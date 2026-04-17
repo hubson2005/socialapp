@@ -14,43 +14,45 @@ import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 // ─── LocalStorage API ──────────────────────────────────────────────────────────
 const STORAGE_KEY = 'link_profiles';
 
+import { supabase } from '../supabase'
+
 const db = {
-  _load: () => {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    } catch {
-      return [];
-    }
+  list: async () => {
+    const { data, error } = await supabase
+      .from('link_profiles')
+      .select('*')
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return data
   },
-  _save: (profiles) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+  create: async (data) => {
+    const { data: created, error } = await supabase
+      .from('link_profiles')
+      .insert([data])
+      .select()
+      .single()
+    if (error) throw error
+    return created
   },
-  list: () => Promise.resolve(db._load()),
-  create: (data) => {
-    const profiles = db._load();
-    const newProfile = {
-      ...data,
-      id: crypto.randomUUID(),
-      created_date: new Date().toISOString(),
-      updated_date: new Date().toISOString(),
-    };
-    db._save([...profiles, newProfile]);
-    return Promise.resolve(newProfile);
+  update: async (id, data) => {
+    const { data: updated, error } = await supabase
+      .from('link_profiles')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return updated
   },
-  update: (id, data) => {
-    const profiles = db._load();
-    const updated = profiles.map((p) =>
-      p.id === id ? { ...p, ...data, id, updated_date: new Date().toISOString() } : p
-    );
-    db._save(updated);
-    return Promise.resolve(updated.find((p) => p.id === id));
+  delete: async (id) => {
+    const { error } = await supabase
+      .from('link_profiles')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+    return { id }
   },
-  delete: (id) => {
-    const profiles = db._load().filter((p) => p.id !== id);
-    db._save(profiles);
-    return Promise.resolve({ id });
-  },
-};
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 const LINKS_PER_PAGE = 10;

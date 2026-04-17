@@ -8,7 +8,8 @@ export default function QRCodeDisplay({ profileId }) {
   const profileUrl = `${window.location.origin}/profile/${profileId}`;
 
   useEffect(() => {
-    // Dynamically load qrcode library
+    setQrLoaded(false); // reset on profileId change
+
     if (window.QRCode) {
       renderQR();
       return;
@@ -22,7 +23,7 @@ export default function QRCodeDisplay({ profileId }) {
   const renderQR = () => {
     const canvas = canvasRef.current;
     if (!canvas || !window.QRCode) return;
-    canvas.innerHTML = '';
+    canvas.innerHTML = ''; // clear any previous QR
     try {
       new window.QRCode(canvas, {
         text: profileUrl,
@@ -43,11 +44,7 @@ export default function QRCodeDisplay({ profileId }) {
     if (!img) return;
     const link = document.createElement('a');
     link.download = `qr-${profileId}.png`;
-    if (img.tagName === 'CANVAS') {
-      link.href = img.toDataURL();
-    } else {
-      link.href = img.src;
-    }
+    link.href = img.tagName === 'CANVAS' ? img.toDataURL() : img.src;
     link.click();
   };
 
@@ -58,15 +55,17 @@ export default function QRCodeDisplay({ profileId }) {
         <h3 className="font-bold text-sm">QR Code</h3>
       </div>
 
-      <div className="flex justify-center mb-3">
+      {/* Spinner lives OUTSIDE the ref div — no more DOM conflict */}
+      <div className="flex justify-center mb-3 relative w-40 h-40 mx-auto">
+        {!qrLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
         <div
           ref={canvasRef}
-          className="w-40 h-40 bg-white rounded-xl flex items-center justify-center overflow-hidden"
-        >
-          {!qrLoaded && (
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          )}
-        </div>
+          className="w-40 h-40 bg-white rounded-xl overflow-hidden"
+        />
       </div>
 
       <p className="text-xs text-muted-foreground truncate mb-3">{profileUrl}</p>

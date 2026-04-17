@@ -1,12 +1,7 @@
-import { Button } from "@/components/ui/button"
+import Dashboard from "./pages/Dashboard"
 
 function App() {
-  return (
-    <div>
-      <h1>Hello</h1>
-      <Button>Click me</Button>
-    </div>
-  )
+  return <Dashboard />
 }
 
 export default App

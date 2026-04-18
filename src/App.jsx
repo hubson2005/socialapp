@@ -1,14 +1,16 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'sonner';
-import Dashboard from './pages/Dashboard';
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Dashboard from './pages/Dashboard'
+import PublicProfile from './pages/PublicProfile'
 
-const queryClient = new QueryClient();
-
-export default function App() {
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Dashboard />
-      <Toaster richColors position="top-right" />
-    </QueryClientProvider>
-  );
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/profile/:id" element={<PublicProfile />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
+
+export default App

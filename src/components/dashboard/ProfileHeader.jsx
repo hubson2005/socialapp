@@ -1,41 +1,69 @@
-import React, { useRef } from 'react';
-import { Camera, User } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Camera, User, Loader2 } from 'lucide-react';
+import { supabase } from '../../supabase';
 
 export default function ProfileHeader({ profile, onUpdate }) {
   const fileRef = useRef();
+  const [uploading, setUploading] = useState(false);
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => onUpdate({ avatar_url: ev.target.result });
-    reader.readAsDataURL(file);
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = 'avatar-' + profile.id + '-' + Date.now() + '.' + fileExt;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      onUpdate({ avatar_url: data.publicUrl });
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Erreur lors du chargement de la photo : ' + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
     <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-5 flex items-center gap-4">
-      {/* Avatar */}
       <div className="relative shrink-0">
         <div
           className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => fileRef.current?.click()}
+          onClick={() => fileRef.current && fileRef.current.click()}
         >
-          {profile.avatar_url ? (
+          {uploading ? (
+            <Loader2 className="w-6 h-6 text-white animate-spin" />
+          ) : profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
             <User className="w-7 h-7 text-white/60" />
           )}
         </div>
         <button
-          onClick={() => fileRef.current?.click()}
+          onClick={() => fileRef.current && fileRef.current.click()}
           className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-primary flex items-center justify-center shadow-lg hover:opacity-80 transition-opacity"
         >
           <Camera className="w-3 h-3 text-white" />
         </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0 space-y-2">
         <input
           type="text"

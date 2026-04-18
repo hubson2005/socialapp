@@ -64,14 +64,13 @@ export default function PublicProfile() {
 
   const { bg1, bg2 } = parseColors(profile.theme_color);
   const links = profile.links || [];
-  const enabledLinks = links.filter(l => l.enabled !== false);
+  const enabledLinks = links.filter((l) => l.enabled !== false);
 
   return (
     <div
       className="min-h-screen flex flex-col items-center px-4 py-10"
       style={{ background: `linear-gradient(160deg, ${bg1}, ${bg2})` }}
     >
-      {/* Avatar */}
       {profile.avatar_url ? (
         <img
           src={profile.avatar_url}
@@ -84,19 +83,16 @@ export default function PublicProfile() {
         </div>
       )}
 
-      {/* Name */}
       <h1 className="text-3xl font-black text-white uppercase tracking-wide mb-2 text-center">
         {profile.display_name}
       </h1>
 
-      {/* Bio */}
       {profile.bio && (
         <p className="text-white/80 text-sm text-center max-w-xs mb-2">
           {profile.bio}
         </p>
       )}
 
-      {/* Phone */}
       {profile.phone && (
         <div className="flex items-center gap-2 text-white/70 text-sm mb-6">
           <Phone className="w-4 h-4" />
@@ -104,7 +100,6 @@ export default function PublicProfile() {
         </div>
       )}
 
-      {/* Links */}
       <div className="w-full max-w-sm space-y-3 mt-4">
         {enabledLinks.map((link, i) => {
           const platform = PLATFORM_ICONS[link.platform?.toLowerCase()] || {

@@ -25,6 +25,14 @@ export default function ProfileHeader({ profile, onUpdate }) {
         .from('avatars')
         .getPublicUrl(fileName);
 
+      // ✅ Sauvegarde immédiate en base
+      const { error: updateError } = await supabase
+        .from('link_profiles')
+        .update({ avatar_url: data.publicUrl })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+
       onUpdate({ avatar_url: data.publicUrl });
     } catch (err) {
       console.error('Upload error:', err);

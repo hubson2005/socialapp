@@ -1,16 +1,12 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Dashboard from './pages/Dashboard'
-import PublicProfile from './pages/PublicProfile'
+import { Routes, Route } from "react-router-dom"
+import Home from "./pages/home"
+import PublicProfile from "./pages/publicprofile"
 
-function App() {
+export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/profile/:id" element={<PublicProfile />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/:username" element={<PublicProfile />} />
+    </Routes>
   )
 }
-
-export default App

@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom"
-import Home from "./pages/home"
-import PublicProfile from "./pages/publicprofile"
+import Home from "./pages/Home"
+import PublicProfile from "./pages/PublicProfile"
 
 export default function App() {
   return (

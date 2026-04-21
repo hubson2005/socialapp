@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { Loader2, Mail, Lock, Sparkles } from 'lucide-react';
+import { Loader2, Mail, Lock } from 'lucide-react';
+import logo from '../assets/favicon.jpg';
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -28,8 +29,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(160deg, #0f0a1e, #2d1b69)' }}>
       <div style={{ width: '100%', maxWidth: '400px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', overflow: 'hidden' }}>
         <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', padding: '28px 32px', textAlign: 'center' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-            <Sparkles size={22} color="white" />
+          <div style={{ width: '64px', height: '64px', borderRadius: '16px', overflow: 'hidden', margin: '0 auto 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
+            <img src={logo} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <h1 style={{ color: 'white', fontSize: '22px', fontWeight: '700', margin: 0 }}>Socialapp</h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', marginTop: '4px' }}>Connectez-vous à votre espace</p>

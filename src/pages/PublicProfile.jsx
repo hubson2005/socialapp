@@ -13,7 +13,7 @@ const PLATFORM_CONFIG = {
   linkedin:    { bg: '#0A66C2', label: 'LINKEDIN',    Icon: FaLinkedin },
   twitter:     { bg: '#1DA1F2', label: 'TWITTER',     Icon: FaTwitter },
   website:     { bg: '#6366f1', label: 'SITE WEB',    Icon: FaGlobe },
-  coinafrique: { bg: '#6366f1', label: 'COINAFRIQUE', Icon: FaGlobe },
+  coinafrique: { bg: '#F97316', label: 'COINAFRIQUE', Icon: FaGlobe },
 };
 
 const parseColors = (themeColor) => {
@@ -25,8 +25,7 @@ const parseColors = (themeColor) => {
 };
 
 export default function PublicProfile() {
-  const { username } = useParams(); // ✅ CHANGÉ ICI
-
+  const { username } = useParams(); // ✅ username au lieu de id
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -36,18 +35,15 @@ export default function PublicProfile() {
       const { data, error } = await supabase
         .from('link_profiles')
         .select('*')
-        .eq('username', username) // ✅ CHANGÉ ICI
+        .eq('username', username) // ✅ recherche par username
         .single();
-
       if (error || !data) {
         setNotFound(true);
       } else {
         setProfile(data);
       }
-
       setLoading(false);
     };
-
     fetchProfile();
   }, [username]);
 
@@ -74,9 +70,8 @@ export default function PublicProfile() {
   return (
     <div
       className="min-h-screen flex flex-col items-center px-4 py-10"
-      style={{ background: `linear-gradient(160deg, ${colors.bg1}, ${colors.bg2})` }}
+      style={{ background: 'linear-gradient(160deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' }}
     >
-      {/* AVATAR */}
       {profile.avatar_url ? (
         <div style={{
           padding: '3px',
@@ -89,58 +84,55 @@ export default function PublicProfile() {
           <img
             src={profile.avatar_url}
             alt={profile.display_name}
-            style={{ width: '112px', height: '112px', borderRadius: '24px', objectFit: 'cover' }}
+            style={{ width: '112px', height: '112px', borderRadius: '24px', objectFit: 'cover', display: 'block' }}
           />
         </div>
       ) : (
         <div style={{
-          width: '112px',
-          height: '112px',
-          borderRadius: '24px',
-          background: 'rgba(255,255,255,0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '40px',
-          fontWeight: 'bold',
-          color: 'white',
+          padding: '3px',
+          borderRadius: '28px',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)',
           marginBottom: '16px',
         }}>
-          {profile.display_name?.[0]?.toUpperCase() || '?'}
+          <div style={{
+            width: '112px', height: '112px', borderRadius: '24px',
+            background: 'rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '40px', fontWeight: 'bold', color: 'white',
+          }}>
+            {profile.display_name ? profile.display_name[0].toUpperCase() : '?'}
+          </div>
         </div>
       )}
 
-      {/* NAME */}
       <h1 className="text-3xl font-black text-white uppercase tracking-wide mb-2 text-center">
         {profile.display_name}
       </h1>
 
-      {/* BIO */}
-      {profile.bio && (
+      {profile.bio ? (
         <p className="text-white/80 text-sm text-center max-w-xs mb-2">
           {profile.bio}
         </p>
-      )}
+      ) : null}
 
-      {/* PHONE */}
-      {profile.phone && (
+      {profile.phone ? (
         <div className="flex items-center gap-2 text-white/70 text-sm mb-6">
           <Phone className="w-4 h-4" />
           {profile.phone}
         </div>
-      )}
+      ) : null}
 
-      {/* LINKS */}
       <div className="w-full max-w-sm space-y-3 mt-4">
         {enabledLinks.map((link, i) => {
-          const key = link.platform?.toLowerCase();
+          const key = link.platform ? link.platform.toLowerCase() : '';
           const platform = PLATFORM_CONFIG[key] || {
             bg: '#6366f1',
-            label: link.platform?.toUpperCase() || 'LIEN',
+            label: link.platform ? link.platform.toUpperCase() : 'LIEN',
             Icon: FaGlobe,
           };
-
-          const Icon = platform.Icon;
+          const { Icon } = platform;
 
           return (
             <a
@@ -156,23 +148,43 @@ export default function PublicProfile() {
               >
                 <Icon size={24} color="white" />
               </div>
-
               <span className="text-white font-bold tracking-widest text-sm flex-1">
                 {link.label || platform.label}
               </span>
-
               <ExternalLink className="w-4 h-4 text-white/50 shrink-0" />
             </a>
           );
         })}
       </div>
 
-      {/* FOOTER */}
+      <a
+        href="https://wa.me/2250506458127"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          marginTop: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'rgba(37,211,102,0.15)',
+          border: '1px solid rgba(37,211,102,0.3)',
+          borderRadius: '12px',
+          padding: '10px 20px',
+          color: '#25D366',
+          fontSize: '13px',
+          fontWeight: '500',
+          textDecoration: 'none',
+        }}
+      >
+        <FaWhatsapp size={16} color="#25D366" />
+        Contactez notre support
+      </a>
+
       <p style={{
         color: 'rgba(255,255,255,0.3)',
         fontSize: '12px',
         textAlign: 'center',
-        marginTop: '40px',
+        marginTop: '20px',
       }}>
         Tous droits réservés par Socialapp.
       </p>

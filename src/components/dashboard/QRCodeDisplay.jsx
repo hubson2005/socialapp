@@ -1,49 +1,40 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Download, QrCode } from 'lucide-react';
 
-export default function QRCodeDisplay({ profileId }) {
+const BASE_URL = 'https://hubson-social-2026-hubson2005s-projects.vercel.app';
+
+export default function QRCodeDisplay({ profileId, username }) {
   const canvasRef = useRef(null);
   const [qrLoaded, setQrLoaded] = useState(false);
 
-  const profileUrl = `${window.location.origin}/profile/${profileId}`;
+  const profileUrl = username
+    ? `${BASE_URL}/profile/${username}`
+    : `${BASE_URL}/profile/${profileId}`;
 
   useEffect(() => {
-    setQrLoaded(false); // reset on profileId change
-
-    if (window.QRCode) {
-      renderQR();
-      return;
-    }
+    setQrLoaded(false);
+    if (window.QRCode) { renderQR(); return; }
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
     script.onload = renderQR;
     document.head.appendChild(script);
-  }, [profileId]);
+  }, [profileId, username]);
 
   const renderQR = () => {
     const canvas = canvasRef.current;
     if (!canvas || !window.QRCode) return;
-    canvas.innerHTML = ''; // clear any previous QR
+    canvas.innerHTML = '';
     try {
-      new window.QRCode(canvas, {
-        text: profileUrl,
-        width: 160,
-        height: 160,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.H,
-      });
+      new window.QRCode(canvas, { text: profileUrl, width: 160, height: 160, colorDark: '#000000', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.H });
       setQrLoaded(true);
-    } catch (e) {
-      console.error('QR error', e);
-    }
+    } catch (e) { console.error('QR error', e); }
   };
 
   const handleDownload = () => {
     const img = canvasRef.current?.querySelector('img') || canvasRef.current?.querySelector('canvas');
     if (!img) return;
     const link = document.createElement('a');
-    link.download = `qr-${profileId}.png`;
+    link.download = `qr-${username || profileId}.png`;
     link.href = img.tagName === 'CANVAS' ? img.toDataURL() : img.src;
     link.click();
   };
@@ -54,26 +45,16 @@ export default function QRCodeDisplay({ profileId }) {
         <QrCode className="w-4 h-4 text-primary" />
         <h3 className="font-bold text-sm">QR Code</h3>
       </div>
-
-      {/* Spinner lives OUTSIDE the ref div — no more DOM conflict */}
       <div className="flex justify-center mb-3 relative w-40 h-40 mx-auto">
         {!qrLoaded && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        <div
-          ref={canvasRef}
-          className="w-40 h-40 bg-white rounded-xl overflow-hidden"
-        />
+        <div ref={canvasRef} className="w-40 h-40 bg-white rounded-xl overflow-hidden" />
       </div>
-
       <p className="text-xs text-muted-foreground truncate mb-3">{profileUrl}</p>
-
-      <button
-        onClick={handleDownload}
-        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
-      >
+      <button onClick={handleDownload} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
         <Download className="w-3.5 h-3.5" />
         Télécharger le QR
       </button>

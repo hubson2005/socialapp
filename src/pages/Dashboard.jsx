@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock } from "lucide-react";
+import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { supabase } from '../supabase';
+import { useAuth } from '../AuthContext.jsx';
 
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import PlatformCard from "@/components/dashboard/PlatformCard";
@@ -79,6 +80,8 @@ const parseColors = (themeColor) => {
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
+  const { signOut, user } = useAuth();
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [localProfile, setLocalProfile] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -125,8 +128,8 @@ export default function Dashboard() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['linkProfiles'] });
       setHasChanges(false);
+      queryClient.invalidateQueries({ queryKey: ['linkProfiles'] });
       toast.success('Modifications sauvegardées !');
     },
     onError: (error) => {
@@ -166,12 +169,17 @@ export default function Dashboard() {
 
   const handleSave = () => {
     if (!localProfile) return;
+    if (updateMutation.isPending) return;
+    if (!hasChanges) return;
     const data = {
       display_name: localProfile.display_name,
       bio: localProfile.bio,
       links: localProfile.links,
       theme_color: localProfile.theme_color,
       expiry_date: localProfile.expiry_date,
+      username: localProfile.username
+        ? localProfile.username.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+        : null,
     };
     updateMutation.mutate({ id: localProfile.id, data });
   };
@@ -180,7 +188,7 @@ export default function Dashboard() {
     updateLocal({
       links: [
         ...(localProfile ? localProfile.links || [] : []),
-        { platform: platformKey, url: '', label: '', enabled: true },
+        { id: crypto.randomUUID(), platform: platformKey, url: '', label: '', enabled: true },
       ],
     });
     setShowAddDialog(false);
@@ -198,6 +206,11 @@ export default function Dashboard() {
     const maxPage = Math.max(0, Math.ceil(links.length / LINKS_PER_PAGE) - 1);
     setLinksPage((p) => Math.min(p, maxPage));
   }, [localProfile, updateLocal]);
+
+  const handleSignOut = async () => {
+    if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Se déconnecter quand même ?')) return;
+    await signOut();
+  };
 
   if (isLoading) {
     return (
@@ -234,8 +247,6 @@ export default function Dashboard() {
   if (!localProfile) return null;
 
   const colors = parseColors(localProfile.theme_color);
-  const bg1 = colors.bg1;
-  const bg2 = colors.bg2;
   const links = localProfile.links || [];
   const pagedLinks = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
@@ -243,7 +254,8 @@ export default function Dashboard() {
   const totalProfilePages = Math.ceil(profiles.length / PROFILES_PER_PAGE);
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, ' + bg1 + ', ' + bg2 + ')' }}>
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' }}>
+      {/* Top Bar */}
       <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -267,6 +279,16 @@ export default function Dashboard() {
               )}
               Sauvegarder
             </Button>
+            <Button
+              onClick={handleSignOut}
+              variant="outline"
+              size="sm"
+              className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10"
+              title={user?.email}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Déconnexion</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -276,6 +298,20 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-4">
             <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
 
+            {/* ✅ Champ username */}
+            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
+              <AtSign className="w-4 h-4 text-white/60 shrink-0" />
+              <span className="text-white/70 text-sm shrink-0">Username :</span>
+              <input
+                type="text"
+                value={localProfile.username || ''}
+                onChange={(e) => updateLocal({ username: e.target.value })}
+                placeholder="ex: hubson"
+                className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30"
+              />
+            </div>
+
+            {/* Expiration */}
             <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
               <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
               <span className="text-white/70 text-sm shrink-0">Expiration :</span>
@@ -318,7 +354,7 @@ export default function Dashboard() {
                     const absoluteIndex = linksPage * LINKS_PER_PAGE + i;
                     return (
                       <PlatformCard
-                        key={link.platform + '-' + absoluteIndex}
+                        key={link.id || link.platform + '-' + absoluteIndex}
                         link={link}
                         index={absoluteIndex}
                         onUpdate={(updated) => handleUpdateLink(absoluteIndex, updated)}
@@ -351,7 +387,8 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-4">
-            <QRCodeDisplay profileId={localProfile.id} />
+            {/* ✅ QRCode avec username */}
+            <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>
@@ -373,6 +410,9 @@ export default function Dashboard() {
                         <span className={'text-sm truncate block ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>
                           {p.display_name || 'Sans nom'}
                         </span>
+                        {p.username && (
+                          <span className="text-xs text-muted-foreground">@{p.username}</span>
+                        )}
                         {expiry && (
                           <span className={'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md mt-0.5 ' + expiry.color + ' ' + expiry.bg}>
                             <CalendarClock className="w-3 h-3" />

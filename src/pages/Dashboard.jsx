@@ -259,9 +259,7 @@ export default function Dashboard() {
       <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
+            <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover' }} />
             <h1 className="font-bold text-lg text-white">SocialApp</h1>
           </div>
           <div className="flex items-center gap-2">

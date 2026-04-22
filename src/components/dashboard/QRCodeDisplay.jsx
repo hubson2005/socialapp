@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Download, QrCode } from 'lucide-react';
 
-const BASE_URL = 'https://hubson-social-2026-hubson2005s-projects.vercel.app';
+const BASE_URL = 'https://www.socialapp.work';
 
 export default function QRCodeDisplay({ profileId, username }) {
   const canvasRef = useRef(null);
   const [qrLoaded, setQrLoaded] = useState(false);
 
   const profileUrl = username
-    ? `${BASE_URL}/profile/${username}`
-    : `${BASE_URL}/profile/${profileId}`;
+    ? `${BASE_URL}/profil/${username}`
+    : `${BASE_URL}/profil/${profileId}`;
 
   useEffect(() => {
     setQrLoaded(false);
@@ -25,9 +25,18 @@ export default function QRCodeDisplay({ profileId, username }) {
     if (!canvas || !window.QRCode) return;
     canvas.innerHTML = '';
     try {
-      new window.QRCode(canvas, { text: profileUrl, width: 160, height: 160, colorDark: '#000000', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.H });
+      new window.QRCode(canvas, {
+        text: profileUrl,
+        width: 160,
+        height: 160,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: window.QRCode.CorrectLevel.H
+      });
       setQrLoaded(true);
-    } catch (e) { console.error('QR error', e); }
+    } catch (e) {
+      console.error('QR error', e);
+    }
   };
 
   const handleDownload = () => {

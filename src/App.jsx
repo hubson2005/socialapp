@@ -52,7 +52,7 @@ function PublicApp() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/profil/:id" element={<PublicProfile />} />
+      <Route path="/profil/:username" element={<PublicProfile />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

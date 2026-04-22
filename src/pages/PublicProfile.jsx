@@ -53,7 +53,6 @@ export default function PublicProfile() {
         setNotFound(true);
       } else {
         setProfile(data);
-        // Track view
         await supabase.from('profile_stats').insert([{ profile_id: data.id, event_type: 'view' }]);
       }
       setLoading(false);
@@ -61,7 +60,6 @@ export default function PublicProfile() {
     fetchProfile();
   }, [username]);
 
-  // Countdown timer
   useEffect(() => {
     if (!profile?.is_event || !profile?.event_date) return;
     const timer = setInterval(() => {
@@ -129,8 +127,13 @@ export default function PublicProfile() {
         <p className="text-white/80 text-sm text-center max-w-xs mb-2">{profile.bio}</p>
       )}
 
-      {profile.username && (
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginBottom: '16px' }}>@{profile.username}</p>
+      {/* ✅ FIX — @username supprimé */}
+
+      {profile.phone && (
+        <div className="flex items-center gap-2 text-white/70 text-sm mb-4">
+          <Phone className="w-4 h-4" />
+          {profile.phone}
+        </div>
       )}
 
       {/* Mode Événement */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign } from "lucide-react";
+import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { supabase } from '../supabase';
@@ -12,40 +12,27 @@ import PlatformCard from "@/components/dashboard/PlatformCard";
 import AddPlatformDialog from "@/components/dashboard/AddPlatformDialog";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
+import StatsCard from "@/components/dashboard/StatsCard";
+import ProfilePreview from "@/components/dashboard/ProfilePreview";
 
 const db = {
   list: async () => {
-    const { data, error } = await supabase
-      .from('link_profiles')
-      .select('*')
-      .order('created_at', { ascending: true });
+    const { data, error } = await supabase.from('link_profiles').select('*').order('created_at', { ascending: true });
     if (error) throw error;
     return data;
   },
   create: async (data) => {
-    const { data: created, error } = await supabase
-      .from('link_profiles')
-      .insert([data])
-      .select()
-      .single();
+    const { data: created, error } = await supabase.from('link_profiles').insert([data]).select().single();
     if (error) throw error;
     return created;
   },
   update: async (id, data) => {
-    const { data: updated, error } = await supabase
-      .from('link_profiles')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single();
+    const { data: updated, error } = await supabase.from('link_profiles').update(data).eq('id', id).select().single();
     if (error) throw error;
     return updated;
   },
   delete: async (id) => {
-    const { error } = await supabase
-      .from('link_profiles')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('link_profiles').delete().eq('id', id);
     if (error) throw error;
     return { id };
   },
@@ -59,15 +46,9 @@ const getExpiryStatus = (expiry_date) => {
   const now = new Date();
   const exp = new Date(expiry_date);
   const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0)
-    return { label: 'Expiré', color: 'text-destructive', bg: 'bg-destructive/10' };
-  if (diffDays <= 30)
-    return { label: diffDays + 'j', color: 'text-orange-500', bg: 'bg-orange-500/10' };
-  return {
-    label: exp.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-    color: 'text-green-600',
-    bg: 'bg-green-500/10',
-  };
+  if (diffDays < 0) return { label: 'Expiré', color: 'text-destructive', bg: 'bg-destructive/10' };
+  if (diffDays <= 30) return { label: diffDays + 'j', color: 'text-orange-500', bg: 'bg-orange-500/10' };
+  return { label: exp.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }), color: 'text-green-600', bg: 'bg-green-500/10' };
 };
 
 const parseColors = (themeColor) => {
@@ -83,6 +64,7 @@ export default function Dashboard() {
   const { signOut, user } = useAuth();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [localProfile, setLocalProfile] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [activeProfileId, setActiveProfileId] = useState(null);
@@ -132,9 +114,7 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['linkProfiles'] });
       toast.success('Modifications sauvegardées !');
     },
-    onError: (error) => {
-      toast.error('Erreur : ' + error.message);
-    },
+    onError: (error) => { toast.error('Erreur : ' + error.message); },
   });
 
   const handleCreateProfile = () => {
@@ -142,10 +122,9 @@ export default function Dashboard() {
     expiry.setFullYear(expiry.getFullYear() + 1);
     createMutation.mutate({
       display_name: 'Profil ' + ((profiles.length || 0) + 1),
-      bio: '',
-      links: [],
-      theme_color: '#6366f1',
+      bio: '', links: [], theme_color: '#6366f1',
       expiry_date: expiry.toISOString().split('T')[0],
+      is_verified: false, is_event: false,
     });
   };
 
@@ -168,40 +147,36 @@ export default function Dashboard() {
   }, []);
 
   const handleSave = () => {
-    if (!localProfile) return;
-    if (updateMutation.isPending) return;
-    if (!hasChanges) return;
+    if (!localProfile || updateMutation.isPending || !hasChanges) return;
     const data = {
       display_name: localProfile.display_name,
       bio: localProfile.bio,
       links: localProfile.links,
       theme_color: localProfile.theme_color,
       expiry_date: localProfile.expiry_date,
-      username: localProfile.username
-        ? localProfile.username.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-        : null,
+      username: localProfile.username ? localProfile.username.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : null,
+      is_verified: localProfile.is_verified || false,
+      is_event: localProfile.is_event || false,
+      event_name: localProfile.event_name || null,
+      event_date: localProfile.event_date || null,
+      event_location: localProfile.event_location || null,
     };
     updateMutation.mutate({ id: localProfile.id, data });
   };
 
   const handleAddPlatform = (platformKey) => {
-    updateLocal({
-      links: [
-        ...(localProfile ? localProfile.links || [] : []),
-        { id: crypto.randomUUID(), platform: platformKey, url: '', label: '', enabled: true },
-      ],
-    });
+    updateLocal({ links: [...(localProfile?.links || []), { id: crypto.randomUUID(), platform: platformKey, url: '', label: '', enabled: true }] });
     setShowAddDialog(false);
   };
 
   const handleUpdateLink = useCallback((index, updatedLink) => {
-    const links = [...(localProfile ? localProfile.links || [] : [])];
+    const links = [...(localProfile?.links || [])];
     links[index] = updatedLink;
     updateLocal({ links });
   }, [localProfile, updateLocal]);
 
   const handleRemoveLink = useCallback((index) => {
-    const links = (localProfile ? localProfile.links || [] : []).filter((_, i) => i !== index);
+    const links = (localProfile?.links || []).filter((_, i) => i !== index);
     updateLocal({ links });
     const maxPage = Math.max(0, Math.ceil(links.length / LINKS_PER_PAGE) - 1);
     setLinksPage((p) => Math.min(p, maxPage));
@@ -212,32 +187,23 @@ export default function Dashboard() {
     await signOut();
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    </div>
+  );
 
   if (!profiles.length && !createMutation.isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-sm"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
           <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold mb-2">Bienvenue !</h1>
-          <p className="text-muted-foreground text-sm mb-6">
-            Créez votre page de liens unique et partagez-la via un seul QR code.
-          </p>
+          <p className="text-muted-foreground text-sm mb-6">Créez votre page de liens unique et partagez-la via un seul QR code.</p>
           <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2">
-            <Plus className="w-4 h-4" />
-            Créer mon profil
+            <Plus className="w-4 h-4" /> Créer mon profil
           </Button>
         </motion.div>
       </div>
@@ -264,26 +230,15 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
-            <Button
-              onClick={handleSave}
-              disabled={!hasChanges || updateMutation.isPending}
-              className="rounded-xl gap-2"
-              size="sm"
-            >
-              {updateMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Save className="w-3.5 h-3.5" />
-              )}
+            <Button onClick={() => setShowPreview(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10">
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Aperçu</span>
+            </Button>
+            <Button onClick={handleSave} disabled={!hasChanges || updateMutation.isPending} className="rounded-xl gap-2" size="sm">
+              {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               Sauvegarder
             </Button>
-            <Button
-              onClick={handleSignOut}
-              variant="outline"
-              size="sm"
-              className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10"
-              title={user?.email}
-            >
+            <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title={user?.email}>
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Déconnexion</span>
             </Button>
@@ -293,57 +248,81 @@ export default function Dashboard() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left */}
           <div className="lg:col-span-2 space-y-4">
             <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
 
-            {/* ✅ Champ username */}
+            {/* Username */}
             <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
               <AtSign className="w-4 h-4 text-white/60 shrink-0" />
               <span className="text-white/70 text-sm shrink-0">Username :</span>
-              <input
-                type="text"
-                value={localProfile.username || ''}
-                onChange={(e) => updateLocal({ username: e.target.value })}
-                placeholder="ex: hubson"
-                className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30"
-              />
+              <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: hubson" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
+            </div>
+
+            {/* Badge vérifié */}
+            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
+                <div>
+                  <span className="text-white/70 text-sm">Badge vérifié</span>
+                  <p className="text-white/40 text-xs">Affiche ✓ sur votre profil public</p>
+                </div>
+              </div>
+              <button
+                onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
+                style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_verified ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
+              >
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_verified ? '23px' : '3px', transition: 'left 0.3s' }} />
+              </button>
+            </div>
+
+            {/* Mode Événement */}
+            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <CalendarDays className="w-4 h-4 text-white/60 shrink-0" />
+                  <div>
+                    <span className="text-white/70 text-sm">Mode Événement</span>
+                    <p className="text-white/40 text-xs">Ajoute un compte à rebours sur votre profil</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateLocal({ is_event: !localProfile.is_event })}
+                  style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_event ? 'linear-gradient(135deg, #ff6b35, #f7c948)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
+                >
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_event ? '23px' : '3px', transition: 'left 0.3s' }} />
+                </button>
+              </div>
+              {localProfile.is_event && (
+                <div className="space-y-2 pt-1 border-t border-white/10">
+                  <input type="text" value={localProfile.event_name || ''} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10" />
+                  <input type="datetime-local" value={localProfile.event_date || ''} onChange={(e) => updateLocal({ event_date: e.target.value })} className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 border border-white/10" />
+                  <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
+                    <MapPin className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                    <input type="text" value={localProfile.event_location || ''} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu de l'événement" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Expiration */}
             <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
               <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
               <span className="text-white/70 text-sm shrink-0">Expiration :</span>
-              <input
-                type="date"
-                value={localProfile.expiry_date || ''}
-                onChange={(e) => updateLocal({ expiry_date: e.target.value })}
-                className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0"
-              />
+              <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
             </div>
 
+            {/* Platforms */}
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-base text-white">Mes plateformes</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl gap-1.5 text-xs"
-                onClick={() => setShowAddDialog(true)}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Ajouter
+              <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs" onClick={() => setShowAddDialog(true)}>
+                <Plus className="w-3.5 h-3.5" /> Ajouter
               </Button>
             </div>
 
             {links.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="bg-white/10 rounded-2xl border border-dashed border-white/20 p-10 text-center"
-              >
-                <p className="text-white/60 text-sm">
-                  Aucune plateforme ajoutée.<br />
-                  Cliquez sur <strong>Ajouter</strong> pour commencer.
-                </p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white/10 rounded-2xl border border-dashed border-white/20 p-10 text-center">
+                <p className="text-white/60 text-sm">Aucune plateforme ajoutée.<br />Cliquez sur <strong>Ajouter</strong> pour commencer.</p>
               </motion.div>
             ) : (
               <>
@@ -351,80 +330,55 @@ export default function Dashboard() {
                   {pagedLinks.map((link, i) => {
                     const absoluteIndex = linksPage * LINKS_PER_PAGE + i;
                     return (
-                      <PlatformCard
-                        key={link.id || link.platform + '-' + absoluteIndex}
-                        link={link}
-                        index={absoluteIndex}
-                        onUpdate={(updated) => handleUpdateLink(absoluteIndex, updated)}
-                        onRemove={() => handleRemoveLink(absoluteIndex)}
-                      />
+                      <PlatformCard key={link.id || link.platform + '-' + absoluteIndex} link={link} index={absoluteIndex} onUpdate={(updated) => handleUpdateLink(absoluteIndex, updated)} onRemove={() => handleRemoveLink(absoluteIndex)} />
                     );
                   })}
                 </div>
                 {totalLinkPages > 1 && (
                   <div className="flex items-center justify-between pt-2">
-                    <button
-                      disabled={linksPage === 0}
-                      onClick={() => setLinksPage((p) => p - 1)}
-                      className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors"
-                    >
-                      Précédent
-                    </button>
+                    <button disabled={linksPage === 0} onClick={() => setLinksPage((p) => p - 1)} className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Précédent</button>
                     <span className="text-white/50 text-xs">{linksPage + 1} / {totalLinkPages}</span>
-                    <button
-                      disabled={linksPage >= totalLinkPages - 1}
-                      onClick={() => setLinksPage((p) => p + 1)}
-                      className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors"
-                    >
-                      Suivant
-                    </button>
+                    <button disabled={linksPage >= totalLinkPages - 1} onClick={() => setLinksPage((p) => p + 1)} className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Suivant</button>
                   </div>
                 )}
               </>
             )}
           </div>
 
+          {/* Right */}
           <div className="space-y-4">
-            {/* ✅ QRCode avec username */}
             <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
+            <StatsCard profileId={localProfile.id} />
+
+            {/* Profiles */}
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>
-                <span className="text-xs text-muted-foreground">
-                  {profiles.length} profil{profiles.length > 1 ? 's' : ''}
-                </span>
+                <span className="text-xs text-muted-foreground">{profiles.length} profil{profiles.length > 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-1">
                 {pagedProfiles.map((p) => {
                   const expiry = getExpiryStatus(p.expiry_date);
                   const isActive = localProfile && localProfile.id === p.id;
                   return (
-                    <div
-                      key={p.id}
-                      className="group flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-colors hover:bg-muted"
-                      onClick={() => handleSwitchProfile(p)}
-                    >
+                    <div key={p.id} className="group flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-colors hover:bg-muted" onClick={() => handleSwitchProfile(p)}>
                       <div className="flex-1 min-w-0">
-                        <span className={'text-sm truncate block ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>
-                          {p.display_name || 'Sans nom'}
-                        </span>
-                        {p.username && (
-                          <span className="text-xs text-muted-foreground">@{p.username}</span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>{p.display_name || 'Sans nom'}</span>
+                          {p.is_verified && <span style={{ fontSize: '10px', color: '#818cf8' }}>✓</span>}
+                          {p.is_event && <span style={{ fontSize: '10px' }}>🎉</span>}
+                        </div>
+                        {p.username && <span className="text-xs text-muted-foreground">@{p.username}</span>}
                         {expiry && (
                           <span className={'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md mt-0.5 ' + expiry.color + ' ' + expiry.bg}>
-                            <CalendarClock className="w-3 h-3" />
-                            {expiry.label}
+                            <CalendarClock className="w-3 h-3" />{expiry.label}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0 ml-2">
                         {isActive && <Check className="w-3.5 h-3.5 text-primary" />}
                         {profiles.length > 1 && (
-                          <button
-                            className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}
-                          >
+                          <button className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -435,30 +389,21 @@ export default function Dashboard() {
               </div>
               {totalProfilePages > 1 && (
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
-                  <button disabled={profilesPage === 0} onClick={() => setProfilesPage((p) => p - 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors">
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
+                  <button disabled={profilesPage === 0} onClick={() => setProfilesPage((p) => p - 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
                   <span className="text-xs text-muted-foreground">{profilesPage + 1} / {totalProfilePages}</span>
-                  <button disabled={profilesPage >= totalProfilePages - 1} onClick={() => setProfilesPage((p) => p + 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors">
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <button disabled={profilesPage >= totalProfilePages - 1} onClick={() => setProfilesPage((p) => p + 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
                 </div>
               )}
               <button onClick={handleCreateProfile} className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors">
-                <Plus className="w-3.5 h-3.5" />
-                Nouveau profil
+                <Plus className="w-3.5 h-3.5" /> Nouveau profil
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <AddPlatformDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onSelect={handleAddPlatform}
-        existingPlatforms={(localProfile.links || []).map((l) => l.platform)}
-      />
+      <AddPlatformDialog open={showAddDialog} onOpenChange={setShowAddDialog} onSelect={handleAddPlatform} existingPlatforms={(localProfile.links || []).map((l) => l.platform)} />
+      {showPreview && <ProfilePreview profile={localProfile} onClose={() => setShowPreview(false)} />}
     </div>
   );
 }

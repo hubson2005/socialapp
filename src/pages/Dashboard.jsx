@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck } from "lucide-react";
+import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { supabase } from '../supabase';
@@ -58,6 +58,16 @@ const parseColors = (themeColor) => {
   }
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
+
+// ✅ Presets de couleurs pour l'événement
+const EVENT_COLOR_PRESETS = [
+  { label: 'Coucher de soleil', c1: '#ff6b35', c2: '#f7c948' },
+  { label: 'Océan', c1: '#0ea5e9', c2: '#6366f1' },
+  { label: 'Forêt', c1: '#10b981', c2: '#065f46' },
+  { label: 'Rose', c1: '#ec4899', c2: '#8b5cf6' },
+  { label: 'Nuit', c1: '#1e1b4b', c2: '#312e81' },
+  { label: 'Rouge', c1: '#ef4444', c2: '#b91c1c' },
+];
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -160,6 +170,11 @@ export default function Dashboard() {
       event_name: localProfile.event_name || null,
       event_date: localProfile.event_date || null,
       event_location: localProfile.event_location || null,
+      // ✅ Couleurs personnalisées de l'événement
+      event_color1: localProfile.event_color1 || null,
+      event_color2: localProfile.event_color2 || null,
+      // ✅ URL bouton réservation
+      event_booking_url: localProfile.event_booking_url || null,
     };
     updateMutation.mutate({ id: localProfile.id, data });
   };
@@ -219,6 +234,10 @@ export default function Dashboard() {
   const pagedProfiles = profiles.slice(profilesPage * PROFILES_PER_PAGE, (profilesPage + 1) * PROFILES_PER_PAGE);
   const totalProfilePages = Math.ceil(profiles.length / PROFILES_PER_PAGE);
 
+  // Couleurs événement actives
+  const ec1 = localProfile.event_color1 || '#ff6b35';
+  const ec2 = localProfile.event_color2 || '#f7c948';
+
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' }}>
       {/* Top Bar */}
@@ -259,18 +278,18 @@ export default function Dashboard() {
               <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: hubson" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
             </div>
 
-            {/* Badge vérifié */}
+            {/* Badge vérifié — ✅ couleur verte */}
             <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
                 <div>
                   <span className="text-white/70 text-sm">Badge vérifié</span>
-                  <p className="text-white/40 text-xs">Affiche ✓ sur votre profil public</p>
+                  <p className="text-white/40 text-xs">Affiche ✓ vert sur votre profil public</p>
                 </div>
               </div>
               <button
                 onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
-                style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_verified ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
+                style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
               >
                 <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_verified ? '23px' : '3px', transition: 'left 0.3s' }} />
               </button>
@@ -300,6 +319,45 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
                     <MapPin className="w-3.5 h-3.5 text-white/40 shrink-0" />
                     <input type="text" value={localProfile.event_location || ''} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu de l'événement" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
+                  </div>
+
+                  {/* ✅ URL bouton réservation */}
+                  <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
+                    <span style={{ fontSize: '13px' }}>🎟️</span>
+                    <input type="url" value={localProfile.event_booking_url || ''} onChange={(e) => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien de réservation (ex: https://...)" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
+                  </div>
+
+                  {/* ✅ Couleurs de la carte événement */}
+                  <div className="pt-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Palette className="w-3.5 h-3.5 text-white/40" />
+                      <span className="text-white/50 text-xs">Couleur de fond de l'événement</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {EVENT_COLOR_PRESETS.map((preset) => (
+                        <button
+                          key={preset.label}
+                          onClick={() => updateLocal({ event_color1: preset.c1, event_color2: preset.c2 })}
+                          title={preset.label}
+                          style={{
+                            width: '32px', height: '32px', borderRadius: '8px',
+                            background: 'linear-gradient(135deg, ' + preset.c1 + ', ' + preset.c2 + ')',
+                            border: (localProfile.event_color1 === preset.c1) ? '2px solid white' : '2px solid transparent',
+                            cursor: 'pointer', flexShrink: 0,
+                          }}
+                        />
+                      ))}
+                      {/* Couleur personnalisée */}
+                      <div style={{ position: 'relative', width: '32px', height: '32px' }}>
+                        <input
+                          type="color"
+                          value={localProfile.event_color1 || '#ff6b35'}
+                          onChange={(e) => updateLocal({ event_color1: e.target.value })}
+                          style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                        />
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.15)', border: '2px dashed rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', pointerEvents: 'none' }}>+</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -365,7 +423,7 @@ export default function Dashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>{p.display_name || 'Sans nom'}</span>
-                          {p.is_verified && <span style={{ fontSize: '10px', color: '#818cf8' }}>✓</span>}
+                          {p.is_verified && <span style={{ fontSize: '10px', color: '#22c55e' }}>✓</span>}
                           {p.is_event && <span style={{ fontSize: '10px' }}>🎉</span>}
                         </div>
                         {p.username && <span className="text-xs text-muted-foreground">@{p.username}</span>}

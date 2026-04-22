@@ -95,6 +95,10 @@ export default function PublicProfile() {
   const links = profile.links || [];
   const enabledLinks = links.filter(l => l.enabled !== false);
 
+  // ✅ Couleurs personnalisées de la carte événement
+  const ec1 = profile.event_color1 || '#ff6b35';
+  const ec2 = profile.event_color2 || '#f7c948';
+
   return (
     <div
       className="min-h-screen flex flex-col items-center px-4 py-10"
@@ -113,21 +117,21 @@ export default function PublicProfile() {
             </div>
           </div>
         )}
+        {/* ✅ Badge vert */}
         {profile.is_verified && (
-          <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', boxShadow: '0 4px 12px rgba(99,102,241,0.5)' }}>✓</div>
+          <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #22c55e)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: 'white', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
         )}
       </div>
 
       <h1 className="text-3xl font-black text-white uppercase tracking-wide mb-1 text-center">
         {profile.display_name}
-        {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#818cf8', fontWeight: '700' }}>✓</span>}
+        {/* ✅ Checkmark vert dans le nom aussi */}
+        {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#22c55e', fontWeight: '700' }}>✓</span>}
       </h1>
 
       {profile.bio && (
-        <p className="text-white/80 text-sm text-center max-w-xs mb-2">{profile.bio}</p>
+        <p className="text-white/80 text-sm text-center max-w-xs mb-4">{profile.bio}</p>
       )}
-
-      {/* ✅ FIX — @username supprimé */}
 
       {profile.phone && (
         <div className="flex items-center gap-2 text-white/70 text-sm mb-4">
@@ -139,8 +143,9 @@ export default function PublicProfile() {
       {/* Mode Événement */}
       {profile.is_event && profile.event_name && (
         <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
-          <div style={{ background: 'linear-gradient(135deg, #ff6b35, #f7c948)', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>
+          {/* ✅ Carte avec couleurs personnalisées */}
+          <div style={{ background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
               ÉVÉNEMENT
             </div>
@@ -149,7 +154,7 @@ export default function PublicProfile() {
           </div>
 
           {countdown && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
               {[
                 { v: countdown.days, l: 'Jours' },
                 { v: countdown.hours, l: 'Heures' },
@@ -157,11 +162,30 @@ export default function PublicProfile() {
                 { v: countdown.secs, l: 'Sec' },
               ].map(({ v, l }) => (
                 <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: '800', color: ec1, lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
                   <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
                 </div>
               ))}
             </div>
+          )}
+
+          {/* ✅ Bouton Réserver ma place */}
+          {profile.event_booking_url && (
+            <a
+              href={profile.event_booking_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')',
+                borderRadius: '14px', padding: '14px 20px',
+                color: 'white', fontSize: '15px', fontWeight: '700',
+                textDecoration: 'none', width: '100%',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+              }}
+            >
+              🎟️ Réserver ma place
+            </a>
           )}
         </div>
       )}

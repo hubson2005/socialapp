@@ -94,8 +94,6 @@ export default function PublicProfile() {
   const colors = parseColors(profile.theme_color);
   const links = profile.links || [];
   const enabledLinks = links.filter(l => l.enabled !== false);
-
-  // ✅ Couleurs personnalisées de la carte événement
   const ec1 = profile.event_color1 || '#ff6b35';
   const ec2 = profile.event_color2 || '#f7c948';
 
@@ -117,7 +115,6 @@ export default function PublicProfile() {
             </div>
           </div>
         )}
-        {/* ✅ Badge vert */}
         {profile.is_verified && (
           <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #22c55e)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: 'white', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
         )}
@@ -125,7 +122,6 @@ export default function PublicProfile() {
 
       <h1 className="text-3xl font-black text-white uppercase tracking-wide mb-1 text-center">
         {profile.display_name}
-        {/* ✅ Checkmark vert dans le nom aussi */}
         {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#22c55e', fontWeight: '700' }}>✓</span>}
       </h1>
 
@@ -143,16 +139,29 @@ export default function PublicProfile() {
       {/* Mode Événement */}
       {profile.is_event && profile.event_name && (
         <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
-          {/* ✅ Carte avec couleurs personnalisées */}
+
+          {/* Image de l'événement */}
+          {profile.event_image_url && (
+            <div style={{ marginBottom: '12px', borderRadius: '20px', overflow: 'hidden' }}>
+              <img
+                src={profile.event_image_url}
+                alt={profile.event_name}
+                style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+          )}
+
+          {/* Carte événement */}
           <div style={{ background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
               ÉVÉNEMENT
             </div>
             <div style={{ fontSize: '20px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>{profile.event_name}</div>
-            {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>📍 {profile.event_location}</div>}
+            {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
           </div>
 
+          {/* Compte à rebours — chiffres toujours orange fixe */}
           {countdown && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
               {[
@@ -162,14 +171,24 @@ export default function PublicProfile() {
                 { v: countdown.secs, l: 'Sec' },
               ].map(({ v, l }) => (
                 <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: ec1, lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
+                  {/* ✅ Orange fixe indépendant de la couleur de fond */}
+                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
                   <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* ✅ Bouton Réserver ma place */}
+          {/* ✅ Détails de l'événement */}
+          {profile.event_description && (
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '14px 16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>
+                {profile.event_description}
+              </p>
+            </div>
+          )}
+
+          {/* Bouton Réserver ma place */}
           {profile.event_booking_url && (
             <a
               href={profile.event_booking_url}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck, Palette } from "lucide-react";
+import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck, Palette, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { supabase } from '../supabase';
@@ -59,7 +59,6 @@ const parseColors = (themeColor) => {
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
 
-// ✅ Presets de couleurs pour l'événement
 const EVENT_COLOR_PRESETS = [
   { label: 'Coucher de soleil', c1: '#ff6b35', c2: '#f7c948' },
   { label: 'Océan', c1: '#0ea5e9', c2: '#6366f1' },
@@ -68,6 +67,8 @@ const EVENT_COLOR_PRESETS = [
   { label: 'Nuit', c1: '#1e1b4b', c2: '#312e81' },
   { label: 'Rouge', c1: '#ef4444', c2: '#b91c1c' },
 ];
+
+const MAX_SIZE_KB = 2000;
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -80,6 +81,7 @@ export default function Dashboard() {
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [linksPage, setLinksPage] = useState(0);
   const [profilesPage, setProfilesPage] = useState(0);
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['linkProfiles'],
@@ -170,13 +172,53 @@ export default function Dashboard() {
       event_name: localProfile.event_name || null,
       event_date: localProfile.event_date || null,
       event_location: localProfile.event_location || null,
-      // ✅ Couleurs personnalisées de l'événement
       event_color1: localProfile.event_color1 || null,
       event_color2: localProfile.event_color2 || null,
-      // ✅ URL bouton réservation
       event_booking_url: localProfile.event_booking_url || null,
+      event_description: localProfile.event_description || null,
+      event_image_url: localProfile.event_image_url || null,
     };
     updateMutation.mutate({ id: localProfile.id, data });
+  };
+
+  // ✅ Upload image événement avec limite 2000 Ko
+  const handleEventImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const sizeKb = file.size / 1024;
+    if (sizeKb > MAX_SIZE_KB) {
+      toast.error('Image trop lourde ! Maximum ' + MAX_SIZE_KB + ' Ko (votre fichier : ' + Math.round(sizeKb) + ' Ko)');
+      return;
+    }
+
+    setUploadingEventImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = 'event-' + localProfile.id + '-' + Date.now() + '.' + fileExt;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('link_profiles')
+        .update({ event_image_url: data.publicUrl })
+        .eq('id', localProfile.id);
+
+      if (updateError) throw updateError;
+
+      updateLocal({ event_image_url: data.publicUrl });
+      toast.success('Image uploadée !');
+    } catch (err) {
+      toast.error('Erreur upload : ' + err.message);
+    } finally {
+      setUploadingEventImage(false);
+    }
   };
 
   const handleAddPlatform = (platformKey) => {
@@ -234,10 +276,6 @@ export default function Dashboard() {
   const pagedProfiles = profiles.slice(profilesPage * PROFILES_PER_PAGE, (profilesPage + 1) * PROFILES_PER_PAGE);
   const totalProfilePages = Math.ceil(profiles.length / PROFILES_PER_PAGE);
 
-  // Couleurs événement actives
-  const ec1 = localProfile.event_color1 || '#ff6b35';
-  const ec2 = localProfile.event_color2 || '#f7c948';
-
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' }}>
       {/* Top Bar */}
@@ -267,7 +305,6 @@ export default function Dashboard() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left */}
           <div className="lg:col-span-2 space-y-4">
             <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
 
@@ -278,7 +315,7 @@ export default function Dashboard() {
               <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: hubson" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
             </div>
 
-            {/* Badge vérifié — ✅ couleur verte */}
+            {/* Badge vérifié */}
             <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
@@ -312,6 +349,7 @@ export default function Dashboard() {
                   <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_event ? '23px' : '3px', transition: 'left 0.3s' }} />
                 </button>
               </div>
+
               {localProfile.is_event && (
                 <div className="space-y-2 pt-1 border-t border-white/10">
                   <input type="text" value={localProfile.event_name || ''} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10" />
@@ -321,14 +359,48 @@ export default function Dashboard() {
                     <input type="text" value={localProfile.event_location || ''} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu de l'événement" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
                   </div>
 
-                  {/* ✅ URL bouton réservation */}
+                  {/* ✅ Détails de l'événement */}
+                  <textarea
+                    value={localProfile.event_description || ''}
+                    onChange={(e) => updateLocal({ event_description: e.target.value })}
+                    placeholder="Détails de l'événement (programme, infos pratiques...)"
+                    rows={3}
+                    className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10 resize-none"
+                  />
+
+                  {/* Lien réservation */}
                   <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
                     <span style={{ fontSize: '13px' }}>🎟️</span>
                     <input type="url" value={localProfile.event_booking_url || ''} onChange={(e) => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien de réservation (ex: https://...)" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
                   </div>
 
-                  {/* ✅ Couleurs de la carte événement */}
-                  <div className="pt-1">
+                  {/* ✅ Upload image événement */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <ImagePlus className="w-3.5 h-3.5 text-white/40" />
+                      <span className="text-white/50 text-xs">Image de l'événement (max 2000 Ko)</span>
+                    </div>
+                    {localProfile.event_image_url ? (
+                      <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
+                        <img src={localProfile.event_image_url} alt="event" style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }} />
+                        <button
+                          onClick={() => updateLocal({ event_image_url: null })}
+                          style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <X size={14} color="white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', border: '2px dashed rgba(255,255,255,0.2)', borderRadius: '12px', padding: '16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
+                        {uploadingEventImage ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+                        {uploadingEventImage ? 'Upload en cours...' : 'Cliquez pour ajouter une image'}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleEventImageUpload} disabled={uploadingEventImage} />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Couleurs */}
+                  <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Palette className="w-3.5 h-3.5 text-white/40" />
                       <span className="text-white/50 text-xs">Couleur de fond de l'événement</span>
@@ -339,22 +411,11 @@ export default function Dashboard() {
                           key={preset.label}
                           onClick={() => updateLocal({ event_color1: preset.c1, event_color2: preset.c2 })}
                           title={preset.label}
-                          style={{
-                            width: '32px', height: '32px', borderRadius: '8px',
-                            background: 'linear-gradient(135deg, ' + preset.c1 + ', ' + preset.c2 + ')',
-                            border: (localProfile.event_color1 === preset.c1) ? '2px solid white' : '2px solid transparent',
-                            cursor: 'pointer', flexShrink: 0,
-                          }}
+                          style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, ' + preset.c1 + ', ' + preset.c2 + ')', border: (localProfile.event_color1 === preset.c1) ? '2px solid white' : '2px solid transparent', cursor: 'pointer', flexShrink: 0 }}
                         />
                       ))}
-                      {/* Couleur personnalisée */}
                       <div style={{ position: 'relative', width: '32px', height: '32px' }}>
-                        <input
-                          type="color"
-                          value={localProfile.event_color1 || '#ff6b35'}
-                          onChange={(e) => updateLocal({ event_color1: e.target.value })}
-                          style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-                        />
+                        <input type="color" value={localProfile.event_color1 || '#ff6b35'} onChange={(e) => updateLocal({ event_color1: e.target.value })} style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
                         <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.15)', border: '2px dashed rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', pointerEvents: 'none' }}>+</div>
                       </div>
                     </div>
@@ -407,8 +468,6 @@ export default function Dashboard() {
           <div className="space-y-4">
             <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
             <StatsCard profileId={localProfile.id} />
-
-            {/* Profiles */}
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>

@@ -14,7 +14,6 @@ import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ProfilePreview from "@/components/dashboard/ProfilePreview";
-
 const db = {
   list: async () => {
     const { data, error } = await supabase.from('link_profiles').select('*').order('created_at', { ascending: true });
@@ -181,7 +180,6 @@ export default function Dashboard() {
     updateMutation.mutate({ id: localProfile.id, data });
   };
 
-  // ✅ Upload image événement avec limite 2000 Ko
   const handleEventImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -308,28 +306,28 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-4">
             <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
 
-            {/* Username */}
-            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
-              <AtSign className="w-4 h-4 text-white/60 shrink-0" />
-              <span className="text-white/70 text-sm shrink-0">Username :</span>
-              <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: hubson" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
-            </div>
-
-            {/* Badge vérifié */}
-            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center justify-between gap-3">
+            {/* ✅ Username + Badge vérifié fusionnés */}
+            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 space-y-3">
               <div className="flex items-center gap-3">
-                <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
-                <div>
-                  <span className="text-white/70 text-sm">Badge vérifié</span>
-                  <p className="text-white/40 text-xs">Affiche ✓ vert sur votre profil public</p>
-                </div>
+                <AtSign className="w-4 h-4 text-white/60 shrink-0" />
+                <span className="text-white/70 text-sm shrink-0">Username :</span>
+                <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: hubson" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
               </div>
-              <button
-                onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
-                style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
-              >
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_verified ? '23px' : '3px', transition: 'left 0.3s' }} />
-              </button>
+              <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
+                <div className="flex items-center gap-3">
+                  <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
+                  <div>
+                    <span className="text-white/70 text-sm">Badge vérifié</span>
+                    <p className="text-white/40 text-xs">Affiche ✓ vert sur votre profil public</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
+                  style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
+                >
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_verified ? '23px' : '3px', transition: 'left 0.3s' }} />
+                </button>
+              </div>
             </div>
 
             {/* Mode Événement */}
@@ -359,7 +357,6 @@ export default function Dashboard() {
                     <input type="text" value={localProfile.event_location || ''} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu de l'événement" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
                   </div>
 
-                  {/* ✅ Détails de l'événement */}
                   <textarea
                     value={localProfile.event_description || ''}
                     onChange={(e) => updateLocal({ event_description: e.target.value })}
@@ -368,13 +365,11 @@ export default function Dashboard() {
                     className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10 resize-none"
                   />
 
-                  {/* Lien réservation */}
                   <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
                     <span style={{ fontSize: '13px' }}>🎟️</span>
                     <input type="url" value={localProfile.event_booking_url || ''} onChange={(e) => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien de réservation (ex: https://...)" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
                   </div>
 
-                  {/* ✅ Upload image événement */}
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <ImagePlus className="w-3.5 h-3.5 text-white/40" />
@@ -399,7 +394,6 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  {/* Couleurs */}
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Palette className="w-3.5 h-3.5 text-white/40" />
@@ -422,13 +416,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Expiration */}
-            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
-              <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
-              <span className="text-white/70 text-sm shrink-0">Expiration :</span>
-              <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
             </div>
 
             {/* Platforms */}
@@ -464,10 +451,19 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Right */}
+          {/* Right — ✅ Expiration déplacée ici */}
           <div className="space-y-4">
             <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
+            
+            {/* ✅ Expiration entre QR code et Mes profils */}
+            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
+              <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
+              <span className="text-white/70 text-sm shrink-0">Expiration :</span>
+              <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
+            </div>
+
             <StatsCard profileId={localProfile.id} />
+            
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Phone } from 'lucide-react';
 import { FaYoutube, FaFacebook, FaWhatsapp, FaInstagram, FaTiktok, FaLinkedin, FaTwitter, FaGlobe } from 'react-icons/fa';
-import TicketShop from '../components/TicketShop';
 
 const PLATFORM_CONFIG = {
   youtube:     { bg: '#FF0000', label: 'YOUTUBE',     Icon: FaYoutube },
@@ -19,21 +18,21 @@ const PLATFORM_CONFIG = {
 
 const parseColors = (themeColor) => {
   if (themeColor && themeColor.includes('|')) {
-    const [bg1, bg2] = themeColor.split('|');
-    return { bg1, bg2 };
+    const parts = themeColor.split('|');
+    return { bg1: parts[0], bg2: parts[1] };
   }
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
 
 const getCountdown = (eventDate) => {
+  if (!eventDate) return null;
   const diff = new Date(eventDate) - new Date();
   if (diff <= 0) return null;
-  return {
-    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-    hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-    mins: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-    secs: Math.floor((diff % (1000 * 60)) / 1000),
-  };
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+  return { days, hours, mins, secs };
 };
 
 export default function PublicProfile() {
@@ -42,7 +41,6 @@ export default function PublicProfile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [countdown, setCountdown] = useState(null);
-  const [showTicketShop, setShowTicketShop] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -64,14 +62,20 @@ export default function PublicProfile() {
 
   useEffect(() => {
     if (!profile?.is_event || !profile?.event_date) return;
-    const timer = setInterval(() => setCountdown(getCountdown(profile.event_date)), 1000);
+    const timer = setInterval(() => {
+      setCountdown(getCountdown(profile.event_date));
+    }, 1000);
     setCountdown(getCountdown(profile.event_date));
     return () => clearInterval(timer);
   }, [profile]);
 
   const handleLinkClick = async (link) => {
     if (!profile) return;
-    await supabase.from('profile_stats').insert([{ profile_id: profile.id, event_type: 'click', platform: link.platform }]);
+    await supabase.from('profile_stats').insert([{
+      profile_id: profile.id,
+      event_type: 'click',
+      platform: link.platform,
+    }]);
     window.open(link.url, '_blank', 'noopener,noreferrer');
   };
 
@@ -87,54 +91,87 @@ export default function PublicProfile() {
     </div>
   );
 
-  const { bg1, bg2 } = parseColors(profile.theme_color);
-  const enabledLinks = (profile.links || []).filter(l => l.enabled !== false);
+  const colors = parseColors(profile.theme_color);
+  const links = profile.links || [];
+  const enabledLinks = links.filter(l => l.enabled !== false);
+  const ec1 = profile.event_color1 || '#ff6b35';
+  const ec2 = profile.event_color2 || '#f7c948';
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10" style={{ background: `linear-gradient(160deg, ${bg1}, ${bg2})` }}>
-
+    <div
+      className="min-h-screen flex flex-col items-center px-4 py-10"
+      style={{ background: 'linear-gradient(160deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' }}
+    >
       {/* Avatar + Badge */}
       <div style={{ position: 'relative', marginBottom: '16px' }}>
         {profile.avatar_url ? (
-          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
             <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '112px', height: '112px', borderRadius: '24px', objectFit: 'cover', display: 'block' }} />
           </div>
         ) : (
-          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
             <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
               {profile.display_name ? profile.display_name[0].toUpperCase() : '?'}
             </div>
           </div>
         )}
         {profile.is_verified && (
-          <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', boxShadow: '0 4px 12px rgba(99,102,241,0.5)' }}>✓</div>
+          <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #22c55e)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: 'white', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
         )}
       </div>
 
       <h1 className="text-3xl font-black text-white uppercase tracking-wide mb-1 text-center">
         {profile.display_name}
-        {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#818cf8' }}>✓</span>}
+        {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#22c55e', fontWeight: '700' }}>✓</span>}
       </h1>
 
-      {profile.bio && <p className="text-white/80 text-sm text-center max-w-xs mb-2">{profile.bio}</p>}
-      {profile.username && <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginBottom: '16px' }}>@{profile.username}</p>}
+      {profile.bio && (
+        <p className="text-white/80 text-sm text-center max-w-xs mb-4">{profile.bio}</p>
+      )}
+
+      {profile.phone && (
+        <div className="flex items-center gap-2 text-white/70 text-sm mb-4">
+          <Phone className="w-4 h-4" />
+          {profile.phone}
+        </div>
+      )}
 
       {/* Mode Événement */}
       {profile.is_event && profile.event_name && (
         <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
-          <div style={{ background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'blink 1.5s infinite' }} />
+
+          {/* Image de l'événement */}
+          {profile.event_image_url && (
+            <div style={{ marginBottom: '12px', borderRadius: '20px', overflow: 'hidden' }}>
+              <img
+                src={profile.event_image_url}
+                alt={profile.event_name}
+                style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+          )}
+
+          {/* Carte événement */}
+          <div style={{ background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
               ÉVÉNEMENT
             </div>
             <div style={{ fontSize: '20px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>{profile.event_name}</div>
-            {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>📍 {profile.event_location}</div>}
+            {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
           </div>
 
+          {/* Compte à rebours — chiffres toujours orange fixe */}
           {countdown && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
-              {[{ v: countdown.days, l: 'Jours' }, { v: countdown.hours, l: 'Heures' }, { v: countdown.mins, l: 'Min' }, { v: countdown.secs, l: 'Sec' }].map(({ v, l }) => (
+              {[
+                { v: countdown.days, l: 'Jours' },
+                { v: countdown.hours, l: 'Heures' },
+                { v: countdown.mins, l: 'Min' },
+                { v: countdown.secs, l: 'Sec' },
+              ].map(({ v, l }) => (
                 <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {/* ✅ Orange fixe indépendant de la couleur de fond */}
                   <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
                   <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
                 </div>
@@ -142,13 +179,33 @@ export default function PublicProfile() {
             </div>
           )}
 
-          {/* Bouton Réserver */}
-          <button
-            onClick={() => setShowTicketShop(true)}
-            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.3px' }}
-          >
-            🎫 Réserver ma place →
-          </button>
+          {/* ✅ Détails de l'événement */}
+          {profile.event_description && (
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '14px 16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>
+                {profile.event_description}
+              </p>
+            </div>
+          )}
+
+          {/* Bouton Réserver ma place */}
+          {profile.event_booking_url && (
+            <a
+              href={profile.event_booking_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')',
+                borderRadius: '14px', padding: '14px 20px',
+                color: 'white', fontSize: '15px', fontWeight: '700',
+                textDecoration: 'none', width: '100%',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+              }}
+            >
+              🎟️ Réserver ma place
+            </a>
+          )}
         </div>
       )}
 
@@ -177,7 +234,12 @@ export default function PublicProfile() {
         })}
       </div>
 
-      <a href="https://wa.me/2250506458127" target="_blank" rel="noopener noreferrer" style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}>
+      <a
+        href="https://wa.me/2250506458127"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}
+      >
         <FaWhatsapp size={16} color="#25D366" />
         Contactez notre support
       </a>
@@ -186,17 +248,7 @@ export default function PublicProfile() {
         Tous droits réservés par Socialapp.
       </p>
 
-      {showTicketShop && (
-        <TicketShop
-          profileId={profile.id}
-          eventName={profile.event_name}
-          eventDate={profile.event_date}
-          eventLocation={profile.event_location}
-          onClose={() => setShowTicketShop(false)}
-        />
-      )}
-
-      <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
     </div>
   );
 }

@@ -28,8 +28,16 @@ export default function Home() {
       name: 'PRO',
       price: '15 000',
       period: '12 mois',
+      subtitle: 'Pour influenceur, restaurant, petite startup, etc...',
       color: '#ff6b35',
-      features: ['3 profils autorisés', '7 liens', '1 Carte PVC avec logo & QR code', 'Page publique', 'Support standard'],
+      features: [
+        '2 profils autorisés',
+        '7 liens',
+        '1 Carte NFC ou PVC simple (selon la disponibilité avec logo & QR code)',
+        'Recevez tous les 1 à 3 mois un rapport détaillé (vues, clics, liens performants)',
+        'Page publique',
+        'Support standard',
+      ],
       popular: true,
     },
     {
@@ -37,17 +45,25 @@ export default function Home() {
       price: '22 000',
       period: '12 mois',
       color: '#f7c948',
-      features: ['5 profils autorisés', '15 liens', '2 Cartes PVC avec logo & QR code', 'Personnalisation avancée', 'Support prioritaire'],
+      features: [
+        '2 profils autorisés',
+        '10 liens',
+        'Personnalisation du QR code avec votre logo',
+        '2 Cartes NFC ou PVC simple (selon la disponibilité avec logo & QR code)',
+        'Personnalisation avancée',
+        'Recevez tous les 1 à 3 mois un rapport détaillé (vues, clics, liens performants)',
+        'Support prioritaire',
+      ],
       popular: false,
     },
     {
       name: 'ÉVÉNEMENT',
       price: '5 000',
-      period: 'mois',
+      period: 'par évènement',
       color: '#22c55e',
       features: [
         'Compte à rebours en temps réel',
-        'Image & détails de l\'événement',
+        "Image & détails de l'événement",
         'Bouton "Réserver ma place"',
         'Couleurs personnalisables',
         'Partageable via QR code',
@@ -113,7 +129,6 @@ export default function Home() {
         }
       `}</style>
 
-      {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(6,4,18,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src={logo} alt="SocialApp" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
@@ -130,7 +145,6 @@ export default function Home() {
         </button>
       </nav>
 
-      {/* HERO */}
       <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '120px 40px 80px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,107,53,0.12), transparent)', pointerEvents: 'none' }} />
         <div className="hero-grid" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
@@ -190,7 +204,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* STATS */}
       <section style={{ padding: '60px 40px', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="stats-grid reveal" style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '32px', textAlign: 'center' }}>
           {[
@@ -207,7 +220,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
       <section id="how" style={{ padding: '100px 40px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -229,7 +241,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ✅ MODE ÉVÉNEMENT */}
       <section id="event" style={{ padding: '100px 40px', background: 'rgba(34,197,94,0.03)', borderTop: '1px solid rgba(34,197,94,0.1)', borderBottom: '1px solid rgba(34,197,94,0.1)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -246,7 +257,6 @@ export default function Home() {
           </div>
 
           <div className="event-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
-            {/* Phone mockup */}
             <div className="reveal d1" style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{ width: '220px', background: '#0f0a1e', borderRadius: '32px', border: '2px solid rgba(255,255,255,0.1)', overflow: 'hidden', padding: '16px', boxShadow: '0 40px 80px rgba(0,0,0,0.5)' }}>
                 <div style={{ textAlign: 'center', marginBottom: '12px' }}>
@@ -278,13 +288,12 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Features list */}
             <div className="reveal d2" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[
                 { icon: '⚡', title: 'Création simple et rapide', desc: 'Renseignez titre, description, visuel, date et lieu. Votre événement est prêt en quelques secondes.' },
-                { icon: '⏱', title: 'Compte à rebours en temps réel', desc: 'Un décompte live jours/heures/min/sec visible sur votre page publique jusqu\'au jour J.' },
+                { icon: '⏱', title: 'Compte à rebours en temps réel', desc: "Un décompte live jours/heures/min/sec visible sur votre page publique jusqu'au jour J." },
                 { icon: '🎨', title: 'Personnalisation complète', desc: 'Choisissez vos couleurs de fond parmi des presets ou créez les vôtres. Ajoutez une image attractive.' },
-                { icon: '🎟', title: 'Réservation en 1 clic', desc: 'Bouton direct vers votre lien de billetterie ou formulaire d\'inscription.' },
+                { icon: '🎟', title: 'Réservation en 1 clic', desc: "Bouton direct vers votre lien de billetterie ou formulaire d'inscription." },
                 { icon: '📊', title: 'Engagement et interaction', desc: 'Communiquez avec votre audience, partagez des mises à jour et créez une connexion forte.' },
               ].map((f, i) => (
                 <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
@@ -303,7 +312,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PRICING */}
       <section id="pricing" style={{ padding: '100px 40px', background: 'rgba(255,255,255,0.01)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -312,32 +320,57 @@ export default function Home() {
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '17px' }}>Choisissez l'offre qui correspond à vos besoins</p>
           </div>
+
           <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '20px', alignItems: 'start' }}>
             {plans.map((p, i) => (
-              <div key={i} className={`reveal card-hover d${i+1}`} style={{
-                background: p.event ? 'rgba(34,197,94,0.06)' : p.popular ? 'rgba(255,107,53,0.08)' : 'rgba(255,255,255,0.03)',
-                border: p.event ? '2px solid rgba(34,197,94,0.4)' : p.popular ? '2px solid rgba(255,107,53,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '24px', padding: '30px', position: 'relative'
-              }}>
+              <div
+                key={i}
+                className={`reveal card-hover d${i+1}`}
+                style={{
+                  background: p.event ? 'rgba(34,197,94,0.06)' : p.popular ? 'rgba(255,107,53,0.08)' : 'rgba(255,255,255,0.03)',
+                  border: p.event ? '2px solid rgba(34,197,94,0.4)' : p.popular ? '2px solid rgba(255,107,53,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '24px',
+                  padding: '30px',
+                  position: 'relative'
+                }}
+              >
                 {p.popular && (
                   <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '5px 18px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
                     ⭐ Plus populaire
                   </div>
                 )}
+
                 {p.event && (
                   <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderRadius: '100px', padding: '5px 18px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: 'white' }}>
                     🎉 Nouveau
                   </div>
                 )}
-                <div style={{ fontSize: '13px', fontWeight: '700', color: p.color, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>{p.name}</div>
+
+                <div style={{ fontSize: '13px', fontWeight: '700', color: p.color, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>
+                  {p.name}
+                </div>
+
                 {p.priceLabel && (
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>{p.priceLabel}</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>
+                    {p.priceLabel}
+                  </div>
                 )}
+
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '34px', fontWeight: '800', letterSpacing: '-1px' }}>{p.price}</span>
                   <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>FCFA</span>
                 </div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '24px' }}>/ {p.period}</div>
+
+                {p.subtitle && (
+                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginBottom: '12px', lineHeight: '1.4' }}>
+                    {p.subtitle}
+                  </div>
+                )}
+
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '24px' }}>
+                  / {p.period}
+                </div>
+
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px', marginBottom: '24px' }}>
                   {p.features.map((f, j) => (
                     <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>
@@ -346,16 +379,25 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+
                 <a
                   href="https://wa.me/2250506458127"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    display: 'block', width: '100%', padding: '13px',
+                    display: 'block',
+                    width: '100%',
+                    padding: '13px',
                     background: p.event ? 'linear-gradient(135deg,#22c55e,#16a34a)' : p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.07)',
                     border: (!p.popular && !p.event) ? '1px solid rgba(255,255,255,0.15)' : 'none',
-                    borderRadius: '12px', color: 'white', fontWeight: '700', fontSize: '14px',
-                    cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', textAlign: 'center',
+                    borderRadius: '12px',
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    textDecoration: 'none',
+                    textAlign: 'center',
                   }}
                 >
                   {p.event ? 'Promouvoir un événement' : 'Choisir ' + p.name}
@@ -363,13 +405,104 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          <div style={{
+            maxWidth: '1100px',
+            margin: '34px auto 0',
+            padding: '28px',
+            background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(247,201,72,0.06))',
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: '24px',
+            boxShadow: '0 18px 50px rgba(0,0,0,0.18)',
+            backdropFilter: 'blur(12px)'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 14px',
+              borderRadius: '999px',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              marginBottom: '18px'
+            }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b35, #f7c948)' }} />
+              <span style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>
+                Options complémentaires
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div style={{
+                display: 'flex',
+                gap: '14px',
+                alignItems: 'flex-start',
+                padding: '16px 18px',
+                borderRadius: '18px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)'
+              }}>
+                <div style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '12px',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(247,201,72,0.2))',
+                  color: '#f7c948',
+                  fontWeight: '800'
+                }}>
+                  1
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: '14px', lineHeight: '1.7' }}>
+                  Vous avez la possibilité de créer plusieurs profils distincts sous une même identité, idéal pour les entreprises disposant de plusieurs collaborateurs.
+                  <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.48)', fontSize: '13px' }}>
+                    (Option non incluse dans les offres tarifaires.)
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '14px',
+                alignItems: 'flex-start',
+                padding: '16px 18px',
+                borderRadius: '18px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)'
+              }}>
+                <div style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '12px',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(247,201,72,0.2))',
+                  color: '#f7c948',
+                  fontWeight: '800'
+                }}>
+                  2
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: '14px', lineHeight: '1.7' }}>
+                  Vous avez également la possibilité de faire imprimer, pour chaque membre de votre personnel, une carte NFC ou une carte PVC simple.
+                  <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.48)', fontSize: '13px' }}>
+                    (Option non incluse dans les offres tarifaires.)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <p className="reveal" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginTop: '28px' }}>
             Paiement via Mobile Money · Contactez-nous sur WhatsApp au +225 05 06 45 81 27
           </p>
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
       <section style={{ padding: '100px 40px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -396,7 +529,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA */}
       <section style={{ padding: '80px 40px' }}>
         <div className="reveal" style={{ maxWidth: '680px', margin: '0 auto', textAlign: 'center', background: 'linear-gradient(135deg,rgba(255,107,53,0.08),rgba(247,201,72,0.08))', border: '1px solid rgba(255,107,53,0.2)', borderRadius: '32px', padding: '60px 40px' }}>
           <img src={logo} alt="SocialApp" style={{ width: '72px', height: '72px', borderRadius: '18px', objectFit: 'cover', marginBottom: '24px' }} />
@@ -411,7 +543,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
       <section id="faq" style={{ padding: '80px 40px' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '56px' }}>
@@ -440,13 +571,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FOOTER */}
       <footer style={{ padding: '32px 40px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src={logo} alt="SocialApp" style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
           <span style={{ fontWeight: '700', fontSize: '15px' }}>SocialApp</span>
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Connect. Share. Discover. © 2026</p>
+        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Connect. Share. Discover. © 2026 SocialApp.</p>
+        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Tous Droits Réservés.</p>
         <div style={{ display: 'flex', gap: '12px' }}>
           <a href="https://wa.me/2250506458127" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 20px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}>
             WhatsApp

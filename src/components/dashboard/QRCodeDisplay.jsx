@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 import { FaYoutube, FaFacebook, FaWhatsapp, FaInstagram, FaTiktok, FaLinkedin, FaTwitter, FaGlobe } from 'react-icons/fa';
-import TicketShop from '../components/TicketShop';
 
 const PLATFORM_CONFIG = {
   youtube:     { bg: '#FF0000', label: 'YOUTUBE',     Icon: FaYoutube },

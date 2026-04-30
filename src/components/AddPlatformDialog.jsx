@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, Search } from 'lucide-react';
-import { PLATFORMS } from '../../config/platforms';
 
 export const PLATFORMS = {
+  // ── Réseaux sociaux ──────────────────────────────────────────────────────
   instagram: {
     label: 'Instagram', color: '#E1306C', category: 'Réseaux sociaux',
     placeholder: 'https://instagram.com/tonpseudo',
@@ -58,6 +58,8 @@ export const PLATFORMS = {
     placeholder: 'https://bere.al/tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#000000"/><text x="3.5" y="16.5" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="9" fill="white">Be</text><text x="11.5" y="16.5" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="9" fill="white">Real</text></svg>),
   },
+
+  // ── Messagerie ───────────────────────────────────────────────────────────
   whatsapp: {
     label: 'WhatsApp', color: '#25D366', category: 'Messagerie',
     placeholder: 'https://wa.me/33600000000',
@@ -78,6 +80,8 @@ export const PLATFORMS = {
     placeholder: 'https://signal.me/#p/tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#3A76F0"/><path d="M12 2a10 10 0 0 0-9.1 14.2L2 22l5.8-.9A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3.4.5.5-3.3-.2-.3A8 8 0 1 1 12 20z" fill="white"/><circle cx="8.5" cy="12" r="1.5" fill="white"/><circle cx="12" cy="12" r="1.5" fill="white"/><circle cx="15.5" cy="12" r="1.5" fill="white"/></svg>),
   },
+
+  // ── Musique ──────────────────────────────────────────────────────────────
   spotify: {
     label: 'Spotify', color: '#1DB954', category: 'Musique',
     placeholder: 'https://open.spotify.com/user/tonid',
@@ -103,6 +107,8 @@ export const PLATFORMS = {
     placeholder: 'https://soundcloud.com/tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FF5500"/><path d="M2 14.5c0 1.1.9 2 2 2H18.3c1.5 0 2.7-1.2 2.7-2.7 0-1.4-1.1-2.6-2.5-2.7-.1-2.2-1.9-4-4.2-4-.9 0-1.8.3-2.5.8-.7-1-1.8-1.6-3-1.6-2.1 0-3.8 1.7-3.8 3.8v.1C3 10.6 2 12.4 2 14.5z" fill="white"/></svg>),
   },
+
+  // ── Navigation ───────────────────────────────────────────────────────────
   googlemaps: {
     label: 'Google Maps', color: '#4285F4', category: 'Navigation',
     placeholder: 'https://maps.google.com/?q=tonlieu',
@@ -118,6 +124,8 @@ export const PLATFORMS = {
     placeholder: 'https://waze.com/ul?q=tonlieu',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#33CCFF"/><path d="M12 3C7.6 3 4 6.5 4 11c0 2.5 1.1 4.7 2.8 6.3l-.5 2.3 2.3-.6c1 .5 2.2.8 3.4.8 4.4 0 8-3.5 8-8s-3.6-8-8-8z" fill="white"/><circle cx="9.5" cy="10.5" r="1" fill="#33CCFF"/><circle cx="14.5" cy="10.5" r="1" fill="#33CCFF"/><path d="M9 13.5c.6.9 1.7 1.5 3 1.5s2.4-.6 3-1.5" stroke="#33CCFF" strokeWidth="1" fill="none" strokeLinecap="round"/></svg>),
   },
+
+  // ── Développement ────────────────────────────────────────────────────────
   github: {
     label: 'GitHub', color: '#181717', category: 'Développement',
     placeholder: 'https://github.com/tonpseudo',
@@ -133,6 +141,8 @@ export const PLATFORMS = {
     placeholder: 'https://producthunt.com/@tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#DA552F"/><path d="M13.5 9H10v2.5h3.5c.7 0 1.25-.56 1.25-1.25S14.2 9 13.5 9zM12 3a9 9 0 1 0 0 18A9 9 0 0 0 12 3zm1.5 10.5H10V16H8.5V8H13.5a2.75 2.75 0 0 1 0 5.5z" fill="white"/></svg>),
   },
+
+  // ── Créatif ──────────────────────────────────────────────────────────────
   behance: {
     label: 'Behance', color: '#1769FF', category: 'Créatif',
     placeholder: 'https://behance.net/tonpseudo',
@@ -143,6 +153,8 @@ export const PLATFORMS = {
     placeholder: 'https://dribbble.com/tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#EA4C89"/><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm6.6 4.7c1.3 1.6 2.1 3.6 2.2 5.8-3.2-.7-6.1-.6-8.6.3-.2-.5-.4-1-.7-1.5 3.1-1.2 5.5-2.8 7.1-4.6zM12 4c2.1 0 4 .8 5.5 2-1.5 1.7-3.7 3.1-6.5 4.2-1.4-2.5-2.8-4.3-3.8-5.4C8.5 4.3 10.2 4 12 4zM5.5 5.6c1 1 2.5 2.8 3.8 5.3C6.5 12 4.5 13.5 3.2 15.6A8 8 0 0 1 4 8c.4-.9 1-1.7 1.5-2.4zm-1.3 12c1.2-1.9 3-3.3 5.8-4.5.9 2.5 1.5 5 1.6 7.2A8 8 0 0 1 4.2 17.6zm9.5 3c-.2-2.1-.7-4.5-1.6-6.9.8-.1 1.7-.2 2.6-.1 1.9.1 3.7.6 5.1 1.4A8 8 0 0 1 13.7 20.6z" fill="white"/></svg>),
   },
+
+  // ── Business ─────────────────────────────────────────────────────────────
   shopify: {
     label: 'Shopify', color: '#96BF48', category: 'Business',
     placeholder: 'https://tonshop.myshopify.com',
@@ -150,9 +162,11 @@ export const PLATFORMS = {
   },
   etsy: {
     label: 'Etsy', color: '#F16521', category: 'Business',
-    placeholder: 'https://etsy.com/shop/tonom',
+    placeholder: 'https://etsy.com/shop/tonnom',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#F16521"/><path d="M8.5 5.5v12.8c0 .5.2.9.7 1.1l3.8 1.1v-.7l-3.5-1V5.5c0-.5-.2-.9-.5-1.1v7.4C8.7 11.3 8.5 10.8 8.5 10.5v-5zm7 0V8h-3.7V6.5c0-.5-.4-1-1-1h-1.3c.3.2.5.6.5 1V10h3.7v1.5h-3.7V15c0 .5.4 1 1 1h3.5v1.5h-4c-.7 0-1.3-.7-1.3-1.5V5c0-.8.6-1.5 1.3-1.5h5c.7 0 1 .3 1 1v1z" fill="white"/></svg>),
   },
+
+  // ── Contact ──────────────────────────────────────────────────────────────
   email: {
     label: 'Email', color: '#EA4335', category: 'Contact',
     placeholder: 'mailto:ton@email.com',
@@ -168,6 +182,8 @@ export const PLATFORMS = {
     placeholder: 'https://calendly.com/tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#0069FF"/><path d="M17 4h-1V3h-2v1H10V3H8v1H7C5.9 4 5 4.9 5 6v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H7V9h10v11z" fill="white"/><circle cx="12" cy="14" r="2" fill="white" opacity="0.7"/></svg>),
   },
+
+  // ── Paiement ─────────────────────────────────────────────────────────────
   paypal: {
     label: 'PayPal', color: '#00457C', category: 'Paiement',
     placeholder: 'https://paypal.me/tonpseudo',
@@ -178,6 +194,8 @@ export const PLATFORMS = {
     placeholder: 'https://cash.app/$tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#00D54B"/><path d="M13.5 8.5c.7.2 1.3.6 1.8 1.2l1.2-1.2c-.7-.9-1.8-1.5-3-1.7V5.5h-1.5V7c-1.8.3-3 1.5-3 3 0 1.8 1.2 2.7 3 3.3 1.5.5 2 .9 2 1.7 0 .7-.6 1.2-1.5 1.2-.9 0-1.7-.4-2.3-1.1l-1.2 1.2c.8.9 1.9 1.5 3.2 1.7V19h1.5v-1.8c2-.3 3.2-1.6 3.2-3.2 0-1.9-1.3-2.9-3.2-3.5-1.3-.4-1.8-.8-1.8-1.5 0-.6.5-1 1.3-1 .8 0 1.4.3 1.8.8l.5.7z" fill="white"/></svg>),
   },
+
+  // ── Autre ────────────────────────────────────────────────────────────────
   website: {
     label: 'Site web', color: '#6366F1', category: 'Autre',
     placeholder: 'https://tonsite.com',
@@ -190,7 +208,11 @@ export const PLATFORMS = {
   },
 };
 
-const CATEGORY_ORDER = ['Réseaux sociaux', 'Messagerie', 'Musique', 'Navigation', 'Développement', 'Créatif', 'Business', 'Contact', 'Paiement', 'Autre'];
+const CATEGORY_ORDER = [
+  'Réseaux sociaux', 'Messagerie', 'Musique',
+  'Navigation', 'Développement', 'Créatif',
+  'Business', 'Contact', 'Paiement', 'Autre',
+];
 
 export default function AddPlatformDialog({ open, onOpenChange, onSelect, existingPlatforms = [] }) {
   const [search, setSearch] = useState('');
@@ -223,14 +245,20 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
         <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <h2 style={{ color: 'white', fontSize: '16px', fontWeight: 700, margin: 0 }}>Ajouter une plateforme</h2>
-            <button onClick={() => onOpenChange(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button
+              onClick={() => onOpenChange(false)}
+              style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
               <X size={15} />
             </button>
           </div>
           <div style={{ position: 'relative' }}>
             <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)' }} />
             <input
-              autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher..."
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher..."
               style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '9px 12px 9px 34px', color: 'white', fontSize: '13px', outline: 'none' }}
             />
           </div>
@@ -239,7 +267,9 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
         <div style={{ overflowY: 'auto', flex: 1, padding: '12px 20px 20px' }}>
           {Object.entries(grouped).map(([cat, items]) => (
             <div key={cat} style={{ marginBottom: '16px' }}>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>{cat}</p>
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+                {cat}
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {items.map(([key, platform]) => (
                   <button

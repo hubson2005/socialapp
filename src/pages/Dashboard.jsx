@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight, CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck, Palette, ImagePlus, X } from "lucide-react";
@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { supabase } from '../supabase';
 import { useAuth } from '../AuthContext.jsx';
 
+
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import PlatformCard from "@/components/dashboard/PlatformCard";
 import AddPlatformDialog from "@/components/dashboard/AddPlatformDialog";
@@ -14,6 +15,7 @@ import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ProfilePreview from "@/components/dashboard/ProfilePreview";
+
 const db = {
   list: async () => {
     const { data, error } = await supabase.from('link_profiles').select('*').order('created_at', { ascending: true });
@@ -37,8 +39,10 @@ const db = {
   },
 };
 
+
 const LINKS_PER_PAGE = 10;
 const PROFILES_PER_PAGE = 10;
+
 
 const getExpiryStatus = (expiry_date) => {
   if (!expiry_date) return null;
@@ -50,6 +54,7 @@ const getExpiryStatus = (expiry_date) => {
   return { label: exp.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }), color: 'text-green-600', bg: 'bg-green-500/10' };
 };
 
+
 const parseColors = (themeColor) => {
   if (themeColor && themeColor.includes('|')) {
     const parts = themeColor.split('|');
@@ -57,6 +62,7 @@ const parseColors = (themeColor) => {
   }
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
+
 
 const EVENT_COLOR_PRESETS = [
   { label: 'Coucher de soleil', c1: '#ff6b35', c2: '#f7c948' },
@@ -67,7 +73,9 @@ const EVENT_COLOR_PRESETS = [
   { label: 'Rouge', c1: '#ef4444', c2: '#b91c1c' },
 ];
 
+
 const MAX_SIZE_KB = 2000;
+
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -82,10 +90,17 @@ export default function Dashboard() {
   const [profilesPage, setProfilesPage] = useState(0);
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
+  // ── Background image states ──────────────────────────────────────────────
+  const [uploadingBgImage, setUploadingBgImage] = useState(false);
+  const [showBgPanel, setShowBgPanel] = useState(false);
+  const bgPanelRef = useRef(null);
+
+
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['linkProfiles'],
     queryFn: db.list,
   });
+
 
   useEffect(() => {
     if (!profiles.length) return;
@@ -97,6 +112,20 @@ export default function Dashboard() {
     setActiveProfileId((prev) => prev || target.id);
   }, [profiles, activeProfileId]);
 
+
+  // Close bg panel on outside click
+  useEffect(() => {
+    if (!showBgPanel) return;
+    const handler = (e) => {
+      if (bgPanelRef.current && !bgPanelRef.current.contains(e.target)) {
+        setShowBgPanel(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showBgPanel]);
+
+
   const deleteMutation = useMutation({
     mutationFn: (id) => db.delete(id),
     onSuccess: (_, deletedId) => {
@@ -106,6 +135,7 @@ export default function Dashboard() {
       toast.success('Profil supprimé !');
     },
   });
+
 
   const createMutation = useMutation({
     mutationFn: (data) => db.create(data),
@@ -118,6 +148,7 @@ export default function Dashboard() {
     },
   });
 
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.update(id, data),
     onSuccess: () => {
@@ -127,6 +158,7 @@ export default function Dashboard() {
     },
     onError: (error) => { toast.error('Erreur : ' + error.message); },
   });
+
 
   const handleCreateProfile = () => {
     const expiry = new Date();
@@ -139,6 +171,7 @@ export default function Dashboard() {
     });
   };
 
+
   const handleSwitchProfile = useCallback((p) => {
     if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
     setActiveProfileId(p.id);
@@ -147,15 +180,18 @@ export default function Dashboard() {
     setLinksPage(0);
   }, [hasChanges]);
 
+
   const handleDeleteProfile = useCallback((p) => {
     if (!window.confirm('Supprimer le profil "' + p.display_name + '" ?')) return;
     deleteMutation.mutate(p.id);
   }, [deleteMutation]);
 
+
   const updateLocal = useCallback((updates) => {
     setLocalProfile((prev) => ({ ...prev, ...updates }));
     setHasChanges(true);
   }, []);
+
 
   const handleSave = () => {
     if (!localProfile || updateMutation.isPending || !hasChanges) return;
@@ -176,9 +212,11 @@ export default function Dashboard() {
       event_booking_url: localProfile.event_booking_url || null,
       event_description: localProfile.event_description || null,
       event_image_url: localProfile.event_image_url || null,
+      bg_image_url: localProfile.bg_image_url || null,
     };
     updateMutation.mutate({ id: localProfile.id, data });
   };
+
 
   const handleEventImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -219,16 +257,60 @@ export default function Dashboard() {
     }
   };
 
+
+  // ── Background image upload ───────────────────────────────────────────────
+  const handleBgImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const sizeKb = file.size / 1024;
+    if (sizeKb > MAX_SIZE_KB) {
+      toast.error('Image trop lourde ! Maximum ' + MAX_SIZE_KB + ' Ko (votre fichier : ' + Math.round(sizeKb) + ' Ko)');
+      return;
+    }
+
+    setUploadingBgImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = 'bg-' + localProfile.id + '-' + Date.now() + '.' + fileExt;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+      updateLocal({ bg_image_url: data.publicUrl });
+      toast.success('Image de fond appliquée !');
+      setShowBgPanel(false);
+    } catch (err) {
+      toast.error('Erreur upload : ' + err.message);
+    } finally {
+      setUploadingBgImage(false);
+    }
+  };
+
+  const handleRemoveBgImage = () => {
+    updateLocal({ bg_image_url: null });
+    setShowBgPanel(false);
+    toast.success('Image de fond supprimée');
+  };
+
+
   const handleAddPlatform = (platformKey) => {
     updateLocal({ links: [...(localProfile?.links || []), { id: crypto.randomUUID(), platform: platformKey, url: '', label: '', enabled: true }] });
     setShowAddDialog(false);
   };
+
 
   const handleUpdateLink = useCallback((index, updatedLink) => {
     const links = [...(localProfile?.links || [])];
     links[index] = updatedLink;
     updateLocal({ links });
   }, [localProfile, updateLocal]);
+
 
   const handleRemoveLink = useCallback((index) => {
     const links = (localProfile?.links || []).filter((_, i) => i !== index);
@@ -237,16 +319,19 @@ export default function Dashboard() {
     setLinksPage((p) => Math.min(p, maxPage));
   }, [localProfile, updateLocal]);
 
+
   const handleSignOut = async () => {
     if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Se déconnecter quand même ?')) return;
     await signOut();
   };
+
 
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Loader2 className="w-6 h-6 animate-spin text-primary" />
     </div>
   );
+
 
   if (!profiles.length && !createMutation.isPending) {
     return (
@@ -265,7 +350,9 @@ export default function Dashboard() {
     );
   }
 
+
   if (!localProfile) return null;
+
 
   const colors = parseColors(localProfile.theme_color);
   const links = localProfile.links || [];
@@ -274,10 +361,34 @@ export default function Dashboard() {
   const pagedProfiles = profiles.slice(profilesPage * PROFILES_PER_PAGE, (profilesPage + 1) * PROFILES_PER_PAGE);
   const totalProfilePages = Math.ceil(profiles.length / PROFILES_PER_PAGE);
 
+  // Compute background style
+  const bgStyle = localProfile.bg_image_url
+    ? {
+        backgroundImage: 'url(' + localProfile.bg_image_url + ')',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }
+    : {
+        background: 'linear-gradient(135deg, ' + colors.bg1 + ', ' + colors.bg2 + ')',
+      };
+
+
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' }}>
+    <div className="min-h-screen" style={bgStyle}>
+      {/* Overlay when bg image is set, for readability */}
+      {localProfile.bg_image_url && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 0,
+            background: 'linear-gradient(135deg, rgba(0,0,0,0.45), rgba(0,0,0,0.30))',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
       {/* Top Bar */}
-      <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10">
+      <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10" style={{ position: 'relative', zIndex: 20 }}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover' }} />
@@ -285,6 +396,169 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
+
+            {/* ── Background Image Button ──────────────────────────────── */}
+            <div ref={bgPanelRef} style={{ position: 'relative' }}>
+              <Button
+                onClick={() => setShowBgPanel((v) => !v)}
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10"
+                title="Image de fond"
+                style={
+                  localProfile.bg_image_url
+                    ? { borderColor: 'rgba(99,102,241,0.7)', background: 'rgba(99,102,241,0.2)' }
+                    : {}
+                }
+              >
+                <ImagePlus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Fond</span>
+                {localProfile.bg_image_url && (
+                  <span style={{
+                    width: '7px', height: '7px', borderRadius: '50%',
+                    background: '#6366f1', display: 'inline-block', marginLeft: '2px',
+                  }} />
+                )}
+              </Button>
+
+              {showBgPanel && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.15 }}
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+                    background: 'rgba(10,8,25,0.97)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: '18px',
+                    padding: '16px',
+                    minWidth: '260px',
+                    zIndex: 50,
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.15)',
+                  }}
+                >
+                  {/* Panel header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <ImagePlus size={13} color="white" />
+                      </div>
+                      <span style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>Image de fond</span>
+                    </div>
+                    <button
+                      onClick={() => setShowBgPanel(false)}
+                      style={{
+                        background: 'rgba(255,255,255,0.08)', border: 'none',
+                        cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
+                        width: '24px', height: '24px', borderRadius: '6px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+
+                  {/* Current image preview */}
+                  {localProfile.bg_image_url && (
+                    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <img
+                        src={localProfile.bg_image_url}
+                        alt="fond actuel"
+                        style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+                      />
+                      {/* Overlay label */}
+                      <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                        padding: '20px 10px 8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      }}>
+                        <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px' }}>Image actuelle</span>
+                        <button
+                          onClick={handleRemoveBgImage}
+                          style={{
+                            background: 'rgba(239,68,68,0.8)', border: 'none',
+                            cursor: 'pointer', borderRadius: '6px',
+                            padding: '3px 8px', display: 'flex', alignItems: 'center',
+                            gap: '4px', color: 'white', fontSize: '11px',
+                          }}
+                        >
+                          <Trash2 size={10} /> Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload zone */}
+                  <label
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      justifyContent: 'center', gap: '8px',
+                      background: uploadingBgImage ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.05)',
+                      border: '2px dashed ' + (uploadingBgImage ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.15)'),
+                      borderRadius: '12px', padding: '20px 16px',
+                      cursor: uploadingBgImage ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!uploadingBgImage) {
+                        e.currentTarget.style.background = 'rgba(99,102,241,0.08)';
+                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!uploadingBgImage) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                      }
+                    }}
+                  >
+                    {uploadingBgImage ? (
+                      <Loader2 size={22} color="rgba(99,102,241,0.8)" className="animate-spin" />
+                    ) : (
+                      <div style={{
+                        width: '40px', height: '40px', borderRadius: '10px',
+                        background: 'rgba(99,102,241,0.15)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <ImagePlus size={18} color="rgba(99,102,241,0.9)" />
+                      </div>
+                    )}
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: 500, margin: 0 }}>
+                        {uploadingBgImage
+                          ? 'Upload en cours...'
+                          : localProfile.bg_image_url
+                            ? 'Changer l\'image de fond'
+                            : 'Choisir une image de fond'}
+                      </p>
+                      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: '3px 0 0' }}>
+                        JPG, PNG, WebP — max 2 Mo
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleBgImageUpload}
+                      disabled={uploadingBgImage}
+                    />
+                  </label>
+
+                  {/* Tip */}
+                  <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px', marginTop: '10px', textAlign: 'center', lineHeight: 1.4 }}>
+                    L'image sera visible derrière tout le contenu du dashboard
+                  </p>
+                </motion.div>
+              )}
+            </div>
+            {/* ── End Background Image Button ──────────────────────────── */}
+
             <Button onClick={() => setShowPreview(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10">
               <Eye className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Aperçu</span>
@@ -301,13 +575,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="max-w-5xl mx-auto px-4 py-6" style={{ position: 'relative', zIndex: 1 }}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
 
-            {/* ✅ Username + Badge vérifié fusionnés */}
-            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 space-y-3">
+            {/* Username + Badge vérifié */}
+            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
               <div className="flex items-center gap-3">
                 <AtSign className="w-4 h-4 text-white/60 shrink-0" />
                 <span className="text-white/70 text-sm shrink-0">Username :</span>
@@ -331,7 +605,7 @@ export default function Dashboard() {
             </div>
 
             {/* Mode Événement */}
-            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 space-y-3">
+            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <CalendarDays className="w-4 h-4 text-white/60 shrink-0" />
@@ -427,7 +701,7 @@ export default function Dashboard() {
             </div>
 
             {links.length === 0 ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white/10 rounded-2xl border border-dashed border-white/20 p-10 text-center">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white/20 rounded-2xl border border-dashed border-white/30 p-10 text-center">
                 <p className="text-white/60 text-sm">Aucune plateforme ajoutée.<br />Cliquez sur <strong>Ajouter</strong> pour commencer.</p>
               </motion.div>
             ) : (
@@ -442,28 +716,28 @@ export default function Dashboard() {
                 </div>
                 {totalLinkPages > 1 && (
                   <div className="flex items-center justify-between pt-2">
-                    <button disabled={linksPage === 0} onClick={() => setLinksPage((p) => p - 1)} className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Précédent</button>
+                    <button disabled={linksPage === 0} onClick={() => setLinksPage((p) => p - 1)} className="px-3 py-1.5 rounded-lg bg-white/25 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Précédent</button>
                     <span className="text-white/50 text-xs">{linksPage + 1} / {totalLinkPages}</span>
-                    <button disabled={linksPage >= totalLinkPages - 1} onClick={() => setLinksPage((p) => p + 1)} className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Suivant</button>
+                    <button disabled={linksPage >= totalLinkPages - 1} onClick={() => setLinksPage((p) => p + 1)} className="px-3 py-1.5 rounded-lg bg-white/25 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Suivant</button>
                   </div>
                 )}
               </>
             )}
           </div>
 
-          {/* Right — ✅ Expiration déplacée ici */}
+          {/* Right column */}
           <div className="space-y-4">
             <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
-            
-            {/* ✅ Expiration entre QR code et Mes profils */}
-            <div className="bg-white/10 rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3">
+
+            {/* Expiration */}
+            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 flex items-center gap-3">
               <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
               <span className="text-white/70 text-sm shrink-0">Expiration :</span>
               <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
             </div>
 
             <StatsCard profileId={localProfile.id} />
-            
+
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>

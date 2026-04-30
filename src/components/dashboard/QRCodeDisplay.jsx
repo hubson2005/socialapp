@@ -1,201 +1,271 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { supabase } from '../supabase';
-import { ExternalLink } from 'lucide-react';
-import { FaYoutube, FaFacebook, FaWhatsapp, FaInstagram, FaTiktok, FaLinkedin, FaTwitter, FaGlobe } from 'react-icons/fa';
+import React, { useEffect, useRef, useState } from 'react';
+import { Download, QrCode, Copy, Check } from 'lucide-react';
 
-const PLATFORM_CONFIG = {
-  youtube:     { bg: '#FF0000', label: 'YOUTUBE',     Icon: FaYoutube },
-  facebook:    { bg: '#1877F2', label: 'FACEBOOK',    Icon: FaFacebook },
-  whatsapp:    { bg: '#25D366', label: 'WHATSAPP',    Icon: FaWhatsapp },
-  instagram:   { bg: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', label: 'INSTAGRAM', Icon: FaInstagram },
-  tiktok:      { bg: '#000000', label: 'TIKTOK',      Icon: FaTiktok },
-  linkedin:    { bg: '#0A66C2', label: 'LINKEDIN',    Icon: FaLinkedin },
-  twitter:     { bg: '#1DA1F2', label: 'TWITTER',     Icon: FaTwitter },
-  website:     { bg: '#6366f1', label: 'SITE WEB',    Icon: FaGlobe },
-  coinafrique: { bg: '#F97316', label: 'COINAFRIQUE', Icon: FaGlobe },
-};
+const BASE_URL = 'https://www.socialapp.work';
 
-const parseColors = (themeColor) => {
-  if (themeColor && themeColor.includes('|')) {
-    const [bg1, bg2] = themeColor.split('|');
-    return { bg1, bg2 };
-  }
-  return { bg1: '#0f0a1e', bg2: '#2d1b69' };
-};
+export default function QRCodeDisplay({ profileId, username, userLogo, userName }) {
+  const canvasRef = useRef(null);
+  const [qrLoaded, setQrLoaded] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-const getCountdown = (eventDate) => {
-  const diff = new Date(eventDate) - new Date();
-  if (diff <= 0) return null;
-  return {
-    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-    hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-    mins: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-    secs: Math.floor((diff % (1000 * 60)) / 1000),
-  };
-};
-
-export default function PublicProfile() {
-  const { username } = useParams();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [countdown, setCountdown] = useState(null);
-  const [showTicketShop, setShowTicketShop] = useState(false);
+  const profileUrl = username
+    ? `${BASE_URL}/profil/${username}`
+    : `${BASE_URL}/profil/${profileId}`;
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const { data, error } = await supabase
-        .from('link_profiles')
-        .select('*')
-        .eq('username', username)
-        .single();
-      if (error || !data) {
-        setNotFound(true);
-      } else {
-        setProfile(data);
-        await supabase.from('profile_stats').insert([{ profile_id: data.id, event_type: 'view' }]);
+    setQrLoaded(false);
+    loadQRCodeLibrary();
+  }, [profileId, username]);
+
+  const loadQRCodeLibrary = () => {
+    if (window.QRCode) {
+      renderQR();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    script.onload = renderQR;
+    script.onerror = () => console.error('Erreur chargement QRCode library');
+    document.head.appendChild(script);
+  };
+
+  const renderQR = () => {
+    const container = canvasRef.current;
+    if (!container || !window.QRCode) return;
+    
+    container.innerHTML = '';
+    
+    try {
+      new window.QRCode(container, {
+        text: profileUrl,
+        width: 200,
+        height: 200,
+        colorDark: '#060412',
+        colorLight: '#ffffff',
+        correctLevel: window.QRCode.CorrectLevel.H
+      });
+      
+      setQrLoaded(true);
+      
+      // Ajouter le logo au centre après un court délai
+      if (userLogo) {
+        setTimeout(() => addLogoToQR(), 100);
       }
-      setLoading(false);
-    };
-    fetchProfile();
-  }, [username]);
-
-  useEffect(() => {
-    if (!profile?.is_event || !profile?.event_date) return;
-    const timer = setInterval(() => setCountdown(getCountdown(profile.event_date)), 1000);
-    setCountdown(getCountdown(profile.event_date));
-    return () => clearInterval(timer);
-  }, [profile]);
-
-  const handleLinkClick = async (link) => {
-    if (!profile) return;
-    await supabase.from('profile_stats').insert([{ profile_id: profile.id, event_type: 'click', platform: link.platform }]);
-    window.open(link.url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      console.error('QR generation error:', e);
+    }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f0a1e' }}>
-      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  const addLogoToQR = () => {
+    const container = canvasRef.current;
+    if (!container) return;
 
-  if (notFound) return (
-    <div className="min-h-screen flex items-center justify-center text-white" style={{ background: '#0f0a1e' }}>
-      <p>Profil introuvable.</p>
-    </div>
-  );
+    const img = container.querySelector('img');
+    if (!img) return;
 
-  const { bg1, bg2 } = parseColors(profile.theme_color);
-  const enabledLinks = (profile.links || []).filter(l => l.enabled !== false);
+    // Créer un canvas pour combiner QR + logo
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 200;
+    canvas.height = 200;
+
+    const qrImage = new Image();
+    qrImage.crossOrigin = 'anonymous';
+    
+    qrImage.onload = () => {
+      // Dessiner le QR code
+      ctx.drawImage(qrImage, 0, 0, 200, 200);
+
+      // Créer l'image du logo
+      const logoImage = new Image();
+      logoImage.crossOrigin = 'anonymous';
+      
+      logoImage.onload = () => {
+        const logoSize = 50;
+        const x = (200 - logoSize) / 2;
+        const y = (200 - logoSize) / 2;
+
+        // Fond blanc arrondi derrière le logo
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+        ctx.beginPath();
+        roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10);
+        ctx.fill();
+
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+
+        // Border gradient
+        const gradient = ctx.createLinearGradient(x - 6, y - 6, x + logoSize + 6, y + logoSize + 6);
+        gradient.addColorStop(0, '#ff6b35');
+        gradient.addColorStop(1, '#f7c948');
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10);
+        ctx.stroke();
+
+        // Dessiner le logo avec clip path arrondi
+        ctx.save();
+        ctx.beginPath();
+        roundRect(ctx, x, y, logoSize, logoSize, 8);
+        ctx.clip();
+        ctx.drawImage(logoImage, x, y, logoSize, logoSize);
+        ctx.restore();
+
+        // Remplacer l'image originale
+        img.src = canvas.toDataURL('image/png');
+      };
+
+      logoImage.onerror = () => {
+        console.error('Erreur chargement logo');
+        // Garder le QR code sans logo
+        img.src = canvas.toDataURL('image/png');
+      };
+
+      logoImage.src = userLogo;
+    };
+
+    qrImage.src = img.src;
+  };
+
+  // Fonction helper pour dessiner des rectangles arrondis
+  const roundRect = (ctx, x, y, width, height, radius) => {
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  };
+
+  const handleDownload = () => {
+    const container = canvasRef.current;
+    if (!container) return;
+
+    const img = container.querySelector('img') || container.querySelector('canvas');
+    if (!img) return;
+
+    const link = document.createElement('a');
+    link.download = `qr-code-${username || userName || profileId}.png`;
+    link.href = img.tagName === 'CANVAS' ? img.toDataURL('image/png') : img.src;
+    link.click();
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Erreur copie:', err);
+      // Fallback pour les navigateurs qui ne supportent pas clipboard
+      const textArea = document.createElement('textarea');
+      textArea.value = profileUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-10" style={{ background: `linear-gradient(160deg, ${bg1}, ${bg2})` }}>
-
-      {/* Avatar + Badge */}
-      <div style={{ position: 'relative', marginBottom: '16px' }}>
-        {profile.avatar_url ? (
-          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-            <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '112px', height: '112px', borderRadius: '24px', objectFit: 'cover', display: 'block' }} />
-          </div>
-        ) : (
-          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-            <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
-              {profile.display_name ? profile.display_name[0].toUpperCase() : '?'}
-            </div>
-          </div>
-        )}
-        {profile.is_verified && (
-          <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', boxShadow: '0 4px 12px rgba(99,102,241,0.5)' }}>✓</div>
-        )}
+    <div className="bg-card rounded-2xl border border-border p-6 text-center">
+      {/* Header */}
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+          <QrCode className="w-4 h-4 text-primary" />
+        </div>
+        <h3 className="font-bold text-base">Mon QR Code</h3>
       </div>
 
-      <h1 className="text-3xl font-black text-white uppercase tracking-wide mb-1 text-center">
-        {profile.display_name}
-        {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#818cf8' }}>✓</span>}
-      </h1>
-
-      {profile.bio && <p className="text-white/80 text-sm text-center max-w-xs mb-2">{profile.bio}</p>}
-      {profile.username && <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginBottom: '16px' }}>@{profile.username}</p>}
-
-      {/* Mode Événement */}
-      {profile.is_event && profile.event_name && (
-        <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
-          <div style={{ background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'blink 1.5s infinite' }} />
-              ÉVÉNEMENT
-            </div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>{profile.event_name}</div>
-            {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>📍 {profile.event_location}</div>}
-          </div>
-
-          {countdown && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
-              {[{ v: countdown.days, l: 'Jours' }, { v: countdown.hours, l: 'Heures' }, { v: countdown.mins, l: 'Min' }, { v: countdown.secs, l: 'Sec' }].map(({ v, l }) => (
-                <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
-                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
-                </div>
-              ))}
+      {/* QR Code Container avec bordures arrondies */}
+      <div className="relative mb-4">
+        <div className="bg-white rounded-2xl p-5 shadow-lg inline-block">
+          {/* Loading spinner */}
+          {!qrLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           )}
-
-          {/* Bouton Réserver */}
-          <button
-            onClick={() => setShowTicketShop(true)}
-            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.3px' }}
-          >
-            🎫 Réserver ma place →
-          </button>
+          
+          {/* QR Code */}
+          <div 
+            ref={canvasRef} 
+            className="w-[200px] h-[200px] rounded-xl overflow-hidden mx-auto"
+            style={{ opacity: qrLoaded ? 1 : 0.3 }}
+          />
         </div>
-      )}
 
-      {/* Links */}
-      <div className="w-full max-w-sm space-y-3 mt-2">
-        {enabledLinks.map((link, i) => {
-          const key = link.platform ? link.platform.toLowerCase() : '';
-          const platform = PLATFORM_CONFIG[key] || { bg: '#6366f1', label: link.platform ? link.platform.toUpperCase() : 'LIEN', Icon: FaGlobe };
-          const { Icon } = platform;
-          return (
-            <button
-              key={i}
-              onClick={() => handleLinkClick(link)}
-              className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors"
-              style={{ border: 'none', cursor: 'pointer', textAlign: 'left' }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: platform.bg }}>
-                <Icon size={24} color="white" />
-              </div>
-              <span className="text-white font-bold tracking-widest text-sm flex-1">
-                {link.label || platform.label}
-              </span>
-              <ExternalLink className="w-4 h-4 text-white/50 shrink-0" />
-            </button>
-          );
-        })}
+        {/* Decorative corners */}
+        <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-xl" />
+        <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-xl" />
+        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-xl" />
+        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-xl" />
       </div>
 
-      <a href="https://wa.me/2250506458127" target="_blank" rel="noopener noreferrer" style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}>
-        <FaWhatsapp size={16} color="#25D366" />
-        Contactez notre support
-      </a>
+      {/* URL Display */}
+      <div className="bg-muted/50 rounded-xl px-4 py-3 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs">🔗</span>
+          <p className="text-xs text-muted-foreground truncate flex-1 font-mono">
+            {profileUrl}
+          </p>
+        </div>
+      </div>
 
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '20px' }}>
-        Tous droits réservés par Socialapp.
-      </p>
+      {/* Action Buttons */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Bouton Copier le lien */}
+        <button
+          onClick={handleCopyLink}
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+            copied
+              ? 'bg-green-500 text-white'
+              : 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground hover:from-primary hover:to-primary/90'
+          }`}
+        >
+          {copied ? (
+            <>
+              <Check className="w-4 h-4" />
+              <span>Copié !</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              <span>Copier</span>
+            </>
+          )}
+        </button>
 
-      {showTicketShop && (
-        <TicketShop
-          profileId={profile.id}
-          eventName={profile.event_name}
-          eventDate={profile.event_date}
-          eventLocation={profile.event_location}
-          onClose={() => setShowTicketShop(false)}
-        />
-      )}
+        {/* Bouton Télécharger */}
+        <button
+          onClick={handleDownload}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-sm font-semibold transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          <span>Télécharger</span>
+        </button>
+      </div>
 
-      <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+      {/* Info tip */}
+      <div className="mt-4 p-3 bg-primary/5 border border-primary/10 rounded-xl">
+        <div className="flex items-start gap-2">
+          <span className="text-base mt-0.5">💡</span>
+          <p className="text-xs text-muted-foreground text-left leading-relaxed">
+            <span className="font-semibold text-primary">Astuce :</span> Partagez ce QR code sur vos supports marketing pour booster votre visibilité !
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

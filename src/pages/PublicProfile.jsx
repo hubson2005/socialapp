@@ -2,19 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { ExternalLink, Phone } from 'lucide-react';
-import { FaYoutube, FaFacebook, FaWhatsapp, FaInstagram, FaTiktok, FaLinkedin, FaTwitter, FaGlobe } from 'react-icons/fa';
-
-const PLATFORM_CONFIG = {
-  youtube:     { bg: '#FF0000', label: 'YOUTUBE',     Icon: FaYoutube },
-  facebook:    { bg: '#1877F2', label: 'FACEBOOK',    Icon: FaFacebook },
-  whatsapp:    { bg: '#25D366', label: 'WHATSAPP',    Icon: FaWhatsapp },
-  instagram:   { bg: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', label: 'INSTAGRAM', Icon: FaInstagram },
-  tiktok:      { bg: '#000000', label: 'TIKTOK',      Icon: FaTiktok },
-  linkedin:    { bg: '#0A66C2', label: 'LINKEDIN',    Icon: FaLinkedin },
-  twitter:     { bg: '#1DA1F2', label: 'TWITTER',     Icon: FaTwitter },
-  website:     { bg: '#6366f1', label: 'SITE WEB',    Icon: FaGlobe },
-  coinafrique: { bg: '#F97316', label: 'COINAFRIQUE', Icon: FaGlobe },
-};
+import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
 
 const parseColors = (themeColor) => {
   if (themeColor && themeColor.includes('|')) {
@@ -69,6 +57,78 @@ export default function PublicProfile() {
     return () => clearInterval(timer);
   }, [profile]);
 
+  // Background universel : pseudo-element via une feuille de style dynamique
+  // Fonctionne sur tous Android/iOS/tablettes car on utilise un <div> fixed
+  // dont la taille est forcée en 100dvh / 100dvw (dynamic viewport units)
+  useEffect(() => {
+    if (!profile) return;
+
+    // Nettoyer ancien style injecté
+    const existing = document.getElementById('__bg_style__');
+    if (existing) existing.remove();
+
+    const html = document.documentElement;
+    const body = document.body;
+    html.style.background = 'transparent';
+    body.style.background = 'transparent';
+
+    // Injecter un <style> avec des CSS vars pour le fond
+    const style = document.createElement('style');
+    style.id = '__bg_style__';
+
+    if (profile.bg_image_url) {
+      style.textContent = `
+        #__bg_layer__ {
+          position: fixed;
+          top: 0; left: 0;
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          z-index: -10;
+          background-image: url(${JSON.stringify(profile.bg_image_url)});
+          background-size: cover;
+          background-position: center center;
+          background-repeat: no-repeat;
+          transform: translateZ(0);
+          will-change: transform;
+        }
+        #__bg_overlay__ {
+          position: fixed;
+          top: 0; left: 0;
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          z-index: -9;
+          background: linear-gradient(160deg, rgba(0,0,0,0.52), rgba(0,0,0,0.36));
+          pointer-events: none;
+        }
+      `;
+    } else {
+      const colors = parseColors(profile.theme_color);
+      style.textContent = `
+        #__bg_layer__ {
+          position: fixed;
+          top: 0; left: 0;
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          z-index: -10;
+          background: linear-gradient(160deg, ${colors.bg1}, ${colors.bg2});
+        }
+        #__bg_overlay__ { display: none; }
+      `;
+    }
+
+    document.head.appendChild(style);
+
+    return () => {
+      const s = document.getElementById('__bg_style__');
+      if (s) s.remove();
+      html.style.background = '';
+      body.style.background = '';
+    };
+  }, [profile]);
+
   const handleLinkClick = async (link) => {
     if (!profile) return;
     await supabase.from('profile_stats').insert([{
@@ -98,157 +158,160 @@ export default function PublicProfile() {
   const ec2 = profile.event_color2 || '#f7c948';
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center px-4 py-10"
-      style={{ background: 'linear-gradient(160deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' }}
-    >
-      {/* Avatar + Badge */}
-      <div style={{ position: 'relative', marginBottom: '16px' }}>
-        {profile.avatar_url ? (
-          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-            <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '112px', height: '112px', borderRadius: '24px', objectFit: 'cover', display: 'block' }} />
-          </div>
-        ) : (
-          <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-            <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
-              {profile.display_name ? profile.display_name[0].toUpperCase() : '?'}
+    <>
+      <style>{`
+        html, body { min-height: 100%; margin: 0; padding: 0; background: transparent; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      `}</style>
+
+      {/* Couche fond — gérée par le style injecté dans useEffect */}
+      <div id="__bg_layer__" />
+      <div id="__bg_overlay__" />
+
+      {/* Contenu scrollable */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        minHeight: '100vh',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '40px 16px',
+      }}>
+
+        {/* Avatar + Badge */}
+        <div style={{ position: 'relative', marginBottom: '16px' }}>
+          {profile.avatar_url ? (
+            <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+              <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '112px', height: '112px', borderRadius: '24px', objectFit: 'cover', display: 'block' }} />
             </div>
-          </div>
-        )}
-        {profile.is_verified && (
-          <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #22c55e)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: 'white', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
-        )}
-      </div>
-
-      <h1 className="text-3xl font-black text-white uppercase tracking-wide mb-1 text-center">
-        {profile.display_name}
-        {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#22c55e', fontWeight: '700' }}>✓</span>}
-      </h1>
-
-      {profile.bio && (
-        <p className="text-white/80 text-sm text-center max-w-xs mb-4">{profile.bio}</p>
-      )}
-
-      {profile.phone && (
-        <div className="flex items-center gap-2 text-white/70 text-sm mb-4">
-          <Phone className="w-4 h-4" />
-          {profile.phone}
-        </div>
-      )}
-
-      {/* Mode Événement */}
-      {profile.is_event && profile.event_name && (
-        <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
-
-          {/* Image de l'événement */}
-          {profile.event_image_url && (
-            <div style={{ marginBottom: '12px', borderRadius: '20px', overflow: 'hidden' }}>
-              <img
-                src={profile.event_image_url}
-                alt={profile.event_name}
-                style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
-          )}
-
-          {/* Carte événement */}
-          <div style={{ background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-              ÉVÉNEMENT
-            </div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>{profile.event_name}</div>
-            {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
-          </div>
-
-          {/* Compte à rebours — chiffres toujours orange fixe */}
-          {countdown && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
-              {[
-                { v: countdown.days, l: 'Jours' },
-                { v: countdown.hours, l: 'Heures' },
-                { v: countdown.mins, l: 'Min' },
-                { v: countdown.secs, l: 'Sec' },
-              ].map(({ v, l }) => (
-                <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  {/* ✅ Orange fixe indépendant de la couleur de fond */}
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
-                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ✅ Détails de l'événement */}
-          {profile.event_description && (
-            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '14px 16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>
-                {profile.event_description}
-              </p>
-            </div>
-          )}
-
-          {/* Bouton Réserver ma place */}
-          {profile.event_booking_url && (
-            <a
-              href={profile.event_booking_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')',
-                borderRadius: '14px', padding: '14px 20px',
-                color: 'white', fontSize: '15px', fontWeight: '700',
-                textDecoration: 'none', width: '100%',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-              }}
-            >
-              🎟️ Réserver ma place
-            </a>
-          )}
-        </div>
-      )}
-
-      {/* Links */}
-      <div className="w-full max-w-sm space-y-3 mt-2">
-        {enabledLinks.map((link, i) => {
-          const key = link.platform ? link.platform.toLowerCase() : '';
-          const platform = PLATFORM_CONFIG[key] || { bg: '#6366f1', label: link.platform ? link.platform.toUpperCase() : 'LIEN', Icon: FaGlobe };
-          const { Icon } = platform;
-          return (
-            <button
-              key={i}
-              onClick={() => handleLinkClick(link)}
-              className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors"
-              style={{ border: 'none', cursor: 'pointer', textAlign: 'left' }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: platform.bg }}>
-                <Icon size={24} color="white" />
+          ) : (
+            <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+              <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
+                {profile.display_name ? profile.display_name[0].toUpperCase() : '?'}
               </div>
-              <span className="text-white font-bold tracking-widest text-sm flex-1">
-                {link.label || platform.label}
-              </span>
-              <ExternalLink className="w-4 h-4 text-white/50 shrink-0" />
-            </button>
-          );
-        })}
+            </div>
+          )}
+          {profile.is_verified && (
+            <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #22c55e)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: 'white', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
+          )}
+        </div>
+
+        <h1 style={{ fontSize: '28px', fontWeight: '900', color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', textAlign: 'center' }}>
+          {profile.display_name}
+          {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#22c55e' }}>✓</span>}
+        </h1>
+
+        {profile.bio && (
+          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', textAlign: 'center', maxWidth: '300px', marginBottom: '16px' }}>{profile.bio}</p>
+        )}
+
+        {profile.phone && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '14px', marginBottom: '16px' }}>
+            <Phone size={16} />
+            {profile.phone}
+          </div>
+        )}
+
+        {/* Mode Événement */}
+        {profile.is_event && profile.event_name && (
+          <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
+
+            {profile.event_image_url && (
+              <div style={{ marginBottom: '12px', borderRadius: '20px', overflow: 'hidden' }}>
+                <img src={profile.event_image_url} alt={profile.event_name} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }} />
+              </div>
+            )}
+
+            <div style={{ background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+                ÉVÉNEMENT
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>{profile.event_name}</div>
+              {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
+            </div>
+
+            {countdown && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
+                {[
+                  { v: countdown.days, l: 'Jours' },
+                  { v: countdown.hours, l: 'Heures' },
+                  { v: countdown.mins, l: 'Min' },
+                  { v: countdown.secs, l: 'Sec' },
+                ].map(({ v, l }) => (
+                  <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
+                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {profile.event_description && (
+              <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '16px', padding: '14px 16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>
+                  {profile.event_description}
+                </p>
+              </div>
+            )}
+
+            {profile.event_booking_url && (
+              <a
+                href={profile.event_booking_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '14px', padding: '14px 20px', color: 'white', fontSize: '15px', fontWeight: '700', textDecoration: 'none', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
+              >
+                🎟️ Réserver ma place
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Links */}
+        <div style={{ width: '100%', maxWidth: '384px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+          {enabledLinks.map((link, i) => {
+            const key = link.platform ? link.platform.toLowerCase() : '';
+            const platform = PLATFORMS[key] || {
+              label: link.platform ? link.platform.toUpperCase() : 'LIEN',
+              color: '#6366f1',
+              icon: (
+                <svg viewBox="0 0 24 24" width="28" height="28"><rect width="24" height="24" rx="6" fill="#6366f1"/><circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/><ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/><line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/></svg>
+              ),
+            };
+            return (
+              <button
+                key={i}
+                onClick={() => handleLinkClick(link)}
+                style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%', padding: '14px 16px', borderRadius: '16px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', cursor: 'pointer', textAlign: 'left', boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+              >
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: platform.color }}>
+                  {platform.icon}
+                </div>
+                <span style={{ color: 'white', fontWeight: '700', letterSpacing: '0.08em', fontSize: '14px', flex: 1 }}>
+                  {link.label || platform.label}
+                </span>
+                <ExternalLink size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink: 0 }} />
+              </button>
+            );
+          })}
+        </div>
+
+        <a
+          href="https://wa.me/2250506458127"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}
+        >
+          <FaWhatsapp size={16} color="#25D366" />
+          Contactez notre support
+        </a>
+
+        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '20px' }}>
+          Tous droits réservés par Socialapp.
+        </p>
+
       </div>
-
-      <a
-        href="https://wa.me/2250506458127"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}
-      >
-        <FaWhatsapp size={16} color="#25D366" />
-        Contactez notre support
-      </a>
-
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '20px' }}>
-        Tous droits réservés par Socialapp.
-      </p>
-
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
-    </div>
+    </>
   );
 }

@@ -21,7 +21,7 @@ export default function Home() {
       price: '10 000',
       period: '11 mois',
       color: '#6366f1',
-      features: ['1 profil autorisé', '3 liens', 'QR code personnalisé', 'Page publique'],
+      features: ['1 profil autorisé', '3 liens', '1 mois offert au mode événement', 'Page publique'],
       popular: false,
     },
     {
@@ -34,7 +34,8 @@ export default function Home() {
         '2 profils autorisés',
         '7 liens',
         '1 Carte NFC ou PVC simple (selon la disponibilité avec logo & QR code)',
-        'Recevez tous les 1 à 3 mois un rapport détaillé (vues, clics, liens performants)',
+        'Recevez tous les 1 ou 3 mois un rapport détaillé (vues, clics, liens performants)',
+        '1 mois offert au mode événement',
         'Page publique',
         'Support standard',
       ],
@@ -51,7 +52,9 @@ export default function Home() {
         'Personnalisation du QR code avec votre logo',
         '2 Cartes NFC ou PVC simple (selon la disponibilité avec logo & QR code)',
         'Personnalisation avancée',
-        'Recevez tous les 1 à 3 mois un rapport détaillé (vues, clics, liens performants)',
+        'Recevez tous les 1 ou 3 mois un rapport détaillé (vues, clics, liens performants)',
+        '1 mois offert au mode événement',
+        'Page publique',
         'Support prioritaire',
       ],
       popular: false,
@@ -59,7 +62,7 @@ export default function Home() {
     {
       name: 'ÉVÉNEMENT',
       price: '5 000',
-      period: 'par évènement',
+      period: 'par événement',
       color: '#22c55e',
       features: [
         'Compte à rebours en temps réel',

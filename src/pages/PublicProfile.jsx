@@ -23,6 +23,12 @@ const getCountdown = (eventDate) => {
   return { days, hours, mins, secs };
 };
 
+const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill={color} xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2zm5.2 13.8c-.2.6-1.3 1.2-1.8 1.2-.5.1-1.1.1-1.6-.1-1-.3-2-1-2.8-1.8A9.2 9.2 0 0 1 9 12.4c-.2-.5-.2-1-.1-1.5.1-.5.6-1.1 1-1.3.3-.1.5-.1.7 0 .2 0 .3 0 .4.3l.6 1.6c0 .1.1.3 0 .4-.1.2-.2.3-.3.4-.1.1-.3.3-.2.5.4.7 1 1.3 1.7 1.7.2.1.4 0 .5-.1l.5-.6c.2-.2.4-.2.6-.1l1.4.7c.2.1.4.2.4.4.1.3 0 .8-.2 1z"/>
+  </svg>
+);
+
 export default function PublicProfile() {
   const { username } = useParams();
   const [profile, setProfile] = useState(null);
@@ -57,13 +63,9 @@ export default function PublicProfile() {
     return () => clearInterval(timer);
   }, [profile]);
 
-  // Background universel : pseudo-element via une feuille de style dynamique
-  // Fonctionne sur tous Android/iOS/tablettes car on utilise un <div> fixed
-  // dont la taille est forcée en 100dvh / 100dvw (dynamic viewport units)
   useEffect(() => {
     if (!profile) return;
 
-    // Nettoyer ancien style injecté
     const existing = document.getElementById('__bg_style__');
     if (existing) existing.remove();
 
@@ -72,7 +74,6 @@ export default function PublicProfile() {
     html.style.background = 'transparent';
     body.style.background = 'transparent';
 
-    // Injecter un <style> avec des CSS vars pour le fond
     const style = document.createElement('style');
     style.id = '__bg_style__';
 
@@ -164,11 +165,9 @@ export default function PublicProfile() {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
       `}</style>
 
-      {/* Couche fond — gérée par le style injecté dans useEffect */}
       <div id="__bg_layer__" />
       <div id="__bg_overlay__" />
 
-      {/* Contenu scrollable */}
       <div style={{
         position: 'relative', zIndex: 1,
         minHeight: '100vh',
@@ -266,7 +265,7 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Links */}
+        {/* ── Links ─────────────────────────────────────────────────── */}
         <div style={{ width: '100%', maxWidth: '384px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
           {enabledLinks.map((link, i) => {
             const key = link.platform ? link.platform.toLowerCase() : '';
@@ -274,36 +273,64 @@ export default function PublicProfile() {
               label: link.platform ? link.platform.toUpperCase() : 'LIEN',
               color: '#6366f1',
               icon: (
-                <svg viewBox="0 0 24 24" width="28" height="28"><rect width="24" height="24" rx="6" fill="#6366f1"/><circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/><ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/><line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/></svg>
+                <svg viewBox="0 0 24 24" width="28" height="28">
+                  <rect width="24" height="24" rx="6" fill="#6366f1"/>
+                  <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/>
+                  <ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/>
+                  <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/>
+                </svg>
               ),
             };
+
             return (
               <button
                 key={i}
                 onClick={() => handleLinkClick(link)}
-                style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%', padding: '14px 16px', borderRadius: '16px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', cursor: 'pointer', textAlign: 'left', boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '16px',
+                  width: '100%', padding: '14px 16px',
+                  borderRadius: '16px',
+                  background: 'rgba(255,255,255,0.25)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(8px)',
+                  cursor: 'pointer', textAlign: 'left',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                  transition: 'background 0.15s',
+                }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
               >
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: platform.color }}>
-                  {platform.icon}
+                {/* ✅ Icône SVG sans background: color — le SVG a déjà son propre fond */}
+                <div style={{
+                  width: '48px', height: '48px',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  {platform.icon
+                    ? React.cloneElement(platform.icon, { width: 48, height: 48 })
+                    : null}
                 </div>
+
                 <span style={{ color: 'white', fontWeight: '700', letterSpacing: '0.08em', fontSize: '14px', flex: 1 }}>
                   {link.label || platform.label}
                 </span>
+
                 <ExternalLink size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink: 0 }} />
               </button>
             );
           })}
         </div>
 
+        {/* Bouton support WhatsApp */}
         <a
           href="https://wa.me/2250506458127"
           target="_blank"
           rel="noopener noreferrer"
           style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}
         >
-          <FaWhatsapp size={16} color="#25D366" />
+          <WhatsAppIcon size={16} color="#25D366" />
           Contactez notre support
         </a>
 

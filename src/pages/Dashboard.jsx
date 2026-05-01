@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight,
   CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck,
-  Palette, ImagePlus, X, GripVertical, Layout, Bell, BellOff, Smartphone, Search,
+  Palette, ImagePlus, X, GripVertical, Layout, Bell, BellOff, Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -520,7 +520,7 @@ export default function Dashboard() {
   if (!profiles.length && !createMutation.isPending) return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-content: 'center'"><Sparkles className="w-8 h-8 text-white" /></div>
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center"><Sparkles className="w-8 h-8 text-white" /></div>
         <h1 className="text-2xl font-bold mb-2">Bienvenue !</h1>
         <p className="text-muted-foreground text-sm mb-6">Créez votre page de liens unique et partagez-la via un seul QR code.</p>
         <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2"><Plus className="w-4 h-4" /> Créer mon profil</Button>
@@ -534,16 +534,8 @@ export default function Dashboard() {
   const links = localProfile.links || [];
   const pagedLinks = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
-
-  // ── Profils filtrés par recherche ──────────────────────────────────────────
-  const filteredProfiles = profiles.filter(p =>
-    !profileSearch ||
-    (p.display_name || '').toLowerCase().includes(profileSearch.toLowerCase()) ||
-    (p.username || '').toLowerCase().includes(profileSearch.toLowerCase())
-  );
-  const pagedProfiles = filteredProfiles.slice(profilesPage * PROFILES_PER_PAGE, (profilesPage + 1) * PROFILES_PER_PAGE);
-  const totalProfilePages = Math.ceil(filteredProfiles.length / PROFILES_PER_PAGE);
-
+  const pagedProfiles = profiles.slice(profilesPage * PROFILES_PER_PAGE, (profilesPage + 1) * PROFILES_PER_PAGE);
+  const totalProfilePages = Math.ceil(profiles.length / PROFILES_PER_PAGE);
   const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
   const bgStyle = localProfile.bg_image_url
     ? { backgroundImage: 'url(' + localProfile.bg_image_url + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }
@@ -804,34 +796,35 @@ export default function Dashboard() {
             {/* Feature 4 — Geo stats */}
             <GeoStatsPanel profileId={localProfile.id} />
 
-            {/* ── Mes profils ───────────────────────────────────────── */}
+            {/* Mes profils */}
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>
                 <span className="text-xs text-muted-foreground">{profiles.length} profil{profiles.length > 1 ? 's' : ''}</span>
               </div>
 
-              {/* Barre de recherche — visible dès 2 profils */}
-              {profiles.length >= 2 && (
+              {/* ── Barre de recherche ── */}
+              {profiles.length > 2 && (
                 <div style={{ position: 'relative', marginBottom: '10px' }}>
-                  <Search
-                    size={13}
-                    style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-                    className="text-muted-foreground"
-                  />
+                  <svg
+                    width="13" height="13" viewBox="0 0 14 14" fill="none"
+                    style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, pointerEvents: 'none' }}
+                  >
+                    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
                   <input
                     type="text"
                     value={profileSearch}
                     onChange={(e) => { setProfileSearch(e.target.value); setProfilesPage(0); }}
                     placeholder="Rechercher un profil..."
-                    className="w-full text-xs rounded-xl border border-border bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground"
-                    style={{ padding: '7px 28px 7px 28px' }}
+                    className="w-full text-xs rounded-xl border border-border bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    style={{ padding: '7px 10px 7px 28px' }}
                   />
                   {profileSearch && (
                     <button
                       onClick={() => { setProfileSearch(''); setProfilesPage(0); }}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.4, display: 'flex', alignItems: 'center' }}
                     >
                       <X size={12} />
                     </button>
@@ -840,48 +833,76 @@ export default function Dashboard() {
               )}
 
               <div className="space-y-1">
-                {filteredProfiles.length === 0 ? (
-                  <p className="text-center text-xs text-muted-foreground py-4">
-                    Aucun résultat pour « {profileSearch} »
-                  </p>
-                ) : (
-                  pagedProfiles.map((p) => {
-                    const expiry = getExpiryStatus(p.expiry_date);
-                    const isActive = localProfile && localProfile.id === p.id;
-                    return (
-                      <div key={p.id} className="group flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-colors hover:bg-muted" onClick={() => handleSwitchProfile(p)}>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>
-                              {p.display_name || 'Sans nom'}
-                            </span>
-                            {p.is_verified && <span style={{ fontSize: '10px', color: '#22c55e' }}>✓</span>}
-                            {p.is_event && <span style={{ fontSize: '10px' }}>🎉</span>}
+                {(() => {
+                  const filtered = profiles.filter(p =>
+                    !profileSearch ||
+                    (p.display_name || '').toLowerCase().includes(profileSearch.toLowerCase()) ||
+                    (p.username || '').toLowerCase().includes(profileSearch.toLowerCase())
+                  );
+                  const paged = filtered.slice(profilesPage * PROFILES_PER_PAGE, (profilesPage + 1) * PROFILES_PER_PAGE);
+                  const totalPages = Math.ceil(filtered.length / PROFILES_PER_PAGE);
+
+                  if (filtered.length === 0) return (
+                    <p style={{ textAlign: 'center', fontSize: '12px', opacity: 0.4, padding: '10px 0' }}>
+                      Aucun résultat pour « {profileSearch} »
+                    </p>
+                  );
+
+                  return (
+                    <>
+                      {paged.map((p) => {
+                        const expiry = getExpiryStatus(p.expiry_date);
+                        const isActive = localProfile && localProfile.id === p.id;
+                        return (
+                          <div key={p.id} className="group flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-colors hover:bg-muted" onClick={() => handleSwitchProfile(p)}>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>
+                                  {p.display_name || 'Sans nom'}
+                                </span>
+                                {p.is_verified && <span style={{ fontSize: '10px', color: '#22c55e' }}>✓</span>}
+                                {p.is_event && <span style={{ fontSize: '10px' }}>🎉</span>}
+                              </div>
+                              {p.username && <span className="text-xs text-muted-foreground">@{p.username}</span>}
+                              {expiry && (
+                                <span className={'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md mt-0.5 ' + expiry.color + ' ' + expiry.bg}>
+                                  <CalendarClock className="w-3 h-3" />{expiry.label}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0 ml-2">
+                              {isActive && <Check className="w-3.5 h-3.5 text-primary" />}
+                              {profiles.length > 1 && (
+                                <button
+                                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          {p.username && <span className="text-xs text-muted-foreground">@{p.username}</span>}
-                          {expiry && (
-                            <span className={'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md mt-0.5 ' + expiry.color + ' ' + expiry.bg}>
-                              <CalendarClock className="w-3 h-3" />{expiry.label}
-                            </span>
-                          )}
+                        );
+                      })}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
+                          <button disabled={profilesPage === 0} onClick={() => setProfilesPage(p => p - 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                          <span className="text-xs text-muted-foreground">{profilesPage + 1} / {totalPages}</span>
+                          <button disabled={profilesPage >= totalPages - 1} onClick={() => setProfilesPage(p => p + 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          {isActive && <Check className="w-3.5 h-3.5 text-primary" />}
-                          {profiles.length > 1 && (
-                            <button
-                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all"
-                              onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
+              <button onClick={handleCreateProfile} className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors">
+                <Plus className="w-3.5 h-3.5" /> Nouveau profil
+              </button>
+            </div>
+                  );
+                })}
+              </div>
               {totalProfilePages > 1 && (
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                   <button disabled={profilesPage === 0} onClick={() => setProfilesPage(p => p - 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
@@ -889,7 +910,6 @@ export default function Dashboard() {
                   <button disabled={profilesPage >= totalProfilePages - 1} onClick={() => setProfilesPage(p => p + 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
                 </div>
               )}
-
               <button onClick={handleCreateProfile} className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Nouveau profil
               </button>

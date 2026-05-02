@@ -170,6 +170,9 @@ export default function PublicProfile() {
   const ec1 = profile.event_color1 || '#ff6b35';
   const ec2 = profile.event_color2 || '#f7c948';
 
+  // ✅ Le bloc événement s'affiche dès que is_event est actif,
+  //    même si event_name est vide — il suffit qu'il y ait au moins
+  //    une image, une date, un lieu, une description ou un lien.
   const hasEventContent =
     profile.is_event && (
       profile.event_image_url ||
@@ -231,10 +234,11 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Mode Événement */}
+        {/* ✅ Mode Événement — s'affiche même sans event_name */}
         {hasEventContent && (
           <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
 
+            {/* Image — toujours affichée si disponible */}
             {profile.event_image_url && (
               <div style={{ marginBottom: '12px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
                 <img
@@ -245,6 +249,7 @@ export default function PublicProfile() {
               </div>
             )}
 
+            {/* Bandeau nom/lieu — affiché seulement si event_name ou event_location */}
             {(profile.event_name || profile.event_location) && (
               <div style={{ background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
@@ -260,7 +265,7 @@ export default function PublicProfile() {
               </div>
             )}
 
-            {/* ── Compte à rebours — cases plus foncées ── */}
+            {/* Compte à rebours */}
             {countdown && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
                 {[
@@ -269,14 +274,7 @@ export default function PublicProfile() {
                   { v: countdown.mins, l: 'Min' },
                   { v: countdown.secs, l: 'Sec' },
                 ].map(({ v, l }) => (
-                  <div key={l} style={{
-                    background: 'rgba(0,0,0,0.40)',
-                    borderRadius: '12px',
-                    padding: '10px',
-                    textAlign: 'center',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    backdropFilter: 'blur(8px)',
-                  }}>
+                  <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
                     <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
                   </div>
@@ -284,6 +282,7 @@ export default function PublicProfile() {
               </div>
             )}
 
+            {/* Description */}
             {profile.event_description && (
               <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '16px', padding: '14px 16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>
@@ -292,6 +291,7 @@ export default function PublicProfile() {
               </div>
             )}
 
+            {/* Lien de réservation */}
             {profile.event_booking_url && (
               <a
                 href={profile.event_booking_url}

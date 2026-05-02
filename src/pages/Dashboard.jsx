@@ -19,9 +19,6 @@ import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ProfilePreview from "@/components/dashboard/ProfilePreview";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DB helpers
-// ─────────────────────────────────────────────────────────────────────────────
 const db = {
   list: async () => {
     const { data, error } = await supabase.from('link_profiles').select('*').order('created_at', { ascending: true });
@@ -76,9 +73,6 @@ const EVENT_COLOR_PRESETS = [
   { label: 'Rouge', c1: '#ef4444', c2: '#b91c1c' },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Feature 3 — Templates
-// ─────────────────────────────────────────────────────────────────────────────
 const PROFILE_TEMPLATES = [
   { id: 'artiste',   label: 'Artiste',    emoji: '🎨', desc: 'Instagram, TikTok, YouTube, Spotify',    theme_color: '#7c3aed|#db2777', bio: 'Artiste & créateur de contenu ✨',          platformKeys: ['instagram','tiktok','youtube','spotify'] },
   { id: 'business',  label: 'Business',   emoji: '💼', desc: 'LinkedIn, Calendly, Email, Site web',    theme_color: '#0f172a|#1e40af', bio: 'Entrepreneur & consultant professionnel',   platformKeys: ['linkedin','calendly','email','website'] },
@@ -88,9 +82,6 @@ const PROFILE_TEMPLATES = [
   { id: 'gaming',    label: 'Gaming',     emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',      theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together", platformKeys: ['twitch','discord','tiktok','youtube'] },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Feature 2 — Live Preview (mini phone)
-// ─────────────────────────────────────────────────────────────────────────────
 function MiniProfilePreview({ profile }) {
   const { bg1, bg2 } = parseColors(profile.theme_color);
   const links = (profile.links || []).filter(l => l.enabled !== false);
@@ -137,9 +128,6 @@ function MiniProfilePreview({ profile }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Feature 3 — Templates modal
-// ─────────────────────────────────────────────────────────────────────────────
 function TemplatesModal({ onClose, onApply }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={onClose}>
@@ -185,9 +173,6 @@ function TemplatesModal({ onClose, onApply }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Feature 4 — Carte géographique
-// ─────────────────────────────────────────────────────────────────────────────
 function GeoStatsPanel({ profileId }) {
   const [geoData, setGeoData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -249,9 +234,6 @@ function GeoStatsPanel({ profileId }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Feature 6 — Notifications Panel
-// ─────────────────────────────────────────────────────────────────────────────
 function NotificationPanel({ onClose, profile }) {
   const [permission, setPermission] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'denied');
   const [threshold, setThreshold] = useState(() => parseInt(localStorage.getItem('notif_threshold') || '10'));
@@ -307,9 +289,6 @@ function NotificationPanel({ onClose, profile }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Dashboard
-// ─────────────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
@@ -324,23 +303,14 @@ export default function Dashboard() {
   const [profileSearch, setProfileSearch] = useState('');
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
-  // Feature 1 — Drag & drop
   const dragIndexRef = useRef(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
-
-  // Feature 2 — Live preview
   const [showLivePreview, setShowLivePreview] = useState(false);
-
-  // Feature 3 — Templates
   const [showTemplates, setShowTemplates] = useState(false);
-
-  // Feature 6 — Notifications
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const notifPanelRef = useRef(null);
   const notifCountRef = useRef(0);
   const notifThreshold = parseInt(localStorage.getItem('notif_threshold') || '10');
-
-  // Background image
   const [uploadingBgImage, setUploadingBgImage] = useState(false);
   const [showBgPanel, setShowBgPanel] = useState(false);
   const bgPanelRef = useRef(null);
@@ -363,7 +333,6 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Feature 6 — Real-time push notifications
   useEffect(() => {
     if (!localProfile?.id || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const channel = supabase.channel('notif-' + localProfile.id)
@@ -434,7 +403,6 @@ export default function Dashboard() {
     setHasChanges(true);
   }, []);
 
-  // Feature 3 — Apply template
   const applyTemplate = useCallback((template) => {
     const newLinks = template.platformKeys.map(key => ({ id: crypto.randomUUID(), platform: key, url: '', label: '', enabled: true }));
     updateLocal({ theme_color: template.theme_color, bio: template.bio, links: newLinks, is_event: template.is_event || false, event_color1: template.event_color1 || null, event_color2: template.event_color2 || null });
@@ -454,10 +422,10 @@ export default function Dashboard() {
       event_color2: localProfile.event_color2 || null, event_booking_url: localProfile.event_booking_url || null,
       event_description: localProfile.event_description || null, event_image_url: localProfile.event_image_url || null,
       bg_image_url: localProfile.bg_image_url || null,
+      phone_number: localProfile.phone_number || null,
     }});
   };
 
-  // Feature 1 — Drag & drop handlers
   const handleDragStart = useCallback((e, idx) => {
     dragIndexRef.current = idx;
     e.dataTransfer.effectAllowed = 'move';
@@ -520,7 +488,7 @@ export default function Dashboard() {
   if (!profiles.length && !createMutation.isPending) return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-content: 'center'"><Sparkles className="w-8 h-8 text-white" /></div>
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center"><Sparkles className="w-8 h-8 text-white" /></div>
         <h1 className="text-2xl font-bold mb-2">Bienvenue !</h1>
         <p className="text-muted-foreground text-sm mb-6">Créez votre page de liens unique et partagez-la via un seul QR code.</p>
         <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2"><Plus className="w-4 h-4" /> Créer mon profil</Button>
@@ -535,7 +503,6 @@ export default function Dashboard() {
   const pagedLinks = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
 
-  // ── Profils filtrés par recherche ──────────────────────────────────────────
   const filteredProfiles = profiles.filter(p =>
     !profileSearch ||
     (p.display_name || '').toLowerCase().includes(profileSearch.toLowerCase()) ||
@@ -562,21 +529,15 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
-
-            {/* Templates */}
             <Button onClick={() => setShowTemplates(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title="Templates">
               <Layout className="w-3.5 h-3.5" /><span className="hidden sm:inline">Templates</span>
             </Button>
-
-            {/* Live Preview */}
             <Button onClick={() => setShowLivePreview(v => !v)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title="Aperçu live"
               style={showLivePreview ? { borderColor: 'rgba(99,102,241,0.7)', background: 'rgba(99,102,241,0.2)' } : {}}>
               <Smartphone className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Live</span>
               {showLivePreview && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />}
             </Button>
-
-            {/* Background */}
             <div ref={bgPanelRef} style={{ position: 'relative' }}>
               <Button onClick={() => setShowBgPanel(v => !v)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title="Image de fond"
                 style={localProfile.bg_image_url ? { borderColor: 'rgba(99,102,241,0.7)', background: 'rgba(99,102,241,0.2)' } : {}}>
@@ -615,8 +576,6 @@ export default function Dashboard() {
                 </motion.div>
               )}
             </div>
-
-            {/* Notifications */}
             <div ref={notifPanelRef} style={{ position: 'relative' }}>
               <Button onClick={() => setShowNotifPanel(v => !v)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title="Notifications"
                 style={notifGranted ? { borderColor: 'rgba(34,197,94,0.5)', background: 'rgba(34,197,94,0.1)' } : {}}>
@@ -626,7 +585,6 @@ export default function Dashboard() {
                 {showNotifPanel && <NotificationPanel onClose={() => setShowNotifPanel(false)} profile={localProfile} />}
               </AnimatePresence>
             </div>
-
             <Button onClick={() => setShowPreview(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10">
               <Eye className="w-3.5 h-3.5" /><span className="hidden sm:inline">Aperçu</span>
             </Button>
@@ -641,7 +599,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Feature 2 — Live preview phone */}
       <AnimatePresence>
         {showLivePreview && (
           <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ duration: 0.25, ease: 'easeOut' }}
@@ -665,45 +622,17 @@ export default function Dashboard() {
           {/* Left column */}
           <div className="lg:col-span-2 space-y-4">
 
-            {/* ── ProfileHeader with badge toggle overlaid top-right ── */}
-            {/* MODIFIED: badge toggle moved here from the username card below */}
-            <div style={{ position: 'relative' }}>
-              <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
-              <button
-                onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
-                title={localProfile.is_verified ? 'Badge vérifié actif — cliquer pour désactiver' : 'Activer le badge vérifié'}
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  zIndex: 10,
-                  width: '44px',
-                  height: '24px',
-                  borderRadius: '100px',
-                  background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.15)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'background 0.3s',
-                  flexShrink: 0,
-                }}
-              >
-                <div style={{
-                  width: '18px',
-                  height: '18px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  position: 'absolute',
-                  top: '3px',
-                  left: localProfile.is_verified ? '23px' : '3px',
-                  transition: 'left 0.3s',
-                }} />
-              </button>
-            </div>
+            {/* ✅ Carte du haut : ProfileHeader + Username + Badge vérification fusionnés */}
+            <div className="bg-white/20 rounded-2xl border border-white/20 overflow-hidden">
 
-            {/* ── Username — entre le nom de profil et la bio ── */}
-            {/* MODIFIED: username moved here, badge section removed from this card */}
-            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3">
-              <div className="flex items-center gap-3">
+              {/* ProfileHeader occupe le haut de la carte */}
+              <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
+
+              {/* ── Séparateur ── */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0 16px' }} />
+
+              {/* ── Username intégré dans la même carte ── */}
+              <div className="flex items-center gap-3 px-4 py-3">
                 <AtSign className="w-4 h-4 text-white/60 shrink-0" />
                 <span className="text-white/70 text-sm shrink-0">Username :</span>
                 <input
@@ -713,6 +642,36 @@ export default function Dashboard() {
                   placeholder="ex: hubson"
                   className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30"
                 />
+              </div>
+
+              {/* ── Séparateur ── */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0 16px' }} />
+
+              {/* ── Badge vérifié intégré dans la même carte ── */}
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
+                  <div>
+                    <span className="text-white/70 text-sm">Badge vérifié</span>
+                    <p className="text-white/40 text-xs">Affiche ✓ vert sur votre profil public</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
+                  style={{
+                    width: '44px', height: '24px', borderRadius: '100px',
+                    background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)',
+                    border: 'none', cursor: 'pointer', position: 'relative',
+                    transition: 'background 0.3s', flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                    position: 'absolute', top: '3px',
+                    left: localProfile.is_verified ? '23px' : '3px',
+                    transition: 'left 0.3s',
+                  }} />
+                </button>
               </div>
             </div>
 
@@ -773,7 +732,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Feature 1 — Drag & drop platforms */}
+            {/* Plateformes */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-base text-white">Mes plateformes</h2>
@@ -829,78 +788,29 @@ export default function Dashboard() {
               <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
             </div>
             <StatsCard profileId={localProfile.id} />
-
-            {/* Feature 4 — Geo stats */}
             <GeoStatsPanel profileId={localProfile.id} />
 
-            {/* ── Mes profils ───────────────────────────────────────── */}
+            {/* Mes profils */}
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>
                 <span className="text-xs text-muted-foreground">{profiles.length} profil{profiles.length > 1 ? 's' : ''}</span>
               </div>
 
-              {/* ✅ Barre de recherche — Glassmorphism — visible dès le 1er profil */}
               {profiles.length >= 1 && (
                 <div style={{ position: 'relative', marginBottom: '10px' }}>
-                  <Search
-                    size={13}
-                    style={{
-                      position: 'absolute',
-                      left: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      pointerEvents: 'none',
-                      color: 'rgba(255,255,255,0.4)',
-                    }}
-                  />
+                  <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'rgba(255,255,255,0.4)' }} />
                   <input
                     type="text"
                     value={profileSearch}
                     onChange={(e) => { setProfileSearch(e.target.value); setProfilesPage(0); }}
                     placeholder="Rechercher un profil..."
-                    style={{
-                      width: '100%',
-                      padding: '8px 30px 8px 30px',
-                      fontSize: '12px',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      background: 'rgba(255,255,255,0.08)',
-                      backdropFilter: 'blur(10px)',
-                      WebkitBackdropFilter: 'blur(10px)',
-                      color: 'white',
-                      outline: 'none',
-                      transition: 'border 0.2s, background 0.2s',
-                      boxSizing: 'border-box',
-                    }}
-                    onFocus={e => {
-                      e.currentTarget.style.border = '1px solid rgba(99,102,241,0.6)';
-                      e.currentTarget.style.background = 'rgba(99,102,241,0.12)';
-                    }}
-                    onBlur={e => {
-                      e.currentTarget.style.border = '1px solid rgba(255,255,255,0.15)';
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                    }}
+                    style={{ width: '100%', padding: '8px 30px 8px 30px', fontSize: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: 'white', outline: 'none', transition: 'border 0.2s, background 0.2s', boxSizing: 'border-box' }}
+                    onFocus={e => { e.currentTarget.style.border = '1px solid rgba(99,102,241,0.6)'; e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; }}
+                    onBlur={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
                   />
                   {profileSearch && (
-                    <button
-                      onClick={() => { setProfileSearch(''); setProfilesPage(0); }}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '6px',
-                        padding: '3px',
-                        color: 'rgba(255,255,255,0.6)',
-                      }}
-                    >
+                    <button onClick={() => { setProfileSearch(''); setProfilesPage(0); }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', padding: '3px', color: 'rgba(255,255,255,0.6)' }}>
                       <X size={11} />
                     </button>
                   )}
@@ -909,9 +819,7 @@ export default function Dashboard() {
 
               <div className="space-y-1">
                 {filteredProfiles.length === 0 ? (
-                  <p className="text-center text-xs text-muted-foreground py-4">
-                    Aucun résultat pour « {profileSearch} »
-                  </p>
+                  <p className="text-center text-xs text-muted-foreground py-4">Aucun résultat pour « {profileSearch} »</p>
                 ) : (
                   pagedProfiles.map((p) => {
                     const expiry = getExpiryStatus(p.expiry_date);
@@ -920,9 +828,7 @@ export default function Dashboard() {
                       <div key={p.id} className="group flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-colors hover:bg-muted" onClick={() => handleSwitchProfile(p)}>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1">
-                            <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>
-                              {p.display_name || 'Sans nom'}
-                            </span>
+                            <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>{p.display_name || 'Sans nom'}</span>
                             {p.is_verified && <span style={{ fontSize: '10px', color: '#22c55e' }}>✓</span>}
                             {p.is_event && <span style={{ fontSize: '10px' }}>🎉</span>}
                           </div>
@@ -936,10 +842,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-1 shrink-0 ml-2">
                           {isActive && <Check className="w-3.5 h-3.5 text-primary" />}
                           {profiles.length > 1 && (
-                            <button
-                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all"
-                              onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}
-                            >
+                            <button className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}>
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}

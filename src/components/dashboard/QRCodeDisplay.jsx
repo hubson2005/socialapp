@@ -7,6 +7,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
   const canvasRef = useRef(null);
   const [qrLoaded, setQrLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const profileUrl = username
     ? `${BASE_URL}/profil/${username}`
@@ -18,10 +19,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
   }, [profileId, username]);
 
   const loadQRCodeLibrary = () => {
-    if (window.QRCode) {
-      renderQR();
-      return;
-    }
+    if (window.QRCode) { renderQR(); return; }
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
     script.onload = renderQR;
@@ -32,9 +30,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
   const renderQR = () => {
     const container = canvasRef.current;
     if (!container || !window.QRCode) return;
-    
     container.innerHTML = '';
-    
     try {
       new window.QRCode(container, {
         text: profileUrl,
@@ -42,15 +38,10 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
         height: 200,
         colorDark: '#060412',
         colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.H
+        correctLevel: window.QRCode.CorrectLevel.H,
       });
-      
       setQrLoaded(true);
-      
-      // Ajouter le logo au centre après un court délai
-      if (userLogo) {
-        setTimeout(() => addLogoToQR(), 100);
-      }
+      if (userLogo) setTimeout(() => addLogoToQR(), 100);
     } catch (e) {
       console.error('QR generation error:', e);
     }
@@ -59,80 +50,41 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
   const addLogoToQR = () => {
     const container = canvasRef.current;
     if (!container) return;
-
     const img = container.querySelector('img');
     if (!img) return;
-
-    // Créer un canvas pour combiner QR + logo
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = 200;
-    canvas.height = 200;
-
+    canvas.width = 200; canvas.height = 200;
     const qrImage = new Image();
     qrImage.crossOrigin = 'anonymous';
-    
     qrImage.onload = () => {
-      // Dessiner le QR code
       ctx.drawImage(qrImage, 0, 0, 200, 200);
-
-      // Créer l'image du logo
       const logoImage = new Image();
       logoImage.crossOrigin = 'anonymous';
-      
       logoImage.onload = () => {
         const logoSize = 50;
         const x = (200 - logoSize) / 2;
         const y = (200 - logoSize) / 2;
-
-        // Fond blanc arrondi derrière le logo
         ctx.fillStyle = '#FFFFFF';
-        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 2;
-        ctx.beginPath();
-        roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10);
-        ctx.fill();
-
-        // Reset shadow
+        ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 8;
+        ctx.beginPath(); roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10); ctx.fill();
         ctx.shadowColor = 'transparent';
-
-        // Border gradient
         const gradient = ctx.createLinearGradient(x - 6, y - 6, x + logoSize + 6, y + logoSize + 6);
-        gradient.addColorStop(0, '#ff6b35');
-        gradient.addColorStop(1, '#f7c948');
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10);
-        ctx.stroke();
-
-        // Dessiner le logo avec clip path arrondi
+        gradient.addColorStop(0, '#ff6b35'); gradient.addColorStop(1, '#f7c948');
+        ctx.strokeStyle = gradient; ctx.lineWidth = 2;
+        ctx.beginPath(); roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10); ctx.stroke();
         ctx.save();
-        ctx.beginPath();
-        roundRect(ctx, x, y, logoSize, logoSize, 8);
-        ctx.clip();
+        ctx.beginPath(); roundRect(ctx, x, y, logoSize, logoSize, 8); ctx.clip();
         ctx.drawImage(logoImage, x, y, logoSize, logoSize);
         ctx.restore();
-
-        // Remplacer l'image originale
         img.src = canvas.toDataURL('image/png');
       };
-
-      logoImage.onerror = () => {
-        console.error('Erreur chargement logo');
-        // Garder le QR code sans logo
-        img.src = canvas.toDataURL('image/png');
-      };
-
+      logoImage.onerror = () => { img.src = canvas.toDataURL('image/png'); };
       logoImage.src = userLogo;
     };
-
     qrImage.src = img.src;
   };
 
-  // Fonction helper pour dessiner des rectangles arrondis
   const roundRect = (ctx, x, y, width, height, radius) => {
     ctx.moveTo(x + radius, y);
     ctx.lineTo(x + width - radius, y);
@@ -146,121 +98,107 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
     ctx.closePath();
   };
 
-  const handleDownload = () => {
+  // ── Download fix mobile ────────────────────────────────────────────────────
+  const handleDownload = async () => {
     const container = canvasRef.current;
     if (!container) return;
-
     const img = container.querySelector('img') || container.querySelector('canvas');
     if (!img) return;
 
-    const link = document.createElement('a');
-    link.download = `qr-code-${username || userName || profileId}.png`;
-    link.href = img.tagName === 'CANVAS' ? img.toDataURL('image/png') : img.src;
-    link.click();
+    setDownloading(true);
+    try {
+      const dataUrl = img.tagName === 'CANVAS' ? img.toDataURL('image/png') : img.src;
+
+      // Convertir en Blob pour contourner le bug mobile (index.html)
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `qr-${username || profileId}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (err) {
+      console.error('Erreur téléchargement:', err);
+      // Fallback : ouvrir dans un nouvel onglet
+      const img2 = container.querySelector('img');
+      if (img2) window.open(img2.src, '_blank');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(profileUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Erreur copie:', err);
-      // Fallback pour les navigateurs qui ne supportent pas clipboard
-      const textArea = document.createElement('textarea');
-      textArea.value = profileUrl;
-      document.body.appendChild(textArea);
-      textArea.select();
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = profileUrl;
+      document.body.appendChild(ta);
+      ta.select();
       document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      document.body.removeChild(ta);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-6 text-center">
-      {/* Header */}
-      <div className="flex items-center justify-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-          <QrCode className="w-4 h-4 text-primary" />
+    <div className="bg-card rounded-2xl border border-border p-4 text-center">
+      <div className="flex items-center justify-center gap-2 mb-3">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+          <QrCode className="w-3.5 h-3.5 text-primary" />
         </div>
-        <h3 className="font-bold text-base">Mon QR Code</h3>
+        <h3 className="font-bold text-sm">Mon QR Code</h3>
       </div>
 
-      {/* QR Code Container avec bordures arrondies */}
-      <div className="relative mb-4">
-        <div className="bg-white rounded-2xl p-5 shadow-lg inline-block">
-          {/* Loading spinner */}
+      <div className="relative mb-3">
+        <div className="bg-white rounded-2xl p-4 shadow-lg inline-block">
           {!qrLoaded && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           )}
-          
-          {/* QR Code */}
-          <div 
-            ref={canvasRef} 
-            className="w-[200px] h-[200px] rounded-xl overflow-hidden mx-auto"
-            style={{ opacity: qrLoaded ? 1 : 0.3 }}
-          />
+          <div ref={canvasRef} className="w-[160px] h-[160px] rounded-xl overflow-hidden mx-auto" style={{ opacity: qrLoaded ? 1 : 0.3 }} />
         </div>
-
-        {/* Decorative corners */}
-        <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-xl" />
-        <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-xl" />
-        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-xl" />
-        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-xl" />
+        <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-primary rounded-tl-xl" />
+        <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary rounded-tr-xl" />
+        <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary rounded-bl-xl" />
+        <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary rounded-br-xl" />
       </div>
 
-      {/* URL Display */}
-      <div className="bg-muted/50 rounded-xl px-4 py-3 mb-4">
+      <div className="bg-muted/50 rounded-xl px-3 py-2 mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs">🔗</span>
-          <p className="text-xs text-muted-foreground truncate flex-1 font-mono">
-            {profileUrl}
-          </p>
+          <p className="text-xs text-muted-foreground truncate flex-1 font-mono">{profileUrl}</p>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Bouton Copier le lien */}
+      <div className="grid grid-cols-2 gap-2">
         <button
           onClick={handleCopyLink}
-          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            copied
-              ? 'bg-green-500 text-white'
-              : 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground hover:from-primary hover:to-primary/90'
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+            copied ? 'bg-green-500 text-white' : 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground'
           }`}
         >
-          {copied ? (
-            <>
-              <Check className="w-4 h-4" />
-              <span>Copié !</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              <span>Copier</span>
-            </>
-          )}
+          {copied ? <><Check className="w-3.5 h-3.5" /> Copié !</> : <><Copy className="w-3.5 h-3.5" /> Copier</>}
         </button>
-
-        {/* Bouton Télécharger */}
         <button
           onClick={handleDownload}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-sm font-semibold transition-colors"
+          disabled={downloading || !qrLoaded}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold transition-colors disabled:opacity-50"
         >
-          <Download className="w-4 h-4" />
-          <span>Télécharger</span>
+          <Download className="w-3.5 h-3.5" />
+          {downloading ? 'Export...' : 'Télécharger'}
         </button>
       </div>
 
-      {/* Info tip */}
-      <div className="mt-4 p-3 bg-primary/5 border border-primary/10 rounded-xl">
+      <div className="mt-3 p-2.5 bg-primary/5 border border-primary/10 rounded-xl">
         <div className="flex items-start gap-2">
-          <span className="text-base mt-0.5">💡</span>
+          <span className="text-sm">💡</span>
           <p className="text-xs text-muted-foreground text-left leading-relaxed">
             <span className="font-semibold text-primary">Astuce :</span> Partagez ce QR code sur vos supports marketing pour booster votre visibilité !
           </p>

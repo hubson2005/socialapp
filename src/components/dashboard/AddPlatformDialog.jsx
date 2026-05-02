@@ -173,10 +173,20 @@ export const PLATFORMS = {
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#EA4335"/><path d="M20 6H4c-.6 0-1 .4-1 1v10c0 .6.4 1 1 1h16c.6 0 1-.4 1-1V7c0-.6-.4-1-1-1zm-1.3 1.5L12 13.1 5.3 7.5h13.4zM4 17V8.5l7.5 6c.1.1.3.2.5.2s.4-.1.5-.2L20 8.5V17H4z" fill="white"/></svg>),
   },
   phone: {
-    label: 'Téléphone', color: '#34C759', category: 'Contact',
-    placeholder: 'tel:+33600000000',
-    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#34C759"/><path d="M17.8 15.5l-2.5-.3c-.5-.1-.9.2-1.2.5l-1.7 1.7c-2.6-1.3-4.7-3.4-6-6l1.7-1.7c.3-.3.4-.7.3-1.2l-.3-2.5c-.1-.6-.6-1-1.2-1H5.5C4.8 5 4.1 5.7 4.2 6.5c.7 7.2 6.5 13 13.7 13.7.8.1 1.5-.6 1.5-1.3v-2.2c0-.6-.4-1.1-1-1.2z" fill="white"/></svg>),
-  },
+  label: 'Téléphone',
+  color: '#34C759',
+  category: 'Contact',
+  placeholder: 'tel:+33600000000',
+  icon: (
+    <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+      <rect width="24" height="24" rx="6" fill="#34C759"/>
+      <path d="M17.8 15.5l-2.5-.3c-.5-.1-.9.2-1.2.5l-1.7 1.7c-2.6-1.3-4.7-3.4-6-6l1.7-1.7c.3-.3.4-.7.3-1.2l-.3-2.5c-.1-.6-.6-1-1.2-1H5.5C4.8 5 4.1 5.7 4.2 6.5c.7 7.2 6.5 13 13.7 13.7.8.1 1.5-.6 1.5-1.3v-2.2c0-.6-.4-1.1-1-1.2z" fill="white"/>
+    </svg>
+  ),
+  action: (phone) => {
+    window.location.href = `tel:${phone}`;
+  }
+},
   calendly: {
     label: 'Calendly', color: '#0069FF', category: 'Contact',
     placeholder: 'https://calendly.com/tonpseudo',

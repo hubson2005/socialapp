@@ -137,7 +137,20 @@ export default function PublicProfile() {
       event_type: 'click',
       platform: link.platform,
     }]);
-    window.open(link.url, '_blank', 'noopener,noreferrer');
+
+    const isPhone = link.platform === 'phone';
+    const isEmail = link.platform === 'email';
+
+    if (isPhone) {
+      // Normalise le numéro : garde uniquement chiffres, +, espaces
+      const raw = (link.url || '').replace(/^tel:/i, '').trim();
+      window.location.href = 'tel:' + raw;
+    } else if (isEmail) {
+      const raw = (link.url || '').replace(/^mailto:/i, '').trim();
+      window.location.href = 'mailto:' + raw;
+    } else {
+      window.open(link.url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   if (loading) return (
@@ -342,3 +355,4 @@ export default function PublicProfile() {
     </>
   );
 }
+

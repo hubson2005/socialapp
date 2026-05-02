@@ -664,26 +664,55 @@ export default function Dashboard() {
 
           {/* Left column */}
           <div className="lg:col-span-2 space-y-4">
-            <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
 
-            {/* Username + badge */}
-            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
+            {/* ── ProfileHeader with badge toggle overlaid top-right ── */}
+            {/* MODIFIED: badge toggle moved here from the username card below */}
+            <div style={{ position: 'relative' }}>
+              <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
+              <button
+                onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
+                title={localProfile.is_verified ? 'Badge vérifié actif — cliquer pour désactiver' : 'Activer le badge vérifié'}
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  zIndex: 10,
+                  width: '44px',
+                  height: '24px',
+                  borderRadius: '100px',
+                  background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s',
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  position: 'absolute',
+                  top: '3px',
+                  left: localProfile.is_verified ? '23px' : '3px',
+                  transition: 'left 0.3s',
+                }} />
+              </button>
+            </div>
+
+            {/* ── Username — entre le nom de profil et la bio ── */}
+            {/* MODIFIED: username moved here, badge section removed from this card */}
+            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3">
               <div className="flex items-center gap-3">
                 <AtSign className="w-4 h-4 text-white/60 shrink-0" />
                 <span className="text-white/70 text-sm shrink-0">Username :</span>
-                <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: hubson" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
-              </div>
-              <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
-                <div className="flex items-center gap-3">
-                  <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
-                  <div>
-                    <span className="text-white/70 text-sm">Badge vérifié</span>
-                    <p className="text-white/40 text-xs">Affiche ✓ vert sur votre profil public</p>
-                  </div>
-                </div>
-                <button onClick={() => updateLocal({ is_verified: !localProfile.is_verified })} style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>
-                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_verified ? '23px' : '3px', transition: 'left 0.3s' }} />
-                </button>
+                <input
+                  type="text"
+                  value={localProfile.username || ''}
+                  onChange={(e) => updateLocal({ username: e.target.value })}
+                  placeholder="ex: hubson"
+                  className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30"
+                />
               </div>
             </div>
 

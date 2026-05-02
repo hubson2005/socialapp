@@ -3,16 +3,14 @@ import { Download, QrCode, Copy, Check, X } from 'lucide-react';
 
 const BASE_URL = 'https://www.socialapp.work';
 
-// Détecte si l'utilisateur est sur mobile
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 export default function QRCodeDisplay({ profileId, username, userLogo, userName }) {
-  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const qrInstanceRef = useRef(null);
   const [qrLoaded, setQrLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-
-  // État pour la modale d'aperçu mobile
   const [showMobileModal, setShowMobileModal] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState(null);
 
@@ -22,128 +20,97 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
 
   useEffect(() => {
     setQrLoaded(false);
-    loadQRCodeLibrary();
-  }, [profileId, username]);
+    loadLibraryAndRender();
+  }, [profileId, username, userLogo]);
 
-  const loadQRCodeLibrary = () => {
-    if (window.QRCode) { renderQR(); return; }
+  const loadLibraryAndRender = () => {
+    if (window.QRCodeStyling) {
+      renderStyledQR();
+      return;
+    }
     const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    script.onload = renderQR;
-    script.onerror = () => console.error('Erreur chargement QRCode library');
+    script.src = 'https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';
+    script.onload = renderStyledQR;
+    script.onerror = () => console.error('Erreur chargement QRCodeStyling');
     document.head.appendChild(script);
   };
 
-  const renderQR = () => {
-    const container = canvasRef.current;
-    if (!container || !window.QRCode) return;
+  const renderStyledQR = () => {
+    const container = containerRef.current;
+    if (!container || !window.QRCodeStyling) return;
+
     container.innerHTML = '';
-    try {
-      new window.QRCode(container, {
-        text: profileUrl,
-        width: 200,
-        height: 200,
-        colorDark: '#060412',
-        colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.H,
-      });
-      setQrLoaded(true);
-      if (userLogo) setTimeout(() => addLogoToQR(), 100);
-    } catch (e) {
-      console.error('QR generation error:', e);
-    }
+
+    const qr = new window.QRCodeStyling({
+      width: 200,
+      height: 200,
+      type: 'canvas',
+      data: profileUrl,
+      // ── Style dots arrondis ──────────────────────────────────────
+      dotsOptions: {
+        type: 'rounded',       // dots arrondis comme dans l'image
+        color: '#060412',
+      },
+      cornersSquareOptions: {
+        type: 'extra-rounded', // coins finder arrondis
+        color: '#060412',
+      },
+      cornersDotOptions: {
+        type: 'dot',           // point central finder
+        color: '#060412',
+      },
+      backgroundOptions: {
+        color: '#ffffff',
+      },
+      // ── Logo centré si fourni ────────────────────────────────────
+      ...(userLogo ? {
+        image: userLogo,
+        imageOptions: {
+          crossOrigin: 'anonymous',
+          margin: 4,
+          imageSize: 0.25,
+        },
+      } : {}),
+      qrOptions: {
+        errorCorrectionLevel: 'H',
+      },
+    });
+
+    qr.append(container);
+    qrInstanceRef.current = qr;
+
+    setTimeout(() => setQrLoaded(true), 300);
   };
 
-  const addLogoToQR = () => {
-    const container = canvasRef.current;
-    if (!container) return;
-    const img = container.querySelector('img');
-    if (!img) return;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 200; canvas.height = 200;
-    const qrImage = new Image();
-    qrImage.crossOrigin = 'anonymous';
-    qrImage.onload = () => {
-      ctx.drawImage(qrImage, 0, 0, 200, 200);
-      const logoImage = new Image();
-      logoImage.crossOrigin = 'anonymous';
-      logoImage.onload = () => {
-        const logoSize = 50;
-        const x = (200 - logoSize) / 2;
-        const y = (200 - logoSize) / 2;
-        ctx.fillStyle = '#FFFFFF';
-        ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 8;
-        ctx.beginPath(); roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10); ctx.fill();
-        ctx.shadowColor = 'transparent';
-        const gradient = ctx.createLinearGradient(x - 6, y - 6, x + logoSize + 6, y + logoSize + 6);
-        gradient.addColorStop(0, '#ff6b35'); gradient.addColorStop(1, '#f7c948');
-        ctx.strokeStyle = gradient; ctx.lineWidth = 2;
-        ctx.beginPath(); roundRect(ctx, x - 6, y - 6, logoSize + 12, logoSize + 12, 10); ctx.stroke();
-        ctx.save();
-        ctx.beginPath(); roundRect(ctx, x, y, logoSize, logoSize, 8); ctx.clip();
-        ctx.drawImage(logoImage, x, y, logoSize, logoSize);
-        ctx.restore();
-        img.src = canvas.toDataURL('image/png');
-      };
-      logoImage.onerror = () => { img.src = canvas.toDataURL('image/png'); };
-      logoImage.src = userLogo;
-    };
-    qrImage.src = img.src;
-  };
-
-  const roundRect = (ctx, x, y, width, height, radius) => {
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-  };
-
-  // ── Récupère le dataUrl du QR depuis le DOM ─────────────────────────────
   const getQrDataUrl = () => {
-    const container = canvasRef.current;
+    const container = containerRef.current;
     if (!container) return null;
-    const img = container.querySelector('img');
-    const cvs = container.querySelector('canvas');
-    if (cvs) return cvs.toDataURL('image/png');
-    if (img && img.src) return img.src;
+    const canvas = container.querySelector('canvas');
+    if (canvas) return canvas.toDataURL('image/png');
     return null;
   };
 
-  // ── Téléchargement adapté mobile / desktop ──────────────────────────────
   const handleDownload = async () => {
-    const dataUrl = getQrDataUrl();
-    if (!dataUrl) return;
     setDownloading(true);
-
     try {
       if (isMobile()) {
-        // Sur mobile : afficher la modale avec l'image à sauvegarder
-        setQrDataUrl(dataUrl);
-        setShowMobileModal(true);
+        const dataUrl = getQrDataUrl();
+        if (dataUrl) {
+          setQrDataUrl(dataUrl);
+          setShowMobileModal(true);
+        }
       } else {
-        // Sur desktop : téléchargement classique via Blob
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `qr-${username || profileId}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        if (qrInstanceRef.current) {
+          qrInstanceRef.current.download({
+            name: `qr-${username || profileId}`,
+            extension: 'png',
+          });
+        }
       }
     } catch (err) {
       console.error('Erreur téléchargement:', err);
-      // Fallback ultime : ouvrir dans un nouvel onglet
-      window.open(dataUrl, '_blank');
+      const dataUrl = getQrDataUrl();
+      if (dataUrl) window.open(dataUrl, '_blank');
     } finally {
       setDownloading(false);
     }
@@ -166,7 +133,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
 
   return (
     <>
-      {/* ── Modale mobile ── */}
+      {/* ── Modale mobile ─────────────────────────────────────────── */}
       {showMobileModal && qrDataUrl && (
         <div
           style={{
@@ -187,7 +154,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <p style={{ color: 'white', fontWeight: 700, fontSize: '15px', margin: 0 }}>
                 📱 Sauvegarder le QR Code
@@ -200,7 +166,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
               </button>
             </div>
 
-            {/* Image QR */}
             <div style={{ background: 'white', borderRadius: '16px', padding: '16px', textAlign: 'center', marginBottom: '16px' }}>
               <img
                 src={qrDataUrl}
@@ -209,7 +174,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
               />
             </div>
 
-            {/* Instructions */}
             <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
               <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '12px', margin: 0, lineHeight: 1.6, textAlign: 'center' }}>
                 👆 <strong>Appuyez longuement</strong> sur l'image ci-dessus<br />
@@ -217,7 +181,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
               </p>
             </div>
 
-            {/* Bouton fermer */}
             <button
               onClick={() => setShowMobileModal(false)}
               style={{
@@ -233,7 +196,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
         </div>
       )}
 
-      {/* ── Carte principale ── */}
+      {/* ── Carte principale ──────────────────────────────────────── */}
       <div className="bg-card rounded-2xl border border-border p-4 text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
@@ -242,25 +205,37 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
           <h3 className="font-bold text-sm">Mon QR Code</h3>
         </div>
 
+        {/* QR Code */}
         <div className="relative mb-3">
           <div className="bg-white rounded-2xl p-4 shadow-lg inline-block">
+            {/* Spinner */}
             {!qrLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div style={{ width: '160px', height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             )}
+            {/* Container QR rendu par qr-code-styling — caché jusqu'au chargement */}
             <div
-              ref={canvasRef}
-              className="w-[160px] h-[160px] rounded-xl overflow-hidden mx-auto"
-              style={{ opacity: qrLoaded ? 1 : 0.3 }}
+              ref={containerRef}
+              style={{
+                width: '160px',
+                height: '160px',
+                display: qrLoaded ? 'flex' : 'none',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                borderRadius: '8px',
+              }}
             />
           </div>
+          {/* Coins décoratifs */}
           <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-primary rounded-tl-xl" />
           <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary rounded-tr-xl" />
           <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary rounded-bl-xl" />
           <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary rounded-br-xl" />
         </div>
 
+        {/* URL */}
         <div className="bg-muted/50 rounded-xl px-3 py-2 mb-3">
           <div className="flex items-center gap-2">
             <span className="text-xs">🔗</span>
@@ -268,6 +243,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
           </div>
         </div>
 
+        {/* Boutons */}
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleCopyLink}
@@ -275,7 +251,9 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
               copied ? 'bg-green-500 text-white' : 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground'
             }`}
           >
-            {copied ? <><Check className="w-3.5 h-3.5" /> Copié !</> : <><Copy className="w-3.5 h-3.5" /> Copier</>}
+            {copied
+              ? <><Check className="w-3.5 h-3.5" /> Copié !</>
+              : <><Copy className="w-3.5 h-3.5" /> Copier</>}
           </button>
           <button
             onClick={handleDownload}
@@ -287,6 +265,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, userName 
           </button>
         </div>
 
+        {/* Astuce */}
         <div className="mt-3 p-2.5 bg-primary/5 border border-primary/10 rounded-xl">
           <div className="flex items-start gap-2">
             <span className="text-sm">💡</span>

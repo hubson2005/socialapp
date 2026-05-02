@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/Logo_SocialApp.png';
+import eventMockup from '../assets/MODE_EVENEMENT.png'; // ← nouvelle image
 
 export default function Home() {
   const navigate = useNavigate();
@@ -78,9 +79,9 @@ export default function Home() {
   ];
 
   const steps = [
-    { icon: '👤', title: 'Créez votre profil', desc: 'Inscrivez-vous et configurez votre profil en moins de 2 minutes. Ajoutez votre photo, nom et bio.' },
-    { icon: '🔗', title: 'Ajoutez vos réseaux', desc: 'Connectez tous vos réseaux sociaux : Facebook, Instagram, TikTok, WhatsApp et bien plus encore.' },
-    { icon: '📲', title: 'Partagez votre QR code', desc: 'Téléchargez votre QR code et imprimez-le sur vos cartes, affiches ou goodies. Un scan suffit !' },
+    { icon: '👤', title: 'Créez votre profil en 2 minutes chrono', desc: 'nscrivez-vous, ajoutez votre photo, votre bio et vos liens. Votre espace personnalisé est prêt à conquérir votre audience en un temps record.' },
+    { icon: '🔗', title: 'Centralisez tous vos réseaux', desc: 'Connectez instantanément Facebook, Instagram, TikTok, WhatsApp et tous vos profils essentiels en un seul espace. Un seul lien, une présence totale.' },
+    { icon: '📲', title: 'Partagez votre QR code', desc: 'Téléchargez votre QR code et  Intégrez-le facilement sur vos supports de communication : cartes de visite, flyers, affiches de concert, invitations de mariage ou cadeaux personnalisés.' },
   ];
 
   const testimonials = [
@@ -90,12 +91,12 @@ export default function Home() {
   ];
 
   const faqs = [
-    { q: "Comment fonctionne le QR code ?", a: "Votre QR code est un lien unique qui dirige vers votre page publique SocialApp. Quand quelqu'un le scanne, il voit tous vos réseaux et peut vous suivre en un clic." },
-    { q: "Puis-je modifier mon profil après la création ?", a: "Oui, vous pouvez modifier votre profil, vos liens et votre design à tout moment depuis votre tableau de bord. Les changements sont appliqués instantanément." },
-    { q: "Comment je reçois ma carte PVC ?", a: "Après votre souscription aux offres PRO ou BUSINESS, notre équipe vous contacte pour récupérer vos informations et vous livrer votre carte sous 7 jours ouvrés." },
-    { q: "Mon QR code expire-t-il ?", a: "Non, votre QR code est valable pour toute la durée de votre abonnement. À la fin de votre abonnement, vous pouvez renouveler pour continuer à l'utiliser." },
-    { q: "Comment fonctionne l'option Événement ?", a: "L'option Événement s'ajoute à votre offre existante. Elle active un mode spécial sur votre page publique avec compte à rebours, image, détails et bouton de réservation. À partir de 5 000 FCFA/mois." },
-    { q: "Comment vous contacter pour souscrire ?", a: "Contactez-nous directement sur WhatsApp au +225 05 06 45 81 27 ou cliquez sur le bouton de support en bas de votre page publique." },
+    { q: "Comment fonctionne le QR code ?", a: "Votre QR code est une passerelle unique vers votre page publique SocialApp. Un simple scan suffit à vos visiteurs pour accéder à tous vos réseaux et vous suivre en un clic." },
+    { q: "Puis-je modifier mon profil après la création ?", a: "Absolument. Vous gardez le contrôle total : modifiez votre profil, vos liens et votre design à tout moment depuis votre tableau de bord. Les mises à jour sont instantanées." },
+    { q: "Comment je reçois ma carte PVC ?", a: "Dès votre souscription aux offres PRO ou BUSINESS, notre équipe vous contacte pour personnaliser votre carte. Recevez-la directement chez vous sous 7 jours ouvrés." },
+    { q: "Mon QR code expire-t-il ?", a: "Votre code est actif durant toute la durée de votre abonnement. Il vous suffit de renouveler votre souscription pour continuer à l'utiliser sans interruption." },
+    { q: "En quoi consiste la fonctionnalité « Événement » ?", a: "C'est le mode idéal pour booster vos lancement ! Elle transforme votre page avec un compte à rebours, des détails complets et un bouton de réservation. Disponible à partir de 5 000 FCFA/mois." },
+    { q: "Comment vous contacter pour souscrire ?", a: "Besoin d'aide ou envie de vous lancer ? Contactez-nous directement sur WhatsApp au +225 05 06 45 81 27 ou utilisez le bouton de support en bas de votre page publique." },
   ];
 
   return (
@@ -129,6 +130,7 @@ export default function Home() {
           .nav-links{display:none!important;}
           .hero-title{font-size:38px!important;}
           .qr-mockup{display:none!important;}
+          .event-mockup-img{width:260px!important;}
         }
       `}</style>
 
@@ -161,7 +163,10 @@ export default function Home() {
               <span style={{ background: 'linear-gradient(135deg, #ff6b35, #f7c948)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>SocialApp</span>
             </h1>
             <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.7', marginBottom: '16px' }}>
-              Un QR code magique qui ouvre <strong style={{ color: 'white' }}>TOUS vos réseaux</strong> en un seul scan. Fini les bios surchargées !
+              Un seul QR code pour <strong style={{ color: 'white' }}>TOUS VOS RÉSEAUX SOCIAUX, LIENS ET ÉVÉNEMENTS</strong> en un seul scan.
+              <br /><br />
+                   SocialApp.Work vous permet de créer un QR code unique qui centralise <strong style={{ color: 'white' }}>tous vos contenus importants</strong>.  
+                   Plus besoin de multiplier les codes, adresses ou numéros : tout est accessible depuis une seule page simple et mobile.
             </p>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '40px' }}>Connect. Share. Discover.</p>
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
@@ -244,6 +249,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Mode Événement ────────────────────────────────────────────────── */}
       <section id="event" style={{ padding: '100px 40px', background: 'rgba(34,197,94,0.03)', borderTop: '1px solid rgba(34,197,94,0.1)', borderBottom: '1px solid rgba(34,197,94,0.1)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -255,49 +261,35 @@ export default function Home() {
               Mode <span style={{ background: 'linear-gradient(135deg,#ff6b35,#f7c948)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Événement</span>
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '17px', maxWidth: '540px', margin: '0 auto' }}>
-              Un profil spécial avec compte à rebours pour vos événements, concerts et lancements
+              Créez une page événementielle interactive et un QR code unique pour vos lancements
             </p>
           </div>
 
           <div className="event-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
+
+            {/* ✅ Nouvelle image à la place du mockup codé en dur */}
             <div className="reveal d1" style={{ display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: '220px', background: '#0f0a1e', borderRadius: '32px', border: '2px solid rgba(255,255,255,0.1)', overflow: 'hidden', padding: '16px', boxShadow: '0 40px 80px rgba(0,0,0,0.5)' }}>
-                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(255,255,255,0.1)', margin: '0 auto 8px', overflow: 'hidden' }}>
-                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: '800', color: 'white' }}>T</div>
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: '800', color: 'white' }}>TESTE</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>création digitale</div>
-                </div>
-                <div style={{ background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '14px', padding: '12px', textAlign: 'center', marginBottom: '10px' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '2px 8px', fontSize: '8px', fontWeight: '700', color: 'white', marginBottom: '6px' }}>
-                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'white', display: 'inline-block' }} />
-                    ÉVÉNEMENT
-                  </div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'white', lineHeight: '1.2' }}>Abidjan Street Food Festival</div>
-                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.8)', marginTop: '3px' }}>📍 Sofitel Ivoire</div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px', marginBottom: '10px' }}>
-                  {[{v:'32',l:'J'},{v:'05',l:'H'},{v:'47',l:'M'},{v:'12',l:'S'}].map(({v,l}) => (
-                    <div key={l} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '8px', padding: '6px 3px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '15px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{v}</div>
-                      <div style={{ fontSize: '7px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', marginTop: '2px' }}>{l}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '10px', padding: '10px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: 'white' }}>
-                  🎟️ Réserver ma place
-                </div>
-              </div>
+              <img
+                src={eventMockup}
+                alt="Mode Événement SocialApp"
+                className="event-mockup-img float"
+                style={{
+                  width: '320px',
+                  maxWidth: '100%',
+                  borderRadius: '24px',
+                  boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+                  objectFit: 'contain',
+                }}
+              />
             </div>
 
             <div className="reveal d2" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[
-                { icon: '⚡', title: 'Création simple et rapide', desc: 'Renseignez titre, description, visuel, date et lieu. Votre événement est prêt en quelques secondes.' },
-                { icon: '⏱', title: 'Compte à rebours en temps réel', desc: "Un décompte live jours/heures/min/sec visible sur votre page publique jusqu'au jour J." },
+                { icon: '⚡', title: 'Création simple et rapide', desc: 'Lancez votre page événementielle en quelques minutes. Idéal pour les concerts, conférences et festivals en Côte divoire et en Afrique.' },
+                { icon: '⏱', title: 'Compte à rebours en temps réel', desc: "Un compte à rebours dynamique visible sur votre profil jusqu'au jour J." },
                 { icon: '🎨', title: 'Personnalisation complète', desc: 'Choisissez vos couleurs de fond parmi des presets ou créez les vôtres. Ajoutez une image attractive.' },
-                { icon: '🎟', title: 'Réservation en 1 clic', desc: "Bouton direct vers votre lien de billetterie ou formulaire d'inscription." },
-                { icon: '📊', title: 'Engagement et interaction', desc: 'Communiquez avec votre audience, partagez des mises à jour et créez une connexion forte.' },
+                { icon: '🎟', title: 'Réservation en 1 clic', desc: "Optimisez votre billetterie : lien direct vers votre plateforme d'inscription ou paiement mobile." },
+                { icon: '📊', title: 'Engagement et interaction', desc: 'Boostez votre audience avec une interface fluide, parfaitement adaptée au mobile.' },
               ].map((f, i) => (
                 <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,107,53,0.1)', border: '1px solid rgba(255,107,53,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{f.icon}</div>
@@ -342,38 +334,19 @@ export default function Home() {
                     ⭐ Plus populaire
                   </div>
                 )}
-
                 {p.event && (
                   <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderRadius: '100px', padding: '5px 18px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: 'white' }}>
                     🎉 Nouveau
                   </div>
                 )}
-
-                <div style={{ fontSize: '13px', fontWeight: '700', color: p.color, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>
-                  {p.name}
-                </div>
-
-                {p.priceLabel && (
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>
-                    {p.priceLabel}
-                  </div>
-                )}
-
+                <div style={{ fontSize: '13px', fontWeight: '700', color: p.color, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>{p.name}</div>
+                {p.priceLabel && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>{p.priceLabel}</div>}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '34px', fontWeight: '800', letterSpacing: '-1px' }}>{p.price}</span>
                   <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>FCFA</span>
                 </div>
-
-                {p.subtitle && (
-                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginBottom: '12px', lineHeight: '1.4' }}>
-                    {p.subtitle}
-                  </div>
-                )}
-
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '24px' }}>
-                  / {p.period}
-                </div>
-
+                {p.subtitle && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginBottom: '12px', lineHeight: '1.4' }}>{p.subtitle}</div>}
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '24px' }}>/ {p.period}</div>
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px', marginBottom: '24px' }}>
                   {p.features.map((f, j) => (
                     <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>
@@ -382,25 +355,16 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-
                 <a
                   href="https://wa.me/2250506458127"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '13px',
+                    display: 'block', width: '100%', padding: '13px',
                     background: p.event ? 'linear-gradient(135deg,#22c55e,#16a34a)' : p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.07)',
                     border: (!p.popular && !p.event) ? '1px solid rgba(255,255,255,0.15)' : 'none',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontWeight: '700',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    textDecoration: 'none',
-                    textAlign: 'center',
+                    borderRadius: '12px', color: 'white', fontWeight: '700', fontSize: '14px',
+                    cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', textAlign: 'center',
                   }}
                 >
                   {p.event ? 'Promouvoir un événement' : 'Choisir ' + p.name}
@@ -409,97 +373,26 @@ export default function Home() {
             ))}
           </div>
 
-          <div style={{
-            maxWidth: '1100px',
-            margin: '34px auto 0',
-            padding: '28px',
-            background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(247,201,72,0.06))',
-            border: '1px solid rgba(255,255,255,0.10)',
-            borderRadius: '24px',
-            boxShadow: '0 18px 50px rgba(0,0,0,0.18)',
-            backdropFilter: 'blur(12px)'
-          }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 14px',
-              borderRadius: '999px',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              marginBottom: '18px'
-            }}>
+          <div style={{ maxWidth: '1100px', margin: '34px auto 0', padding: '28px', background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(247,201,72,0.06))', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '24px', boxShadow: '0 18px 50px rgba(0,0,0,0.18)', backdropFilter: 'blur(12px)' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '18px' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b35, #f7c948)' }} />
-              <span style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>
-                Options complémentaires
-              </span>
+              <span style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>Options complémentaires</span>
             </div>
-
             <div style={{ display: 'grid', gap: '16px' }}>
-              <div style={{
-                display: 'flex',
-                gap: '14px',
-                alignItems: 'flex-start',
-                padding: '16px 18px',
-                borderRadius: '18px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)'
-              }}>
-                <div style={{
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: '12px',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(247,201,72,0.2))',
-                  color: '#f7c948',
-                  fontWeight: '800'
-                }}>
-                  1
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: '14px', lineHeight: '1.7' }}>
-                  Vous avez la possibilité de créer plusieurs profils distincts sous une même identité, idéal pour les entreprises disposant de plusieurs collaborateurs.
-                  <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.48)', fontSize: '13px' }}>
-                    (Option non incluse dans les offres tarifaires.)
+              {[
+                'Vous avez la possibilité de créer plusieurs profils distincts sous une même identité, idéal pour les entreprises disposant de plusieurs collaborateurs.',
+                'Vous avez également la possibilité de faire imprimer, pour chaque membre de votre personnel, une carte NFC ou une carte PVC simple.',
+              ].map((text, i) => (
+                <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', padding: '16px 18px', borderRadius: '18px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '12px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(247,201,72,0.2))', color: '#f7c948', fontWeight: '800' }}>{i+1}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: '14px', lineHeight: '1.7' }}>
+                    {text}
+                    <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.48)', fontSize: '13px' }}>(Option non incluse dans les offres tarifaires.)</div>
                   </div>
                 </div>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                gap: '14px',
-                alignItems: 'flex-start',
-                padding: '16px 18px',
-                borderRadius: '18px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)'
-              }}>
-                <div style={{
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: '12px',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(247,201,72,0.2))',
-                  color: '#f7c948',
-                  fontWeight: '800'
-                }}>
-                  2
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: '14px', lineHeight: '1.7' }}>
-                  Vous avez également la possibilité de faire imprimer, pour chaque membre de votre personnel, une carte NFC ou une carte PVC simple.
-                  <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.48)', fontSize: '13px' }}>
-                    (Option non incluse dans les offres tarifaires.)
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-
           <p className="reveal" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginTop: '28px' }}>
             Paiement via Mobile Money · Contactez-nous sur WhatsApp au +225 05 06 45 81 27
           </p>
@@ -535,9 +428,9 @@ export default function Home() {
       <section style={{ padding: '80px 40px' }}>
         <div className="reveal" style={{ maxWidth: '680px', margin: '0 auto', textAlign: 'center', background: 'linear-gradient(135deg,rgba(255,107,53,0.08),rgba(247,201,72,0.08))', border: '1px solid rgba(255,107,53,0.2)', borderRadius: '32px', padding: '60px 40px' }}>
           <img src={logo} alt="SocialApp" style={{ width: '72px', height: '72px', borderRadius: '18px', objectFit: 'cover', marginBottom: '24px' }} />
-          <h2 style={{ fontSize: '36px', fontWeight: '800', letterSpacing: '-1.5px', marginBottom: '14px' }}>Votre QR code sur une carte de visite</h2>
+          <h2 style={{ fontSize: '36px', fontWeight: '800', letterSpacing: '-1.5px', marginBottom: '14px' }}>QR Code SocialApp : Votre networking 2.0</h2>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '17px', marginBottom: '8px' }}>
-            <strong style={{ color: '#f7c948' }}>+30 à 50% de followers</strong> en un clin d'œil !
+            <strong style={{ color: '#f7c948' }}>Un seul scan, un accès total : boostez votre visibilité de 30 à 50% instantanément.</strong> Networking fluide, connexion intelligente, impact immédiat. Passez au réseautage nouvelle génération.
           </p>
           <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '32px' }}>Connect. Share. Discover.</p>
           <button onClick={() => navigate('/login')} style={{ padding: '16px 44px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '17px', cursor: 'pointer', fontFamily: 'inherit' }}>

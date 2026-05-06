@@ -82,12 +82,131 @@ const PROFILE_TEMPLATES = [
   { id: 'gaming',    label: 'Gaming',     emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',      theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together", platformKeys: ['twitch','discord','tiktok','youtube'] },
 ];
 
+// ─── Carousel multi-images ───────────────────────────────────────────────────
+function EventImageCarousel({ images = [], onRemove, adminMode = false }) {
+  const [current, setCurrent] = useState(0);
+  const intervalRef = useRef(null);
+
+  const urls = images.map(img => (typeof img === 'string' ? img : img?.url)).filter(Boolean);
+
+  useEffect(() => {
+    setCurrent(0);
+  }, [urls.length]);
+
+  useEffect(() => {
+    if (urls.length <= 1) return;
+    intervalRef.current = setInterval(() => {
+      setCurrent(prev => (prev + 1) % urls.length);
+    }, 3500);
+    return () => clearInterval(intervalRef.current);
+  }, [urls.length]);
+
+  const goTo = (idx) => {
+    clearInterval(intervalRef.current);
+    setCurrent(idx);
+    intervalRef.current = setInterval(() => {
+      setCurrent(prev => (prev + 1) % urls.length);
+    }, 3500);
+  };
+
+  if (urls.length === 0) return null;
+
+  return (
+    <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', background: '#000' }}>
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={current}
+          src={urls[current]}
+          alt={`event-${current}`}
+          initial={{ opacity: 0, scale: 1.03 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+          style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+        />
+      </AnimatePresence>
+
+      {/* Overlay gradient bas */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px', background: 'linear-gradient(transparent, rgba(0,0,0,0.65))', pointerEvents: 'none' }} />
+
+      {/* Navigation gauche / droite */}
+      {urls.length > 1 && (
+        <>
+          <button
+            onClick={() => goTo((current - 1 + urls.length) % urls.length)}
+            style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            onClick={() => goTo((current + 1) % urls.length)}
+            style={{ position: 'absolute', right: adminMode ? '44px' : '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </>
+      )}
+
+      {/* Bouton supprimer (mode admin uniquement) */}
+      {adminMode && onRemove && (
+        <button
+          onClick={() => onRemove(current)}
+          style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <X size={14} color="white" />
+        </button>
+      )}
+
+      {/* Pastilles de navigation */}
+      {urls.length > 1 && (
+        <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px' }}>
+          {urls.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              style={{ width: i === current ? '18px' : '6px', height: '6px', borderRadius: '3px', background: i === current ? 'white' : 'rgba(255,255,255,0.4)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s' }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Compteur */}
+      {urls.length > 1 && (
+        <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', borderRadius: '6px', padding: '2px 7px', fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+          {current + 1} / {urls.length}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Miniatures admin sous le carousel ──────────────────────────────────────
+function EventImageThumbs({ images = [], current, onSelect, onRemove }) {
+  const urls = images.map(img => (typeof img === 'string' ? img : img?.url)).filter(Boolean);
+  if (urls.length <= 1) return null;
+  return (
+    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+      {urls.map((url, i) => (
+        <div key={i} style={{ position: 'relative', width: '52px', height: '40px', borderRadius: '8px', overflow: 'hidden', border: i === current ? '2px solid white' : '2px solid transparent', cursor: 'pointer', flexShrink: 0 }} onClick={() => onSelect(i)}>
+          <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MiniProfilePreview({ profile }) {
   const { bg1, bg2 } = parseColors(profile.theme_color);
   const links = (profile.links || []).filter(l => l.enabled !== false);
   const bgStyle = profile.bg_image_url
     ? { backgroundImage: 'url(' + profile.bg_image_url + ')', backgroundSize: 'cover', backgroundPosition: 'center' }
     : { background: 'linear-gradient(160deg, ' + bg1 + ', ' + bg2 + ')' };
+
+  const eventImages = Array.isArray(profile.event_images)
+    ? profile.event_images
+    : profile.event_image_url
+      ? [profile.event_image_url]
+      : [];
 
   return (
     <div style={{ width: '240px', height: '480px', borderRadius: '32px', overflow: 'hidden', border: '6px solid #111', position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)', ...bgStyle }}>
@@ -105,6 +224,12 @@ function MiniProfilePreview({ profile }) {
         {profile.is_event && profile.event_name && (
           <div style={{ background: 'linear-gradient(135deg,' + (profile.event_color1||'#ff6b35') + ',' + (profile.event_color2||'#f7c948') + ')', borderRadius: '9px', padding: '5px 9px', marginBottom: '7px', width: '100%', textAlign: 'center' }}>
             <p style={{ color: 'white', fontSize: '9px', fontWeight: 800, margin: 0 }}>🎉 {profile.event_name}</p>
+          </div>
+        )}
+        {/* Mini carousel sans bouton télécharger */}
+        {profile.is_event && eventImages.length > 0 && (
+          <div style={{ width: '100%', marginBottom: '6px' }}>
+            <EventImageCarousel images={eventImages} />
           </div>
         )}
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
@@ -301,7 +426,9 @@ export default function Dashboard() {
   const [linksPage, setLinksPage] = useState(0);
   const [profilesPage, setProfilesPage] = useState(0);
   const [profileSearch, setProfileSearch] = useState('');
-  const [uploadingEventImage, setUploadingEventImage] = useState(false);
+
+  const [eventCarouselIndex, setEventCarouselIndex] = useState(0);
+  const [uploadingEventImages, setUploadingEventImages] = useState(false);
 
   const dragIndexRef = useRef(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -412,6 +539,10 @@ export default function Dashboard() {
 
   const handleSave = () => {
     if (!localProfile || updateMutation.isPending || !hasChanges) return;
+
+    const rawImages = localProfile.event_images || (localProfile.event_image_url ? [localProfile.event_image_url] : []);
+    const eventImagesArray = rawImages.map(img => (typeof img === 'string' ? img : img?.url)).filter(Boolean);
+
     updateMutation.mutate({ id: localProfile.id, data: {
       display_name: localProfile.display_name, bio: localProfile.bio, links: localProfile.links,
       theme_color: localProfile.theme_color, expiry_date: localProfile.expiry_date,
@@ -420,9 +551,10 @@ export default function Dashboard() {
       event_name: localProfile.event_name || null, event_date: localProfile.event_date || null,
       event_location: localProfile.event_location || null, event_color1: localProfile.event_color1 || null,
       event_color2: localProfile.event_color2 || null, event_booking_url: localProfile.event_booking_url || null,
-      event_description: localProfile.event_description || null, event_image_url: localProfile.event_image_url || null,
+      event_description: localProfile.event_description || null,
+      event_images: eventImagesArray,
+      event_image_url: eventImagesArray[0] || null,
       bg_image_url: localProfile.bg_image_url || null,
-      phone_number: localProfile.phone_number || null,
     }});
   };
 
@@ -445,20 +577,38 @@ export default function Dashboard() {
     setDragOverIndex(null); dragIndexRef.current = null;
   }, [localProfile, updateLocal]);
 
-  const handleEventImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max ' + MAX_SIZE_KB + ' Ko'); return; }
+  const handleEventImagesUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    const oversized = files.find(f => f.size / 1024 > MAX_SIZE_KB);
+    if (oversized) { toast.error(oversized.name + ' dépasse ' + MAX_SIZE_KB + ' Ko'); return; }
+
+    setUploadingEventImages(true);
     try {
-      const fileName = 'event-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
-      const { error } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      await supabase.from('link_profiles').update({ event_image_url: data.publicUrl }).eq('id', localProfile.id);
-      updateLocal({ event_image_url: data.publicUrl });
-      toast.success('Image uploadée !');
-    } catch (err) { toast.error('Erreur : ' + err.message); }
+      const uploadedUrls = await Promise.all(files.map(async (file) => {
+        const fileName = 'event-' + localProfile.id + '-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + file.name.split('.').pop();
+        const { error } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
+        if (error) throw error;
+        const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        return data.publicUrl;
+      }));
+
+      const existing = (localProfile.event_images || (localProfile.event_image_url ? [localProfile.event_image_url] : []));
+      const merged = [...existing, ...uploadedUrls];
+      updateLocal({ event_images: merged, event_image_url: merged[0] });
+      setEventCarouselIndex(merged.length - 1);
+      toast.success(uploadedUrls.length + ' image(s) ajoutée(s) !');
+    } catch (err) { toast.error('Erreur upload : ' + err.message); }
+    finally { setUploadingEventImages(false); e.target.value = ''; }
   };
+
+  const handleRemoveEventImage = useCallback((idx) => {
+    const current = localProfile.event_images || (localProfile.event_image_url ? [localProfile.event_image_url] : []);
+    const updated = current.filter((_, i) => i !== idx);
+    updateLocal({ event_images: updated, event_image_url: updated[0] || null });
+    setEventCarouselIndex(prev => Math.min(prev, Math.max(0, updated.length - 1)));
+  }, [localProfile, updateLocal]);
 
   const handleBgImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -502,6 +652,12 @@ export default function Dashboard() {
   const links = localProfile.links || [];
   const pagedLinks = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
+
+  const eventImages = Array.isArray(localProfile.event_images)
+    ? localProfile.event_images
+    : localProfile.event_image_url
+      ? [localProfile.event_image_url]
+      : [];
 
   const filteredProfiles = profiles.filter(p =>
     !profileSearch ||
@@ -622,32 +778,16 @@ export default function Dashboard() {
           {/* Left column */}
           <div className="lg:col-span-2 space-y-4">
 
-            {/* ✅ Carte du haut : ProfileHeader + Username + Badge vérification fusionnés */}
+            {/* ProfileHeader + Username + Badge vérifié */}
             <div className="bg-white/20 rounded-2xl border border-white/20 overflow-hidden">
-
-              {/* ProfileHeader occupe le haut de la carte */}
               <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
-
-              {/* ── Séparateur ── */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0 16px' }} />
-
-              {/* ── Username intégré dans la même carte ── */}
               <div className="flex items-center gap-3 px-4 py-3">
                 <AtSign className="w-4 h-4 text-white/60 shrink-0" />
                 <span className="text-white/70 text-sm shrink-0">Username :</span>
-                <input
-                  type="text"
-                  value={localProfile.username || ''}
-                  onChange={(e) => updateLocal({ username: e.target.value })}
-                  placeholder="ex: hubson"
-                  className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30"
-                />
+                <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: hubson" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
               </div>
-
-              {/* ── Séparateur ── */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0 16px' }} />
-
-              {/* ── Badge vérifié intégré dans la même carte ── */}
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
@@ -656,26 +796,13 @@ export default function Dashboard() {
                     <p className="text-white/40 text-xs">Affiche ✓ vert sur votre profil public</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => updateLocal({ is_verified: !localProfile.is_verified })}
-                  style={{
-                    width: '44px', height: '24px', borderRadius: '100px',
-                    background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)',
-                    border: 'none', cursor: 'pointer', position: 'relative',
-                    transition: 'background 0.3s', flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                    position: 'absolute', top: '3px',
-                    left: localProfile.is_verified ? '23px' : '3px',
-                    transition: 'left 0.3s',
-                  }} />
+                <button onClick={() => updateLocal({ is_verified: !localProfile.is_verified })} style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_verified ? '23px' : '3px', transition: 'left 0.3s' }} />
                 </button>
               </div>
             </div>
 
-            {/* Mode Événement */}
+            {/* ── Mode Événement ────────────────────────────────────────── */}
             <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -689,6 +816,7 @@ export default function Dashboard() {
                   <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_event ? '23px' : '3px', transition: 'left 0.3s' }} />
                 </button>
               </div>
+
               {localProfile.is_event && (
                 <div className="space-y-2 pt-1 border-t border-white/10">
                   <input type="text" value={localProfile.event_name || ''} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10" />
@@ -702,20 +830,66 @@ export default function Dashboard() {
                     <span style={{ fontSize: '13px' }}>🎟️</span>
                     <input type="url" value={localProfile.event_booking_url || ''} onChange={(e) => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien de réservation" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
                   </div>
+
+                  {/* ── Section images multiples ───────────────────────────── */}
                   <div>
-                    <div className="flex items-center gap-2 mb-2"><ImagePlus className="w-3.5 h-3.5 text-white/40" /><span className="text-white/50 text-xs">Image de l'événement (max 2000 Ko)</span></div>
-                    {localProfile.event_image_url ? (
-                      <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
-                        <img src={localProfile.event_image_url} alt="event" style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }} />
-                        <button onClick={() => updateLocal({ event_image_url: null })} style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} color="white" /></button>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <ImagePlus className="w-3.5 h-3.5 text-white/40" />
+                        <span className="text-white/50 text-xs">
+                          Images de l'événement
+                          {eventImages.length > 0 && (
+                            <span style={{ marginLeft: '6px', background: 'rgba(255,255,255,0.12)', borderRadius: '6px', padding: '1px 7px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
+                              {eventImages.length} / ∞
+                            </span>
+                          )}
+                        </span>
                       </div>
+                      {eventImages.length > 0 && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: '8px', padding: '4px 10px', cursor: uploadingEventImages ? 'not-allowed' : 'pointer', color: 'rgba(180,170,255,0.9)', fontSize: '12px', fontWeight: 600, opacity: uploadingEventImages ? 0.6 : 1 }}>
+                          {uploadingEventImages ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                          Ajouter
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages} />
+                        </label>
+                      )}
+                    </div>
+
+                    {eventImages.length > 0 ? (
+                      <>
+                        {/* ✅ Carousel admin — bouton supprimer uniquement, sans télécharger */}
+                        <EventImageCarousel
+                          images={eventImages}
+                          onRemove={handleRemoveEventImage}
+                          adminMode
+                        />
+                        <EventImageThumbs
+                          images={eventImages}
+                          current={eventCarouselIndex}
+                          onSelect={setEventCarouselIndex}
+                          onRemove={handleRemoveEventImage}
+                        />
+                      </>
                     ) : (
-                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', border: '2px dashed rgba(255,255,255,0.2)', borderRadius: '12px', padding: '16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
-                        <ImagePlus size={16} /> Cliquez pour ajouter une image
-                        <input type="file" accept="image/*" className="hidden" onChange={handleEventImageUpload} />
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(255,255,255,0.18)', borderRadius: '14px', padding: '24px 16px', cursor: uploadingEventImages ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}
+                        onMouseEnter={e => { if (!uploadingEventImages) { e.currentTarget.style.background = 'rgba(99,102,241,0.08)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)'; } }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; }}
+                      >
+                        {uploadingEventImages
+                          ? <Loader2 size={22} color="rgba(99,102,241,0.8)" className="animate-spin" />
+                          : <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImagePlus size={20} color="rgba(255,255,255,0.35)" /></div>
+                        }
+                        <div style={{ textAlign: 'center' }}>
+                          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', fontWeight: 500, margin: 0 }}>
+                            {uploadingEventImages ? 'Upload en cours...' : 'Ajouter des images'}
+                          </p>
+                          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', margin: '3px 0 0' }}>Plusieurs fichiers acceptés · max 2 Mo chacune</p>
+                        </div>
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages} />
                       </label>
                     )}
                   </div>
+
+                  {/* Couleurs */}
                   <div>
                     <div className="flex items-center gap-2 mb-2"><Palette className="w-3.5 h-3.5 text-white/40" /><span className="text-white/50 text-xs">Couleur de fond de l'événement</span></div>
                     <div className="flex gap-2 flex-wrap">
@@ -754,12 +928,8 @@ export default function Dashboard() {
                     const isDragOver = dragOverIndex === absoluteIndex;
                     return (
                       <div key={link.id || link.platform + '-' + absoluteIndex}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, absoluteIndex)}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={(e) => handleDragOver(e, absoluteIndex)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, absoluteIndex)}
+                        draggable onDragStart={(e) => handleDragStart(e, absoluteIndex)} onDragEnd={handleDragEnd}
+                        onDragOver={(e) => handleDragOver(e, absoluteIndex)} onDragLeave={handleDragLeave} onDrop={(e) => handleDrop(e, absoluteIndex)}
                         style={{ position: 'relative', transition: 'transform 0.15s', transform: isDragOver ? 'scale(1.02)' : 'scale(1)', outline: isDragOver ? '2px dashed rgba(255,255,255,0.5)' : '2px solid transparent', borderRadius: '16px', cursor: 'grab' }}
                       >
                         {links.length > 1 && <div style={{ position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)', zIndex: 2, color: 'rgba(255,255,255,0.25)', pointerEvents: 'none' }}><GripVertical size={14} /></div>}
@@ -782,41 +952,24 @@ export default function Dashboard() {
           {/* Right column */}
           <div className="space-y-4">
             <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
-            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 flex items-center gap-3">
-              <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
-              <span className="text-white/70 text-sm shrink-0">Expiration :</span>
-              <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
-            </div>
-            <StatsCard profileId={localProfile.id} />
-            <GeoStatsPanel profileId={localProfile.id} />
-
-            {/* Mes profils */}
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Mes profils</h3>
                 <span className="text-xs text-muted-foreground">{profiles.length} profil{profiles.length > 1 ? 's' : ''}</span>
               </div>
-
               {profiles.length >= 1 && (
                 <div style={{ position: 'relative', marginBottom: '10px' }}>
                   <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'rgba(255,255,255,0.4)' }} />
-                  <input
-                    type="text"
-                    value={profileSearch}
-                    onChange={(e) => { setProfileSearch(e.target.value); setProfilesPage(0); }}
-                    placeholder="Rechercher un profil..."
+                  <input type="text" value={profileSearch} onChange={(e) => { setProfileSearch(e.target.value); setProfilesPage(0); }} placeholder="Rechercher un profil..."
                     style={{ width: '100%', padding: '8px 30px 8px 30px', fontSize: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: 'white', outline: 'none', transition: 'border 0.2s, background 0.2s', boxSizing: 'border-box' }}
                     onFocus={e => { e.currentTarget.style.border = '1px solid rgba(99,102,241,0.6)'; e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; }}
                     onBlur={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
                   />
                   {profileSearch && (
-                    <button onClick={() => { setProfileSearch(''); setProfilesPage(0); }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', padding: '3px', color: 'rgba(255,255,255,0.6)' }}>
-                      <X size={11} />
-                    </button>
+                    <button onClick={() => { setProfileSearch(''); setProfilesPage(0); }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', padding: '3px', color: 'rgba(255,255,255,0.6)' }}><X size={11} /></button>
                   )}
                 </div>
               )}
-
               <div className="space-y-1">
                 {filteredProfiles.length === 0 ? (
                   <p className="text-center text-xs text-muted-foreground py-4">Aucun résultat pour « {profileSearch} »</p>
@@ -852,7 +1005,6 @@ export default function Dashboard() {
                   })
                 )}
               </div>
-
               {totalProfilePages > 1 && (
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                   <button disabled={profilesPage === 0} onClick={() => setProfilesPage(p => p - 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
@@ -860,11 +1012,17 @@ export default function Dashboard() {
                   <button disabled={profilesPage >= totalProfilePages - 1} onClick={() => setProfilesPage(p => p + 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
                 </div>
               )}
-
               <button onClick={handleCreateProfile} className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Nouveau profil
               </button>
             </div>
+            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 flex items-center gap-3">
+              <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
+              <span className="text-white/70 text-sm shrink-0">Expiration :</span>
+              <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
+            </div>
+            <StatsCard profileId={localProfile.id} />
+            <GeoStatsPanel profileId={localProfile.id} />
           </div>
         </div>
       </div>

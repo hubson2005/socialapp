@@ -20,7 +20,7 @@ import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ProfilePreview from "@/components/dashboard/ProfilePreview";
 
-// ─── DB helpers ──────────────────────────────────────────────────────────────
+// ─── DB helpers ───────────────────────────────────────────────────────────────
 const db = {
   get: async (userId) => {
     const { data, error } = await supabase
@@ -63,7 +63,7 @@ const parseColors = (themeColor) => {
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
 
-// ─── Composant champ verrouillé ───────────────────────────────────────────────
+// ─── Champ verrouillé ─────────────────────────────────────────────────────────
 function LockedField({ placeholder }) {
   return (
     <div style={{
@@ -89,7 +89,7 @@ function WaveModal({ onClose }) {
       exit={{ opacity: 0 }}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
       }}
@@ -114,51 +114,46 @@ function WaveModal({ onClose }) {
       >
         {/* Icône Wave */}
         <div style={{
-          width: '56px', height: '56px', borderRadius: '16px',
+          width: '60px', height: '60px', borderRadius: '18px',
           background: 'linear-gradient(135deg, #0057FF, #0099FF)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 16px',
           boxShadow: '0 8px 24px rgba(0,87,255,0.4)',
         }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-            <path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm5-3c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm5 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm2 5c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"/>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
           </svg>
         </div>
 
-        <h3 style={{ color: 'white', fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>
-          Activation du compte
+        <h3 style={{ color: 'white', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
+          🔓 Débloquer cette fonctionnalité
         </h3>
-        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginBottom: '20px', lineHeight: 1.5 }}>
-          Pour activer votre profil et sauvegarder vos modifications, effectuez le paiement via Wave.
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginBottom: '20px', lineHeight: 1.6 }}>
+          Le <strong style={{ color: 'rgba(255,255,255,0.8)' }}>username personnalisé</strong> est une fonctionnalité premium. Activez votre compte via Wave pour en bénéficier.
         </p>
 
-        {/* Montant */}
+        {/* Numéro Wave */}
         <div style={{
-          background: 'rgba(0,87,255,0.1)', border: '1px solid rgba(0,87,255,0.25)',
-          borderRadius: '14px', padding: '16px', marginBottom: '16px',
+          background: 'rgba(0,87,255,0.1)', border: '1px solid rgba(0,87,255,0.3)',
+          borderRadius: '14px', padding: '16px', marginBottom: '14px',
         }}>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '4px' }}>Montant à envoyer</p>
-          <p style={{ color: 'white', fontSize: '28px', fontWeight: 800, margin: '0 0 4px' }}>XXXXX FCFA</p>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>via Wave CI</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '8px' }}>
+            Envoyez votre paiement via <strong style={{ color: '#60a5fa' }}>Wave CI</strong> au numéro :
+          </p>
+          <p style={{ color: 'white', fontSize: '26px', fontWeight: 800, margin: '0 0 4px', letterSpacing: '0.02em' }}>
+            +225 05 76 03 12 12
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>Montant : à définir par l'admin</p>
         </div>
 
-        {/* Numéro */}
-        <div style={{
-          background: 'rgba(255,255,255,0.06)', borderRadius: '12px',
-          padding: '12px', marginBottom: '8px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>Numéro Wave</span>
-          <span style={{ color: '#0099FF', fontSize: '16px', fontWeight: 700 }}>+225 05 76 03 12 12</span>
-        </div>
-
+        {/* Instructions */}
         <div style={{
           background: 'rgba(255,255,255,0.05)', borderRadius: '12px',
-          padding: '10px 12px', marginBottom: '20px',
-          textAlign: 'left',
+          padding: '12px 14px', marginBottom: '18px', textAlign: 'left',
         }}>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', lineHeight: 1.6 }}>
-            📸 Après paiement, envoyez une capture d'écran au support WhatsApp. Votre compte sera activé sous <strong style={{ color: 'rgba(255,255,255,0.8)' }}>24h</strong>.
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', lineHeight: 1.7, margin: 0 }}>
+            📸 Après paiement, envoyez une capture au support WhatsApp. Votre compte sera activé sous{' '}
+            <strong style={{ color: 'rgba(255,255,255,0.85)' }}>24h</strong>.
           </p>
         </div>
 
@@ -169,9 +164,9 @@ function WaveModal({ onClose }) {
           rel="noopener noreferrer"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            width: '100%', padding: '12px',
+            width: '100%', padding: '13px',
             background: '#25D366', borderRadius: '12px',
-            color: 'white', fontSize: '14px', fontWeight: 600,
+            color: 'white', fontSize: '14px', fontWeight: 700,
             textDecoration: 'none', marginBottom: '10px',
             boxShadow: '0 4px 16px rgba(37,211,102,0.35)',
           }}
@@ -185,7 +180,7 @@ function WaveModal({ onClose }) {
         <button
           onClick={onClose}
           style={{
-            width: '100%', padding: '10px',
+            width: '100%', padding: '11px',
             background: 'transparent',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '12px',
@@ -215,14 +210,13 @@ export default function UserDashboard() {
   const [showBgPanel, setShowBgPanel] = useState(false);
   const bgPanelRef = useRef(null);
 
-  // Récupère le profil de l'utilisateur connecté
   const { data: profile, isLoading } = useQuery({
     queryKey: ['userProfile', user?.id],
     queryFn: () => db.get(user.id),
     enabled: !!user?.id,
   });
 
-  // is_activated vient de la table link_profiles (mis à true par l'admin)
+  // is_activated est mis à true par l'admin depuis le Dashboard admin
   const isActivated = profile?.is_activated === true;
 
   useEffect(() => {
@@ -233,19 +227,15 @@ export default function UserDashboard() {
     });
   }, [profile]);
 
-  // Fermer le panel bg au clic extérieur
   useEffect(() => {
     if (!showBgPanel) return;
     const handler = (e) => {
-      if (bgPanelRef.current && !bgPanelRef.current.contains(e.target)) {
-        setShowBgPanel(false);
-      }
+      if (bgPanelRef.current && !bgPanelRef.current.contains(e.target)) setShowBgPanel(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showBgPanel]);
 
-  // Applique le fond sur <html>
   useEffect(() => {
     if (!localProfile) return;
     const html = document.documentElement;
@@ -310,15 +300,7 @@ export default function UserDashboard() {
     setHasChanges(true);
   }, []);
 
-  // Clic sur Sauvegarder : si non activé → modal Wave, sinon sauvegarde
-  const handleSaveClick = () => {
-    if (!isActivated) {
-      setShowWaveModal(true);
-      return;
-    }
-    handleSave();
-  };
-
+  // ✅ Sauvegarder est toujours actif
   const handleSave = () => {
     if (!localProfile || updateMutation.isPending || !hasChanges) return;
     const data = {
@@ -327,9 +309,7 @@ export default function UserDashboard() {
       links: localProfile.links,
       theme_color: localProfile.theme_color,
       expiry_date: localProfile.expiry_date,
-      username: localProfile.username
-        ? localProfile.username.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-        : null,
+      // Le username n'est PAS envoyé — il reste verrouillé côté utilisateur
       is_verified: localProfile.is_verified || false,
       is_event: localProfile.is_event || false,
       event_name: localProfile.event_name || null,
@@ -348,100 +328,77 @@ export default function UserDashboard() {
   const handleEventImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const sizeKb = file.size / 1024;
-    if (sizeKb > MAX_SIZE_KB) {
-      toast.error('Image trop lourde ! Maximum 2 Mo');
-      return;
-    }
+    if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
     setUploadingEventImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = 'event-' + localProfile.id + '-' + Date.now() + '.' + fileExt;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
+      const fileName = 'event-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
+      const { error } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
+      if (error) throw error;
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
       updateLocal({ event_image_url: data.publicUrl });
       toast.success('Image uploadée !');
-    } catch (err) {
-      toast.error('Erreur upload : ' + err.message);
-    } finally {
-      setUploadingEventImage(false);
-    }
+    } catch (err) { toast.error('Erreur upload : ' + err.message); }
+    finally { setUploadingEventImage(false); e.target.value = ''; }
   };
 
   const handleBgImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const sizeKb = file.size / 1024;
-    if (sizeKb > MAX_SIZE_KB) {
-      toast.error('Image trop lourde ! Maximum 2 Mo');
-      return;
-    }
+    if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
     setUploadingBgImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = 'bg-' + localProfile.id + '-' + Date.now() + '.' + fileExt;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
+      const fileName = 'bg-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
+      const { error } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
+      if (error) throw error;
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
       updateLocal({ bg_image_url: data.publicUrl });
       toast.success('Image de fond appliquée !');
       setShowBgPanel(false);
-    } catch (err) {
-      toast.error('Erreur upload : ' + err.message);
-    } finally {
-      setUploadingBgImage(false);
-    }
+    } catch (err) { toast.error('Erreur : ' + err.message); }
+    finally { setUploadingBgImage(false); }
   };
 
-  const handleAddPlatform = (platformKey) => {
-    updateLocal({ links: [...(localProfile?.links || []), { id: crypto.randomUUID(), platform: platformKey, url: '', label: '', enabled: true }] });
+  const handleAddPlatform = (key) => {
+    updateLocal({ links: [...(localProfile?.links || []), { id: crypto.randomUUID(), platform: key, url: '', label: '', enabled: true }] });
     setShowAddDialog(false);
   };
 
-  const handleUpdateLink = useCallback((index, updatedLink) => {
-    const links = [...(localProfile?.links || [])];
-    links[index] = updatedLink;
-    updateLocal({ links });
+  const handleUpdateLink = useCallback((index, updated) => {
+    const l = [...(localProfile?.links || [])]; l[index] = updated; updateLocal({ links: l });
   }, [localProfile, updateLocal]);
 
   const handleRemoveLink = useCallback((index) => {
-    const links = (localProfile?.links || []).filter((_, i) => i !== index);
-    updateLocal({ links });
-    const maxPage = Math.max(0, Math.ceil(links.length / LINKS_PER_PAGE) - 1);
-    setLinksPage((p) => Math.min(p, maxPage));
+    const l = (localProfile?.links || []).filter((_, i) => i !== index);
+    updateLocal({ links: l });
+    setLinksPage((p) => Math.min(p, Math.max(0, Math.ceil(l.length / LINKS_PER_PAGE) - 1)));
   }, [localProfile, updateLocal]);
 
   const handleSignOut = async () => {
-    if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Se déconnecter quand même ?')) return;
+    if (hasChanges && !window.confirm('Modifications non sauvegardées. Se déconnecter quand même ?')) return;
     await signOut();
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Loader2 className="w-6 h-6 animate-spin text-primary" />
     </div>
   );
 
-  // ── Pas encore de profil ───────────────────────────────────────────────────
-  if (!profile && !createMutation.isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(135deg,#0f0a1e,#2d1b69)' }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center">
-            <Sparkles className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold mb-2 text-white">Bienvenue !</h1>
-          <p className="text-white/60 text-sm mb-6">Créez votre page de liens unique et partagez-la via un seul QR code.</p>
-          <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2" disabled={createMutation.isPending}>
-            {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Créer mon profil
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
+  if (!profile && !createMutation.isPending) return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(135deg,#0f0a1e,#2d1b69)' }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2 text-white">Bienvenue !</h1>
+        <p className="text-white/60 text-sm mb-6">Créez votre page de liens unique et partagez-la via un seul QR code.</p>
+        <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2" disabled={createMutation.isPending}>
+          {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          Créer mon profil
+        </Button>
+      </motion.div>
+    </div>
+  );
 
   if (!localProfile) return null;
 
@@ -449,31 +406,30 @@ export default function UserDashboard() {
   const links = localProfile.links || [];
   const pagedLinks = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
-
   const bgStyle = localProfile.bg_image_url
-    ? { backgroundImage: 'url(' + localProfile.bg_image_url + ')', backgroundSize: 'cover', backgroundPosition: 'center' }
+    ? { backgroundImage: 'url(' + localProfile.bg_image_url + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }
     : { background: 'linear-gradient(135deg, ' + colors.bg1 + ', ' + colors.bg2 + ')' };
 
   return (
     <>
       <div className="min-h-screen" style={bgStyle}>
+        {localProfile.bg_image_url && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'linear-gradient(135deg,rgba(0,0,0,0.45),rgba(0,0,0,0.30))', pointerEvents: 'none' }} />
+        )}
 
-        {/* Top Bar */}
-        <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10">
+        {/* ── Top Bar ───────────────────────────────────────────────────────── */}
+        <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10" style={{ position: 'relative', zIndex: 20 }}>
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover' }} />
               <h1 className="font-bold text-lg text-white">SocialApp</h1>
             </div>
-
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
 
               {/* Fond */}
               <div ref={bgPanelRef} style={{ position: 'relative' }}>
-                <Button
-                  onClick={() => setShowBgPanel((v) => !v)}
-                  variant="outline" size="sm"
+                <Button onClick={() => setShowBgPanel((v) => !v)} variant="outline" size="sm"
                   className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10"
                   style={localProfile.bg_image_url ? { borderColor: 'rgba(99,102,241,0.7)', background: 'rgba(99,102,241,0.2)' } : {}}
                 >
@@ -481,21 +437,12 @@ export default function UserDashboard() {
                   <span className="hidden sm:inline">Fond</span>
                 </Button>
                 {showBgPanel && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-                      background: 'rgba(10,8,25,0.97)', backdropFilter: 'blur(20px)',
-                      border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px',
-                      padding: '16px', minWidth: '240px', zIndex: 50,
-                      boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
-                    }}
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                    style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, background: 'rgba(10,8,25,0.97)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px', padding: '16px', minWidth: '240px', zIndex: 50, boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                       <span style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>🖼️ Image de fond</span>
-                      <button onClick={() => setShowBgPanel(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <X size={13} />
-                      </button>
+                      <button onClick={() => setShowBgPanel(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={13} /></button>
                     </div>
                     {localProfile.bg_image_url && (
                       <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', marginBottom: '10px' }}>
@@ -505,7 +452,7 @@ export default function UserDashboard() {
                         </button>
                       </div>
                     )}
-                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '10px', padding: '16px', cursor: uploadingBgImage ? 'not-allowed' : 'pointer' }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '10px', padding: '16px', cursor: 'pointer' }}>
                       {uploadingBgImage ? <Loader2 size={16} className="animate-spin" color="rgba(99,102,241,0.8)" /> : <ImagePlus size={16} color="rgba(255,255,255,0.5)" />}
                       <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>{uploadingBgImage ? 'Upload...' : localProfile.bg_image_url ? "Changer l'image" : "Choisir une image"}</span>
                       <input type="file" accept="image/*" className="hidden" onChange={handleBgImageUpload} disabled={uploadingBgImage} />
@@ -515,59 +462,99 @@ export default function UserDashboard() {
               </div>
 
               <Button onClick={() => setShowPreview(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10">
-                <Eye className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Aperçu</span>
+                <Eye className="w-3.5 h-3.5" /><span className="hidden sm:inline">Aperçu</span>
               </Button>
 
-              {/* Bouton Sauvegarder — verrouillé si non activé */}
+              {/* ✅ Bouton Sauvegarder — toujours actif */}
               <Button
-                onClick={handleSaveClick}
-                disabled={updateMutation.isPending}
+                onClick={handleSave}
+                disabled={!hasChanges || updateMutation.isPending}
                 className="rounded-xl gap-2"
                 size="sm"
-                style={!isActivated ? { background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' } : {}}
               >
                 {updateMutation.isPending
                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : !isActivated
-                    ? <Lock className="w-3.5 h-3.5" />
-                    : <Save className="w-3.5 h-3.5" />
+                  : <Save className="w-3.5 h-3.5" />
                 }
                 Sauvegarder
               </Button>
 
               <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title={user?.email}>
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Déconnexion</span>
+                <LogOut className="w-3.5 h-3.5" /><span className="hidden sm:inline">Déconnexion</span>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Bandeau compte non activé */}
+        {/* ── Bandeau statut activation ─────────────────────────────────────── */}
         {!isActivated && (
-          <div style={{ background: 'rgba(0,87,255,0.15)', borderBottom: '1px solid rgba(0,87,255,0.3)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <div style={{ background: 'rgba(0,87,255,0.12)', borderBottom: '1px solid rgba(0,87,255,0.25)', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', position: 'relative', zIndex: 10 }}>
             <AlertCircle size={14} color="#60a5fa" />
-            <span style={{ color: '#93c5fd', fontSize: '13px' }}>
-              Compte en attente d'activation — cliquez sur <strong>Sauvegarder</strong> pour obtenir les instructions de paiement.
+            <span style={{ color: '#93c5fd', fontSize: '12px' }}>
+              Compte en attente d'activation — certaines fonctionnalités sont verrouillées.
             </span>
           </div>
         )}
 
-        <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* ── Content ───────────────────────────────────────────────────────── */}
+        <div className="max-w-5xl mx-auto px-4 py-6" style={{ position: 'relative', zIndex: 1 }}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* ── Colonne gauche ──────────────────────────────────────────────── */}
             <div className="lg:col-span-2 space-y-4">
 
+              {/* Avatar / nom / bio */}
               <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
 
               {/* Username + Badge */}
-              <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
-                <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-2xl border border-white/20 overflow-hidden">
+
+                {/* ✅ USERNAME VERROUILLÉ — clic → modal Wave */}
+                <div
+                  onClick={() => !isActivated && setShowWaveModal(true)}
+                  style={{ cursor: !isActivated ? 'pointer' : 'default' }}
+                  className="flex items-center gap-3 px-4 py-3"
+                >
                   <AtSign className="w-4 h-4 text-white/60 shrink-0" />
                   <span className="text-white/70 text-sm shrink-0">Username :</span>
-                  <input type="text" value={localProfile.username || ''} onChange={(e) => updateLocal({ username: e.target.value })} placeholder="ex: monpseudo" className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30" />
+                  {isActivated ? (
+                    <input
+                      type="text"
+                      value={localProfile.username || ''}
+                      onChange={(e) => updateLocal({ username: e.target.value })}
+                      placeholder="ex: monpseudo"
+                      className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0 placeholder-white/30"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
+                        padding: '6px 10px', border: '1px dashed rgba(255,255,255,0.15)',
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                      }}>
+                        <Lock size={12} color="rgba(255,255,255,0.35)" />
+                        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' }}>
+                          {localProfile.username || 'Verrouillé — cliquez pour activer'}
+                        </span>
+                      </div>
+                      <div style={{
+                        background: 'rgba(0,87,255,0.2)', border: '1px solid rgba(0,87,255,0.4)',
+                        borderRadius: '8px', padding: '4px 8px',
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        flexShrink: 0,
+                      }}>
+                        <Lock size={10} color="#60a5fa" />
+                        <span style={{ fontSize: '10px', color: '#60a5fa', fontWeight: 600 }}>Pro</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0 16px' }} />
+
+                {/* Badge vérifié */}
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="flex items-center gap-3">
                     <BadgeCheck className="w-4 h-4 text-white/60 shrink-0" />
                     <div>
@@ -584,19 +571,19 @@ export default function UserDashboard() {
                 </div>
               </div>
 
-              {/* Mode Événement — champs verrouillés sauf image */}
+              {/* ── Mode Événement ────────────────────────────────────────────── */}
               <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <CalendarDays className="w-4 h-4 text-white/60 shrink-0" />
                     <div>
                       <span className="text-white/70 text-sm">Mode Événement</span>
-                      <p className="text-white/40 text-xs">Ajoute un compte à rebours sur votre profil</p>
+                      <p className="text-white/40 text-xs">Ajoutez l'image de votre événement</p>
                     </div>
                   </div>
                   <button
                     onClick={() => updateLocal({ is_event: !localProfile.is_event })}
-                    style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_event ? 'linear-gradient(135deg, #ff6b35, #f7c948)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
+                    style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_event ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
                   >
                     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_event ? '23px' : '3px', transition: 'left 0.3s' }} />
                   </button>
@@ -606,32 +593,27 @@ export default function UserDashboard() {
                   <div className="space-y-2 pt-2 border-t border-white/10">
 
                     {/* Champs verrouillés */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Lock size={13} color="rgba(255,255,255,0.25)" style={{ flexShrink: 0 }} />
-                      <LockedField placeholder="Nom de l'événement — activez votre compte pour modifier" />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Lock size={13} color="rgba(255,255,255,0.25)" style={{ flexShrink: 0 }} />
-                      <LockedField placeholder="Date de l'événement" />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Lock size={13} color="rgba(255,255,255,0.25)" style={{ flexShrink: 0 }} />
-                      <LockedField placeholder="Lieu de l'événement" />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Lock size={13} color="rgba(255,255,255,0.25)" style={{ flexShrink: 0 }} />
-                      <LockedField placeholder="Description / programme" />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Lock size={13} color="rgba(255,255,255,0.25)" style={{ flexShrink: 0 }} />
-                      <LockedField placeholder="Lien de réservation" />
-                    </div>
+                    {[
+                      'Nom de l\'événement',
+                      'Date & heure',
+                      'Lieu de l\'événement',
+                      'Description / programme',
+                      'Lien de réservation',
+                    ].map((label) => (
+                      <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Lock size={13} color="rgba(255,255,255,0.2)" style={{ flexShrink: 0 }} />
+                        <LockedField placeholder={label} />
+                      </div>
+                    ))}
 
-                    {/* Image — déverrouillée */}
-                    <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '12px', padding: '10px 12px' }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <ImagePlus className="w-3.5 h-3.5 text-white/50" />
-                        <span className="text-white/60 text-xs">Image de l'événement — <span style={{ color: '#a5b4fc' }}>disponible sans activation</span></span>
+                    {/* ✅ Image — déverrouillée */}
+                    <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '14px', padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                        <ImagePlus size={14} color="rgba(255,255,255,0.5)" />
+                        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
+                          Image de l'événement —{' '}
+                          <span style={{ color: '#a5b4fc', fontWeight: 600 }}>disponible sans activation</span>
+                        </span>
                       </div>
                       {localProfile.event_image_url ? (
                         <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden' }}>
@@ -644,7 +626,7 @@ export default function UserDashboard() {
                           </button>
                         </div>
                       ) : (
-                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '10px', padding: '14px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '10px', padding: '16px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
                           {uploadingEventImage ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
                           {uploadingEventImage ? 'Upload...' : 'Ajouter une image'}
                           <input type="file" accept="image/*" className="hidden" onChange={handleEventImageUpload} disabled={uploadingEventImage} />
@@ -652,7 +634,7 @@ export default function UserDashboard() {
                       )}
                     </div>
 
-                    {/* Message activation */}
+                    {/* Info activation */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,87,255,0.08)', border: '1px solid rgba(0,87,255,0.2)', borderRadius: '10px', padding: '8px 12px' }}>
                       <Lock size={12} color="#60a5fa" style={{ flexShrink: 0 }} />
                       <span style={{ color: '#93c5fd', fontSize: '11px' }}>
@@ -663,7 +645,7 @@ export default function UserDashboard() {
                 )}
               </div>
 
-              {/* Plateformes */}
+              {/* ── Plateformes ───────────────────────────────────────────────── */}
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-base text-white">Mes plateformes</h2>
                 <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs" onClick={() => setShowAddDialog(true)}>
@@ -683,9 +665,8 @@ export default function UserDashboard() {
                       return (
                         <PlatformCard
                           key={link.id || link.platform + '-' + absoluteIndex}
-                          link={link}
-                          index={absoluteIndex}
-                          onUpdate={(updated) => handleUpdateLink(absoluteIndex, updated)}
+                          link={link} index={absoluteIndex}
+                          onUpdate={(u) => handleUpdateLink(absoluteIndex, u)}
                           onRemove={() => handleRemoveLink(absoluteIndex)}
                         />
                       );
@@ -702,48 +683,60 @@ export default function UserDashboard() {
               )}
             </div>
 
-            {/* Colonne droite */}
+            {/* ── Colonne droite ───────────────────────────────────────────────── */}
             <div className="space-y-4">
               <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
 
-              {/* Expiration */}
+              {/* Expiration automatique — lecture seule */}
               <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 flex items-center gap-3">
                 <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
-                <span className="text-white/70 text-sm shrink-0">Expiration :</span>
-                <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', margin: 0 }}>Abonnement valide jusqu'au</p>
+                  <p style={{ color: 'white', fontSize: '14px', fontWeight: 600, margin: '2px 0 0' }}>
+                    {localProfile.expiry_date
+                      ? new Date(localProfile.expiry_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+                      : '—'}
+                  </p>
+                </div>
+                <div style={{ background: '#dcfce7', borderRadius: '8px', padding: '4px 8px' }}>
+                  <span style={{ color: '#166534', fontSize: '11px', fontWeight: 600 }}>12 mois</span>
+                </div>
               </div>
 
               <StatsCard profileId={localProfile.id} />
 
-              {/* Statut activation */}
+              {/* Statut compte */}
               <div style={{
                 background: isActivated ? 'rgba(34,197,94,0.1)' : 'rgba(0,87,255,0.1)',
                 border: '1px solid ' + (isActivated ? 'rgba(34,197,94,0.3)' : 'rgba(0,87,255,0.3)'),
                 borderRadius: '16px', padding: '14px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
-                    background: isActivated ? 'rgba(34,197,94,0.2)' : 'rgba(0,87,255,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {isActivated
-                      ? <Check size={18} color="#22c55e" />
-                      : <Lock size={18} color="#60a5fa" />
-                    }
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0, background: isActivated ? 'rgba(34,197,94,0.2)' : 'rgba(0,87,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {isActivated ? <Check size={18} color="#22c55e" /> : <Lock size={18} color="#60a5fa" />}
                   </div>
                   <div>
                     <p style={{ color: 'white', fontSize: '13px', fontWeight: 600, margin: 0 }}>
-                      {isActivated ? 'Compte activé' : 'Compte non activé'}
+                      {isActivated ? '✅ Compte activé' : '⏳ Compte non activé'}
                     </p>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', margin: 0 }}>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', margin: '2px 0 0' }}>
                       {isActivated
-                        ? 'Vous pouvez sauvegarder vos modifications'
-                        : 'Cliquez sur Sauvegarder pour activer'
-                      }
+                        ? 'Toutes les fonctionnalités sont disponibles'
+                        : 'Contactez le support pour activer votre compte'}
                     </p>
                   </div>
                 </div>
+                {!isActivated && (
+                  <a
+                    href="https://wa.me/2250576031212"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '10px', padding: '8px', background: '#25D366', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2zm5.2 13.8c-.2.6-1.3 1.2-1.8 1.2-.5.1-1.1.1-1.6-.1-1-.3-2-1-2.8-1.8A9.2 9.2 0 0 1 9 12.4c-.2-.5-.2-1-.1-1.5.1-.5.6-1.1 1-1.3.3-.1.5-.1.7 0 .2 0 .3 0 .4.3l.6 1.6c0 .1.1.3 0 .4-.1.2-.2.3-.3.4-.1.1-.3.3-.2.5.4.7 1 1.3 1.7 1.7.2.1.4 0 .5-.1l.5-.6c.2-.2.4-.2.6-.1l1.4.7c.2.1.4.2.4.4.1.3 0 .8-.2 1z"/></svg>
+                    Contacter le support
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -753,7 +746,7 @@ export default function UserDashboard() {
       <AddPlatformDialog open={showAddDialog} onOpenChange={setShowAddDialog} onSelect={handleAddPlatform} existingPlatforms={(localProfile.links || []).map((l) => l.platform)} />
       {showPreview && <ProfilePreview profile={localProfile} onClose={() => setShowPreview(false)} />}
 
-      {/* Modal Wave */}
+      {/* ✅ Modal Wave — s'ouvre au clic sur le champ username verrouillé */}
       <AnimatePresence>
         {showWaveModal && <WaveModal onClose={() => setShowWaveModal(false)} />}
       </AnimatePresence>

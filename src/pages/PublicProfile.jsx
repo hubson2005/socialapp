@@ -376,7 +376,7 @@ export default function PublicProfile() {
           }}>
             <Eye size={13} color="rgba(255,255,255,0.5)" />
             <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: '600' }}>
-              {formattedViews} personne{viewCount > 1 ? 's ont' : ' a'} visité ce profil
+              {formattedViews} visiteur{viewCount > 1 ? 's' : ' a'} sur votre profil
             </span>
           </div>
         )}
@@ -407,9 +407,9 @@ export default function PublicProfile() {
                 <button
                   onClick={() => handleDownload(images[currentIndex])}
                   style={{
-                    position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
-                    background: 'white', color: '#000', padding: '10px 18px', borderRadius: '999px',
-                    fontWeight: '700', fontSize: '14px', border: 'none', cursor: 'pointer',
+                    position: 'absolute', bottom: '25px', right: '20px', 
+                    background: 'white', color: '#000', padding: '4px 10px', borderRadius: '999px',
+                    fontWeight: '700', fontSize: '11px', border: 'none', cursor: 'pointer',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.3)', zIndex: 10, whiteSpace: 'nowrap',
                   }}
                 >
@@ -524,7 +524,7 @@ export default function PublicProfile() {
 
         {/* Support WhatsApp */}
         <a
-          href="https://wa.me/2250506458127"
+          href="https://wa.me/2250576031212"
           target="_blank"
           rel="noopener noreferrer"
           style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}

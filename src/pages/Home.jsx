@@ -85,9 +85,9 @@ export default function Home() {
   ];
 
   const testimonials = [
-    { name: 'Kofi Mensah', role: 'Influenceur', text: "Depuis que j'utilise SocialApp, mes abonnés Instagram ont augmenté de 40% en 2 mois. Un outil indispensable !", avatar: 'K' },
-    { name: 'Aminata Diallo', role: 'Gérante PME', text: "Je distribue mes cartes PVC à chaque événement. Mes clients scannent et me retrouvent partout. Génial !", avatar: 'A' },
-    { name: 'Jean-Baptiste Ouédraogo', role: 'Artiste', text: "Simple, rapide et efficace. Mon QR code remplace toute ma bio Instagram. Je recommande à 100% !", avatar: 'J' },
+    { name: 'Koffi Mensah', role: 'Influenceur', text: "Depuis que j'utilise SocialApp, mes abonnés Instagram ont augmenté de 40% en 2 mois. Un outil indispensable !", avatar: 'K' },
+    { name: 'Dorine Ouattara', role: 'Gérante PME', text: "Je présente ma carte  PVC avec Qr code à chaque événement. Mes clients scannent et me retrouvent partout. Génial !", avatar: 'A' },
+    { name: 'Jean-Baptiste KOUAMÉ', role: 'Artiste', text: "Simple, rapide et efficace. Mon QR code remplace toute ma bio Instagram. Je recommande à 100% !", avatar: 'J' },
   ];
 
   const faqs = [
@@ -356,7 +356,7 @@ export default function Home() {
                   ))}
                 </div>
                 <a
-                  href="https://wa.me/2250506458127"
+                  href="https://wa.me/2250576031212"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -394,7 +394,7 @@ export default function Home() {
             </div>
           </div>
           <p className="reveal" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginTop: '28px' }}>
-            Paiement via Mobile Money · Contactez-nous sur WhatsApp au +225 05 06 45 81 27
+            Paiement via Mobile Money · Contactez-nous sur WhatsApp au +225 05 76 03 12 12
           </p>
         </div>
       </section>
@@ -475,7 +475,7 @@ export default function Home() {
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Connect. Share. Discover. © 2026 SocialApp.</p>
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Tous Droits Réservés.</p>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <a href="https://wa.me/2250506458127" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 20px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}>
+          <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 20px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}>
             WhatsApp
           </a>
           <button onClick={() => navigate('/login')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '100px', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>

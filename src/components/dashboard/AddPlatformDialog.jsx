@@ -9,10 +9,19 @@ export const PLATFORMS = {
     icon: (<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><defs><radialGradient id="ig1" cx="30%" cy="107%" r="150%"><stop offset="0%" stopColor="#fdf497"/><stop offset="5%" stopColor="#fdf497"/><stop offset="45%" stopColor="#fd5949"/><stop offset="60%" stopColor="#d6249f"/><stop offset="90%" stopColor="#285AEB"/></radialGradient></defs><rect width="24" height="24" rx="6" fill="url(#ig1)"/><path d="M12 7.5A4.5 4.5 0 1 0 12 16.5 4.5 4.5 0 0 0 12 7.5z" stroke="white" strokeWidth="1.5"/><circle cx="17" cy="7" r="1" fill="white"/><rect x="3" y="3" width="18" height="18" rx="5" stroke="white" strokeWidth="1.5" fill="none"/></svg>),
   },
   tiktok: {
-    label: 'TikTok', color: '#000000', category: 'Réseaux sociaux',
-    placeholder: 'https://tiktok.com/@tonpseudo',
-    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#000000"/><path d="M16.6 5.82s.51.5 0 0A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 0 1-2.59-2.59 2.59 2.59 0 0 1 2.59-2.59c.28 0 .54.04.79.1V9.01a5.68 5.68 0 0 0-.79-.05 5.74 5.74 0 0 0-5.74 5.74 5.74 5.74 0 0 0 5.74 5.74 5.74 5.74 0 0 0 5.74-5.74V9.01a7.35 7.35 0 0 0 4.31 1.38V7.3s-1.88.09-3.25-1.48z" fill="white"/><path d="M16.6 5.82s.51.5 0 0A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 0 1-2.59-2.59 2.59 2.59 0 0 1 2.59-2.59c.28 0 .54.04.79.1V9.01a5.68 5.68 0 0 0-.79-.05 5.74 5.74 0 0 0-5.74 5.74 5.74 5.74 0 0 0 5.74 5.74 5.74 5.74 0 0 0 5.74-5.74V9.01a7.35 7.35 0 0 0 4.31 1.38V7.3s-1.88.09-3.25-1.48z" fill="#69C9D0" opacity="0.5"/></svg>),
-  },
+  label: 'TikTok',
+  color: '#000',
+  category: 'Réseaux sociaux',
+  placeholder: 'https://tiktok.com/@tonpseudo',
+  icon: (
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <rect width="24" height="24" rx="6" fill="#000" />
+      <path d="M14 4c.5 1 1.4 1.8 2.5 2v2a4.8 4.8 0 0 1-2.5-.7v5a4 4 0 1 1-4-4h.5v2a2 2 0 1 0 1.5 2V4h2z" fill="#25F4EE"/>
+      <path d="M14.5 4c.5 1 1.4 1.8 2.5 2v2a4.8 4.8 0 0 1-2.5-.7v5a4 4 0 1 1-4-4h.5v2a2 2 0 1 0 1.5 2V4h2z" fill="#FE2C55" opacity=".7"/>
+      <path d="M14.25 4c.5 1 1.4 1.8 2.5 2v2a4.8 4.8 0 0 1-2.5-.7v5a4 4 0 1 1-4-4h.5v2a2 2 0 1 0 1.5 2V4h2z" fill="#fff"/>
+    </svg>
+  ),
+},
   twitter: {
     label: 'X (Twitter)', color: '#000000', category: 'Réseaux sociaux',
     placeholder: 'https://x.com/tonpseudo',
@@ -61,10 +70,14 @@ export const PLATFORMS = {
 
   // ── Messagerie ───────────────────────────────────────────────────────────
   whatsapp: {
-    label: 'WhatsApp', color: '#25D366', category: 'Messagerie',
-    placeholder: 'https://wa.me/33600000000',
-    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#25D366"/><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2zm5.2 13.8c-.2.6-1.3 1.2-1.8 1.2-.5.1-1.1.1-1.6-.1-1-.3-2-1-2.8-1.8A9.2 9.2 0 0 1 9 12.4c-.2-.5-.2-1-.1-1.5.1-.5.6-1.1 1-1.3.3-.1.5-.1.7 0 .2 0 .3 0 .4.3l.6 1.6c0 .1.1.3 0 .4-.1.2-.2.3-.3.4-.1.1-.3.3-.2.5.4.7 1 1.3 1.7 1.7.2.1.4 0 .5-.1l.5-.6c.2-.2.4-.2.6-.1l1.4.7c.2.1.4.2.4.4.1.3 0 .8-.2 1z" fill="white"/></svg>),
-  },
+  label: 'WhatsApp',
+  color: '#25D366',
+  category: 'Messagerie',
+  placeholder: 'https://wa.me/33600000000',
+  icon: (<svg viewBox="0 0 24 24" width="20" height="20"><rect width="24" height="24" rx="6" fill="#25D366" /><path d="M12 4a8 8 0 0 0-6.9 12l-1 4 4.1-1A8 8 0 1 0 12 4z" fill="white" />
+      <path d="M16.4 14.5c-.2.5-1 .9-1.4 1-.4.1-.9.1-1.5-.1-.9-.3-2-.9-3.2-2-1-1-1.7-2-2-2.9-.2-.6-.2-1.1-.1-1.5.1-.4.5-1.2 1-1.4.2-.1.4-.1.5 0l1.1 1.3c.1.2.1.4 0 .5l-.5.8c.5.9 1.3 1.7 2.2 2.2l.8-.5c.2-.1.4-.1.5 0l1.3 1.1c.2.1.2.3.1.5z" fill="#25D366"/></svg>
+  ),
+},
   telegram: {
     label: 'Telegram', color: '#26A5E4', category: 'Messagerie',
     placeholder: 'https://t.me/tonpseudo',
@@ -173,9 +186,7 @@ export const PLATFORMS = {
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#EA4335"/><path d="M20 6H4c-.6 0-1 .4-1 1v10c0 .6.4 1 1 1h16c.6 0 1-.4 1-1V7c0-.6-.4-1-1-1zm-1.3 1.5L12 13.1 5.3 7.5h13.4zM4 17V8.5l7.5 6c.1.1.3.2.5.2s.4-.1.5-.2L20 8.5V17H4z" fill="white"/></svg>),
   },
   phone: {
-  label: 'Téléphone',
-  color: '#34C759',
-  category: 'Contact',
+  label: 'Téléphone', color: '#34C759', category: 'Contact',
   placeholder: 'tel:+33600000000',
   icon: (
     <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -206,6 +217,21 @@ export const PLATFORMS = {
   },
 
   // ── Autre ────────────────────────────────────────────────────────────────
+  appstore: {
+  label: 'App Store', color: '#0D96F6', category: 'Business',
+  placeholder: 'https://apps.apple.com/app/id123456789',
+  icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#0D96F6"/>
+      <path d="M14.7 5.5h1.8l-3.1 5.4 1.7 2.9h2l-2.7-4.6 2.3-3.7zm-5.4 0l-1 1.7 4.3 7.4H6.8l-1 1.7h7.8l1.1 1.9h2l-1.1-1.9h2.1l1-1.7h-4.1L10.3 5.5h-1z" fill="white"/></svg>
+  ),
+},
+
+playstore: {
+  label: 'Google Play', color: '#e2ab25', category: 'Business',
+  placeholder: 'https://play.google.com/store/apps/details?id=com.example.app',
+  icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#ffffff"/><path d="M5 4.5v15l8.5-7.5L5 4.5z" fill="#34A853"/><path d="M13.5 12l2.5-2.2 3 1.7c.7.4.7 1.4 0 1.8l-3 1.7-2.5-2z" fill="#FBBC04"/><path d="M13.5 12L5 19.5l11-6.2-2.5-1.3z" fill="#EA4335"/>
+      <path d="M13.5 12L5 4.5l11 6.2-2.5 1.3z" fill="#4285F4"/></svg>
+  ),
+},
   website: {
     label: 'Site web', color: '#6366F1', category: 'Autre',
     placeholder: 'https://tonsite.com',

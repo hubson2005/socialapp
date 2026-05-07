@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 import logo from '../assets/Logo_SocialApp.png';
-import eventMockup from '../assets/MODE_EVENEMENT.png'; // ← nouvelle image
+import eventMockup from '../assets/MODE_EVENEMENT.png';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState(null);
+
+  // ✅ Si l'utilisateur est déjà connecté, le CTA principal pointe vers /dashboard
+  const handleCTA = () => navigate(user ? '/dashboard' : '/login');
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -79,14 +84,14 @@ export default function Home() {
   ];
 
   const steps = [
-    { icon: '👤', title: 'Créez votre profil en 2 minutes chrono', desc: 'nscrivez-vous, ajoutez votre photo, votre bio et vos liens. Votre espace personnalisé est prêt à conquérir votre audience en un temps record.' },
+    { icon: '👤', title: 'Créez votre profil en 2 minutes chrono', desc: 'Inscrivez-vous, ajoutez votre photo, votre bio et vos liens. Votre espace personnalisé est prêt à conquérir votre audience en un temps record.' },
     { icon: '🔗', title: 'Centralisez tous vos réseaux', desc: 'Connectez instantanément Facebook, Instagram, TikTok, WhatsApp et tous vos profils essentiels en un seul espace. Un seul lien, une présence totale.' },
-    { icon: '📲', title: 'Partagez votre QR code', desc: 'Téléchargez votre QR code et  Intégrez-le facilement sur vos supports de communication : cartes de visite, flyers, affiches de concert, invitations de mariage ou cadeaux personnalisés.' },
+    { icon: '📲', title: 'Partagez votre QR code', desc: 'Téléchargez votre QR code et intégrez-le facilement sur vos supports de communication : cartes de visite, flyers, affiches de concert, invitations de mariage ou cadeaux personnalisés.' },
   ];
 
   const testimonials = [
     { name: 'Koffi Mensah', role: 'Influenceur', text: "Depuis que j'utilise SocialApp, mes abonnés Instagram ont augmenté de 40% en 2 mois. Un outil indispensable !", avatar: 'K' },
-    { name: 'Dorine Ouattara', role: 'Gérante PME', text: "Je présente ma carte  PVC avec Qr code à chaque événement. Mes clients scannent et me retrouvent partout. Génial !", avatar: 'A' },
+    { name: 'Dorine Ouattara', role: 'Gérante PME', text: "Je présente ma carte PVC avec QR code à chaque événement. Mes clients scannent et me retrouvent partout. Génial !", avatar: 'A' },
     { name: 'Jean-Baptiste KOUAMÉ', role: 'Artiste', text: "Simple, rapide et efficace. Mon QR code remplace toute ma bio Instagram. Je recommande à 100% !", avatar: 'J' },
   ];
 
@@ -95,7 +100,7 @@ export default function Home() {
     { q: "Puis-je modifier mon profil après la création ?", a: "Absolument. Vous gardez le contrôle total : modifiez votre profil, vos liens et votre design à tout moment depuis votre tableau de bord. Les mises à jour sont instantanées." },
     { q: "Comment je reçois ma carte PVC ?", a: "Dès votre souscription aux offres PRO ou BUSINESS, notre équipe vous contacte pour personnaliser votre carte. Recevez-la directement chez vous sous 7 jours ouvrés." },
     { q: "Mon QR code expire-t-il ?", a: "Votre code est actif durant toute la durée de votre abonnement. Il vous suffit de renouveler votre souscription pour continuer à l'utiliser sans interruption." },
-    { q: "En quoi consiste la fonctionnalité « Événement » ?", a: "C'est le mode idéal pour booster vos lancement ! Elle transforme votre page avec un compte à rebours, des détails complets et un bouton de réservation. Disponible à partir de 5 000 FCFA/mois." },
+    { q: "En quoi consiste la fonctionnalité « Événement » ?", a: "C'est le mode idéal pour booster vos lancements ! Elle transforme votre page avec un compte à rebours, des détails complets et un bouton de réservation. Disponible à partir de 5 000 FCFA/mois." },
     { q: "Comment vous contacter pour souscrire ?", a: "Besoin d'aide ou envie de vous lancer ? Contactez-nous directement sur WhatsApp au +225 05 06 45 81 27 ou utilisez le bouton de support en bas de votre page publique." },
   ];
 
@@ -134,6 +139,7 @@ export default function Home() {
         }
       `}</style>
 
+      {/* ── Navbar ──────────────────────────────────────────────────────────── */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(6,4,18,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src={logo} alt="SocialApp" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
@@ -145,11 +151,26 @@ export default function Home() {
           <a href="#pricing" style={{ color: 'inherit', textDecoration: 'none' }}>Tarifs</a>
           <a href="#faq" style={{ color: 'inherit', textDecoration: 'none' }}>FAQ</a>
         </div>
-        <button onClick={() => navigate('/login')} style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #ff6b35, #f7c948)', border: 'none', borderRadius: '100px', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' }}>
-          Connexion →
-        </button>
+
+        {/* ✅ Bouton nav — adapté selon l'état de connexion */}
+        {user ? (
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #22c55e, #16a34a)', border: 'none', borderRadius: '100px', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            Mon tableau de bord →
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate('/login')}
+            style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #ff6b35, #f7c948)', border: 'none', borderRadius: '100px', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Connexion →
+          </button>
+        )}
       </nav>
 
+      {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '120px 40px 80px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,107,53,0.12), transparent)', pointerEvents: 'none' }} />
         <div className="hero-grid" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
@@ -165,15 +186,22 @@ export default function Home() {
             <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.7', marginBottom: '16px' }}>
               Un seul QR code pour <strong style={{ color: 'white' }}>TOUS VOS RÉSEAUX SOCIAUX, LIENS ET ÉVÉNEMENTS</strong> en un seul scan.
               <br /><br />
-                   SocialApp.Work vous permet de créer un QR code unique qui centralise <strong style={{ color: 'white' }}>tous vos contenus importants</strong>.  
-                   Plus besoin de multiplier les codes, adresses ou numéros : tout est accessible depuis une seule page simple et mobile.
+              SocialApp.Work vous permet de créer un QR code unique qui centralise <strong style={{ color: 'white' }}>tous vos contenus importants</strong>.
+              Plus besoin de multiplier les codes, adresses ou numéros : tout est accessible depuis une seule page simple et mobile.
             </p>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '40px' }}>Connect. Share. Discover.</p>
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
-              <button onClick={() => navigate('/login')} style={{ padding: '15px 34px', background: 'linear-gradient(135deg, #ff6b35, #f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '700', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                Créer mon QR code →
+              {/* ✅ CTA principal — redirige selon état auth */}
+              <button
+                onClick={handleCTA}
+                style={{ padding: '15px 34px', background: 'linear-gradient(135deg, #ff6b35, #f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '700', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                {user ? 'Mon tableau de bord →' : 'Créer mon QR code →'}
               </button>
-              <a href="#pricing" style={{ padding: '15px 34px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '14px', color: 'white', fontWeight: '600', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+              <a
+                href="#pricing"
+                style={{ padding: '15px 34px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '14px', color: 'white', fontWeight: '600', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+              >
                 Voir les tarifs
               </a>
             </div>
@@ -212,6 +240,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Stats ───────────────────────────────────────────────────────────── */}
       <section style={{ padding: '60px 40px', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="stats-grid reveal" style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '32px', textAlign: 'center' }}>
           {[
@@ -228,6 +257,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Comment ça marche ───────────────────────────────────────────────── */}
       <section id="how" style={{ padding: '100px 40px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -249,7 +279,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Mode Événement ────────────────────────────────────────────────── */}
+      {/* ── Mode Événement ──────────────────────────────────────────────────── */}
       <section id="event" style={{ padding: '100px 40px', background: 'rgba(34,197,94,0.03)', borderTop: '1px solid rgba(34,197,94,0.1)', borderBottom: '1px solid rgba(34,197,94,0.1)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -264,28 +294,15 @@ export default function Home() {
               Créez une page événementielle interactive et un QR code unique pour vos lancements
             </p>
           </div>
-
           <div className="event-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
-
-            {/* ✅ Nouvelle image à la place du mockup codé en dur */}
             <div className="reveal d1" style={{ display: 'flex', justifyContent: 'center' }}>
-              <img
-                src={eventMockup}
-                alt="Mode Événement SocialApp"
-                className="event-mockup-img float"
-                style={{
-                  width: '320px',
-                  maxWidth: '100%',
-                  borderRadius: '24px',
-                  boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
-                  objectFit: 'contain',
-                }}
+              <img src={eventMockup} alt="Mode Événement SocialApp" className="event-mockup-img float"
+                style={{ width: '320px', maxWidth: '100%', borderRadius: '24px', boxShadow: '0 40px 80px rgba(0,0,0,0.5)', objectFit: 'contain' }}
               />
             </div>
-
             <div className="reveal d2" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[
-                { icon: '⚡', title: 'Création simple et rapide', desc: 'Lancez votre page événementielle en quelques minutes. Idéal pour les concerts, conférences et festivals en Côte divoire et en Afrique.' },
+                { icon: '⚡', title: 'Création simple et rapide', desc: "Lancez votre page événementielle en quelques minutes. Idéal pour les concerts, conférences et festivals en Côte d'Ivoire et en Afrique." },
                 { icon: '⏱', title: 'Compte à rebours en temps réel', desc: "Un compte à rebours dynamique visible sur votre profil jusqu'au jour J." },
                 { icon: '🎨', title: 'Personnalisation complète', desc: 'Choisissez vos couleurs de fond parmi des presets ou créez les vôtres. Ajoutez une image attractive.' },
                 { icon: '🎟', title: 'Réservation en 1 clic', desc: "Optimisez votre billetterie : lien direct vers votre plateforme d'inscription ou paiement mobile." },
@@ -307,6 +324,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Tarifs ──────────────────────────────────────────────────────────── */}
       <section id="pricing" style={{ padding: '100px 40px', background: 'rgba(255,255,255,0.01)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -315,30 +333,13 @@ export default function Home() {
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '17px' }}>Choisissez l'offre qui correspond à vos besoins</p>
           </div>
-
           <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '20px', alignItems: 'start' }}>
             {plans.map((p, i) => (
-              <div
-                key={i}
-                className={`reveal card-hover d${i+1}`}
-                style={{
-                  background: p.event ? 'rgba(34,197,94,0.06)' : p.popular ? 'rgba(255,107,53,0.08)' : 'rgba(255,255,255,0.03)',
-                  border: p.event ? '2px solid rgba(34,197,94,0.4)' : p.popular ? '2px solid rgba(255,107,53,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '24px',
-                  padding: '30px',
-                  position: 'relative'
-                }}
+              <div key={i} className={`reveal card-hover d${i+1}`}
+                style={{ background: p.event ? 'rgba(34,197,94,0.06)' : p.popular ? 'rgba(255,107,53,0.08)' : 'rgba(255,255,255,0.03)', border: p.event ? '2px solid rgba(34,197,94,0.4)' : p.popular ? '2px solid rgba(255,107,53,0.5)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '30px', position: 'relative' }}
               >
-                {p.popular && (
-                  <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '5px 18px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                    ⭐ Plus populaire
-                  </div>
-                )}
-                {p.event && (
-                  <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderRadius: '100px', padding: '5px 18px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: 'white' }}>
-                    🎉 Nouveau
-                  </div>
-                )}
+                {p.popular && <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '5px 18px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>⭐ Plus populaire</div>}
+                {p.event && <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderRadius: '100px', padding: '5px 18px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: 'white' }}>🎉 Nouveau</div>}
                 <div style={{ fontSize: '13px', fontWeight: '700', color: p.color, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>{p.name}</div>
                 {p.priceLabel && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>{p.priceLabel}</div>}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
@@ -355,17 +356,8 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <a
-                  href="https://wa.me/2250576031212"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'block', width: '100%', padding: '13px',
-                    background: p.event ? 'linear-gradient(135deg,#22c55e,#16a34a)' : p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.07)',
-                    border: (!p.popular && !p.event) ? '1px solid rgba(255,255,255,0.15)' : 'none',
-                    borderRadius: '12px', color: 'white', fontWeight: '700', fontSize: '14px',
-                    cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', textAlign: 'center',
-                  }}
+                <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'block', width: '100%', padding: '13px', background: p.event ? 'linear-gradient(135deg,#22c55e,#16a34a)' : p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.07)', border: (!p.popular && !p.event) ? '1px solid rgba(255,255,255,0.15)' : 'none', borderRadius: '12px', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', textAlign: 'center' }}
                 >
                   {p.event ? 'Promouvoir un événement' : 'Choisir ' + p.name}
                 </a>
@@ -399,6 +391,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Témoignages ─────────────────────────────────────────────────────── */}
       <section style={{ padding: '100px 40px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -425,6 +418,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── CTA final ───────────────────────────────────────────────────────── */}
       <section style={{ padding: '80px 40px' }}>
         <div className="reveal" style={{ maxWidth: '680px', margin: '0 auto', textAlign: 'center', background: 'linear-gradient(135deg,rgba(255,107,53,0.08),rgba(247,201,72,0.08))', border: '1px solid rgba(255,107,53,0.2)', borderRadius: '32px', padding: '60px 40px' }}>
           <img src={logo} alt="SocialApp" style={{ width: '72px', height: '72px', borderRadius: '18px', objectFit: 'cover', marginBottom: '24px' }} />
@@ -433,12 +427,17 @@ export default function Home() {
             <strong style={{ color: '#f7c948' }}>Un seul scan, un accès total : boostez votre visibilité de 30 à 50% instantanément.</strong> Networking fluide, connexion intelligente, impact immédiat. Passez au réseautage nouvelle génération.
           </p>
           <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '32px' }}>Connect. Share. Discover.</p>
-          <button onClick={() => navigate('/login')} style={{ padding: '16px 44px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '17px', cursor: 'pointer', fontFamily: 'inherit' }}>
-            Commencer gratuitement →
+          {/* ✅ CTA final — adapté selon auth */}
+          <button
+            onClick={handleCTA}
+            style={{ padding: '16px 44px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontWeight: '800', fontSize: '17px', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            {user ? 'Accéder à mon dashboard →' : 'Commencer gratuitement →'}
           </button>
         </div>
       </section>
 
+      {/* ── FAQ ─────────────────────────────────────────────────────────────── */}
       <section id="faq" style={{ padding: '80px 40px' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: '56px' }}>
@@ -449,17 +448,14 @@ export default function Home() {
           <div className="reveal" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {faqs.map((f, i) => (
               <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', overflow: 'hidden' }}>
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   style={{ width: '100%', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', color: 'white', fontSize: '15px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                 >
                   {f.q}
                   <span style={{ fontSize: '20px', flexShrink: 0, marginLeft: '16px', color: '#ff6b35', transition: 'transform 0.3s', transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0)' }}>+</span>
                 </button>
                 {openFaq === i && (
-                  <div style={{ padding: '0 24px 20px', color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: '1.7' }}>
-                    {f.a}
-                  </div>
+                  <div style={{ padding: '0 24px 20px', color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: '1.7' }}>{f.a}</div>
                 )}
               </div>
             ))}
@@ -467,6 +463,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer style={{ padding: '32px 40px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src={logo} alt="SocialApp" style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
@@ -475,11 +472,17 @@ export default function Home() {
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Connect. Share. Discover. © 2026 SocialApp.</p>
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>Tous Droits Réservés.</p>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 20px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}>
+          <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer"
+            style={{ padding: '10px 20px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}
+          >
             WhatsApp
           </a>
-          <button onClick={() => navigate('/login')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '100px', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
-            Se connecter
+          {/* ✅ Footer button — adapté selon auth */}
+          <button
+            onClick={handleCTA}
+            style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '100px', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            {user ? 'Mon dashboard' : 'Se connecter'}
           </button>
         </div>
       </footer>

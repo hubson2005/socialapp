@@ -1,15 +1,18 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Dashboard";         // Dashboard ADMIN
+import UserDashboard from "./pages/UserDashboard"; // Dashboard UTILISATEUR
 import PublicProfile from "./pages/PublicProfile";
 import Home from "./pages/Home";
 
+// ✅ Détecte si on est sur le sous-domaine admin
 const isAdmin = () => {
   const hostname = window.location.hostname;
   return hostname === 'admin.socialapp.work' || hostname === 'localhost';
 };
 
+// ── Garde : utilisateur connecté requis ──────────────────────────────────────
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) {
@@ -22,6 +25,7 @@ function ProtectedRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />;
 }
 
+// ── Garde : redirige vers /dashboard si déjà connecté ───────────────────────
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) {
@@ -34,6 +38,7 @@ function PublicRoute({ children }) {
   return !user ? children : <Navigate to="/dashboard" replace />;
 }
 
+// ── App ADMIN (admin.socialapp.work ou localhost) ────────────────────────────
 function AdminApp() {
   return (
     <Routes>
@@ -48,11 +53,26 @@ function AdminApp() {
   );
 }
 
+// ── App PUBLIQUE (socialapp.work) ────────────────────────────────────────────
 function PublicApp() {
   return (
     <Routes>
+      {/* Page d'accueil publique */}
       <Route path="/" element={<Home />} />
+
+      {/* Profil public partageable */}
       <Route path="/profil/:username" element={<PublicProfile />} />
+
+      {/* Connexion utilisateur */}
+      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+
+      {/* ✅ Dashboard utilisateur (limité) — protégé par auth */}
+      <Route
+        path="/dashboard"
+        element={<ProtectedRoute><UserDashboard /></ProtectedRoute>}
+      />
+
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

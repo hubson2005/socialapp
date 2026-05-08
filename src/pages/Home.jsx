@@ -356,11 +356,30 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'block', width: '100%', padding: '13px', background: p.event ? 'linear-gradient(135deg,#22c55e,#16a34a)' : p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.07)', border: (!p.popular && !p.event) ? '1px solid rgba(255,255,255,0.15)' : 'none', borderRadius: '12px', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', textAlign: 'center' }}
-                >
-                  {p.event ? 'Promouvoir un événement' : 'Choisir ' + p.name}
-                </a>
+                <button
+  onClick={() => navigate(`/login?plan=${p.name.toLowerCase()}`)}
+  style={{
+    display: 'block',
+    width: '100%',
+    padding: '13px',
+    background: p.event
+      ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+      : p.popular
+      ? 'linear-gradient(135deg,#ff6b35,#f7c948)'
+      : 'rgba(255,255,255,0.07)',
+    border: (!p.popular && !p.event)
+      ? '1px solid rgba(255,255,255,0.15)'
+      : 'none',
+    borderRadius: '12px',
+    color: 'white',
+    fontWeight: '700',
+    fontSize: '14px',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  }}
+>
+  {p.event ? 'Promouvoir un événement' : 'Choisir ' + p.name}
+</button>
               </div>
             ))}
           </div>

@@ -344,7 +344,7 @@ export default function UserDashboard() {
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(135deg,#0f0a1e,#2d1b69)' }}>
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} className="text-center max-w-sm">
         <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center">
-          <img src="/favicon.png" alt="Logo" className="w-10 h-10 object-cover rounded-xl"/>
+          <img  src="/favicon-socialapp.png" alt="Logo" className="w-10 h-10 object-cover rounded-xl"/>
         <h1 className="text-2xl font-bold mb-2 text-white">Bienvenue !</h1>
         <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:`${limits.color}20`, border:`1px solid ${limits.color}40`, borderRadius:'100px', padding:'4px 14px', marginBottom:'12px' }}>
           <span style={{ fontSize:'14px' }}>{limits.emoji}</span>

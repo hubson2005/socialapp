@@ -18,6 +18,18 @@ import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ProfilePreview from "@/components/dashboard/ProfilePreview";
+import MarketplacePanel from "@/components/dashboard/MarketplacePanel";
+import DocumentsPanel from "@/components/dashboard/DocumentsPanel";
+
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return width;
+}
 
 const db = {
   list: async () => {
@@ -74,12 +86,12 @@ const EVENT_COLOR_PRESETS = [
 ];
 
 const PROFILE_TEMPLATES = [
-  { id: 'artiste',   label: 'Artiste',    emoji: '🎨', desc: 'Instagram, TikTok, YouTube, Spotify',    theme_color: '#7c3aed|#db2777', bio: 'Artiste & créateur de contenu ✨',          platformKeys: ['instagram','tiktok','youtube','spotify'] },
-  { id: 'business',  label: 'Business',   emoji: '💼', desc: 'LinkedIn, Calendly, Email, Site web',    theme_color: '#0f172a|#1e40af', bio: 'Entrepreneur & consultant professionnel',   platformKeys: ['linkedin','calendly','email','website'] },
-  { id: 'createur',  label: 'Créateur',   emoji: '📱', desc: 'YouTube, TikTok, Instagram, X',         theme_color: '#0f0a1e|#2d1b69', bio: 'Créateur de contenu | Suivez mon aventure 🚀', platformKeys: ['youtube','tiktok','instagram','twitter'] },
+  { id: 'artiste',   label: 'Artiste',    emoji: '🎨', desc: 'Instagram, TikTok, YouTube, Spotify',       theme_color: '#7c3aed|#db2777', bio: 'Artiste & créateur de contenu ✨',             platformKeys: ['instagram','tiktok','youtube','spotify'] },
+  { id: 'business',  label: 'Business',   emoji: '💼', desc: 'LinkedIn, Calendly, Email, Site web',       theme_color: '#0f172a|#1e40af', bio: 'Entrepreneur & consultant professionnel',      platformKeys: ['linkedin','calendly','email','website'] },
+  { id: 'createur',  label: 'Créateur',   emoji: '📱', desc: 'YouTube, TikTok, Instagram, X',            theme_color: '#0f0a1e|#2d1b69', bio: 'Créateur de contenu | Suivez mon aventure 🚀', platformKeys: ['youtube','tiktok','instagram','twitter'] },
   { id: 'evenement', label: 'Événement',  emoji: '🎉', desc: 'Mode événement activé + compte à rebours', theme_color: '#1a0a00|#7c2d12', bio: 'Rejoins-nous pour un événement exceptionnel !', platformKeys: ['instagram','facebook','whatsapp'], is_event: true, event_color1: '#ff6b35', event_color2: '#f7c948' },
-  { id: 'musique',   label: 'Musique',    emoji: '🎵', desc: 'Spotify, Apple Music, SoundCloud',      theme_color: '#064e3b|#065f46', bio: 'Musicien | Écoutez mes derniers titres 🎶',  platformKeys: ['spotify','applemusic','soundcloud','youtube'] },
-  { id: 'gaming',    label: 'Gaming',     emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',      theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together", platformKeys: ['twitch','discord','tiktok','youtube'] },
+  { id: 'musique',   label: 'Musique',    emoji: '🎵', desc: 'Spotify, Apple Music, SoundCloud',         theme_color: '#064e3b|#065f46', bio: 'Musicien | Écoutez mes derniers titres 🎶',    platformKeys: ['spotify','applemusic','soundcloud','youtube'] },
+  { id: 'gaming',    label: 'Gaming',     emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',         theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together",   platformKeys: ['twitch','discord','tiktok','youtube'] },
 ];
 
 // ─── Carousel multi-images ────────────────────────────────────────────────────
@@ -291,28 +303,18 @@ function NotificationPanel({ onClose, profile }) {
     if (perm === 'granted') {
       toast.success('Notifications activées !');
       new Notification('🔔 SocialApp', { body: 'Alerte tous les ' + threshold + ' visiteurs sur "' + (profile.display_name || 'votre profil') + '"', icon: '/Logo_SocialApp.png' });
-    } else {
-      toast.error('Permission refusée. Vérifiez les paramètres du navigateur.');
-    }
+    } else { toast.error('Permission refusée. Vérifiez les paramètres du navigateur.'); }
   };
   const saveThreshold = (val) => { setThreshold(val); localStorage.setItem('notif_threshold', String(val)); if (permission === 'granted') toast.success('Seuil : ' + val + ' vues'); };
   return (
     <motion.div initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.15 }}
-      style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, background: 'rgba(10,8,25,0.97)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px', padding: '18px', minWidth: '280px', zIndex: 50, boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}
-    >
+      style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, background: 'rgba(10,8,25,0.97)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px', padding: '18px', minWidth: '280px', zIndex: 50, boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Bell size={13} color="white" /></div>
           <span style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>Notifications push</span>
         </div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={13} /></button>
-      </div>
-      <div style={{ background: permission === 'granted' ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)', border: '1px solid ' + (permission === 'granted' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'), borderRadius: '10px', padding: '10px 12px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '16px' }}>{permission === 'granted' ? '✅' : permission === 'denied' ? '🚫' : '🔔'}</span>
-        <div>
-          <p style={{ color: 'white', fontSize: '12px', fontWeight: 600, margin: 0 }}>{permission === 'granted' ? 'Notifications actives' : permission === 'denied' ? 'Permission refusée' : 'Non configuré'}</p>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', margin: 0 }}>{permission === 'granted' ? 'Alertes en temps réel activées' : permission === 'denied' ? 'Activez dans les paramètres du navigateur' : 'Cliquez sur Activer ci-dessous'}</p>
-        </div>
       </div>
       <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', margin: '0 0 8px' }}>Recevoir une alerte toutes les X vues :</p>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
@@ -327,23 +329,20 @@ function NotificationPanel({ onClose, profile }) {
   );
 }
 
-// ─── Panneau d'activation des comptes ────────────────────────────────────────
+// ─── Panneau activation comptes ───────────────────────────────────────────────
 function UserActivationPanel() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('pending'); // pending | all | active
+  const [filter, setFilter] = useState('pending');
 
   const { data: allProfiles = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['adminAllProfiles'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('link_profiles')
-        .select('id, display_name, username, is_activated, expiry_date, user_id, created_at')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('link_profiles').select('id, display_name, username, is_activated, expiry_date, user_id, created_at').order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000, // rafraîchit toutes les 30s
+    refetchInterval: 30000,
   });
 
   const activateMutation = useMutation({
@@ -384,12 +383,9 @@ function UserActivationPanel() {
 
   return (
     <div style={{ background: 'rgba(15,10,30,0.7)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px', overflow: 'hidden' }}>
-      {/* Header */}
       <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Users size={15} color="white" />
-          </div>
+          <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Users size={15} color="white" /></div>
           <div>
             <h3 style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: 0 }}>Gestion des comptes</h3>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: 0 }}>{allProfiles.length} profil{allProfiles.length > 1 ? 's' : ''} · {pendingCount} en attente</p>
@@ -399,8 +395,6 @@ function UserActivationPanel() {
           <RefreshCw size={12} color="rgba(255,255,255,0.5)" className={isFetching ? 'animate-spin' : ''} />
         </button>
       </div>
-
-      {/* Stats mini */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1px', background: 'rgba(255,255,255,0.06)' }}>
         {[
           { label: 'Total', value: allProfiles.length, icon: <Users size={12} color="#a78bfa" />, color: '#a78bfa' },
@@ -413,8 +407,6 @@ function UserActivationPanel() {
           </div>
         ))}
       </div>
-
-      {/* Filtres + recherche */}
       <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ position: 'relative' }}>
           <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
@@ -426,51 +418,33 @@ function UserActivationPanel() {
           ))}
         </div>
       </div>
-
-      {/* Liste */}
       <div style={{ maxHeight: '320px', overflowY: 'auto', padding: '8px' }}>
         {isLoading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}><Loader2 size={16} className="animate-spin" color="rgba(255,255,255,0.3)" /></div>
         ) : filtered.length === 0 ? (
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>
-            {filter === 'pending' ? '🎉 Aucun compte en attente' : 'Aucun résultat'}
-          </p>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>{filter === 'pending' ? '🎉 Aucun compte en attente' : 'Aucun résultat'}</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {filtered.map(p => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                {/* Avatar */}
                 <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: p.is_activated ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0 }}>
                   {(p.display_name || '?')[0].toUpperCase()}
                 </div>
-                {/* Infos */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ color: 'white', fontSize: '12px', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name || 'Sans nom'}</p>
                   <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: 0 }}>{p.username ? '@' + p.username : 'Sans username'}</p>
                 </div>
-                {/* Statut badge */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '20px', background: p.is_activated ? 'rgba(34,197,94,0.12)' : 'rgba(249,115,22,0.12)', border: '1px solid ' + (p.is_activated ? 'rgba(34,197,94,0.25)' : 'rgba(249,115,22,0.25)'), flexShrink: 0 }}>
                   {p.is_activated ? <Check size={10} color="#22c55e" /> : <Clock size={10} color="#f97316" />}
                   <span style={{ fontSize: '10px', fontWeight: 600, color: p.is_activated ? '#22c55e' : '#f97316' }}>{p.is_activated ? 'Actif' : 'Attente'}</span>
                 </div>
-                {/* Bouton action */}
                 {p.is_activated ? (
-                  <button
-                    onClick={() => deactivateMutation.mutate(p.id)}
-                    disabled={deactivateMutation.isPending && deactivateMutation.variables === p.id}
-                    style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
-                  >
-                    {deactivateMutation.isPending && deactivateMutation.variables === p.id ? <Loader2 size={10} className="animate-spin" /> : <X size={10} />}
-                    Désact.
+                  <button onClick={() => deactivateMutation.mutate(p.id)} style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                    <X size={10} />Désact.
                   </button>
                 ) : (
-                  <button
-                    onClick={() => activateMutation.mutate(p.id)}
-                    disabled={activateMutation.isPending && activateMutation.variables === p.id}
-                    style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
-                  >
-                    {activateMutation.isPending && activateMutation.variables === p.id ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
-                    Activer
+                  <button onClick={() => activateMutation.mutate(p.id)} style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                    <Check size={10} />Activer
                   </button>
                 )}
               </div>
@@ -486,6 +460,9 @@ function UserActivationPanel() {
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 768;
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [localProfile, setLocalProfile] = useState(null);
@@ -691,7 +668,7 @@ export default function Dashboard() {
   if (!profiles.length && !createMutation.isPending) return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent mx-auto mb-6 flex items-center justify-center"><Sparkles className="w-8 h-8 text-white" /></div>
+        <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width: '80px', height: '80px', borderRadius: '24px', objectFit: 'cover', margin: '0 auto 24px', display: 'block', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} />
         <h1 className="text-2xl font-bold mb-2">Bienvenue !</h1>
         <p className="text-muted-foreground text-sm mb-6">Créez votre page de liens unique et partagez-la via un seul QR code.</p>
         <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2"><Plus className="w-4 h-4" /> Créer mon profil</Button>
@@ -710,62 +687,55 @@ export default function Dashboard() {
   const pagedProfiles = filteredProfiles.slice(profilesPage * PROFILES_PER_PAGE, (profilesPage + 1) * PROFILES_PER_PAGE);
   const totalProfilePages = Math.ceil(filteredProfiles.length / PROFILES_PER_PAGE);
   const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-  const bgStyle = localProfile.bg_image_url ? { backgroundImage: 'url(' + localProfile.bg_image_url + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' } : { background: 'linear-gradient(135deg,' + colors.bg1 + ',' + colors.bg2 + ')' };
+  const bgStyle = localProfile.bg_image_url
+    ? { backgroundImage: 'url(' + localProfile.bg_image_url + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }
+    : { background: 'linear-gradient(135deg,' + colors.bg1 + ',' + colors.bg2 + ')' };
 
   return (
     <div className="min-h-screen" style={bgStyle}>
       {localProfile.bg_image_url && <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'linear-gradient(135deg,rgba(0,0,0,0.45),rgba(0,0,0,0.30))', pointerEvents: 'none' }} />}
 
-      {/* Top Bar */}
-      <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-lg border-b border-white/10" style={{ position: 'relative', zIndex: 20 }}>
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover' }} />
-            <h1 className="font-bold text-lg text-white">SocialApp</h1>
+      {/* ── Top Bar ── */}
+      <div className="sticky top-0 z-20 bg-black/20 backdrop-blur-lg border-b border-white/10">
+        <div style={{ width: '100%', padding: isMobile ? '10px 12px' : '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div className="flex items-center gap-2 shrink-0">
+            <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'cover' }} />
+            {!isMobile && <h1 className="font-bold text-lg text-white">SocialApp</h1>}
+            <span style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '8px', padding: '2px 8px', fontSize: '10px', color: '#a5b4fc', fontWeight: 700 }}>ADMIN</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap', overflowX: isMobile ? 'auto' : 'visible' }}>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
-            <Button onClick={() => setShowTemplates(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title="Templates">
-              <Layout className="w-3.5 h-3.5" /><span className="hidden sm:inline">Templates</span>
-            </Button>
+            {!isMobile && (
+              <Button onClick={() => setShowTemplates(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10">
+                <Layout className="w-3.5 h-3.5" /><span>Templates</span>
+              </Button>
+            )}
             <Button onClick={() => setShowLivePreview(v => !v)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10"
               style={showLivePreview ? { borderColor: 'rgba(99,102,241,0.7)', background: 'rgba(99,102,241,0.2)' } : {}}>
-              <Smartphone className="w-3.5 h-3.5" /><span className="hidden sm:inline">Live</span>
+              <Smartphone className="w-3.5 h-3.5" />
               {showLivePreview && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />}
             </Button>
             <div ref={bgPanelRef} style={{ position: 'relative' }}>
               <Button onClick={() => setShowBgPanel(v => !v)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10"
                 style={localProfile.bg_image_url ? { borderColor: 'rgba(99,102,241,0.7)', background: 'rgba(99,102,241,0.2)' } : {}}>
-                <ImagePlus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Fond</span>
-                {localProfile.bg_image_url && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6366f1', display: 'inline-block' }} />}
+                <ImagePlus className="w-3.5 h-3.5" />
               </Button>
               {showBgPanel && (
-                <motion.div initial={{ opacity: 0, y: -8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.15 }}
-                  style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, background: 'rgba(10,8,25,0.97)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px', padding: '16px', minWidth: '260px', zIndex: 50, boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}
-                >
+                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                  style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, background: 'rgba(10,8,25,0.97)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px', padding: '16px', minWidth: '260px', zIndex: 50, boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImagePlus size={13} color="white" /></div>
-                      <span style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>Image de fond</span>
-                    </div>
+                    <span style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>Image de fond</span>
                     <button onClick={() => setShowBgPanel(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={13} /></button>
                   </div>
                   {localProfile.bg_image_url && (
-                    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
                       <img src={localProfile.bg_image_url} alt="fond" style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }} />
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent,rgba(0,0,0,0.7))', padding: '20px 10px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px' }}>Image actuelle</span>
-                        <button onClick={handleRemoveBgImage} style={{ background: 'rgba(239,68,68,0.8)', border: 'none', cursor: 'pointer', borderRadius: '6px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px', color: 'white', fontSize: '11px' }}><Trash2 size={10} /> Supprimer</button>
-                      </div>
+                      <button onClick={handleRemoveBgImage} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(239,68,68,0.8)', border: 'none', cursor: 'pointer', borderRadius: '6px', padding: '3px 8px', color: 'white', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}><Trash2 size={10} /> Supprimer</button>
                     </div>
                   )}
-                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '12px', padding: '20px 16px', cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.08)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
-                  >
-                    {uploadingBgImage ? <Loader2 size={22} color="rgba(99,102,241,0.8)" className="animate-spin" /> : <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImagePlus size={18} color="rgba(99,102,241,0.9)" /></div>}
-                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: 500, margin: 0 }}>{uploadingBgImage ? 'Upload en cours...' : localProfile.bg_image_url ? "Changer l'image" : 'Choisir une image'}</p>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: '2px 0 0' }}>JPG, PNG, WebP — max 2 Mo</p>
+                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '12px', padding: '16px', cursor: 'pointer' }}>
+                    {uploadingBgImage ? <Loader2 size={18} className="animate-spin" color="rgba(99,102,241,0.8)" /> : <ImagePlus size={18} color="rgba(99,102,241,0.9)" />}
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>{uploadingBgImage ? 'Upload...' : 'Choisir une image'}</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleBgImageUpload} disabled={uploadingBgImage} />
                   </label>
                 </motion.div>
@@ -776,30 +746,27 @@ export default function Dashboard() {
                 style={notifGranted ? { borderColor: 'rgba(34,197,94,0.5)', background: 'rgba(34,197,94,0.1)' } : {}}>
                 {notifGranted ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
               </Button>
-              <AnimatePresence>
-                {showNotifPanel && <NotificationPanel onClose={() => setShowNotifPanel(false)} profile={localProfile} />}
-              </AnimatePresence>
+              <AnimatePresence>{showNotifPanel && <NotificationPanel onClose={() => setShowNotifPanel(false)} profile={localProfile} />}</AnimatePresence>
             </div>
             <Button onClick={() => setShowPreview(true)} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10">
-              <Eye className="w-3.5 h-3.5" /><span className="hidden sm:inline">Aperçu</span>
+              <Eye className="w-3.5 h-3.5" />
             </Button>
             <Button onClick={handleSave} disabled={!hasChanges || updateMutation.isPending} className="rounded-xl gap-2" size="sm">
               {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              Sauvegarder
+              {!isMobile && 'Sauvegarder'}
             </Button>
-            <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10" title={user?.email}>
-              <LogOut className="w-3.5 h-3.5" /><span className="hidden sm:inline">Déconnexion</span>
+            <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-xl border-white/20 text-white hover:bg-white/10" title={user?.email}>
+              <LogOut className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Live Preview */}
+      {/* ── Live Preview ── */}
       <AnimatePresence>
         {showLivePreview && (
-          <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ duration: 0.25, ease: 'easeOut' }}
-            style={{ position: 'fixed', right: '20px', top: '76px', zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}
-          >
+          <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }} transition={{ duration: 0.25 }}
+            style={{ position: 'fixed', right: '20px', top: '76px', zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
             <div style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', borderRadius: '10px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pd 2s infinite' }} />
               <span style={{ color: 'white', fontSize: '11px', fontWeight: 600 }}>Aperçu live</span>
@@ -811,11 +778,25 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 py-6" style={{ position: 'relative', zIndex: 1, paddingRight: showLivePreview ? '280px' : undefined }}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column */}
-          <div className="lg:col-span-2 space-y-4">
+      {/* ══════════════════════════════════════════════════════════════════════
+          NOUVEAU LAYOUT :
+          ┌─────────────────┬──────────────────┬─────────────────┐
+          │ Profil          │ Plateformes      │ QR Code         │
+          │ Gestion comptes │                  │ Statistiques    │
+          │ Documents       │                  │                 │
+          ├─────────────────┴──────────────────┴─────────────────┤
+          │ Mode Événement  │  Marketplace     │  Mes profils    │
+          └─────────────────┴──────────────────┴─────────────────┘
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ position: 'relative', zIndex: 1, padding: isMobile ? '12px' : '20px 24px', paddingRight: showLivePreview ? '280px' : (isMobile ? '12px' : '24px') }}>
+
+        {/* ══ LIGNE 1 : 3 colonnes ══ */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 300px', gap: '16px', marginBottom: '16px', alignItems: 'start' }}>
+
+          {/* ── COLONNE GAUCHE : Profil + Gestion comptes + Documents ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* Profil */}
             <div className="bg-white/20 rounded-2xl border border-white/20 overflow-hidden">
               <ProfileHeader profile={localProfile} onUpdate={updateLocal} />
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0 16px' }} />
@@ -837,96 +818,38 @@ export default function Dashboard() {
                   <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_verified ? '23px' : '3px', transition: 'left 0.3s' }} />
                 </button>
               </div>
-            </div>
-
-            {/* Mode Événement */}
-            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <CalendarDays className="w-4 h-4 text-white/60 shrink-0" />
-                  <div>
-                    <span className="text-white/70 text-sm">Mode Événement</span>
-                    <p className="text-white/40 text-xs">Ajoute un compte à rebours sur votre profil</p>
-                  </div>
-                </div>
-                <button onClick={() => updateLocal({ is_event: !localProfile.is_event })} style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_event ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>
-                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_event ? '23px' : '3px', transition: 'left 0.3s' }} />
-                </button>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0 16px' }} />
+              <div className="flex items-center gap-3 px-4 py-3">
+                <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
+                <span className="text-white/70 text-sm shrink-0">Expiration :</span>
+                <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
               </div>
-              {localProfile.is_event && (
-                <div className="space-y-2 pt-1 border-t border-white/10">
-                  <input type="text" value={localProfile.event_name || ''} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10" />
-                  <input type="datetime-local" value={localProfile.event_date || ''} onChange={(e) => updateLocal({ event_date: e.target.value })} className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 border border-white/10" />
-                  <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
-                    <MapPin className="w-3.5 h-3.5 text-white/40 shrink-0" />
-                    <input type="text" value={localProfile.event_location || ''} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu de l'événement" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
-                  </div>
-                  <textarea value={localProfile.event_description || ''} onChange={(e) => updateLocal({ event_description: e.target.value })} placeholder="Détails de l'événement..." rows={3} className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10 resize-none" />
-                  <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
-                    <span style={{ fontSize: '13px' }}>🎟️</span>
-                    <input type="url" value={localProfile.event_booking_url || ''} onChange={(e) => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien de réservation" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <ImagePlus className="w-3.5 h-3.5 text-white/40" />
-                        <span className="text-white/50 text-xs">Images de l'événement{eventImages.length > 0 && <span style={{ marginLeft: '6px', background: 'rgba(255,255,255,0.12)', borderRadius: '6px', padding: '1px 7px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{eventImages.length} / ∞</span>}</span>
-                      </div>
-                      {eventImages.length > 0 && (
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: '8px', padding: '4px 10px', cursor: uploadingEventImages ? 'not-allowed' : 'pointer', color: 'rgba(180,170,255,0.9)', fontSize: '12px', fontWeight: 600 }}>
-                          {uploadingEventImages ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}Ajouter
-                          <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages} />
-                        </label>
-                      )}
-                    </div>
-                    {eventImages.length > 0 ? (
-                      <><EventImageCarousel images={eventImages} onRemove={handleRemoveEventImage} adminMode />
-                        <EventImageThumbs images={eventImages} current={eventCarouselIndex} onSelect={setEventCarouselIndex} onRemove={handleRemoveEventImage} /></>
-                    ) : (
-                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(255,255,255,0.18)', borderRadius: '14px', padding: '24px 16px', cursor: 'pointer', transition: 'all 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.08)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; }}
-                      >
-                        {uploadingEventImages ? <Loader2 size={22} color="rgba(99,102,241,0.8)" className="animate-spin" /> : <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImagePlus size={20} color="rgba(255,255,255,0.35)" /></div>}
-                        <div style={{ textAlign: 'center' }}>
-                          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', fontWeight: 500, margin: 0 }}>{uploadingEventImages ? 'Upload en cours...' : 'Ajouter des images'}</p>
-                          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', margin: '3px 0 0' }}>Plusieurs fichiers acceptés · max 2 Mo chacune</p>
-                        </div>
-                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages} />
-                      </label>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-2"><Palette className="w-3.5 h-3.5 text-white/40" /><span className="text-white/50 text-xs">Couleur de fond de l'événement</span></div>
-                    <div className="flex gap-2 flex-wrap">
-                      {EVENT_COLOR_PRESETS.map((preset) => (
-                        <button key={preset.label} onClick={() => updateLocal({ event_color1: preset.c1, event_color2: preset.c2 })} title={preset.label} style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg,' + preset.c1 + ',' + preset.c2 + ')', border: (localProfile.event_color1 === preset.c1) ? '2px solid white' : '2px solid transparent', cursor: 'pointer', flexShrink: 0 }} />
-                      ))}
-                      <div style={{ position: 'relative', width: '32px', height: '32px' }}>
-                        <input type="color" value={localProfile.event_color1 || '#ff6b35'} onChange={(e) => updateLocal({ event_color1: e.target.value })} style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.15)', border: '2px dashed rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', pointerEvents: 'none' }}>+</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Plateformes */}
+            {/* Gestion des comptes */}
+            <UserActivationPanel />
+
+            {/* Documents */}
+            <DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan || 'admin'} />
+
+          </div>
+
+          {/* ── COLONNE CENTRE : Plateformes ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-base text-white">Mes plateformes</h2>
-                {links.length > 1 && <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '4px' }}><GripVertical size={12} /> glisser pour réordonner</span>}
+                {links.length > 1 && <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '4px' }}><GripVertical size={12} /> glisser</span>}
               </div>
               <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs" onClick={() => setShowAddDialog(true)}><Plus className="w-3.5 h-3.5" /> Ajouter</Button>
             </div>
             {links.length === 0 ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white/20 rounded-2xl border border-dashed border-white/30 p-10 text-center">
-                <p className="text-white/60 text-sm">Aucune plateforme ajoutée.<br />Cliquez sur <strong>Ajouter</strong> pour commencer.</p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white/20 rounded-2xl border border-dashed border-white/30 p-8 text-center">
+                <p className="text-white/60 text-sm">Aucune plateforme.<br />Cliquez sur <strong>Ajouter</strong>.</p>
               </motion.div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   {pagedLinks.map((link, i) => {
                     const absoluteIndex = linksPage * LINKS_PER_PAGE + i;
                     const isDragOver = dragOverIndex === absoluteIndex;
@@ -934,8 +857,7 @@ export default function Dashboard() {
                       <div key={link.id || link.platform + '-' + absoluteIndex}
                         draggable onDragStart={(e) => handleDragStart(e, absoluteIndex)} onDragEnd={handleDragEnd}
                         onDragOver={(e) => handleDragOver(e, absoluteIndex)} onDragLeave={handleDragLeave} onDrop={(e) => handleDrop(e, absoluteIndex)}
-                        style={{ position: 'relative', transition: 'transform 0.15s', transform: isDragOver ? 'scale(1.02)' : 'scale(1)', outline: isDragOver ? '2px dashed rgba(255,255,255,0.5)' : '2px solid transparent', borderRadius: '16px', cursor: 'grab' }}
-                      >
+                        style={{ position: 'relative', transition: 'transform 0.15s', transform: isDragOver ? 'scale(1.02)' : 'scale(1)', outline: isDragOver ? '2px dashed rgba(255,255,255,0.5)' : '2px solid transparent', borderRadius: '16px', cursor: 'grab' }}>
                         {links.length > 1 && <div style={{ position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)', zIndex: 2, color: 'rgba(255,255,255,0.25)', pointerEvents: 'none' }}><GripVertical size={14} /></div>}
                         <PlatformCard link={link} index={absoluteIndex} onUpdate={(u) => handleUpdateLink(absoluteIndex, u)} onRemove={() => handleRemoveLink(absoluteIndex)} />
                       </div>
@@ -943,81 +865,155 @@ export default function Dashboard() {
                   })}
                 </div>
                 {totalLinkPages > 1 && (
-                  <div className="flex items-center justify-between pt-2">
-                    <button disabled={linksPage === 0} onClick={() => setLinksPage(p => p - 1)} className="px-3 py-1.5 rounded-lg bg-white/25 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Précédent</button>
+                  <div className="flex items-center justify-between pt-1">
+                    <button disabled={linksPage === 0} onClick={() => setLinksPage(p => p - 1)} className="px-3 py-1.5 rounded-lg bg-white/25 text-white text-xs disabled:opacity-30">Précédent</button>
                     <span className="text-white/50 text-xs">{linksPage + 1} / {totalLinkPages}</span>
-                    <button disabled={linksPage >= totalLinkPages - 1} onClick={() => setLinksPage(p => p + 1)} className="px-3 py-1.5 rounded-lg bg-white/25 text-white text-xs disabled:opacity-30 hover:bg-white/20 transition-colors">Suivant</button>
+                    <button disabled={linksPage >= totalLinkPages - 1} onClick={() => setLinksPage(p => p + 1)} className="px-3 py-1.5 rounded-lg bg-white/25 text-white text-xs disabled:opacity-30">Suivant</button>
                   </div>
                 )}
               </>
             )}
           </div>
 
-          {/* Right column */}
-          <div className="space-y-4">
+          {/* ── COLONNE DROITE : QR Code + Statistiques ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <QRCodeDisplay profileId={localProfile.id} username={localProfile.username} />
-            <div className="bg-card rounded-2xl border border-border p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-sm">Mes profils</h3>
-                <span className="text-xs text-muted-foreground">{profiles.length} profil{profiles.length > 1 ? 's' : ''}</span>
-              </div>
-              {profiles.length >= 1 && (
-                <div style={{ position: 'relative', marginBottom: '10px' }}>
-                  <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'rgba(255,255,255,0.4)' }} />
-                  <input type="text" value={profileSearch} onChange={(e) => { setProfileSearch(e.target.value); setProfilesPage(0); }} placeholder="Rechercher un profil..."
-                    style={{ width: '100%', padding: '8px 30px', fontSize: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: 'white', outline: 'none', boxSizing: 'border-box' }}
-                    onFocus={e => { e.currentTarget.style.border = '1px solid rgba(99,102,241,0.6)'; e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; }}
-                    onBlur={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                  />
-                  {profileSearch && (<button onClick={() => { setProfileSearch(''); setProfilesPage(0); }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', padding: '3px', color: 'rgba(255,255,255,0.6)' }}><X size={11} /></button>)}
-                </div>
-              )}
-              <div className="space-y-1">
-                {filteredProfiles.length === 0 ? (
-                  <p className="text-center text-xs text-muted-foreground py-4">Aucun résultat pour « {profileSearch} »</p>
-                ) : pagedProfiles.map((p) => {
-                  const expiry = getExpiryStatus(p.expiry_date);
-                  const isActive = localProfile && localProfile.id === p.id;
-                  return (
-                    <div key={p.id} className="group flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-colors hover:bg-muted" onClick={() => handleSwitchProfile(p)}>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>{p.display_name || 'Sans nom'}</span>
-                          {p.is_verified && <span style={{ fontSize: '10px', color: '#22c55e' }}>✓</span>}
-                          {p.is_event && <span style={{ fontSize: '10px' }}>🎉</span>}
-                        </div>
-                        {p.username && <span className="text-xs text-muted-foreground">@{p.username}</span>}
-                        {expiry && (<span className={'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md mt-0.5 ' + expiry.color + ' ' + expiry.bg}><CalendarClock className="w-3 h-3" />{expiry.label}</span>)}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 ml-2">
-                        {isActive && <Check className="w-3.5 h-3.5 text-primary" />}
-                        {profiles.length > 1 && (<button className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}><Trash2 className="w-3.5 h-3.5" /></button>)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {totalProfilePages > 1 && (
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
-                  <button disabled={profilesPage === 0} onClick={() => setProfilesPage(p => p - 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                  <span className="text-xs text-muted-foreground">{profilesPage + 1} / {totalProfilePages}</span>
-                  <button disabled={profilesPage >= totalProfilePages - 1} onClick={() => setProfilesPage(p => p + 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
-                </div>
-              )}
-              <button onClick={handleCreateProfile} className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors"><Plus className="w-3.5 h-3.5" /> Nouveau profil</button>
-            </div>
-            <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 flex items-center gap-3">
-              <CalendarClock className="w-4 h-4 text-white/60 shrink-0" />
-              <span className="text-white/70 text-sm shrink-0">Expiration :</span>
-              <input type="date" value={localProfile.expiry_date || ''} onChange={(e) => updateLocal({ expiry_date: e.target.value })} className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-0" />
-            </div>
             <StatsCard profileId={localProfile.id} />
             <GeoStatsPanel profileId={localProfile.id} />
-
-            {/* ✅ Panneau activation des comptes utilisateurs */}
-            <UserActivationPanel />
-
           </div>
+
+        </div>
+
+        {/* ══ LIGNE 2 : Mode Événement | Marketplace | Mes profils ══ */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '16px', alignItems: 'start' }}>
+
+          {/* ── Mode Événement ── */}
+          <div className="bg-white/20 rounded-2xl border border-white/20 px-4 py-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CalendarDays className="w-4 h-4 text-white/60 shrink-0" />
+                <div>
+                  <span className="text-white/70 text-sm">Mode Événement</span>
+                  <p className="text-white/40 text-xs">Compte à rebours sur votre profil</p>
+                </div>
+              </div>
+              <button onClick={() => updateLocal({ is_event: !localProfile.is_event })} style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_event ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_event ? '23px' : '3px', transition: 'left 0.3s' }} />
+              </button>
+            </div>
+            {localProfile.is_event && (
+              <div className="space-y-2 pt-1 border-t border-white/10">
+                <input type="text" value={localProfile.event_name || ''} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10" />
+                <input type="datetime-local" value={localProfile.event_date || ''} onChange={(e) => updateLocal({ event_date: e.target.value })} className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 border border-white/10" />
+                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
+                  <MapPin className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                  <input type="text" value={localProfile.event_location || ''} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
+                </div>
+                <textarea value={localProfile.event_description || ''} onChange={(e) => updateLocal({ event_description: e.target.value })} placeholder="Détails..." rows={2} className="w-full bg-white/10 text-white text-sm focus:outline-none rounded-xl px-3 py-2 placeholder-white/30 border border-white/10 resize-none" />
+                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 border border-white/10">
+                  <span style={{ fontSize: '13px' }}>🎟️</span>
+                  <input type="url" value={localProfile.event_booking_url || ''} onChange={(e) => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien de réservation" className="bg-transparent text-white text-sm focus:outline-none flex-1 placeholder-white/30" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <ImagePlus className="w-3.5 h-3.5 text-white/40" />
+                      <span className="text-white/50 text-xs">Images{eventImages.length > 0 && <span style={{ marginLeft: '6px', background: 'rgba(255,255,255,0.12)', borderRadius: '6px', padding: '1px 7px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{eventImages.length}</span>}</span>
+                    </div>
+                    {eventImages.length > 0 && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: '8px', padding: '4px 8px', cursor: 'pointer', color: 'rgba(180,170,255,0.9)', fontSize: '12px', fontWeight: 600 }}>
+                        {uploadingEventImages ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}+
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages} />
+                      </label>
+                    )}
+                  </div>
+                  {eventImages.length > 0 ? (
+                    <><EventImageCarousel images={eventImages} onRemove={handleRemoveEventImage} adminMode />
+                      <EventImageThumbs images={eventImages} current={eventCarouselIndex} onSelect={setEventCarouselIndex} onRemove={handleRemoveEventImage} /></>
+                  ) : (
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(255,255,255,0.18)', borderRadius: '14px', padding: '20px 16px', cursor: 'pointer', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.08)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; }}>
+                      {uploadingEventImages ? <Loader2 size={20} color="rgba(99,102,241,0.8)" className="animate-spin" /> : <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImagePlus size={18} color="rgba(255,255,255,0.35)" /></div>}
+                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0 }}>{uploadingEventImages ? 'Upload...' : 'Ajouter des images'}</p>
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages} />
+                    </label>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2"><Palette className="w-3.5 h-3.5 text-white/40" /><span className="text-white/50 text-xs">Couleur fond événement</span></div>
+                  <div className="flex gap-2 flex-wrap">
+                    {EVENT_COLOR_PRESETS.map((preset) => (
+                      <button key={preset.label} onClick={() => updateLocal({ event_color1: preset.c1, event_color2: preset.c2 })} title={preset.label} style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg,' + preset.c1 + ',' + preset.c2 + ')', border: (localProfile.event_color1 === preset.c1) ? '2px solid white' : '2px solid transparent', cursor: 'pointer', flexShrink: 0 }} />
+                    ))}
+                    <div style={{ position: 'relative', width: '28px', height: '28px' }}>
+                      <input type="color" value={localProfile.event_color1 || '#ff6b35'} onChange={(e) => updateLocal({ event_color1: e.target.value })} style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.15)', border: '2px dashed rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', pointerEvents: 'none' }}>+</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Marketplace ── */}
+          <div>
+            <MarketplacePanel profileId={localProfile.id} userPlan="admin" />
+          </div>
+
+          {/* ── Mes profils ── */}
+          <div className="bg-card rounded-2xl border border-border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-sm">Mes profils</h3>
+              <span className="text-xs text-muted-foreground">{profiles.length} profil{profiles.length > 1 ? 's' : ''}</span>
+            </div>
+            {profiles.length >= 1 && (
+              <div style={{ position: 'relative', marginBottom: '10px' }}>
+                <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'rgba(255,255,255,0.4)' }} />
+                <input type="text" value={profileSearch} onChange={(e) => { setProfileSearch(e.target.value); setProfilesPage(0); }} placeholder="Rechercher..."
+                  style={{ width: '100%', padding: '8px 30px', fontSize: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: 'white', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => { e.currentTarget.style.border = '1px solid rgba(99,102,241,0.6)'; e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; }}
+                  onBlur={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                />
+                {profileSearch && (<button onClick={() => { setProfileSearch(''); setProfilesPage(0); }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', padding: '3px', color: 'rgba(255,255,255,0.6)' }}><X size={11} /></button>)}
+              </div>
+            )}
+            <div className="space-y-1">
+              {filteredProfiles.length === 0 ? (
+                <p className="text-center text-xs text-muted-foreground py-4">Aucun résultat pour « {profileSearch} »</p>
+              ) : pagedProfiles.map((p) => {
+                const expiry = getExpiryStatus(p.expiry_date);
+                const isActive = localProfile && localProfile.id === p.id;
+                return (
+                  <div key={p.id} className="group flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-colors hover:bg-muted" onClick={() => handleSwitchProfile(p)}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className={'text-sm truncate ' + (isActive ? 'font-semibold text-primary' : 'text-foreground')}>{p.display_name || 'Sans nom'}</span>
+                        {p.is_verified && <span style={{ fontSize: '10px', color: '#22c55e' }}>✓</span>}
+                        {p.is_event && <span style={{ fontSize: '10px' }}>🎉</span>}
+                        {p.is_activated && <span style={{ fontSize: '9px', background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>✅</span>}
+                      </div>
+                      {p.username && <span className="text-xs text-muted-foreground">@{p.username}</span>}
+                      {expiry && (<span className={'inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md mt-0.5 ' + expiry.color + ' ' + expiry.bg}><CalendarClock className="w-3 h-3" />{expiry.label}</span>)}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      {isActive && <Check className="w-3.5 h-3.5 text-primary" />}
+                      {profiles.length > 1 && (<button className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p); }}><Trash2 className="w-3.5 h-3.5" /></button>)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {totalProfilePages > 1 && (
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
+                <button disabled={profilesPage === 0} onClick={() => setProfilesPage(p => p - 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                <span className="text-xs text-muted-foreground">{profilesPage + 1} / {totalProfilePages}</span>
+                <button disabled={profilesPage >= totalProfilePages - 1} onClick={() => setProfilesPage(p => p + 1)} className="p-1 rounded-lg hover:bg-muted disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
+            <button onClick={handleCreateProfile} className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors"><Plus className="w-3.5 h-3.5" /> Nouveau profil</button>
+          </div>
+
         </div>
       </div>
 
@@ -1029,3 +1025,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+

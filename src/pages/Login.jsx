@@ -7,11 +7,55 @@ function FloatingOrb({ style }) {
   return <div style={{ position: 'absolute', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none', ...style }} />;
 }
 
-// Infos par plan
+// ✅ Correspond exactement à PLAN_LIMITS dans UserDashboard.jsx
 const PLAN_INFO = {
-  basic:    { label: 'BASIC',    color: '#6366f1', emoji: '⚡', price: '10 000 FCFA', desc: '1 profil · 3 liens · Page publique' },
-  pro:      { label: 'PRO',      color: '#ff8c00', emoji: '🚀', price: '15 000 FCFA', desc: '2 profils · 7 liens · Stats · NFC' },
-  business: { label: 'BUSINESS', color: '#f7c948', emoji: '💼', price: '22 000 FCFA', desc: '2 profils · 10 liens · Stats · QR logo' },
+  basic: {
+    label: 'BASIC',
+    color: '#6366f1',
+    emoji: '⚡',
+    price: '10 000 FCFA',
+    period: 'Paiement annuel',
+    features: [
+      '1 profil',
+      '3 liens',
+      'Boutique marketplace - 4 produits',
+      'Documents PDF',
+      'Page publique',
+    ],
+  },
+  pro: {
+    label: 'PRO',
+    color: '#ff8c00',
+    emoji: '🚀',
+    price: '15 000 FCFA',
+    period: 'Paiement annuel',
+    features: [
+      '2 profils',
+      '7 liens',
+      'Boutique marketplace - 10 produits',
+      'Documents PDF',
+      'Statistiques',
+      '1 Carte NFC ou PVC (logo & QR)',
+      'Support standard',
+    ],
+  },
+  business: {
+    label: 'BUSINESS',
+    color: '#f7c948',
+    emoji: '💼',
+    price: '25 000 FCFA',
+    period: 'Paiement annuel',
+    features: [
+      '2 profils',
+      '10 liens',
+      'Boutique marketplace - 10 produits',
+      'Documents PDF',
+      'Statistiques',
+      'QR code avec votre logo',
+      '2 Cartes NFC ou PVC',
+      'Support prioritaire',
+    ],
+  },
 };
 
 export default function Login() {
@@ -19,7 +63,6 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const { signIn } = useAuth();
 
-  // ── Lecture du plan depuis l'URL (?plan=basic|pro|business) ──
   const planFromUrl = searchParams.get('plan') || 'basic';
   const selectedPlan = PLAN_INFO[planFromUrl] ? planFromUrl : 'basic';
   const planInfo = PLAN_INFO[selectedPlan];
@@ -45,79 +88,42 @@ export default function Login() {
   };
 
   const handleSignup = async (e) => {
-  e.preventDefault();
-  setError('');
+    e.preventDefault();
+    setError('');
+    if (!email || !password || !confirmPassword) { setError('Veuillez remplir tous les champs.'); return; }
+    if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+    if (password !== confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return; }
+    if (!supabase) return;
 
-  // Vérifications
-  if (!email || !password || !confirmPassword) {
-    setError('Veuillez remplir tous les champs.');
-    return;
-  }
-
-  if (password.length < 6) {
-    setError('Le mot de passe doit contenir au moins 6 caractères.');
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    setError('Les mots de passe ne correspondent pas.');
-    return;
-  }
-
-  if (!supabase) return;
-
-  setLoading(true);
-
-  try {
-    // ─────────────────────────────────────────────
-    // INSCRIPTION + SAUVEGARDE DU PLAN
-    // ─────────────────────────────────────────────
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin + '/dashboard',
-
-        // ✅ Plan sauvegardé directement
-        data: {
-          plan: selectedPlan,
+    setLoading(true);
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email, password,
+        options: {
+          emailRedirectTo: window.location.origin + '/dashboard',
+          data: { plan: selectedPlan }, // ✅ plan sauvegardé dans user_metadata dès l'inscription
         },
-      },
-    });
+      });
+      if (signUpError) throw signUpError;
 
-    if (signUpError) throw signUpError;
+      // ✅ Double sauvegarde — updateUser pour s'assurer que le plan est bien enregistré
+      if (data?.user) {
+        await supabase.auth.updateUser({ data: { plan: selectedPlan } });
+      }
 
-    console.log('Utilisateur créé :', data.user);
-    console.log('Plan sauvegardé :', selectedPlan);
-
-    // ─────────────────────────────────────────────
-    // Succès
-    // ─────────────────────────────────────────────
-    setSuccessEmail(email);
-    setMode('success');
-
-  } catch (err) {
-
-    console.error(err);
-
-    if (
-      err.message?.includes('already registered') ||
-      err.message?.includes('already been registered')
-    ) {
-      setError(
-        'Cet email est déjà utilisé. Connectez-vous à la place.'
-      );
-
-    } else {
-      setError(
-        err.message || "Erreur lors de l'inscription."
-      );
+      setSuccessEmail(email);
+      setMode('success');
+    } catch (err) {
+      if (err.message?.includes('already registered') || err.message?.includes('already been registered')) {
+        setError('Cet email est déjà utilisé. Connectez-vous à la place.');
+      } else {
+        setError(err.message || "Erreur lors de l'inscription.");
+      }
+    } finally {
+      setLoading(false);
     }
+  };
 
-  } finally {
-    setLoading(false);
-  }
-};
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -156,6 +162,7 @@ export default function Login() {
         .tab-btn { flex:1; padding:10px; border-radius:10px; border:none; cursor:pointer; font-family:'Sora',sans-serif; font-weight:600; font-size:13px; transition:all 0.2s; }
         .tab-btn.active { background:rgba(255,140,0,0.15); border:1px solid rgba(255,140,0,0.35); color:#ff8c00; }
         .tab-btn.inactive { background:transparent; border:1px solid transparent; color:rgba(255,255,255,0.35); }
+        .plan-feature { display:flex; align-items:center; gap:7px; font-size:12px; color:rgba(255,255,255,0.65); padding:2px 0; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         .fade-up { animation:fadeUp 0.4s ease both; }
         @keyframes scaleIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
@@ -180,21 +187,33 @@ export default function Login() {
           </p>
         </div>
 
-        {/* ── Bandeau plan sélectionné ──────────────────────────────────── */}
+        {/* ── Bandeau plan sélectionné ── */}
         {mode !== 'success' && (
-          <div style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${planInfo.color}40`, borderRadius:'14px', padding:'10px 14px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'10px' }}>
-            <div style={{ width:'32px', height:'32px', borderRadius:'9px', background: `${planInfo.color}20`, border: `1px solid ${planInfo.color}40`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', flexShrink:0 }}>{planInfo.emoji}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <span style={{ color: planInfo.color, fontSize:'12px', fontWeight:800, letterSpacing:'0.05em' }}>Offre {planInfo.label}</span>
-                <span style={{ background: `${planInfo.color}20`, color: planInfo.color, fontSize:'10px', fontWeight:700, padding:'1px 7px', borderRadius:'20px' }}>{planInfo.price}</span>
+          <div style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${planInfo.color}40`, borderRadius:'14px', padding:'12px 14px', marginBottom:'20px' }}>
+            {/* En-tête offre */}
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
+              <div style={{ width:'32px', height:'32px', borderRadius:'9px', background: `${planInfo.color}20`, border: `1px solid ${planInfo.color}40`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', flexShrink:0 }}>{planInfo.emoji}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                  <span style={{ color: planInfo.color, fontSize:'12px', fontWeight:800, letterSpacing:'0.05em' }}>Offre {planInfo.label}</span>
+                  <span style={{ background: `${planInfo.color}20`, color: planInfo.color, fontSize:'10px', fontWeight:700, padding:'1px 7px', borderRadius:'20px' }}>{planInfo.price}</span>
+                  <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'10px' }}>/ {planInfo.period}</span>
+                </div>
               </div>
-              <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'11px', margin:0 }}>{planInfo.desc}</p>
+            </div>
+            {/* Liste des fonctionnalités */}
+            <div style={{ borderTop:`1px solid ${planInfo.color}20`, paddingTop:'8px', display:'flex', flexDirection:'column', gap:'3px' }}>
+              {planInfo.features.map((f, i) => (
+                <div key={i} className="plan-feature">
+                  <span style={{ color: planInfo.color, fontSize:'11px', flexShrink:0 }}>✓</span>
+                  {f}
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* ── ÉCRAN SUCCÈS ────────────────────────────────────────────────── */}
+        {/* ── ÉCRAN SUCCÈS ── */}
         {mode === 'success' && (
           <div className="fade-up" style={{ textAlign:'center' }}>
             <div className="check-pop" style={{ width:'72px', height:'72px', borderRadius:'50%', background:'rgba(34,197,94,0.15)', border:'2px solid rgba(34,197,94,0.4)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
@@ -218,7 +237,7 @@ export default function Login() {
           </div>
         )}
 
-        {/* ── TABS ────────────────────────────────────────────────────────── */}
+        {/* ── TABS ── */}
         {mode !== 'success' && (
           <>
             <div style={{ display:'flex', gap:'6px', marginBottom:'24px', background:'rgba(255,255,255,0.04)', borderRadius:'14px', padding:'4px' }}>

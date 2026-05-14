@@ -1,0 +1,12 @@
+# SocialApp — robots.txt
+# https://www.socialapp.work
+
+User-agent: *
+
+Allow: /
+Allow: /login
+
+Disallow: /dashboard
+Disallow: /admin
+
+Sitemap: https://www.socialapp.work/sitemap.xml

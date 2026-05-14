@@ -1,8 +1,63 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink, Phone, Eye } from 'lucide-react';
+import { ExternalLink, Phone, Eye, ShoppingBag, Tag, FileText, X, ZoomIn, Download } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
+
+// ─── Skeleton de chargement ───────────────────────────────────────────────────
+function ProfileSkeleton() {
+  return (
+    <div style={{ minHeight: '100vh', background: '#0f0a1e', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px' }}>
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -600px 0; }
+          100% { background-position:  600px 0; }
+        }
+        .sk {
+          background: linear-gradient(90deg,
+            rgba(255,255,255,0.06) 25%,
+            rgba(255,255,255,0.12) 50%,
+            rgba(255,255,255,0.06) 75%
+          );
+          background-size: 600px 100%;
+          animation: shimmer 1.4s infinite linear;
+          border-radius: 12px;
+        }
+      `}</style>
+      <div className="sk" style={{ width: 118, height: 118, borderRadius: 28, marginBottom: 16 }} />
+      <div className="sk" style={{ width: 180, height: 22, marginBottom: 10 }} />
+      <div className="sk" style={{ width: 240, height: 14, marginBottom: 6 }} />
+      <div className="sk" style={{ width: 180, height: 14, marginBottom: 24 }} />
+      <div style={{ width: '100%', maxWidth: 384, marginBottom: 14 }}>
+        <div className="sk" style={{ width: 120, height: 18, marginBottom: 14 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ borderRadius: 16, overflow: 'hidden' }}>
+              <div className="sk" style={{ width: '100%', aspectRatio: '4/3', borderRadius: 0 }} />
+              <div style={{ padding: '10px 12px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '0 0 16px 16px' }}>
+                <div className="sk" style={{ width: '70%', height: 16, marginBottom: 6 }} />
+                <div className="sk" style={{ width: '50%', height: 12 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ width: '100%', maxWidth: 384, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {[0,1,2].map(i => (
+          <div key={i} className="sk" style={{ width: '100%', height: 72, borderRadius: 16, opacity: 1 - i * 0.2 }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LazyImg({ src, alt, style }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <img src={src} alt={alt} loading="lazy" decoding="async" onLoad={() => setLoaded(true)}
+      style={{ ...style, opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }} />
+  );
+}
 
 const parseColors = (themeColor) => {
   if (themeColor && themeColor.includes('|')) {
@@ -23,23 +78,72 @@ const getCountdown = (eventDate) => {
   return { days, hours, mins, secs };
 };
 
-// ✅ Formate le nombre de vues : 1200 → "1,2k"
-const formatViews = (n) => {
-  if (!n || n === 0) return null;
-  if (n >= 1000) return (n / 1000).toFixed(1).replace('.0', '') + 'k';
-  return String(n);
-};
+const formatPrice = (price) =>
+  price ? Number(price).toLocaleString('fr-FR') + ' F' : '';
 
 const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill={color} xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 24 24" width={size} height={size} fill={color}>
     <path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2zm5.2 13.8c-.2.6-1.3 1.2-1.8 1.2-.5.1-1.1.1-1.6-.1-1-.3-2-1-2.8-1.8A9.2 9.2 0 0 1 9 12.4c-.2-.5-.2-1-.1-1.5.1-.5.6-1.1 1-1.3.3-.1.5-.1.7 0 .2 0 .3 0 .4.3l.6 1.6c0 .1.1.3 0 .4-.1.2-.2.3-.3.4-.1.1-.3.3-.2.5.4.7 1 1.3 1.7 1.7.2.1.4 0 .5-.1l.5-.6c.2-.2.4-.2.6-.1l1.4.7c.2.1.4.2.4.4.1.3 0 .8-.2 1z"/>
   </svg>
 );
 
-// ✅ Composant bouton avec effet ripple au tap
+// ─── Modal plein écran image ──────────────────────────────────────────────────
+function ImageLightbox({ src, onClose }) {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handler);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(0,0,0,0.92)',
+        backdropFilter: 'blur(16px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+        animation: 'fadeInOverlay 0.2s ease',
+      }}
+    >
+      {/* Bouton fermer */}
+      <button
+        onClick={onClose}
+        style={{
+          position: 'absolute', top: '16px', right: '16px',
+          width: '40px', height: '40px', borderRadius: '50%',
+          background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'white', zIndex: 2,
+        }}
+      >
+        <X size={18} />
+      </button>
+
+      {/* Image */}
+      <img
+        src={src}
+        alt="aperçu"
+        onClick={e => e.stopPropagation()}
+        style={{
+          maxWidth: '100%', maxHeight: '90vh',
+          borderRadius: '16px',
+          objectFit: 'contain',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.8)',
+          animation: 'zoomIn 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+        }}
+      />
+    </div>
+  );
+}
+
 function RippleButton({ onClick, style, children, platformColor }) {
   const [ripples, setRipples] = useState([]);
-
   const handlePointerDown = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -48,39 +152,112 @@ function RippleButton({ onClick, style, children, platformColor }) {
     setRipples(prev => [...prev, { x, y, id }]);
     setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 600);
   };
-
   return (
-    <button
-      onClick={onClick}
-      onPointerDown={handlePointerDown}
-      style={{
-        ...style,
-        position: 'relative',
-        overflow: 'hidden',
-        // ✅ Bord gauche coloré avec la couleur de la plateforme
-        borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)',
-      }}
-    >
-      {/* Ripples */}
+    <button onClick={onClick} onPointerDown={handlePointerDown}
+      style={{ ...style, position: 'relative', overflow: 'hidden', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}>
       {ripples.map(r => (
-        <span
-          key={r.id}
-          style={{
-            position: 'absolute',
-            left: r.x,
-            top: r.y,
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.45)',
-            transform: 'translate(-50%, -50%) scale(0)',
-            animation: 'ripple 0.6s ease-out forwards',
-            pointerEvents: 'none',
-          }}
-        />
+        <span key={r.id} style={{ position: 'absolute', left: r.x, top: r.y, width: '8px', height: '8px', borderRadius: '50%', background: 'rgba(255,255,255,0.45)', transform: 'translate(-50%, -50%) scale(0)', animation: 'ripple 0.6s ease-out forwards', pointerEvents: 'none' }} />
       ))}
       {children}
     </button>
+  );
+}
+
+// ─── Modal détail produit ─────────────────────────────────────────────────────
+function ProductDetailModal({ product, whatsappNumber, onClose }) {
+  const discount = product.original_price && product.price
+    ? Math.round((1 - product.price / product.original_price) * 100) : 0;
+  const waNumber = (whatsappNumber || '').replace(/\D/g, '');
+  const waMessage = encodeURIComponent(`Bonjour ! Je suis intéressé(e) par votre article : *${product.title}* à ${formatPrice(product.price)}. Est-il encore disponible ?`);
+  const waLink = `https://wa.me/${waNumber}?text=${waMessage}`;
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0', animation: 'fadeInOverlay 0.25s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#0f0a1e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '480px', maxHeight: '92vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 -20px 60px rgba(0,0,0,0.6)', animation: 'slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
+          <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.15)' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 16px 0' }}>
+          <button onClick={onClose} style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '18px', fontWeight: 300 }}>×</button>
+        </div>
+        <div style={{ overflowY: 'auto', padding: '0 0 32px' }}>
+          <div style={{ margin: '10px 16px 0', borderRadius: '18px', overflow: 'hidden', aspectRatio: '4/3', background: 'rgba(255,255,255,0.05)', position: 'relative' }}>
+            {product.image_url ? (
+              <LazyImg src={product.image_url} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            ) : (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,rgba(255,107,53,0.1),rgba(247,201,72,0.1))' }}>
+                <ShoppingBag size={48} color="rgba(255,255,255,0.15)" />
+              </div>
+            )}
+            {discount > 0 && <div style={{ position: 'absolute', top: '12px', left: '12px', background: '#22c55e', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', fontWeight: 700, color: 'white' }}>-{discount}%</div>}
+            {!product.is_available && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ background: 'rgba(0,0,0,0.8)', color: 'white', fontSize: '13px', fontWeight: 700, padding: '8px 20px', borderRadius: '100px', letterSpacing: '0.1em' }}>INDISPONIBLE</span></div>}
+          </div>
+          <div style={{ padding: '18px 20px 0' }}>
+            <h2 style={{ color: 'white', fontSize: '20px', fontWeight: 800, margin: '0 0 12px', lineHeight: 1.3 }}>{product.title}</h2>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '28px', fontWeight: 900, color: product.original_price ? '#ff6b35' : 'white', letterSpacing: '-1px' }}>{formatPrice(product.price)}</span>
+              {product.original_price && <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through' }}>{formatPrice(product.original_price)}</span>}
+              {discount > 0 && <span style={{ fontSize: '13px', background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '3px 10px', borderRadius: '100px', fontWeight: 700 }}>Économise {formatPrice(product.original_price - product.price)}</span>}
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: product.is_available !== false ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: '1px solid ' + (product.is_available !== false ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), borderRadius: '100px', padding: '5px 12px', marginBottom: '18px' }}>
+              <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: product.is_available !== false ? '#22c55e' : '#ef4444', flexShrink: 0 }} />
+              <span style={{ fontSize: '12px', fontWeight: 600, color: product.is_available !== false ? '#22c55e' : '#f87171' }}>{product.is_available !== false ? 'En stock · Disponible' : 'Rupture de stock'}</span>
+            </div>
+            {product.description && (
+              <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px 16px', marginBottom: '20px' }}>
+                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Description</p>
+                <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>{product.description}</p>
+              </div>
+            )}
+            {product.is_available !== false && waNumber && (
+              <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '15px', background: '#25D366', borderRadius: '16px', color: 'white', fontSize: '16px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 8px 24px rgba(37,211,102,0.35)', marginBottom: '12px' }}>
+                <WhatsAppIcon size={20} color="white" />
+                Commander sur WhatsApp
+              </a>
+            )}
+            {product.is_available === false && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', color: 'rgba(255,255,255,0.35)', fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
+                Article temporairement indisponible
+              </div>
+            )}
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px', textAlign: 'center', margin: 0 }}>🔒 Paiement et livraison directement avec le vendeur</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Carte produit publique ───────────────────────────────────────────────────
+function PublicProductCard({ product, onOpen }) {
+  const discount = product.original_price && product.price
+    ? Math.round((1 - product.price / product.original_price) * 100) : 0;
+  return (
+    <div onClick={() => onOpen(product)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', overflow: 'hidden', position: 'relative', cursor: 'pointer', transition: 'transform 0.15s' }}
+      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
+    >
+      <div style={{ position: 'relative', aspectRatio: '4/3', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+        {product.image_url ? (
+          <LazyImg src={product.image_url} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingBag size={28} color="rgba(255,255,255,0.2)" /></div>
+        )}
+        {discount > 0 && <div style={{ position: 'absolute', top: '8px', left: '8px', background: '#22c55e', borderRadius: '6px', padding: '2px 7px', fontSize: '11px', fontWeight: 700, color: 'white' }}>-{discount}%</div>}
+        {!product.is_available && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ background: 'rgba(0,0,0,0.7)', color: 'rgba(255,255,255,0.7)', fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.05em' }}>INDISPONIBLE</span></div>}
+        <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', borderRadius: '100px', padding: '3px 8px', fontSize: '10px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Voir +</div>
+      </div>
+      <div style={{ padding: '10px 12px 12px' }}>
+        <div style={{ marginBottom: '4px' }}>
+          <span style={{ fontSize: '16px', fontWeight: 800, color: product.original_price ? '#ff6b35' : 'white', display: 'block', lineHeight: 1.1 }}>{formatPrice(product.price)}</span>
+          {product.original_price && <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>{formatPrice(product.original_price)}</span>}
+        </div>
+        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '12px', fontWeight: 600, margin: 0, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{product.title}</p>
+      </div>
+    </div>
   );
 }
 
@@ -93,49 +270,36 @@ export default function PublicProfile() {
   const [images, setImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
-  // ✅ State pour le nombre de vues
-  const [viewCount, setViewCount] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  // ✅ State pour la lightbox image
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   const handleDownload = (url) => {
     try {
       const filename = url.split('/').pop().split('?')[0] || 'image.jpg';
-      const downloadUrl = url.includes('?')
-        ? url + '&download=' + filename
-        : url + '?download=' + filename;
+      const downloadUrl = url.includes('?') ? url + '&download=' + filename : url + '?download=' + filename;
       const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch (err) {
-      window.open(url, '_blank');
-    }
+      a.href = downloadUrl; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    } catch (err) { window.open(url, '_blank'); }
   };
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data, error } = await supabase
-        .from('link_profiles')
-        .select('*')
-        .eq('username', username)
-        .single();
-      if (error || !data) {
-        setNotFound(true);
-      } else {
-        setProfile(data);
-        // Enregistre la vue
-        await supabase.from('profile_stats').insert([{ profile_id: data.id, event_type: 'view' }]);
-        // ✅ Récupère le total des vues
-        const { count } = await supabase
-          .from('profile_stats')
-          .select('*', { count: 'exact', head: true })
-          .eq('profile_id', data.id)
-          .eq('event_type', 'view');
-        setViewCount(count);
-      }
+      const { data, error } = await supabase.from('link_profiles').select('*').eq('username', username).single();
+      if (error || !data) { setNotFound(true); setLoading(false); return; }
+      setProfile(data);
       setLoading(false);
+      Promise.all([
+        supabase.from('profile_stats').insert([{ profile_id: data.id, event_type: 'view' }]),
+        supabase.from('marketplace_products').select('id, title, price, original_price, description, image_url, is_available').eq('profile_id', Number(data.id)).order('created_at', { ascending: false }),
+        supabase.from('profile_documents').select('id, name, file_url, file_size, is_visible').eq('profile_id', Number(data.id)).eq('is_visible', true).order('created_at', { ascending: false }),
+      ]).then(([, productsResult, docsResult]) => {
+        setProducts(productsResult?.data || []);
+        setDocuments(docsResult?.data || []);
+      });
     };
     fetchProfile();
   }, [username]);
@@ -145,285 +309,178 @@ export default function PublicProfile() {
       setImages(Array.isArray(profile.event_images) ? profile.event_images : [profile.event_images]);
     } else if (profile?.event_image_url) {
       setImages([profile.event_image_url]);
-    } else {
-      setImages([]);
-    }
+    } else { setImages([]); }
   }, [profile]);
 
   useEffect(() => {
     if (!images.length || !isAutoPlay) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
-    }, 4000);
+    const interval = setInterval(() => { setCurrentIndex(prev => (prev + 1) % images.length); }, 4000);
     return () => clearInterval(interval);
   }, [images.length, isAutoPlay]);
 
   const handleTouchStart = useCallback((e) => {
     const touchStartX = e.touches[0].clientX;
     const touchStartY = e.touches[0].clientY;
-
     const handleTouchMove = (moveEvent) => {
-      const touchMoveX = moveEvent.touches[0].clientX;
-      const touchMoveY = moveEvent.touches[0].clientY;
-      const deltaX = touchStartX - touchMoveX;
-      const deltaY = touchStartY - touchMoveY;
-
+      const deltaX = touchStartX - moveEvent.touches[0].clientX;
+      const deltaY = touchStartY - moveEvent.touches[0].clientY;
       if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-        if (deltaX > 0 && currentIndex < images.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else if (deltaX < 0 && currentIndex > 0) {
-          setCurrentIndex(currentIndex - 1);
-        }
-        setIsAutoPlay(false);
-        moveEvent.preventDefault();
+        if (deltaX > 0 && currentIndex < images.length - 1) setCurrentIndex(currentIndex + 1);
+        else if (deltaX < 0 && currentIndex > 0) setCurrentIndex(currentIndex - 1);
+        setIsAutoPlay(false); moveEvent.preventDefault();
       }
     };
-
-    const handleTouchEnd = () => {
-      document.removeEventListener('touchmove', handleTouchMove);
-    };
-
+    const handleTouchEnd = () => document.removeEventListener('touchmove', handleTouchMove);
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd, { once: true });
   }, [currentIndex, images.length]);
 
   useEffect(() => {
     if (!profile?.is_event || !profile?.event_date) return;
-    const timer = setInterval(() => {
-      setCountdown(getCountdown(profile.event_date));
-    }, 1000);
+    const timer = setInterval(() => { setCountdown(getCountdown(profile.event_date)); }, 1000);
     setCountdown(getCountdown(profile.event_date));
     return () => clearInterval(timer);
   }, [profile]);
 
   useEffect(() => {
     if (!profile) return;
-
     const existing = document.getElementById('__bg_style__');
     if (existing) existing.remove();
-
     const html = document.documentElement;
     const body = document.body;
     html.style.background = 'transparent';
     body.style.background = 'transparent';
-
     const style = document.createElement('style');
     style.id = '__bg_style__';
-
     if (profile.bg_image_url) {
       style.textContent = `
-        #__bg_layer__ {
-          position: fixed; top: 0; left: 0;
-          width: 100vw; height: 100vh; height: 100dvh;
-          z-index: -10;
-          background-image: url(${JSON.stringify(profile.bg_image_url)});
-          background-size: cover;
-          background-position: center center;
-          background-repeat: no-repeat;
-          transform: translateZ(0);
-          will-change: transform;
-        }
-        #__bg_overlay__ {
-          position: fixed; top: 0; left: 0;
-          width: 100vw; height: 100vh; height: 100dvh;
-          z-index: -9;
-          background: linear-gradient(160deg, rgba(0,0,0,0.52), rgba(0,0,0,0.36));
-          pointer-events: none;
-        }
+        #__bg_layer__ { position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;z-index:-10;background-image:url(${JSON.stringify(profile.bg_image_url)});background-size:cover;background-position:center center;background-repeat:no-repeat;transform:translateZ(0);will-change:transform; }
+        #__bg_overlay__ { position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;z-index:-9;background:linear-gradient(160deg,rgba(0,0,0,0.52),rgba(0,0,0,0.36));pointer-events:none; }
       `;
     } else {
       const colors = parseColors(profile.theme_color);
       style.textContent = `
-        #__bg_layer__ {
-          position: fixed; top: 0; left: 0;
-          width: 100vw; height: 100vh; height: 100dvh;
-          z-index: -10;
-          background: linear-gradient(160deg, ${colors.bg1}, ${colors.bg2});
-        }
-        #__bg_overlay__ { display: none; }
+        #__bg_layer__ { position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;z-index:-10;background:linear-gradient(160deg,${colors.bg1},${colors.bg2}); }
+        #__bg_overlay__ { display:none; }
       `;
     }
-
     document.head.appendChild(style);
-
-    return () => {
-      const s = document.getElementById('__bg_style__');
-      if (s) s.remove();
-      html.style.background = '';
-      body.style.background = '';
-    };
+    return () => { const s = document.getElementById('__bg_style__'); if (s) s.remove(); html.style.background=''; body.style.background=''; };
   }, [profile]);
 
   const handleLinkClick = async (link) => {
     if (!profile) return;
-    await supabase.from('profile_stats').insert([{
-      profile_id: profile.id,
-      event_type: 'click',
-      platform: link.platform,
-    }]);
-
+    await supabase.from('profile_stats').insert([{ profile_id: profile.id, event_type: 'click', platform: link.platform }]);
     const isPhone = link.platform === 'phone';
     const isEmail = link.platform === 'email';
-
-    if (isPhone) {
-      const raw = (link.url || '').replace(/^tel:/i, '').trim();
-      window.location.href = 'tel:' + raw;
-    } else if (isEmail) {
-      const raw = (link.url || '').replace(/^mailto:/i, '').trim();
-      window.location.href = 'mailto:' + raw;
-    } else {
-      window.open(link.url, '_blank', 'noopener,noreferrer');
-    }
+    if (isPhone) window.location.href = 'tel:' + (link.url || '').replace(/^tel:/i, '').trim();
+    else if (isEmail) window.location.href = 'mailto:' + (link.url || '').replace(/^mailto:/i, '').trim();
+    else window.open(link.url, '_blank', 'noopener,noreferrer');
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f0a1e' }}>
-      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (loading) return <ProfileSkeleton />;
+  if (notFound) return <div className="min-h-screen flex items-center justify-center text-white" style={{ background: '#0f0a1e' }}><p>Profil introuvable.</p></div>;
 
-  if (notFound) return (
-    <div className="min-h-screen flex items-center justify-center text-white" style={{ background: '#0f0a1e' }}>
-      <p>Profil introuvable.</p>
-    </div>
-  );
-
-  const colors = parseColors(profile.theme_color);
   const links = profile.links || [];
   const enabledLinks = links.filter(l => l.enabled !== false);
   const ec1 = profile.event_color1 || '#ff6b35';
   const ec2 = profile.event_color2 || '#f7c948';
-  const formattedViews = formatViews(viewCount);
 
-  const hasEventContent =
-    profile.is_event && (
-      images.length > 0 ||
-      profile.event_name ||
-      profile.event_date ||
-      profile.event_location ||
-      profile.event_description ||
-      profile.event_booking_url
-    );
+  const availableProducts = products.filter(p => p.is_available !== false);
+  const sortedProducts = [...availableProducts, ...products.filter(p => p.is_available === false)];
+
+  const hasEventContent = profile.is_event && (
+    images.length > 0 || profile.event_name || profile.event_date ||
+    profile.event_location || profile.event_description || profile.event_booking_url
+  );
 
   return (
     <>
       <style>{`
-        html, body { min-height: 100%; margin: 0; padding: 0; background: transparent; }
+        html, body { min-height:100%;margin:0;padding:0;background:transparent; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-        /* ✅ Animation ripple */
-        @keyframes ripple {
-          0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-          100% { transform: translate(-50%, -50%) scale(28); opacity: 0; }
-        }
-
-        /* ✅ Animation fade-in décalée pour les boutons de liens */
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .link-btn {
-          animation: fadeSlideUp 0.4s ease both;
-        }
+        @keyframes ripple { 0%{transform:translate(-50%,-50%) scale(0);opacity:1} 100%{transform:translate(-50%,-50%) scale(28);opacity:0} }
+        @keyframes fadeSlideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes zoomIn { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
+        .link-btn { animation:fadeSlideUp 0.4s ease both; }
       `}</style>
 
       <div id="__bg_layer__" />
       <div id="__bg_overlay__" />
 
-      <div style={{
-        position: 'relative', zIndex: 1,
-        minHeight: '100vh',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '40px 16px',
-      }}>
+      <div style={{ position:'relative', zIndex:1, minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px' }}>
 
-        {/* Avatar + Badge */}
-        <div style={{ position: 'relative', marginBottom: '16px' }}>
+        {/* Avatar */}
+        <div style={{ position:'relative', marginBottom:'16px' }}>
           {profile.avatar_url ? (
-            <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-              <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '112px', height: '112px', borderRadius: '24px', objectFit: 'cover', display: 'block' }} />
+            <div style={{ padding:'3px', borderRadius:'28px', background:'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', backdropFilter:'blur(10px)', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }}>
+              <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'112px', height:'112px', borderRadius:'24px', objectFit:'cover', display:'block' }} />
             </div>
           ) : (
-            <div style={{ padding: '3px', borderRadius: '28px', background: 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-              <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold', color: 'white' }}>
+            <div style={{ padding:'3px', borderRadius:'28px', background:'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', backdropFilter:'blur(10px)', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }}>
+              <div style={{ width:'112px', height:'112px', borderRadius:'24px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>
                 {profile.display_name ? profile.display_name[0].toUpperCase() : '?'}
               </div>
             </div>
           )}
           {profile.is_verified && (
-            <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #22c55e)', border: '3px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: 'white', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
+            <div style={{ position:'absolute', bottom:'-8px', right:'-8px', width:'28px', height:'28px', borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', border:'3px solid rgba(255,255,255,0.9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'700', color:'white', boxShadow:'0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
           )}
         </div>
 
-        <h1 style={{ fontSize: '28px', fontWeight: '900', color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', textAlign: 'center' }}>
+        <h1 style={{ fontSize:'28px', fontWeight:'900', color:'white', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'4px', textAlign:'center' }}>
           {profile.display_name}
-          {profile.is_verified && <span style={{ marginLeft: '8px', fontSize: '16px', color: '#22c55e' }}>✓</span>}
+          {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
         </h1>
 
         {profile.bio && (
-          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', textAlign: 'center', maxWidth: '300px', marginBottom: '12px' }}>{profile.bio}</p>
+          <p style={{ color:'rgba(255,255,255,0.8)', fontSize:'14px', textAlign:'center', maxWidth:'300px', marginBottom:'12px' }}>{profile.bio}</p>
         )}
 
-        {/* ✅ COMPTEUR DE VUES */}
-        {formattedViews && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '100px',
-            padding: '5px 14px',
-            marginBottom: '16px',
-          }}>
-            <Eye size={13} color="rgba(255,255,255,0.5)" />
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: '600' }}>
-              {formattedViews} visiteur{viewCount > 1 ? 's' : ' a'} sur votre profil
-            </span>
-          </div>
-        )}
+        {/* ✅ Compteur de vues SUPPRIMÉ */}
 
         {profile.phone && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '14px', marginBottom: '16px' }}>
-            <Phone size={16} />
-            {profile.phone}
+          <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}>
+            <Phone size={16} />{profile.phone}
           </div>
         )}
 
         {/* MODE ÉVÉNEMENT */}
         {hasEventContent && (
-          <div style={{ width: '100%', maxWidth: '360px', marginBottom: '20px' }}>
+          <div style={{ width:'100%', maxWidth:'360px', marginBottom:'20px' }}>
 
-            {/* CARROUSEL */}
             {images.length > 0 && (
-              <div
-                style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', marginBottom: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
-                onTouchStart={handleTouchStart}
-              >
-                <img
-                  src={images[currentIndex]}
-                  alt="event"
-                  style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block', transition: 'opacity 0.5s ease' }}
+              <div style={{ position:'relative', borderRadius:'20px', overflow:'hidden', marginBottom:'12px', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }} onTouchStart={handleTouchStart}>
+                <img src={images[currentIndex]} alt="event"
+                  style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }}
+                  onClick={() => setLightboxSrc(images[currentIndex])}
                 />
 
-                <button
-                  onClick={() => handleDownload(images[currentIndex])}
-                  style={{
-                    position: 'absolute', bottom: '25px', right: '20px', 
-                    background: 'white', color: '#000', padding: '4px 10px', borderRadius: '999px',
-                    fontWeight: '700', fontSize: '11px', border: 'none', cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)', zIndex: 10, whiteSpace: 'nowrap',
-                  }}
-                >
-                  ⬇ Télécharger
-                </button>
+                {/* ✅ Boutons Afficher + Télécharger côte à côte */}
+                <div style={{ position:'absolute', bottom:'14px', right:'12px', display:'flex', gap:'6px', zIndex:10 }}>
+                  {/* Bouton Afficher */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLightboxSrc(images[currentIndex]); }}
+                    style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.9)', color:'white', padding:'5px 10px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', boxShadow:'0 4px 12px rgba(0,0,0,0.3)', whiteSpace:'nowrap', backdropFilter:'blur(8px)' }}
+                  >
+                    <ZoomIn size={12} /> Afficher
+                  </button>
+                  {/* Bouton Télécharger */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDownload(images[currentIndex]); }}
+                    style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(255,255,255,0.92)', color:'#000', padding:'5px 10px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', boxShadow:'0 4px 12px rgba(0,0,0,0.3)', whiteSpace:'nowrap' }}
+                  >
+                    <Download size={12} /> Télécharger
+                  </button>
+                </div>
 
                 {images.length > 1 && (
-                  <div style={{ position: 'absolute', bottom: '12px', width: '100%', display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                  <div style={{ position:'absolute', bottom:'46px', width:'100%', display:'flex', justifyContent:'center', gap:'6px' }}>
                     {images.map((_, i) => (
-                      <div
-                        key={i}
-                        onClick={() => { setCurrentIndex(i); setIsAutoPlay(false); }}
-                        style={{ width: i === currentIndex ? '18px' : '6px', height: '6px', borderRadius: '999px', background: 'white', opacity: i === currentIndex ? 1 : 0.4, transition: 'all 0.3s', cursor: 'pointer' }}
-                      />
+                      <div key={i} onClick={() => { setCurrentIndex(i); setIsAutoPlay(false); }}
+                        style={{ width: i === currentIndex ? '18px' : '6px', height:'6px', borderRadius:'999px', background:'white', opacity: i === currentIndex ? 1 : 0.4, transition:'all 0.3s', cursor:'pointer' }} />
                     ))}
                   </div>
                 )}
@@ -431,113 +488,133 @@ export default function PublicProfile() {
             )}
 
             {(profile.event_name || profile.event_location) && (
-              <div style={{ background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '20px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: '100px', padding: '4px 12px', fontSize: '11px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+              <div style={{ background:'linear-gradient(135deg,'+ec1+','+ec2+')', borderRadius:'20px', padding:'20px', textAlign:'center', marginBottom:'12px' }}>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(0,0,0,0.2)', borderRadius:'100px', padding:'4px 12px', fontSize:'11px', fontWeight:'700', color:'white', marginBottom:'8px' }}>
+                  <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'white', display:'inline-block', animation:'pulse 1.5s infinite' }} />
                   ÉVÉNEMENT
                 </div>
-                {profile.event_name && <div style={{ fontSize: '20px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>{profile.event_name}</div>}
-                {profile.event_location && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
+                {profile.event_name && <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'4px' }}>{profile.event_name}</div>}
+                {profile.event_location && <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
               </div>
             )}
 
             {countdown && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
-                {[{ v: countdown.days, l: 'Jours' }, { v: countdown.hours, l: 'Heures' }, { v: countdown.mins, l: 'Min' }, { v: countdown.secs, l: 'Sec' }].map(({ v, l }) => (
-                  <div key={l} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff6b35', lineHeight: 1 }}>{String(v).padStart(2, '0')}</div>
-                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '3px' }}>{l}</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
+                {[{v:countdown.days,l:'Jours'},{v:countdown.hours,l:'Heures'},{v:countdown.mins,l:'Min'},{v:countdown.secs,l:'Sec'}].map(({v,l}) => (
+                  <div key={l} style={{background: 'rgba(255,255,255,0.28)', borderRadius: '12px', padding: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.25)' }}>
+                    <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1 }}>{String(v).padStart(2,'0')}</div>
+                    <div style={{ fontWeight:'700', fontSize:'9px', color:'rgb(0, 0, 0)', textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {profile.event_description && (
-              <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '16px', padding: '14px 16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>{profile.event_description}</p>
+              <div style={{ background: 'rgba(255,255,255,0.32)', borderRadius: '16px', padding: '14px 16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.35)' }}>
+                <p style={{ fontSize:'13px', color:'rgba(255,255,255,0.75)', lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
               </div>
             )}
 
             {profile.event_booking_url && (
               <a href={profile.event_booking_url} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, ' + ec1 + ', ' + ec2 + ')', borderRadius: '14px', padding: '14px 20px', color: 'white', fontSize: '15px', fontWeight: '700', textDecoration: 'none', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
-              >
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:'linear-gradient(135deg,'+ec1+','+ec2+')', borderRadius:'14px', padding:'14px 20px', color:'white', fontSize:'15px', fontWeight:'700', textDecoration:'none', width:'100%', boxShadow:'0 4px 20px rgba(0,0,0,0.2)' }}>
                 🎟️ Réserver ma place
               </a>
             )}
           </div>
         )}
 
-        {/* ✅ LIENS AVEC RIPPLE + BORD COLORÉ + ANIMATION DÉCALÉE */}
-        <div style={{ width: '100%', maxWidth: '384px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+        {/* SECTION MARKETPLACE */}
+        {sortedProducts.length > 0 && (
+          <div style={{ width:'100%', maxWidth:'384px', marginTop:'8px', marginBottom:'20px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px' }}>
+              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <ShoppingBag size={14} color="white" />
+              </div>
+              <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0, letterSpacing:'0.04em' }}>Boutique</h2>
+              <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{availableProducts.length} article{availableProducts.length > 1 ? 's' : ''}</span>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+              {sortedProducts.map(product => (
+                <PublicProductCard key={product.id} product={product} onOpen={setSelectedProduct} />
+              ))}
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'10px', justifyContent:'center' }}>
+              <Tag size={10} color="rgba(255,255,255,0.25)" />
+              <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px' }}>Contactez le vendeur pour commander</span>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION DOCUMENTS */}
+        {documents.length > 0 && (
+          <div style={{ width:'100%', maxWidth:'384px', marginTop:'8px', marginBottom:'20px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ef4444,#b91c1c)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <FileText size={14} color="white" />
+              </div>
+              <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0, letterSpacing:'0.04em' }}>Documents</h2>
+              <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              {documents.map(doc => (
+                <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.1)'}
+                  onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.08)'}
+                >
+                  <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <FileText size={18} color="#ef4444" />
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ color:'white', fontSize:'13px', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.name}</div>
+                    {doc.file_size && <div style={{ color:'rgba(255,255,255,0.4)', fontSize:'11px', marginTop:'2px' }}>PDF · {doc.file_size < 1024*1024 ? Math.round(doc.file_size/1024)+' Ko' : (doc.file_size/(1024*1024)).toFixed(1)+' Mo'}</div>}
+                  </div>
+                  <div style={{ width:'32px', height:'32px', borderRadius:'8px', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <ExternalLink size={14} color="#ef4444" />
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* LIENS */}
+        <div style={{ width:'100%', maxWidth:'384px', display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = link.platform ? link.platform.toLowerCase() : '';
-            const platform = PLATFORMS[key] || {
-              label: link.platform ? link.platform.toUpperCase() : 'LIEN',
-              color: '#6366f1',
-              icon: (
-                <svg viewBox="0 0 24 24" width="28" height="28">
-                  <rect width="24" height="24" rx="6" fill="#6366f1"/>
-                  <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/>
-                  <ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/>
-                  <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/>
-                </svg>
-              ),
-            };
-
-            // Couleur d'accent : depuis PLATFORMS ou fallback
-            const accentColor = platform.color || '#6366f1';
-
+            const platform = PLATFORMS[key] || { label: link.platform ? link.platform.toUpperCase() : 'LIEN', color:'#6366f1', icon:(
+              <svg viewBox="0 0 24 24" width="28" height="28"><rect width="24" height="24" rx="6" fill="#6366f1"/><circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/><ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/><line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/></svg>
+            )};
             return (
-              <div
-                key={i}
-                className="link-btn"
-                style={{ animationDelay: `${i * 0.07}s` }}
-              >
-                <RippleButton
-                  onClick={() => handleLinkClick(link)}
-                  platformColor={accentColor}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '16px',
-                    width: '100%', padding: '14px 16px',
-                    borderRadius: '16px',
-                    background: 'rgba(255,255,255,0.12)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(8px)',
-                    cursor: 'pointer', textAlign: 'left',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-                    transition: 'background 0.15s, transform 0.1s',
-                  }}
-                >
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
+              <div key={i} className="link-btn" style={{ animationDelay:`${i * 0.07}s` }}>
+                <RippleButton onClick={() => handleLinkClick(link)} platformColor={platform.color || '#6366f1'}
+                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.15)', backdropFilter:'blur(8px)', cursor:'pointer', textAlign:'left', boxShadow:'0 2px 12px rgba(0,0,0,0.15)', transition:'background 0.15s,transform 0.1s' }}>
+                  <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    {platform.icon ? React.cloneElement(platform.icon, { width:48, height:48 }) : null}
                   </div>
-                  <span style={{ color: 'white', fontWeight: '700', letterSpacing: '0.08em', fontSize: '14px', flex: 1 }}>
-                    {link.label || platform.label}
-                  </span>
-                  <ExternalLink size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink: 0 }} />
+                  <span style={{ color:'white', fontWeight:'700', letterSpacing:'0.08em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
+                  <ExternalLink size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink:0 }} />
                 </RippleButton>
               </div>
             );
           })}
         </div>
 
-        {/* Support WhatsApp */}
-        <a
-          href="https://wa.me/2250576031212"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: '12px', padding: '10px 20px', color: '#25D366', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}
-        >
+        <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer"
+          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.15)', border:'1px solid rgba(37,211,102,0.3)', borderRadius:'12px', padding:'10px 20px', color:'#25D366', fontSize:'13px', fontWeight:'500', textDecoration:'none' }}>
           <WhatsAppIcon size={16} color="#25D366" />
           Contactez notre support
         </a>
 
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '20px' }}>
-          Tous droits réservés par Socialapp.
-        </p>
-
+        <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'12px', textAlign:'center', marginTop:'20px' }}>Tous droits réservés par Socialapp.</p>
       </div>
+
+      {/* MODAL PRODUIT */}
+      {selectedProduct && <ProductDetailModal product={selectedProduct} whatsappNumber={profile.phone || ''} onClose={() => setSelectedProduct(null)} />}
+
+      {/* ✅ LIGHTBOX IMAGE PLEIN ÉCRAN */}
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </>
   );
 }

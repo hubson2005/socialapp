@@ -803,7 +803,7 @@ export default function UserDashboard() {
   };
 
   if (isLoading) return (
-   <div style={{ height: '100dvh', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#040210' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#040210' }}>
       <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#6366f1' }} />
     </div>
   );
@@ -904,7 +904,7 @@ export default function UserDashboard() {
       </div>
 
       {/* Main */}
-     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative', zIndex: 1 }}>
         {/* Top bar */}
         <div style={{ position: 'sticky', top: 0, zIndex: 15, background: 'rgba(4,2,16,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '10px 14px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
 
@@ -995,7 +995,7 @@ export default function UserDashboard() {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', paddingBottom: isMobile ? '100px' : '24px', overflowY: 'auto', overflowX: 'hidden', minHeight: 0, overflowX: 'hidden' }}>
+        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', paddingBottom: isMobile ? '100px' : '24px', overflowY: 'auto', overflowX: 'hidden' }}>
           <AnimatePresence mode="wait">
             <motion.div key={activeSection} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
               {renderSection()}

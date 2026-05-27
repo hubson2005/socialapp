@@ -7,7 +7,7 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
 
   const meta = PLATFORMS[link.platform] || {
     label: link.platform || 'Autre',
-    color: '#8B8B8B',
+    color: '#444e60',
     placeholder: 'https://...',
     icon: (
       <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">

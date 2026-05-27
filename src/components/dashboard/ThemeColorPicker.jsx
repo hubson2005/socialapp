@@ -10,6 +10,8 @@ const PRESETS = [
   { label: 'Rose', value: '#831843|#db2777' },
   { label: 'Ardoise', value: '#1e293b|#475569' },
   { label: 'Noir', value: '#000000|#1a1a2e' },
+  { label: 'violet', value: '#3d1152|#44134c' },
+  { label: 'beige', value: '#D2B48C|#e5cab1' },
 ];
 
 export default function ThemeColorPicker({ profile, onUpdate }) {

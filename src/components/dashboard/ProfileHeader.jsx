@@ -43,7 +43,7 @@ export default function ProfileHeader({ profile, onUpdate }) {
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 p-5 flex items-center gap-4">
+    <div className="bg-blue/10 backdrop-blur rounded-2xl border border-white/1 p-5 flex items-center gap-4">
       <div className="relative shrink-0">
         <div
           className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"

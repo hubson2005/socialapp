@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async"; // ✅ FIX 8 : migré de react-helmet vers react-helmet-async (react-helmet n'est plus maintenu)
 import logo from '../assets/Logo_SocialApp.png';
 import eventMockup from '../assets/MODE_EVENEMENT.png';
 import interfaceMockup from '../assets/INTERFACE_SOCIALAPP.png';
-// Après les autres imports d'assets
 import marketplaceMockup from '../assets/MARKETPLACE.png';
 
 export default function Home() {
@@ -31,7 +30,7 @@ export default function Home() {
       price: '10 000',
       period: 'Paiement annuel',
       color: '#6366f1',
-      features: ['1 profil', '3 liens', 'Page publique',  'Import 01 fichier PDF sur votre profil', 'Marketplace (ajout de 4 articles)'],
+      features: ['1 profil', '3 liens', 'Page publique', 'Import 01 fichier PDF sur votre profil', 'Marketplace (ajout de 4 articles)'],
       popular: false,
     },
     {
@@ -44,7 +43,7 @@ export default function Home() {
         '2 profils',
         '7 liens',
         '1 Carte NFC ou PVC (avec ton logo & QR code)',
-        'Statistiques détaillées des vues, clics, top liens ',
+        'Statistiques détaillées des vues, clics, top liens',
         'Marketplace ajout de 10 articles',
         'import de 3 fichiers PDFs sur votre profil',
         'Support standard',
@@ -53,6 +52,7 @@ export default function Home() {
     },
     {
       name: 'BUSINESS',
+      subtitle: 'Grandes entreprises, agences, marques établies…', // ✅ FIX 7 : subtitle ajouté pour cohérence visuelle entre les cartes
       price: '25 000',
       period: 'Paiement annuel',
       color: '#f7c948',
@@ -61,7 +61,7 @@ export default function Home() {
         '10 liens',
         '2 Carte NFC ou PVC (avec ton logo & QR code)',
         'Personnalisation avancée',
-        'Statistiques détaillées des vues, clics, top liens ',
+        'Statistiques détaillées des vues, clics, top liens',
         'Marketplace ajout de 10 articles',
         '1 mois offert mode événement',
         'Statistiques détaillées des visiteurs par pays',
@@ -128,7 +128,7 @@ export default function Home() {
           .card-hover { transition: transform 0.3s, box-shadow 0.3s; }
           .card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
           .float { animation: float 5s ease-in-out infinite; }
-          .float2 { animation: float 5s ease-in-out 1.5s infinite; }
+          /* ✅ FIX 3 : suppression de la classe float2 inutilisée */
           @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
           @keyframes dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
           @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
@@ -162,11 +162,12 @@ export default function Home() {
             <a href="#faq" style={{ color:'inherit', textDecoration:'none' }}>FAQ</a>
           </div>
           {user ? (
-            <button onClick={() => navigate('/dashboard')} style={{ padding:'10px 22px', background:'linear-gradient(135deg,#22c55e,#16a34a)', border:'none', borderRadius:'100px', color:'white', fontWeight:'700', fontSize:'14px', cursor:'pointer', fontFamily:'inherit' }}>
+            // ✅ FIX 5 : type="button" ajouté sur tous les boutons pour éviter les soumissions accidentelles
+            <button type="button" onClick={() => navigate('/dashboard')} style={{ padding:'10px 22px', background:'linear-gradient(135deg,#22c55e,#16a34a)', border:'none', borderRadius:'100px', color:'white', fontWeight:'700', fontSize:'14px', cursor:'pointer', fontFamily:'inherit' }}>
               Mon tableau de bord →
             </button>
           ) : (
-            <button onClick={() => navigate('/login')} style={{ padding:'10px 22px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'100px', color:'white', fontWeight:'700', fontSize:'14px', cursor:'pointer', fontFamily:'inherit' }}>
+            <button type="button" onClick={() => navigate('/login')} style={{ padding:'10px 22px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'100px', color:'white', fontWeight:'700', fontSize:'14px', cursor:'pointer', fontFamily:'inherit' }}>
               Connexion →
             </button>
           )}
@@ -194,7 +195,6 @@ export default function Home() {
                 Un seul QR code à scanner. Tes clients trouvent ton WhatsApp, ta boutique, tes réseaux — <strong style={{ color:'#f7c948' }}>tout ça en 3 secondes.</strong>
               </p>
 
-              {/* Mini avantages */}
               <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'36px' }}>
                 {[
                   '✅ WhatsApp, TikTok, Instagram, Facebook — tout au même endroit',
@@ -206,7 +206,8 @@ export default function Home() {
               </div>
 
               <div style={{ display:'flex', gap:'14px', flexWrap:'wrap' }}>
-                <button onClick={handleCTA} style={{ padding:'15px 34px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'14px', color:'white', fontWeight:'800', fontSize:'16px', cursor:'pointer', fontFamily:'inherit' }}>
+                {/* ✅ FIX 5 : type="button" */}
+                <button type="button" onClick={handleCTA} style={{ padding:'15px 34px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'14px', color:'white', fontWeight:'800', fontSize:'16px', cursor:'pointer', fontFamily:'inherit' }}>
                   {user ? 'Mon tableau de bord →' : 'Créer mon profil gratuitement →'}
                 </button>
                 <a href="#pricing" style={{ padding:'15px 28px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:'14px', color:'rgba(255,255,255,0.8)', fontWeight:'600', fontSize:'15px', textDecoration:'none', display:'inline-flex', alignItems:'center' }}>
@@ -217,6 +218,7 @@ export default function Home() {
             </div>
 
             <div style={{ display:'flex', justifyContent:'center' }}>
+              {/* Image hero : pas de lazy loading car elle est above the fold */}
               <img src={interfaceMockup} alt="Interface SocialApp" className="hero-mockup float"
                 style={{ width:'460px', maxWidth:'100%', objectFit:'contain', filter:'drop-shadow(0 40px 80px rgba(255,107,53,0.2))' }}
               />
@@ -284,24 +286,23 @@ export default function Home() {
             </div>
 
             <div className="market-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'center' }}>
+              <div className="reveal d1" style={{ display:'flex', justifyContent:'center' }}>
+                {/* ✅ FIX 4 : lazy loading ajouté sur les images sous le fold */}
+                <img
+                  src={marketplaceMockup}
+                  alt="Boutique SocialApp sur mobile"
+                  loading="lazy"
+                  className="float"
+                  style={{
+                    width: '320px',
+                    maxWidth: '100%',
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 40px 80px rgba(255,107,53,0.25))',
+                    borderRadius: '32px',
+                  }}
+                />
+              </div>
 
-             {/* ── Image téléphone Marketplace ── */}
-<div className="reveal d1" style={{ display: 'flex', justifyContent: 'center' }}>
-  <img
-    src={marketplaceMockup}
-    alt="Boutique SocialApp sur mobile"
-    className="float"
-    style={{
-      width: '320px',
-      maxWidth: '100%',
-      objectFit: 'contain',
-      filter: 'drop-shadow(0 40px 80px rgba(255,107,53,0.25))',
-      borderRadius: '32px',
-    }}
-  />
-</div>
-
-              {/* Texte droite */}
               <div className="reveal d2" style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
                 {[
                   { icon:'📸', title:'Ajoute tes produits avec photos', desc:"Tu mets la photo, le prix, le prix barré et une petite description. Tes clients voient directement ce que tu vends." },
@@ -318,7 +319,8 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
-                <button onClick={handleCTA} style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'13px 26px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'12px', color:'white', fontWeight:'700', fontSize:'14px', cursor:'pointer', fontFamily:'inherit', marginTop:'8px', width:'fit-content' }}>
+                {/* ✅ FIX 5 : type="button" */}
+                <button type="button" onClick={handleCTA} style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'13px 26px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'12px', color:'white', fontWeight:'700', fontSize:'14px', cursor:'pointer', fontFamily:'inherit', marginTop:'8px', width:'fit-content' }}>
                   Ouvrir ma boutique gratuitement →
                 </button>
               </div>
@@ -343,7 +345,8 @@ export default function Home() {
             </div>
             <div className="event-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'center' }}>
               <div className="reveal d1" style={{ display:'flex', justifyContent:'center' }}>
-                <img src={eventMockup} alt="Mode Événement SocialApp" className="float"
+                {/* ✅ FIX 4 : lazy loading */}
+                <img src={eventMockup} alt="Mode Événement SocialApp" loading="lazy" className="float"
                   style={{ width:'320px', maxWidth:'100%', borderRadius:'24px', boxShadow:'0 40px 80px rgba(0,0,0,0.5)', objectFit:'contain' }}
                 />
               </div>
@@ -402,8 +405,11 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
+                  {/* ✅ FIX 2 : encodeURIComponent pour encoder correctement "événement" dans l'URL */}
+                  {/* ✅ FIX 5 : type="button" */}
                   <button
-                    onClick={() => navigate(`/login?plan=${p.name.toLowerCase()}`)}
+                    type="button"
+                    onClick={() => navigate(`/login?plan=${encodeURIComponent(p.name.toLowerCase())}`)}
                     style={{ display:'block', width:'100%', padding:'12px', background: p.event?'linear-gradient(135deg,#22c55e,#16a34a)':p.popular?'linear-gradient(135deg,#ff6b35,#f7c948)':'rgba(255,255,255,0.07)', border:(!p.popular&&!p.event)?'1px solid rgba(255,255,255,0.15)':'none', borderRadius:'12px', color:'white', fontWeight:'700', fontSize:'14px', cursor:'pointer', fontFamily:'inherit' }}
                   >
                     {p.event ? 'Promouvoir mon événement' : `Choisir ${p.name}`}
@@ -418,99 +424,52 @@ export default function Home() {
         </section>
 
         {/* ── QR CODE MODIFIABLE ── */}
-<section style={{ padding:'40px 32px 20px', position:'relative', overflow:'hidden' }}>
-  
-  {/* Lumières gauche/droite */}
-  <div style={{
-    position:'absolute',
-    left:'5%',
-    top:'50%',
-    transform:'translateY(-50%)',
-    width:'220px',
-    height:'3px',
-    background:'linear-gradient(90deg, transparent, #a855f7)',
-    filter:'blur(2px)',
-    opacity:0.9,
-  }} />
-
-  <div style={{
-    position:'absolute',
-    right:'5%',
-    top:'50%',
-    transform:'translateY(-50%)',
-    width:'220px',
-    height:'3px',
-    background:'linear-gradient(90deg, #ff6b35, transparent)',
-    filter:'blur(2px)',
-    opacity:0.9,
-  }} />
-
-  <div
-    className="reveal"
-    style={{
-      maxWidth:'1400px',
-      margin:'0 auto',
-      textAlign:'center',
-      position:'relative',
-      zIndex:2,
-    }}
-  >
-
-    <h2
-      className="qr-title"
-      style={{
-        fontSize:'36px',
-        fontWeight:'900',
-        lineHeight:'1.1',
-        letterSpacing:'-2px',
-        textTransform:'uppercase',
-        whiteSpace:'nowrap',
-        textShadow:'0 0 25px rgba(255,255,255,0.08)',
-      }}
-    >
-      <span style={{ color:'#ffffff' }}>
-        QR CODE
-      </span>
-
-      <span
-        style={{
-          background:'linear-gradient(135deg,#a855f7,#d946ef)',
-          WebkitBackgroundClip:'text',
-          WebkitTextFillColor:'transparent',
-          backgroundClip:'text',
-        }}
-      >
-        {' '}MODIFIABLE
-      </span>
-
-      <span style={{ color:'#ffffff' }}>
-        {' '}SANS
-      </span>
-
-      <span
-        style={{
-          background:'linear-gradient(135deg,#ff6b35,#f7c948)',
-          WebkitBackgroundClip:'text',
-          WebkitTextFillColor:'transparent',
-          backgroundClip:'text',
-        }}
-      >
-        {' '}RÉIMPRESSION
-      </span>
-    </h2>
-
-    <p
-      style={{
-        marginTop:'14px',
-        color:'rgba(255,255,255,0.5)',
-        fontSize:'16px',
-      }}
-    >
-      Modifie tes liens, ta boutique ou ton WhatsApp sans changer ton QR code.
-    </p>
-
-  </div>
-</section>
+        <section style={{ padding:'40px 32px 20px', position:'relative', overflow:'hidden' }}>
+          <div style={{
+            position:'absolute',
+            left:'5%',
+            top:'50%',
+            transform:'translateY(-50%)',
+            width:'220px',
+            height:'3px',
+            background:'linear-gradient(90deg, transparent, #a855f7)',
+            filter:'blur(2px)',
+            opacity:0.9,
+          }} />
+          <div style={{
+            position:'absolute',
+            right:'5%',
+            top:'50%',
+            transform:'translateY(-50%)',
+            width:'220px',
+            height:'3px',
+            background:'linear-gradient(90deg, #ff6b35, transparent)',
+            filter:'blur(2px)',
+            opacity:0.9,
+          }} />
+          <div className="reveal" style={{ maxWidth:'1400px', margin:'0 auto', textAlign:'center', position:'relative', zIndex:2 }}>
+            <h2
+              className="qr-title"
+              style={{
+                fontSize:'36px',
+                fontWeight:'900',
+                lineHeight:'1.1',
+                letterSpacing:'-2px',
+                textTransform:'uppercase',
+                whiteSpace:'nowrap',
+                textShadow:'0 0 25px rgba(255,255,255,0.08)',
+              }}
+            >
+              <span style={{ color:'#ffffff' }}>QR CODE</span>
+              <span style={{ background:'linear-gradient(135deg,#a855f7,#d946ef)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{' '}MODIFIABLE</span>
+              <span style={{ color:'#ffffff' }}>{' '}SANS</span>
+              <span style={{ background:'linear-gradient(135deg,#ff6b35,#f7c948)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>{' '}RÉIMPRESSION</span>
+            </h2>
+            <p style={{ marginTop:'14px', color:'rgba(255,255,255,0.5)', fontSize:'16px' }}>
+              Modifie tes liens, ta boutique ou ton WhatsApp sans changer ton QR code.
+            </p>
+          </div>
+        </section>
 
         {/* ── TÉMOIGNAGES ── */}
         <section style={{ padding:'100px 32px' }}>
@@ -549,7 +508,8 @@ export default function Home() {
             <p style={{ color:'rgba(255,255,255,0.55)', fontSize:'16px', lineHeight:'1.8', marginBottom:'32px' }}>
               Rejoins des centaines d'entrepreneurs ivoiriens qui utilisent SocialApp pour partager leurs réseaux et vendre leurs produits. <strong style={{ color:'#f7c948' }}>C'est simple, c'est rapide, c'est fait pour toi.</strong>
             </p>
-            <button onClick={handleCTA} style={{ padding:'16px 44px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'14px', color:'white', fontWeight:'800', fontSize:'17px', cursor:'pointer', fontFamily:'inherit', display:'block', width:'100%', marginBottom:'14px' }}>
+            {/* ✅ FIX 5 : type="button" */}
+            <button type="button" onClick={handleCTA} style={{ padding:'16px 44px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', border:'none', borderRadius:'14px', color:'white', fontWeight:'800', fontSize:'17px', cursor:'pointer', fontFamily:'inherit', display:'block', width:'100%', marginBottom:'14px' }}>
               {user ? 'Accéder à mon dashboard →' : 'Créer mon profil gratuitement →'}
             </button>
             <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'13px' }}>Paiement Mobile Money · Wave · MTN Money</p>
@@ -568,13 +528,19 @@ export default function Home() {
             <div className="reveal" style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
               {faqs.map((f,i) => (
                 <div key={i} style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'16px', overflow:'hidden' }}>
-                  <button onClick={() => setOpenFaq(openFaq===i ? null : i)}
+                  {/* ✅ FIX 1 : pattern fonctionnel (prev => ...) pour éviter la stale closure */}
+                  {/* ✅ FIX 5 : type="button" */}
+                  {/* ✅ FIX 6 : aria-expanded pour l'accessibilité */}
+                  <button
+                    type="button"
+                    aria-expanded={openFaq === i}
+                    onClick={() => setOpenFaq(prev => prev === i ? null : i)}
                     style={{ width:'100%', padding:'18px 22px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'none', border:'none', color:'white', fontSize:'15px', fontWeight:'600', cursor:'pointer', fontFamily:'inherit', textAlign:'left', gap:'16px' }}
                   >
                     {f.q}
-                    <span style={{ fontSize:'20px', flexShrink:0, color:'#ff6b35', transition:'transform 0.3s', transform:openFaq===i?'rotate(45deg)':'rotate(0)', display:'inline-block' }}>+</span>
+                    <span style={{ fontSize:'20px', flexShrink:0, color:'#ff6b35', transition:'transform 0.3s', transform:openFaq===i?'rotate(45deg)':'rotate(0)', display:'inline-block' }} aria-hidden="true">+</span>
                   </button>
-                  {openFaq===i && (
+                  {openFaq === i && (
                     <div style={{ padding:'0 22px 18px', color:'rgba(255,255,255,0.6)', fontSize:'14px', lineHeight:'1.7' }}>{f.a}</div>
                   )}
                 </div>
@@ -595,7 +561,8 @@ export default function Home() {
               style={{ padding:'10px 20px', background:'rgba(37,211,102,0.1)', border:'1px solid rgba(37,211,102,0.3)', borderRadius:'100px', color:'#25D366', fontWeight:'600', fontSize:'13px', textDecoration:'none' }}>
               WhatsApp
             </a>
-            <button onClick={handleCTA} style={{ padding:'10px 20px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'100px', color:'white', fontWeight:'600', fontSize:'13px', cursor:'pointer', fontFamily:'inherit' }}>
+            {/* ✅ FIX 5 : type="button" */}
+            <button type="button" onClick={handleCTA} style={{ padding:'10px 20px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'100px', color:'white', fontWeight:'600', fontSize:'13px', cursor:'pointer', fontFamily:'inherit' }}>
               {user ? 'Mon dashboard' : 'Se connecter'}
             </button>
           </div>

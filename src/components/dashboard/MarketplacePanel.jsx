@@ -87,6 +87,7 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
     finally { setSaving(false); }
   };
 
+  
   return (
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
@@ -331,6 +332,8 @@ export default function MarketplacePanel({ profileId }) {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [favs, setFavs] = useState({});
+  const PRODUCTS_PER_PAGE = 4;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['marketplace', profileId],
@@ -385,6 +388,7 @@ export default function MarketplacePanel({ profileId }) {
     setShowModal(false);
     setEditProduct(null);
     queryClient.invalidateQueries({ queryKey: ['marketplace', profileId] });
+    setCurrentPage(Math.ceil((products.length + 1) / PRODUCTS_PER_PAGE));
   };
 
   const handleClose = () => {
@@ -395,6 +399,12 @@ export default function MarketplacePanel({ profileId }) {
   const toggleFav = (id) => setFavs(f => ({ ...f, [id]: !f[id] }));
 
   const atLimit = products.length >= MAX_PRODUCTS;
+  const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+
+const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+const endIndex = startIndex + PRODUCTS_PER_PAGE;
+
+const currentProducts = products.slice(startIndex, endIndex);
 
   return (
     <>
@@ -436,42 +446,184 @@ export default function MarketplacePanel({ profileId }) {
         </div>
 
         {/* Grille produits */}
-        <div style={{ padding: '14px' }}>
-          {isLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
-              <Loader2 size={20} color="rgba(255,107,53,0.6)" style={{ animation: 'spin 1s linear infinite' }} />
-            </div>
-          ) : products.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(255,107,53,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                <PackageOpen size={24} color="rgba(255,107,53,0.6)" />
-              </div>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 600, margin: '0 0 6px' }}>Aucun produit</p>
-              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>Ajoutez vos premiers produits<br />pour les afficher sur votre profil</p>
-              <button
-                onClick={handleAdd}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 18px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '12px', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                <Plus size={14} /> Ajouter un produit
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <AnimatePresence>
-                {products.map(p => (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    isFav={!!favs[p.id]}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onToggleFav={toggleFav}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
+<div style={{ padding: '14px' }}>
+  {isLoading ? (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '32px 0'
+      }}
+    >
+      <Loader2
+        size={20}
+        color="rgba(255,107,53,0.6)"
+        style={{ animation: 'spin 1s linear infinite' }}
+      />
+    </div>
+  ) : products.length === 0 ? (
+    <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+      <div
+        style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: '16px',
+          background: 'rgba(255,107,53,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 14px'
+        }}
+      >
+        <PackageOpen size={24} color="rgba(255,107,53,0.6)" />
+      </div>
+
+      <p
+        style={{
+          color: 'rgba(255,255,255,0.5)',
+          fontSize: '14px',
+          fontWeight: 600,
+          margin: '0 0 6px'
+        }}
+      >
+        Aucun produit
+      </p>
+
+      <p
+        style={{
+          color: 'rgba(255,255,255,0.25)',
+          fontSize: '12px',
+          margin: '0 0 16px',
+          lineHeight: 1.5
+        }}
+      >
+        Ajoutez vos premiers produits
+        <br />
+        pour les afficher sur votre profil
+      </p>
+
+      <button
+        onClick={handleAdd}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '7px',
+          padding: '9px 18px',
+          background: 'linear-gradient(135deg,#ff6b35,#f7c948)',
+          border: 'none',
+          borderRadius: '12px',
+          color: 'white',
+          fontSize: '13px',
+          fontWeight: 700,
+          cursor: 'pointer'
+        }}
+      >
+        <Plus size={14} /> Ajouter un produit
+      </button>
+    </div>
+  ) : (
+    <>
+      {/* Produits */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '12px'
+        }}
+      >
+        <AnimatePresence>
+          {currentProducts.map(p => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              isFav={!!favs[p.id]}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleFav={toggleFav}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '10px',
+            marginTop: '18px'
+          }}
+        >
+          <button
+            onClick={() =>
+              setCurrentPage(prev =>
+                Math.max(prev - 1, 1)
+              )
+            }
+            disabled={currentPage === 1}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: 'none',
+              cursor:
+                currentPage === 1
+                  ? 'not-allowed'
+                  : 'pointer',
+              background:
+                currentPage === 1
+                  ? 'rgba(255,255,255,0.08)'
+                  : 'linear-gradient(135deg,#ff6b35,#f7c948)',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 700
+            }}
+          >
+            Précédent
+          </button>
+
+          <span
+            style={{
+              color: 'rgba(255,255,255,0.5)',
+              fontSize: '12px',
+              fontWeight: 600
+            }}
+          >
+            Page {currentPage} / {totalPages}
+          </span>
+
+          <button
+            onClick={() =>
+              setCurrentPage(prev =>
+                Math.min(prev + 1, totalPages)
+              )
+            }
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: 'none',
+              cursor:
+                currentPage === totalPages
+                  ? 'not-allowed'
+                  : 'pointer',
+              background:
+                currentPage === totalPages
+                  ? 'rgba(255,255,255,0.08)'
+                  : 'linear-gradient(135deg,#ff6b35,#f7c948)',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 700
+            }}
+          >
+            Suivant
+          </button>
         </div>
+      )}
+    </>
+  )}
+</div>
 
         {/* Footer info */}
         {products.length > 0 && (

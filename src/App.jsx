@@ -16,7 +16,6 @@ import {
 // Détection admin sous-domaine
 const isAdminDomain = () => {
   const hostname = window.location.hostname;
-
   return (
     hostname === "admin.socialapp.work" ||
     hostname === "localhost"
@@ -56,15 +55,8 @@ function AdminApp() {
         }
       />
 
-      <Route
-        path="/"
-        element={<Navigate to="/dashboard" replace />}
-      />
-
-      <Route
-        path="*"
-        element={<Navigate to="/dashboard" replace />}
-      />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
@@ -78,12 +70,6 @@ function PublicApp() {
 
       {/* Accueil */}
       <Route path="/" element={<Home />} />
-
-      {/* Profil public */}
-      <Route
-        path="/profil/:username"
-        element={<PublicProfile />}
-      />
 
       {/* Login */}
       <Route
@@ -105,11 +91,13 @@ function PublicApp() {
         }
       />
 
+      {/* ✅ Profil public — https://www.socialapp.work/:username
+          Doit être EN DERNIER pour ne pas intercepter /login, /dashboard, etc. */}
+      <Route path="/:username" element={<PublicProfile />} />
+
       {/* Fallback */}
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+
     </Routes>
   );
 }

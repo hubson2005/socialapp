@@ -288,7 +288,7 @@ export default function AutomationsPanel({ profileId }) {
                     </div>
                     <div className="auto-desc">{auto.desc}</div>
                     <div className="flow">
-                      {auto.flow.map(([ico,lbl],i) => (
+                      {(auto.flow || []).map(([ico,lbl],i) => (
                         <span key={i} style={{ display:"flex", alignItems:"center" }}>
                           <span className="flow-step"><span style={{ fontSize:14 }}>{ico}</span>{lbl}</span>
                           {i < auto.flow.length - 1 && <span className="flow-arrow">→</span>}
@@ -417,19 +417,36 @@ export default function AutomationsPanel({ profileId }) {
       if (modal === "create") {
 
         const payload = {
-          profile_id: profileId,
-          name: "Nouvelle automation",
-          active: false,
-          icon: "⚡",
-          color: "rgba(245,132,31,.1)",
-          description: "Automation personnalisée",
-          trigger: "Nouveau lead",
-          action: "Message WhatsApp",
-          freq: "Immédiat",
-          runs: 0,
-          lastRun: "Jamais"
-        };
+  profile_id: profileId,
 
+  name: "Nouvelle automation",
+
+  active: false,
+
+  icon: "⚡",
+
+  color: "rgba(245,132,31,.1)",
+
+  desc: "Automation personnalisée",
+
+  description: "Automation personnalisée",
+
+  trigger: "Nouveau lead",
+
+  action: "Message WhatsApp",
+
+  freq: "Immédiat",
+
+  runs: 0,
+
+  lastRun: "Jamais",
+
+  flow: [
+    ["⚡", "Déclencheur"],
+    ["🔄", "Traitement"],
+    ["✅", "Action exécutée"]
+  ]
+};
         const { data, error } = await supabase
           .from("automations")
           .insert(payload)

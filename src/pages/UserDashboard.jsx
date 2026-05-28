@@ -22,7 +22,7 @@ import MarketplacePanel from "@/components/dashboard/MarketplacePanel";
 import DocumentsPanel from "@/components/dashboard/DocumentsPanel";
 import MobileNav from "@/components/dashboard/MobileNav";
 import RealtimePanel from "@/components/dashboard/RealtimePanel";
-import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
+import Analyticspanel from "@/components/dashboard/Analyticspanel";
 import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
 import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
@@ -852,36 +852,16 @@ export default function UserDashboard() {
     switch (activeSection) {
       case 'overview':
         return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={rawPlan} />;
-      case 'platforms':
-        return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} />;
-      case 'event':
-        return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
-      case 'marketplace':
-        return <div style={{ maxWidth: '640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
-      case 'documents':
-        return <div style={{ maxWidth: '640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={rawPlan} /></div>;
-      case 'analytics':
-        return limits.hasStats ? <AnalyticsPanel profileId={localProfile.id} /> : null;
-      case 'realtime':
-        return limits.hasRealtime ? <RealtimePanel profileId={localProfile.id} /> : null;
-      case 'crm':
-        return limits.hasCRM ? <LeadsCRMPanel profileId={localProfile.id} /> : null;
-      case 'automations':
-        return limits.hasAutomations ? (
-          <div style={{ color: 'white', padding: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px' }}>⚙️ Automatisations</h2>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>Module en cours de déploiement.</p>
-          </div>
-        ) : null;
-      case 'integrations':
-        return limits.hasIntegrations ? (
-          <div style={{ color: 'white', padding: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px' }}>🔗 Intégrations</h2>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>Module en cours de déploiement.</p>
-          </div>
-        ) : null;
-      case 'settings':
-        return <UserSettingsPanel profile={localProfile} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} isActivated={isActivated} limits={limits} profiles={profiles} activeProfileId={activeProfileId} onSwitchProfile={p => { setActiveProfileId(p.id); setLocalProfile(p); setHasChanges(false); }} onCreateProfile={handleCreateProfile} atProfileLimit={atProfLimit} />;
+      case 'platforms': return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} />;
+      case 'event': return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
+      case 'marketplace': return <div style={{ maxWidth: '640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
+      case 'documents': return <div style={{ maxWidth: '640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={rawPlan} /></div>;
+      case 'analytics': return limits.hasStats ? <AnalyticsPanel profileId={localProfile.id} /> : null;
+      case 'realtime': return limits.hasRealtime ? <RealtimePanel profileId={localProfile.id} /> : null;
+      case 'crm': return limits.hasCRM ? <LeadsCRMPanel profileId={localProfile.id} /> : null;
+      case 'automations': return <AutomationsPanel profileId={localProfile.id} /> ; null;
+      case 'integrations':return <IntegrationsPanel profileId={localProfile.id} /> ; null;
+      case 'settings': return <UserSettingsPanel profile={localProfile} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} isActivated={isActivated} limits={limits} profiles={profiles} activeProfileId={activeProfileId} onSwitchProfile={p => { setActiveProfileId(p.id); setLocalProfile(p); setHasChanges(false); }} onCreateProfile={handleCreateProfile} atProfileLimit={atProfLimit} />;
       default:
         return null;
     }

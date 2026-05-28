@@ -45,28 +45,70 @@ async function fetchCountry() {
   }
 }
 
-/** Enregistre une vue avec tous les champs attendus par le dashboard */
+/** Enregistre une vue avec debug */
 async function trackView(profileId) {
-  const [geo] = await Promise.all([fetchCountry()]);
-  await supabase.from('profile_stats').insert([{
-    profile_id:   profileId,
-    event_type:   'view',
-    device:       detectDevice(),
-    referrer:     cleanReferrer(),
-    country:      geo.country,
-    country_name: geo.country_name,
-  }]);
+  try {
+    console.log("TRACK VIEW START");
+    console.log("PROFILE ID:", profileId);
+
+    const [geo] = await Promise.all([fetchCountry()]);
+
+    const payload = {
+      profile_id: profileId,
+      event_type: 'view',
+      device: detectDevice(),
+      referrer: cleanReferrer(),
+      country: geo.country,
+      country_name: geo.country_name,
+    };
+
+    console.log("PAYLOAD:", payload);
+
+    const { data, error } = await supabase
+      .from('profile_stats')
+      .insert([payload])
+      .select();
+
+    if (error) {
+      console.error("SUPABASE INSERT ERROR:", error);
+    } else {
+      console.log("VIEW INSERTED:", data);
+    }
+
+  } catch (err) {
+    console.error("TRACK VIEW CRASH:", err);
+  }
 }
 
-/** Enregistre un clic sur un lien */
+/** Enregistre un clic */
 async function trackClick(profileId, platform) {
-  await supabase.from('profile_stats').insert([{
-    profile_id: profileId,
-    event_type: 'click',
-    platform,
-    device:     detectDevice(),
-    referrer:   cleanReferrer(),
-  }]);
+  try {
+    console.log("TRACK CLICK START");
+
+    const payload = {
+      profile_id: profileId,
+      event_type: 'click',
+      platform,
+      device: detectDevice(),
+      referrer: cleanReferrer(),
+    };
+
+    console.log("CLICK PAYLOAD:", payload);
+
+    const { data, error } = await supabase
+      .from('profile_stats')
+      .insert([payload])
+      .select();
+
+    if (error) {
+      console.error("CLICK ERROR:", error);
+    } else {
+      console.log("CLICK INSERTED:", data);
+    }
+
+  } catch (err) {
+    console.error("TRACK CLICK CRASH:", err);
+  }
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────

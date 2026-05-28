@@ -22,7 +22,7 @@ import MarketplacePanel from "@/components/dashboard/MarketplacePanel";
 import DocumentsPanel from "@/components/dashboard/DocumentsPanel";
 import MobileNav from "@/components/dashboard/MobileNav";
 import RealtimePanel from "@/components/dashboard/RealtimePanel";
-import Analyticspanel from "@/components/dashboard/Analyticspanel";
+import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
 import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";

@@ -306,7 +306,7 @@ export default function UserSidebar({
                             fontWeight: isActive && !locked ? 700 : 500,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>
-                            {t(item.labelKey)}
+                            {t(item.id)}
                           </span>
                           {locked && (
                             <span style={{

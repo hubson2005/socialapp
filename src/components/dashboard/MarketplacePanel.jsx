@@ -649,3 +649,4 @@ const currentProducts = products.slice(startIndex, endIndex);
     </>
   );
 }
+

@@ -31,6 +31,9 @@ export const USER_GROUPS = [
 // Plan order — exporté pour usage dans UserDashboard
 export const PLAN_ORDER = { basic: 0, événement: 0, pro: 1, business: 2 };
 
+// Rang maximum parmi tous les plans
+const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
+
 // ─── UserSidebar ──────────────────────────────────────────────────────────────
 export default function UserSidebar({
   activeSection,
@@ -44,6 +47,9 @@ export default function UserSidebar({
 }) {
   const [search, setSearch] = useState('');
   const currentOrder = PLAN_ORDER[plan] ?? 0;
+
+  // L'utilisateur est sur le plan le plus élevé → pas de bouton "Changer d'offre"
+  const isMaxPlan = currentOrder >= MAX_PLAN_ORDER;
 
   const isNavLocked = (item) => {
     if (!item.locked) return false;
@@ -61,6 +67,8 @@ export default function UserSidebar({
   };
 
   const desktopWidth = collapsed ? 64 : 220;
+
+  const { t } = useTranslation();
 
   const sidebarStyle = isMobile
     ? {
@@ -270,7 +278,6 @@ export default function UserSidebar({
                         transition: 'background 0.12s, opacity 0.12s',
                       }}
                     >
-                      {/* Indicateur actif */}
                       {isActive && !locked && (
                         <div style={{
                           position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
@@ -280,7 +287,6 @@ export default function UserSidebar({
                         }} />
                       )}
 
-                      {/* Icône */}
                       <div style={{
                         width: '30px', height: '30px', borderRadius: '9px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -292,7 +298,6 @@ export default function UserSidebar({
                         }
                       </div>
 
-                      {/* Label + badge lock */}
                       {(!collapsed || isMobile) && (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
                           <span style={{
@@ -301,7 +306,7 @@ export default function UserSidebar({
                             fontWeight: isActive && !locked ? 700 : 500,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>
-                            {item.label}
+                            {t(item.labelKey)}
                           </span>
                           {locked && (
                             <span style={{
@@ -322,7 +327,6 @@ export default function UserSidebar({
                         </div>
                       )}
 
-                      {/* Point lock collapsed */}
                       {locked && collapsed && !isMobile && (
                         <div style={{
                           position: 'absolute', top: '6px', right: '6px',
@@ -355,12 +359,15 @@ export default function UserSidebar({
                   </span>
                 )}
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: '0 0 6px' }}>
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: isMaxPlan ? 0 : '0 0 6px' }}>
                 {limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits
               </p>
-              <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ff8c00', fontSize: '10px', fontWeight: 600, textDecoration: 'none' }}>
-                <Crown size={10} /> Changer d'offre
-              </a>
+              {/* Masqué si l'utilisateur est déjà sur le plan maximum */}
+              {!isMaxPlan && (
+                <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ff8c00', fontSize: '10px', fontWeight: 600, textDecoration: 'none' }}>
+                  <Crown size={10} /> Changer d'offre
+                </a>
+              )}
             </div>
           </div>
         )}
@@ -368,3 +375,4 @@ export default function UserSidebar({
     </>
   );
 }
+

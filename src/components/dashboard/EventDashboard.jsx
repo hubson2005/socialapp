@@ -385,3 +385,4 @@ function StatCard({ icon, title, value }) {
     </div>
   );
 }
+

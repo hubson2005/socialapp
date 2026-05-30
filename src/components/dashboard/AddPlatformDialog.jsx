@@ -337,3 +337,4 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
     </div>
   );
 }
+

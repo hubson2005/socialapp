@@ -6,6 +6,7 @@ import logo from '../assets/Logo_SocialApp.png';
 import eventMockup from '../assets/MODE_EVENEMENT.png';
 import interfaceMockup from '../assets/INTERFACE_SOCIALAPP.png';
 import marketplaceMockup from '../assets/MARKETPLACE.png';
+import LandingPage from '../pages/LandingPage';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -571,3 +572,4 @@ export default function Home() {
     </>
   );
 }
+

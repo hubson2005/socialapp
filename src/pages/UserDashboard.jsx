@@ -28,6 +28,9 @@ import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
 import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/dashboard/UserSidebar";
+import OverviewPanel from "@/components/dashboard/OverviewPanel";
+import EventPanel from "@/components/dashboard/EventPanel";
+import { useTranslation } from 'react-i18next';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
@@ -43,90 +46,30 @@ function useWindowWidth() {
 // ─── Plan limits ─────────────────────────────────────────────────────────────
 const PLAN_LIMITS = {
   basic: {
-    maxLinks: 3,
-    maxProfiles: 1,
-    hasStats: false,
-    maxMarketplace: 4,
-    maxDocs: 1,
-    hasEvent: false,
-    hasRealtime: false,
-    hasCRM: false,
-    hasAutomations: false,
-    hasIntegrations: false,
-    hasAdvancedAnalytics: false,
-    qrType: 'standard',
-    colorCustom: 'basic',
-    badge: false,
-    label: 'BASIC',
-    color: '#6366f1',
-    emoji: '⚡',
-    price: '10 000 FCFA',
+    maxLinks: 3, maxProfiles: 1, hasStats: false, maxMarketplace: 4, maxDocs: 1,
+    hasEvent: false, hasRealtime: false, hasCRM: false, hasAutomations: false,
+    hasIntegrations: false, hasAdvancedAnalytics: false, qrType: 'standard',
+    colorCustom: 'basic', badge: false, label: 'BASIC', color: '#6366f1', emoji: '⚡', price: '10 000 FCFA',
   },
   pro: {
-    maxLinks: 8,
-    maxProfiles: 1,
-    hasStats: true,
-    maxMarketplace: 10,
-    maxDocs: 3,
-    hasEvent: true,
-    hasRealtime: true,
-    hasCRM: false,
-    hasAutomations: false,
-    hasIntegrations: 'partial',
-    hasAdvancedAnalytics: false,
-    qrType: 'premium',
-    colorCustom: 'advanced',
-    badge: true,
-    label: 'PRO',
-    color: '#ff8c00',
-    emoji: '🚀',
-    price: '15 000 FCFA',
+    maxLinks: 8, maxProfiles: 1, hasStats: true, maxMarketplace: 10, maxDocs: 3,
+    hasEvent: true, hasRealtime: true, hasCRM: false, hasAutomations: false,
+    hasIntegrations: 'partial', hasAdvancedAnalytics: false, qrType: 'premium',
+    colorCustom: 'advanced', badge: true, label: 'PRO', color: '#ff8c00', emoji: '🚀', price: '15 000 FCFA',
   },
   business: {
-    maxLinks: 17,
-    maxProfiles: 1,
-    hasStats: true,
-    maxMarketplace: Infinity,
-    maxDocs: 10,
-    hasEvent: true,
-    hasRealtime: true,
-    hasCRM: true,
-    hasAutomations: true,
-    hasIntegrations: true,
-    hasAdvancedAnalytics: true,
-    qrType: 'dynamic',
-    colorCustom: 'complete',
-    badge: true,
-    label: 'BUSINESS',
-    color: '#f7c948',
-    emoji: '💼',
-    price: '25 000 FCFA',
+    maxLinks: 17, maxProfiles: 1, hasStats: true, maxMarketplace: Infinity, maxDocs: 10,
+    hasEvent: true, hasRealtime: true, hasCRM: true, hasAutomations: true,
+    hasIntegrations: true, hasAdvancedAnalytics: true, qrType: 'dynamic',
+    colorCustom: 'complete', badge: true, label: 'BUSINESS', color: '#f7c948', emoji: '💼', price: '25 000 FCFA',
   },
   événement: {
-    maxLinks: 3,
-    maxProfiles: 1,
-    hasStats: false,
-    maxMarketplace: 0,
-    maxDocs: 0,
-    hasEvent: true,
-    hasRealtime: false,
-    hasCRM: false,
-    hasAutomations: false,
-    hasIntegrations: false,
-    hasAdvancedAnalytics: false,
-    qrType: 'standard',
-    colorCustom: 'basic',
-    badge: false,
-    label: 'ÉVÉNEMENT',
-    color: '#22c55e',
-    emoji: '🎉',
-    price: '',
+    maxLinks: 3, maxProfiles: 1, hasStats: false, maxMarketplace: 0, maxDocs: 0,
+    hasEvent: true, hasRealtime: false, hasCRM: false, hasAutomations: false,
+    hasIntegrations: false, hasAdvancedAnalytics: false, qrType: 'standard',
+    colorCustom: 'basic', badge: false, label: 'ÉVÉNEMENT', color: '#22c55e', emoji: '🎉', price: '',
   },
 };
-
-// Plan order — importé depuis UserSidebar
-
-// USER_NAV, USER_GROUPS, PLAN_ORDER — importés depuis UserSidebar
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov|avi|mkv|quicktime)$/i.test(url || '');
@@ -219,7 +162,6 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon }) {
           🔒
         </div>
       </div>
-
       <div>
         <p style={{ color: 'white', fontSize: '20px', fontWeight: 800, margin: '0 0 8px' }}>{featureName}</p>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '14px', margin: '0 0 6px', lineHeight: 1.5 }}>
@@ -231,7 +173,6 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon }) {
         </div>
         <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', margin: '6px 0 0' }}>{price}</p>
       </div>
-
       <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px 20px', maxWidth: '320px', width: '100%' }}>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
           {emoji} Inclus dans l'offre {planLabel}
@@ -254,7 +195,6 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon }) {
           </ul>
         )}
       </div>
-
       <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg,' + color + ',' + color + 'aa)', borderRadius: '14px', padding: '12px 28px', color: 'white', fontSize: '14px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 8px 24px ' + color + '33' }}>
         <Crown size={15} /> Passer en {planLabel} — {price}
       </a>
@@ -332,136 +272,6 @@ function MiniStat({ label, value, icon: Icon, color }) {
   );
 }
 
-// ─── Overview panel ───────────────────────────────────────────────────────────
-function OverviewPanel({ profile, limits, isActivated, onNavigate, onUpdate, onSave, hasChanges, saving, plan }) {
-  const isMob = useWindowWidth() < 768;
-  const links = profile?.links || [];
-
-  const quickActions = [
-    { label: 'Plateformes',  icon: Link2,       color: '#0ea5e9', section: 'platforms',   desc: links.length + ' lien(s)', locked: false },
-    { label: 'Événement',    icon: CalendarDays, color: '#f59e0b', section: 'event',       desc: limits.hasEvent ? (profile?.is_event ? 'Activé' : 'Désactivé') : 'PRO requis', locked: !limits.hasEvent },
-    { label: 'Analytics',    icon: BarChart2,    color: '#a78bfa', section: 'analytics',   desc: limits.hasStats ? 'Actifs' : 'PRO requis', locked: !limits.hasStats },
-    { label: 'Marketplace',  icon: ShoppingBag,  color: '#22c55e', section: 'marketplace', desc: (limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace) + ' produits max', locked: false },
-    { label: 'CRM',          icon: Users,        color: '#ec4899', section: 'crm',         desc: limits.hasCRM ? 'Actif' : 'BUSINESS requis', locked: !limits.hasCRM },
-    { label: 'Documents',    icon: FileText,     color: '#64748b', section: 'documents',   desc: limits.maxDocs + ' doc(s) max', locked: false },
-  ];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div>
-        <h2 style={{ color: 'white', fontSize: '20px', fontWeight: 800, margin: 0 }}>Dashboard</h2>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px', margin: '4px 0 0' }}>Bienvenue sur votre espace SocialApp</p>
-      </div>
-
-      {!isActivated && (
-        <div style={{ background: 'rgba(0,87,255,0.1)', border: '1px solid rgba(0,87,255,0.3)', borderRadius: '14px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-          <AlertCircle size={16} color="#60a5fa" style={{ flexShrink: 0, marginTop: '1px' }} />
-          <div>
-            <p style={{ color: '#93c5fd', fontSize: '13px', fontWeight: 600, margin: '0 0 2px' }}>Compte en attente d'activation</p>
-            <p style={{ color: 'rgba(147,197,253,0.6)', fontSize: '11px', margin: 0 }}>Certaines fonctionnalités sont verrouillées. Contactez le support pour activer votre compte.</p>
-          </div>
-          <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer"
-            style={{ marginLeft: 'auto', background: '#25D366', borderRadius: '8px', padding: '6px 12px', color: 'white', fontSize: '11px', fontWeight: 700, textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
-            WhatsApp →
-          </a>
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: isMob ? '1fr' : 'repeat(3,1fr)', gap: '16px', alignItems: 'start' }}>
-
-        {/* Profil card */}
-        <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', overflow: 'hidden' }}>
-          <ProfileHeader profile={profile} onUpdate={onUpdate} />
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AtSign size={13} color="rgba(255,255,255,0.4)" />
-            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', flexShrink: 0 }}>@</span>
-            {isActivated
-              ? <input type="text" value={profile?.username || ''} onChange={e => onUpdate({ username: e.target.value })} placeholder="username" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '12px', outline: 'none', flex: 1, minWidth: 0 }} />
-              : <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '5px 10px', border: '1px dashed rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.6 }}>
-                  <Lock size={11} color="rgba(255,255,255,0.4)" />
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' }}>{profile?.username || 'verrouillé'}</span>
-                </div>
-                <span style={{ background: 'rgba(0,87,255,0.2)', border: '1px solid rgba(0,87,255,0.4)', borderRadius: '6px', padding: '3px 7px', fontSize: '9px', color: '#60a5fa', fontWeight: 700, flexShrink: 0 }}>Pro</span>
-              </div>
-            }
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <BadgeCheck size={13} color="rgba(255,255,255,0.4)" />
-              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>Badge vérifié</span>
-              {!limits.badge && <span style={{ background: 'rgba(255,140,0,0.15)', border: '1px solid rgba(255,140,0,0.3)', borderRadius: '5px', padding: '1px 5px', fontSize: '9px', color: '#ff8c00', fontWeight: 700 }}>PRO</span>}
-            </div>
-            <button onClick={() => limits.badge && onUpdate({ is_verified: !profile?.is_verified })}
-              style={{ width: '38px', height: '20px', borderRadius: '100px', background: profile?.is_verified ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: limits.badge ? 'pointer' : 'not-allowed', position: 'relative', transition: 'background 0.3s', flexShrink: 0, opacity: limits.badge ? 1 : 0.4 }}>
-              <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: profile?.is_verified ? '21px' : '3px', transition: 'left 0.3s' }} />
-            </button>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CalendarClock size={13} color="rgba(255,255,255,0.4)" />
-            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', flexShrink: 0 }}>Exp. :</span>
-            <span style={{ color: 'white', fontSize: '12px' }}>{profile?.expiry_date ? new Date(profile.expiry_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}</span>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: isActivated ? 'rgba(34,197,94,0.2)' : 'rgba(0,87,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {isActivated ? <CheckCircle size={13} color="#22c55e" /> : <Lock size={13} color="#60a5fa" />}
-            </div>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>{isActivated ? '✅ Compte activé' : '⏳ En attente d\'activation'}</span>
-          </div>
-          {hasChanges && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '10px 14px' }}>
-              <button onClick={onSave} disabled={saving} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', padding: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Sauvegarder
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div><QRCodeDisplay profileId={profile?.id} username={profile?.username} /></div>
-
-        <div>
-          {limits.hasStats
-            ? <StatsCard profileId={profile?.id} />
-            : <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '24px 16px', textAlign: 'center' }}>
-              <BarChart2 size={28} color="rgba(255,255,255,0.2)" style={{ margin: '0 auto 10px' }} />
-              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', fontWeight: 600, margin: '0 0 4px' }}>Statistiques</p>
-              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', margin: '0 0 6px' }}>Disponible avec l'offre PRO</p>
-              <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '10px', margin: '0 0 14px' }}>15 000 FCFA / an</p>
-              <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,140,0,0.15)', border: '1px solid rgba(255,140,0,0.3)', borderRadius: '10px', padding: '7px 14px', color: '#ff8c00', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
-                <Crown size={12} /> Upgrader → PRO
-              </a>
-            </div>
-          }
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: isMob ? '1fr 1fr' : 'repeat(3,1fr)', gap: '10px' }}>
-        {quickActions.map(a => (
-          <button key={a.section} onClick={() => onNavigate(a.section)}
-            style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px', background: a.locked ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (a.locked ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'), borderRadius: '16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', opacity: a.locked ? 0.55 : 1 }}
-            onMouseEnter={e => { if (!a.locked) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
-            onMouseLeave={e => { e.currentTarget.style.background = a.locked ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: a.color + '22', border: '1px solid ' + a.color + '44', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {a.locked ? <Lock size={15} color="rgba(255,255,255,0.25)" /> : <a.icon size={16} color={a.color} />}
-              </div>
-              {a.locked && (
-                <span style={{ background: 'rgba(255,140,0,0.12)', border: '1px solid rgba(255,140,0,0.3)', borderRadius: '5px', padding: '2px 6px', fontSize: '8.5px', color: '#ff8c00', fontWeight: 700 }}>
-                  {a.desc.includes('BUSINESS') ? '💼 BIZ' : '🚀 PRO'}
-                </span>
-              )}
-            </div>
-            <div>
-              <p style={{ color: 'white', fontSize: '12px', fontWeight: 700, margin: '0 0 2px' }}>{a.label}</p>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: 0 }}>{a.desc}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Platforms panel ──────────────────────────────────────────────────────────
 function PlatformsPanel({ localProfile, updateLocal, limits, showAddDialog, setShowAddDialog }) {
   const links = localProfile?.links || [];
@@ -495,18 +305,13 @@ function PlatformsPanel({ localProfile, updateLocal, limits, showAddDialog, setS
           <Plus size={13} /> Ajouter
         </button>
       </div>
-
       <div style={{ background: atLimit ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', border: '1px solid ' + (atLimit ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.1)'), borderRadius: '10px', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         {atLimit ? <AlertCircle size={13} color="#f87171" /> : <Crown size={13} color="rgba(255,255,255,0.3)" />}
         <span style={{ fontSize: '12px', color: atLimit ? '#f87171' : 'rgba(255,255,255,0.45)' }}>
-          {atLimit
-            ? `Limite atteinte — ${limits.maxLinks} liens max pour l'offre ${limits.label}`
-            : `${links.length} / ${limits.maxLinks} liens utilisés`
-          }
+          {atLimit ? `Limite atteinte — ${limits.maxLinks} liens max pour l'offre ${limits.label}` : `${links.length} / ${limits.maxLinks} liens utilisés`}
         </span>
         {atLimit && <a href="/" style={{ marginLeft: 'auto', fontSize: '11px', color: '#ff8c00', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>Upgrader →</a>}
       </div>
-
       {links.length === 0 ? (
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '2px dashed rgba(255,255,255,0.12)', borderRadius: '18px', padding: '48px 24px', textAlign: 'center' }}>
           <Link2 size={28} color="rgba(255,255,255,0.15)" style={{ margin: '0 auto 10px' }} />
@@ -527,177 +332,17 @@ function PlatformsPanel({ localProfile, updateLocal, limits, showAddDialog, setS
   );
 }
 
-// ─── Event panel ──────────────────────────────────────────────────────────────
-function EventPanel({ localProfile, updateLocal, isActivated }) {
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [thumbIndex, setThumbIndex] = useState(0);
-  const eventMedias = Array.isArray(localProfile.event_images) ? localProfile.event_images : localProfile.event_image_url ? [localProfile.event_image_url] : [];
-  const videoCount = eventMedias.filter(u => isVideoUrl(typeof u === 'string' ? u : u?.url)).length;
-  const imgCount = eventMedias.length - videoCount;
-
-  const handleMediaUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    for (const file of files) {
-      const isVid = file.type.startsWith('video/');
-      if (file.size / 1024 > (isVid ? MAX_VIDEO_SIZE_KB : MAX_SIZE_KB)) {
-        toast.error(`${file.name} dépasse ${isVid ? '50 Mo' : '2 Mo'}`); e.target.value = ''; return;
-      }
-    }
-    setUploadingMedia(true);
-    try {
-      const urls = await Promise.all(files.map(async file => {
-        const ext = file.name.split('.').pop();
-        const pre = file.type.startsWith('video/') ? 'event-video' : 'event-img';
-        const name = `${pre}-${localProfile.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
-        if (error) throw error;
-        const { data } = supabase.storage.from('avatars').getPublicUrl(name);
-        return data.publicUrl;
-      }));
-      const merged = [...eventMedias, ...urls];
-      updateLocal({ event_images: merged, event_image_url: merged[0] });
-      toast.success(urls.length + ' fichier(s) ajouté(s) !');
-    } catch (err) { toast.error('Erreur : ' + err.message); }
-    finally { setUploadingMedia(false); e.target.value = ''; }
-  };
-
-  const handleRemoveMedia = (idx) => {
-    const updated = eventMedias.filter((_, i) => i !== idx);
-    updateLocal({ event_images: updated, event_image_url: updated[0] || null });
-    setThumbIndex(prev => Math.min(prev, Math.max(0, updated.length - 1)));
-  };
-
-  const EVENT_COLOR_PRESETS = [
-    { c1: '#ff6b35', c2: '#f7c948' }, { c1: '#0ea5e9', c2: '#6366f1' },
-    { c1: '#10b981', c2: '#065f46' }, { c1: '#ec4899', c2: '#8b5cf6' },
-    { c1: '#1e1b4b', c2: '#312e81' }, { c1: '#ef4444', c2: '#b91c1c' },
-  ];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '680px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: 0 }}>Mode Événement</h2>
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '4px 0 0' }}>Ajoutez des images ou vidéos de votre événement</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: localProfile.is_event ? '#fbbf24' : 'rgba(255,255,255,0.4)', fontSize: '12px', fontWeight: 600 }}>{localProfile.is_event ? 'Activé' : 'Désactivé'}</span>
-          <button onClick={() => updateLocal({ is_event: !localProfile.is_event })} style={{ width: '44px', height: '24px', borderRadius: '100px', background: localProfile.is_event ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s' }}>
-            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: localProfile.is_event ? '23px' : '3px', transition: 'left 0.3s' }} />
-          </button>
-        </div>
-      </div>
-
-      {localProfile.is_event && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {isActivated ? (
-              <>
-                <input type="text" value={localProfile.event_name || ''} onChange={e => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', outline: 'none' }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <input type="datetime-local" value={localProfile.event_date || ''} onChange={e => updateLocal({ event_date: e.target.value })} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', outline: 'none' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px' }}>
-                    <MapPin size={14} color="rgba(255,255,255,0.3)" />
-                    <input type="text" value={localProfile.event_location || ''} onChange={e => updateLocal({ event_location: e.target.value })} placeholder="Lieu" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '13px', outline: 'none', flex: 1 }} />
-                  </div>
-                </div>
-                <textarea value={localProfile.event_description || ''} onChange={e => updateLocal({ event_description: e.target.value })} placeholder="Description…" rows={3} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', outline: 'none', resize: 'none' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <span style={{ fontSize: '14px' }}>🎟️</span>
-                  <input type="url" value={localProfile.event_booking_url || ''} onChange={e => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien réservation" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '13px', outline: 'none', flex: 1 }} />
-                </div>
-              </>
-            ) : (
-              <>
-                {["Nom de l'événement", "Date & heure", "Lieu", "Description / programme", "Lien de réservation"].map(label => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '10px 12px', border: '1px dashed rgba(255,255,255,0.1)', opacity: 0.55 }}>
-                    <Lock size={12} color="rgba(255,255,255,0.3)" />
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>{label}</span>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,87,255,0.08)', border: '1px solid rgba(0,87,255,0.2)', borderRadius: '10px', padding: '8px 12px' }}>
-                  <Lock size={12} color="#60a5fa" style={{ flexShrink: 0 }} />
-                  <span style={{ color: '#93c5fd', fontSize: '11px' }}>Ces champs seront accessibles après activation de votre compte.</span>
-                </div>
-              </>
-            )}
-          </div>
-
-          {isActivated && (
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}><Palette size={14} color="rgba(255,255,255,0.4)" /><span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: 600 }}>Couleurs</span></div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {EVENT_COLOR_PRESETS.map((p, i) => (
-                  <button key={i} onClick={() => updateLocal({ event_color1: p.c1, event_color2: p.c2 })} style={{ width: '32px', height: '32px', borderRadius: '9px', background: `linear-gradient(135deg,${p.c1},${p.c2})`, border: localProfile.event_color1 === p.c1 ? '3px solid white' : '3px solid transparent', cursor: 'pointer', flexShrink: 0 }} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '18px', padding: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ImagePlus size={14} color="rgba(255,255,255,0.5)" />
-                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: 600 }}>Médias</span>
-                {imgCount > 0 && <span style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '6px', padding: '1px 6px', fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>🖼 {imgCount}</span>}
-                {videoCount > 0 && <span style={{ background: 'rgba(99,102,241,0.3)', borderRadius: '6px', padding: '1px 6px', fontSize: '10px', color: '#a5b4fc', fontWeight: 600 }}>▶ {videoCount}</span>}
-                <span style={{ color: '#a5b4fc', fontSize: '10px', fontWeight: 600 }}>— sans activation</span>
-              </div>
-              {eventMedias.length > 0 && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: 'rgba(180,170,255,0.9)', fontSize: '12px', fontWeight: 600 }}>
-                  {uploadingMedia ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Ajouter
-                  <input type="file" accept="image/*,video/mp4,video/webm,video/ogg,video/mov,video/quicktime" multiple className="hidden" onChange={handleMediaUpload} disabled={uploadingMedia} />
-                </label>
-              )}
-            </div>
-            {eventMedias.length > 0 ? (
-              <>
-                <EventMediaCarousel medias={eventMedias} onRemove={handleRemoveMedia} adminMode />
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '6px' }}>
-                  {eventMedias.map((m, i) => {
-                    const url = typeof m === 'string' ? m : m?.url;
-                    return (
-                      <div key={i} onClick={() => setThumbIndex(i)} style={{ width: '46px', height: '36px', borderRadius: '7px', overflow: 'hidden', border: i === thumbIndex ? '2px solid white' : '2px solid transparent', cursor: 'pointer', flexShrink: 0, background: '#000' }}>
-                        {isVideoUrl(url) ? (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(99,102,241,0.35)', gap: '1px' }}>
-                            <span style={{ fontSize: '10px', color: 'white' }}>▶</span>
-                            <span style={{ fontSize: '7px', color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>vidéo</span>
-                          </div>
-                        ) : <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '14px', padding: '28px', cursor: 'pointer' }}>
-                {uploadingMedia ? <Loader2 size={20} color="rgba(99,102,241,0.8)" className="animate-spin" /> : (
-                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <ImagePlus size={15} color="rgba(255,255,255,0.4)" />
-                    <Video size={15} color="rgba(99,102,241,0.7)" />
-                  </div>
-                )}
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', fontWeight: 600, margin: '0 0 2px' }}>{uploadingMedia ? 'Upload en cours...' : 'Images ou vidéos'}</p>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: 0 }}>Images &lt; 2 Mo · Vidéos &lt; 50 Mo</p>
-                </div>
-                <input type="file" accept="image/*,video/mp4,video/webm,video/ogg,video/mov,video/quicktime" multiple className="hidden" onChange={handleMediaUpload} disabled={uploadingMedia} />
-              </label>
-            )}
-          </div>
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main UserDashboard ───────────────────────────────────────────────────────
 export default function UserDashboard() {
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
+
+  // ✅ useLanguage branché — re-render global quand la langue change
+  const { t, i18n } = useTranslation();
+const language = i18n.language;
+const isRtl = language === 'ar';
 
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -709,8 +354,8 @@ export default function UserDashboard() {
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const rawPlan   = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
-  const limits    = PLAN_LIMITS[rawPlan] || PLAN_LIMITS.basic;
+  const rawPlan     = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
+  const limits      = PLAN_LIMITS[rawPlan] || PLAN_LIMITS.basic;
   const isActivated = localProfile?.is_activated === true;
 
   const { data: profiles = [], isLoading } = useQuery({
@@ -840,35 +485,43 @@ export default function UserDashboard() {
   const renderSection = () => {
     if (isCurrentSectionLocked()) {
       const nav = USER_NAV.find(n => n.id === activeSection);
-      return (
-        <LockedFeaturePanel
-          requiredPlan={nav.locked}
-          featureName={nav.label}
-          icon={nav.icon}
+      return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} />;
+    }
+    switch (activeSection) {
+      case 'overview':     return (
+        <OverviewPanel
+          profile={localProfile}
+          limits={limits}
+          isActivated={isActivated}
+          onNavigate={setActiveSection}
+          onUpdate={updateLocal}
+          onSave={handleSave}
+          hasChanges={hasChanges}
+          saving={updateMutation.isPending}
+          plan={rawPlan}
         />
       );
-    }
-
-    switch (activeSection) {
-      case 'overview':
-        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={rawPlan} />;
-      case 'platforms': return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} />;
-      case 'event': return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
-      case 'marketplace': return <div style={{ maxWidth: '640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
-      case 'documents': return <div style={{ maxWidth: '640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={rawPlan} /></div>;
-      case 'analytics': return limits.hasStats ? <AnalyticsPanel profileId={localProfile.id} /> : null;
-      case 'realtime': return limits.hasRealtime ? <RealtimePanel profileId={localProfile.id} /> : null;
-      case 'crm': return limits.hasCRM ? <LeadsCRMPanel profileId={localProfile.id} /> : null;
-      case 'automations': return <AutomationsPanel profileId={localProfile.id} /> ; null;
-      case 'integrations':return <IntegrationsPanel profileId={localProfile.id} /> ; null;
-      case 'settings': return <UserSettingsPanel profile={localProfile} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} isActivated={isActivated} limits={limits} profiles={profiles} activeProfileId={activeProfileId} onSwitchProfile={p => { setActiveProfileId(p.id); setLocalProfile(p); setHasChanges(false); }} onCreateProfile={handleCreateProfile} atProfileLimit={atProfLimit} />;
-      default:
-        return null;
+      case 'platforms':    return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} />;
+      case 'event':        return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
+      case 'marketplace':  return <div style={{ maxWidth: '640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
+      case 'documents':    return <div style={{ maxWidth: '640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={rawPlan} /></div>;
+      case 'analytics':    return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} />   : null;
+      case 'realtime':     return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} />   : null;
+      case 'crm':          return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} />   : null;
+      case 'automations':  return <AutomationsPanel  profileId={localProfile.id} />;
+      case 'integrations': return <IntegrationsPanel profileId={localProfile.id} />;
+      // ✅ UserSettingsPanel standalone — pas de props
+      case 'settings':     return <UserSettingsPanel />;
+      default: return null;
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', position: 'relative' }}>
+    <div style={{
+      height: '100dvh',
+      minHeight: '100dvh', overflow: 'hidden', display: 'flex', position: 'relative', overflowX: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+    }}>
+
       {/* Sidebar */}
       <div style={{ position: 'relative', zIndex: 10, flexShrink: 0, width: isMobile ? 0 : undefined }}>
         <UserSidebar
@@ -884,27 +537,29 @@ export default function UserDashboard() {
       </div>
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative', zIndex: 1 }}>
-        {/* Top bar */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 15, background: 'rgba(4,2,16,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '10px 14px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+      <div style={{
+        flex: 1, height: '100dvh',
+        minHeight: '100dvh', overflowX: 'hidden', overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', minWidth: 0,
+        position: 'relative',
+        zIndex: 1, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+      }}>
 
-          {/* ── Gauche : logo + titre + badge plan ── */}
+        {/* Top bar */}
+        <div style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 15, background: 'rgba(4,2,16,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '10px 14px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+
+          {/* Gauche */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width: '26px', height: '26px', borderRadius: '7px', objectFit: 'cover', flexShrink: 0 }} />}
             <h2 style={{ color: 'white', fontSize: '14px', fontWeight: 700, margin: 0, whiteSpace: 'nowrap' }}>
-              {currentNav?.label || 'Dashboard'}
+              {currentNav?.label || t('dashboard_title')}
             </h2>
-            {/* Badge "Non sauvegardé" — affiché ici à la place du cadre rouge */}
             <AnimatePresence>
               {hasChanges && (
                 <motion.span
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.85 }}
-                  transition={{ duration: 0.15 }}
+                  initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }} transition={{ duration: 0.15 }}
                   style={{ background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', color: '#fbbf24', fontWeight: 600, flexShrink: 0 }}
                 >
-                  ● Non sauvegardé
+                  {t('unsaved')}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -913,69 +568,36 @@ export default function UserDashboard() {
             </span>
           </div>
 
-          {/* ── Droite : actions ── */}
+          {/* Droite */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
 
-            {/* Bouton image de fond */}
-            <label
-              title="Image de fond"
-              style={{
-                width: '34px', height: '34px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: localProfile?.bg_image_url ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.07)',
-                border: '1px solid ' + (localProfile?.bg_image_url ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.12)'),
-                borderRadius: '9px', cursor: 'pointer', flexShrink: 0,
-                position: 'relative',
-              }}
-            >
-              {uploadingBg
-                ? <Loader2 size={14} color="#a78bfa" className="animate-spin" />
-                : <Image size={14} color={localProfile?.bg_image_url ? '#a78bfa' : 'rgba(255,255,255,0.5)'} />
-              }
-              <input
-                type="file"
-                accept="image/*"
-                style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-                onChange={handleBgUpload}
-                disabled={uploadingBg}
-              />
+            <label title="Image de fond" style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: localProfile?.bg_image_url ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.07)', border: '1px solid ' + (localProfile?.bg_image_url ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.12)'), borderRadius: '9px', cursor: 'pointer', flexShrink: 0, position: 'relative' }}>
+              {uploadingBg ? <Loader2 size={14} color="#a78bfa" className="animate-spin" /> : <Image size={14} color={localProfile?.bg_image_url ? '#a78bfa' : 'rgba(255,255,255,0.5)'} />}
+              <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} onChange={handleBgUpload} disabled={uploadingBg} />
             </label>
 
-            {/* Retirer image de fond si présente */}
             {localProfile?.bg_image_url && (
-              <button
-                onClick={() => updateLocal({ bg_image_url: null })}
-                title="Retirer l'image de fond"
-                style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '9px', cursor: 'pointer', flexShrink: 0 }}
-              >
+              <button onClick={() => updateLocal({ bg_image_url: null })} title="Retirer l'image de fond" style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '9px', cursor: 'pointer', flexShrink: 0 }}>
                 <X size={13} color="#f87171" />
               </button>
             )}
 
-            {/* Sauvegarder */}
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || updateMutation.isPending}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: hasChanges ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.07)', border: '1px solid ' + (hasChanges ? 'transparent' : 'rgba(255,255,255,0.12)'), borderRadius: '9px', color: hasChanges ? 'white' : 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: 600, cursor: hasChanges ? 'pointer' : 'default', opacity: updateMutation.isPending ? 0.7 : 1 }}
-            >
+            <button onClick={handleSave} disabled={!hasChanges || updateMutation.isPending}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: hasChanges ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.07)', border: '1px solid ' + (hasChanges ? 'transparent' : 'rgba(255,255,255,0.12)'), borderRadius: '9px', color: hasChanges ? 'white' : 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: 600, cursor: hasChanges ? 'pointer' : 'default', opacity: updateMutation.isPending ? 0.7 : 1 }}>
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              {!isMobile && 'Sauvegarder'}
+              {!isMobile && t('save')}
             </button>
 
-            {/* Déconnexion */}
-            <button
-              onClick={handleSignOut}
-              style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '9px', cursor: 'pointer' }}
-              title={user?.email}
-            >
+            <button onClick={handleSignOut} title={user?.email}
+              style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '9px', cursor: 'pointer' }}>
               <LogOut size={14} color="rgba(255,255,255,0.5)" />
             </button>
           </div>
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', paddingBottom: isMobile ? '100px' : '24px', overflowY: 'auto', overflowX: 'hidden' }}>
+        {/* Zone scrollable */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: isMobile ? '16px' : '24px', paddingBottom: isMobile ? '100px' : '24px' }}>
           <AnimatePresence mode="wait">
             <motion.div key={activeSection} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
               {renderSection()}
@@ -984,11 +606,7 @@ export default function UserDashboard() {
         </div>
 
         {isMobile && (
-          <MobileNav
-            activeSection={activeSection}
-            onNavigate={setActiveSection}
-            profile={localProfile}
-          />
+          <MobileNav activeSection={activeSection} onNavigate={setActiveSection} profile={localProfile} />
         )}
       </div>
 
@@ -1005,3 +623,4 @@ export default function UserDashboard() {
     </div>
   );
 }
+

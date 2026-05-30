@@ -1,0 +1,46 @@
+{
+  "dashboard": "Tableau de bord",
+  "overview": "Vue d'ensemble",
+  "platforms": "Plateformes",
+  "event": "Événement",
+  "marketplace": "Marketplace",
+  "documents": "Documents",
+  "analytics": "Analyses",
+  "realtime": "Temps réel",
+  "crm": "CRM",
+  "automations": "Automatisations",
+  "integrations": "Intégrations",
+  "settings": "Paramètres",
+
+  "save": "Sauvegarder",
+  "saving": "Sauvegarde...",
+  "logout": "Déconnexion",
+
+  "profile": "Profil",
+  "bio": "Biographie",
+  "username": "Nom d'utilisateur",
+
+  "unsaved": "Non sauvegardé",
+
+  "create_profile": "Créer mon profil",
+
+  "welcome": "Bienvenue",
+  "plan": "Offre",
+
+  "add": "Ajouter",
+  "remove": "Supprimer",
+
+  "activated": "Activé",
+  "not_activated": "Non activé",
+
+  "statistics": "Statistiques",
+  "views": "Vues",
+  "clicks": "Clics",
+  "visitors": "Visiteurs",
+
+  "background_image": "Image de fond",
+
+  "close": "Fermer",
+
+  "language": "Langue"
+}

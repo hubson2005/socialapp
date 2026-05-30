@@ -153,3 +153,4 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
     </div>
   );
 }
+

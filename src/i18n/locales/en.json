@@ -1,0 +1,46 @@
+{
+  "dashboard": "Dashboard",
+  "overview": "Overview",
+  "platforms": "Platforms",
+  "event": "Event",
+  "marketplace": "Marketplace",
+  "documents": "Documents",
+  "analytics": "Analytics",
+  "realtime": "Realtime",
+  "crm": "CRM",
+  "automations": "Automations",
+  "integrations": "Integrations",
+  "settings": "Settings",
+
+  "save": "Save",
+  "saving": "Saving...",
+  "logout": "Logout",
+
+  "profile": "Profile",
+  "bio": "Biography",
+  "username": "Username",
+
+  "unsaved": "Unsaved",
+
+  "create_profile": "Create Profile",
+
+  "welcome": "Welcome",
+  "plan": "Plan",
+
+  "add": "Add",
+  "remove": "Remove",
+
+  "activated": "Activated",
+  "not_activated": "Not activated",
+
+  "statistics": "Statistics",
+  "views": "Views",
+  "clicks": "Clicks",
+  "visitors": "Visitors",
+
+  "background_image": "Background Image",
+
+  "close": "Close",
+
+  "language": "Language"
+}

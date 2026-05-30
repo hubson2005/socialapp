@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Download, Copy, Check, X, Share2, Palette } from 'lucide-react';
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 const BASE_URL = 'https://www.socialapp.work';
 
@@ -49,11 +50,11 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
           .select('event_type')
           .eq('profile_id', profileId);
         if (data) {
-          setStats({
-            scans:     data.filter(r => r.event_type === 'view').length,
-            downloads: data.filter(r => r.event_type === 'qr_download').length,
-            shares:    data.filter(r => r.event_type === 'qr_share').length,
-          });
+         setStats({
+  scans:     data.filter(r => r.event_type === 'qr_scan').length,
+  downloads: data.filter(r => r.event_type === 'qr_download').length,
+  shares:    data.filter(r => r.event_type === 'qr_share').length,
+});
         }
       } catch { /* silencieux */ }
     })();
@@ -96,7 +97,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
       width:  130,
       height: 200,
       type:   'canvas',
-      data:   profileUrl,
+      data: `${profileUrl}?source=qr`,
       dotsOptions:          { type: 'classy',        color: qrColor.dot },
       cornersSquareOptions: { type: 'extra-rounded', color: qrColor.dot },
       cornersDotOptions:    { type: 'dot',           color: qrColor.dot },
@@ -438,3 +439,4 @@ function StatItem({ value, label, color }) {
     </div>
   );
 }
+

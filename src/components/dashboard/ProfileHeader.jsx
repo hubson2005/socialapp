@@ -91,3 +91,4 @@ export default function ProfileHeader({ profile, onUpdate }) {
     </div>
   );
 }
+

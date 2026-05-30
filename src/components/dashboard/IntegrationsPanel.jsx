@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 // ─── Intégrations disponibles ─────────────────────────────────────────────────
 const INTEGRATIONS = [
@@ -540,3 +541,4 @@ export default function IntegrationsPanel({ profileId }) {
     </div>
   );
 }
+

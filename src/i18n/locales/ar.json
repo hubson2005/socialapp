@@ -1,0 +1,46 @@
+{
+  "dashboard": "لوحة التحكم",
+  "overview": "نظرة عامة",
+  "platforms": "المنصات",
+  "event": "الحدث",
+  "marketplace": "المتجر",
+  "documents": "الوثائق",
+  "analytics": "التحليلات",
+  "realtime": "الوقت الحقيقي",
+  "crm": "إدارة العملاء",
+  "automations": "الأتمتة",
+  "integrations": "التكاملات",
+  "settings": "الإعدادات",
+
+  "save": "حفظ",
+  "saving": "جاري الحفظ...",
+  "logout": "تسجيل الخروج",
+
+  "profile": "الملف الشخصي",
+  "bio": "نبذة",
+  "username": "اسم المستخدم",
+
+  "unsaved": "غير محفوظ",
+
+  "create_profile": "إنشاء ملف شخصي",
+
+  "welcome": "مرحباً",
+  "plan": "الخطة",
+
+  "add": "إضافة",
+  "remove": "حذف",
+
+  "activated": "مفعل",
+  "not_activated": "غير مفعل",
+
+  "statistics": "الإحصائيات",
+  "views": "المشاهدات",
+  "clicks": "النقرات",
+  "visitors": "الزوار",
+
+  "background_image": "صورة الخلفية",
+
+  "close": "إغلاق",
+
+  "language": "اللغة"
+}

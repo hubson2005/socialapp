@@ -286,6 +286,21 @@ export default function PublicProfile() {
   const [documents, setDocuments]       = useState([]);
   const [lightboxSrc, setLightboxSrc]   = useState(null);
 
+  // ── Chargement + tracking ────────────────────────────────────────────────────
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const source = params.get('source');
+
+  if (source === 'qr' && profile?.id) {
+    supabase.from('profile_stats').insert([
+      {
+        profile_id: profile.id,
+        event_type: 'qr_scan',
+      },
+    ]);
+  }
+}, [profile]);
+
   const handleDownload = (url) => {
     try {
       const fn = url.split('/').pop().split('?')[0] || 'image.jpg';
@@ -580,3 +595,4 @@ export default function PublicProfile() {
     </>
   );
 }
+

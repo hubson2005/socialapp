@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async' // ✅ FIX 8 : import HelmetProvider
 import App from './App'
 import './index.css'
+import './i18n';
 
 const queryClient = new QueryClient()
 
@@ -19,3 +20,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </HelmetProvider>
   </React.StrictMode>
 )
+

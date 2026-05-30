@@ -28,6 +28,9 @@ import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import MobileNav from "@/components/dashboard/MobileNav";
 import EventManager from "@/components/dashboard/EventManager";
+// ✅ UserSettingsPanel partagé — standalone, pas de props requises
+import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
+import { useTranslation } from "react-i18next";
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
@@ -78,8 +81,8 @@ const SIDEBAR_NAV = [
   { id: 'integrations',   label: 'Intégrations',      icon: Sparkles,        group: 'crm' },
   { id: 'profiles',       label: 'Mes profils',        icon: Layers,          group: 'content' },
   { id: 'platforms',      label: 'Plateformes',        icon: Link2,           group: 'content' },
-  { id: 'event',         label: 'Événement',     icon: CalendarDays, group: 'content' },
-  { id: 'eventmanager',  label: 'Event Manager',  icon: CalendarDays, group: 'content', badge: 'NEW' },
+  { id: 'event',          label: 'Événement',          icon: CalendarDays,    group: 'content' },
+  { id: 'eventmanager',   label: 'Event Manager',      icon: CalendarDays,    group: 'content', badge: 'NEW' },
   { id: 'marketplace',    label: 'Marketplace',        icon: ShoppingBag,     group: 'content' },
   { id: 'documents',      label: 'Documents',          icon: FileText,        group: 'content' },
   { id: 'accounts',       label: 'Comptes',            icon: Users,           group: 'admin' },
@@ -162,25 +165,27 @@ function RealtimePanel({ profileId }) {
 
   useEffect(() => {
     if (!profileId) return;
-    setConnected(true);
-    const channel = supabase.channel('realtime-' + profileId)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_stats', filter: 'profile_id=eq.' + profileId }, (payload) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    supabase.from('profile_stats').select('id', { count: 'exact', head: true }).eq('profile_id', profileId).eq('event_type', 'view').gte('created_at', today.toISOString()).then(({ count }) => { if (count) setTotalToday(count); });
+    const channel = supabase.channel('realtime-admin-' + profileId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_stats' }, (payload) => {
         const ev = payload.new;
+        if (ev.profile_id !== profileId) return;
         if (ev.event_type === 'view') {
           setTotalToday(p => p + 1);
-          const visitor = { id: ev.id || Date.now(), country: ev.country_name || ev.country || '?', device: ev.device || 'desktop', time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), referrer: ev.referrer || 'direct' };
-          setVisitors(prev => [visitor, ...prev].slice(0, 20));
+          setVisitors(prev => [{ id: ev.id || Date.now(), country: ev.country_name || ev.country || '?', device: ev.device || 'desktop', time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), referrer: ev.referrer || 'direct' }, ...prev].slice(0, 20));
         }
         if (ev.event_type === 'click') {
           setRecentClicks(prev => [{ id: Date.now(), platform: ev.platform || 'lien', time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }, ...prev].slice(0, 10));
         }
-      }).subscribe();
+      })
+      .subscribe((status) => setConnected(status === 'SUBSCRIBED'));
     return () => { supabase.removeChannel(channel); setConnected(false); };
   }, [profileId]);
 
   const flagEmoji = (code) => {
-    try { return code && code.length === 2 ? String.fromCodePoint(...[...code.toUpperCase()].map(c => c.charCodeAt(0) + 127397)) : '🌐'; }
-    catch { return '🌐'; }
+    try { return code && code.length === 2 ? String.fromCodePoint(...[...code.toUpperCase()].map(c => c.charCodeAt(0) + 127397)) : '🌐'; } catch { return '🌐'; }
   };
 
   return (
@@ -188,17 +193,15 @@ function RealtimePanel({ profileId }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: connected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: '1px solid ' + (connected ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), borderRadius: '20px', padding: '5px 12px' }}>
           <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444', display: 'inline-block', animation: connected ? 'pulse-dot 2s infinite' : 'none' }} />
-          <span style={{ color: connected ? '#22c55e' : '#ef4444', fontSize: '12px', fontWeight: 600 }}>{connected ? 'Connecté' : 'Déconnecté'}</span>
+          <span style={{ color: connected ? '#22c55e' : '#ef4444', fontSize: '12px', fontWeight: 600 }}>{connected ? 'Connecté' : 'Connexion…'}</span>
         </div>
         <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px' }}>Flux en direct — profil actif</span>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px' }}>
         <MiniStat label="Vues aujourd'hui" value={totalToday} icon={Eye} color="#6366f1" />
-        <MiniStat label="Visiteurs live" value={visitors.filter(v => true).length} icon={Activity} color="#22c55e" />
+        <MiniStat label="Visiteurs live" value={visitors.length} icon={Activity} color="#22c55e" />
         <MiniStat label="Clics récents" value={recentClicks.length} icon={MousePointerClick} color="#f59e0b" />
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', overflow: 'hidden' }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -211,7 +214,7 @@ function RealtimePanel({ profileId }) {
                 <Wifi size={20} color="rgba(255,255,255,0.15)" style={{ margin: '0 auto 8px' }} />
                 <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', margin: 0 }}>En attente de visiteurs…</p>
               </div>
-            ) : visitors.map((v, i) => (
+            ) : visitors.map((v) => (
               <motion.div key={v.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <span style={{ fontSize: '16px', width: '20px', flexShrink: 0 }}>{flagEmoji(v.country)}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -223,7 +226,6 @@ function RealtimePanel({ profileId }) {
             ))}
           </div>
         </div>
-
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', overflow: 'hidden' }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MousePointerClick size={13} color="#f59e0b" />
@@ -267,24 +269,16 @@ function AnalyticsPanel({ profileId }) {
       setLoading(true);
       const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
       const from = new Date(); from.setDate(from.getDate() - days);
-
       const { data: viewsData } = await supabase.from('profile_stats').select('created_at, country, country_name, platform').eq('profile_id', profileId).gte('created_at', from.toISOString());
       const { data: prevData } = await supabase.from('profile_stats').select('id').eq('profile_id', profileId).eq('event_type', 'view').gte('created_at', new Date(from.getTime() - days * 86400000).toISOString()).lt('created_at', from.toISOString());
-
       const views = (viewsData || []).filter(r => !r.platform);
       const clicks = (viewsData || []).filter(r => r.platform);
       const prevCount = prevData?.length || 0;
       const trend = prevCount > 0 ? Math.round(((views.length - prevCount) / prevCount) * 100) : null;
-
       setStats({ views: views.length, clicks: clicks.length, ctr: views.length > 0 ? Math.round((clicks.length / views.length) * 100) : 0, trend, trendUp: trend !== null ? trend >= 0 : true });
-
       const geoMap = {};
-      views.forEach(r => {
-        const k = r.country_name || r.country || 'Inconnu';
-        geoMap[k] = { count: (geoMap[k]?.count || 0) + 1, code: r.country };
-      });
+      views.forEach(r => { const k = r.country_name || r.country || 'Inconnu'; geoMap[k] = { count: (geoMap[k]?.count || 0) + 1, code: r.country }; });
       setGeoData(Object.entries(geoMap).sort((a, b) => b[1].count - a[1].count).slice(0, 6));
-
       const clickMap = {};
       clicks.forEach(r => { clickMap[r.platform] = (clickMap[r.platform] || 0) + 1; });
       setTopLinks(Object.entries(clickMap).sort((a, b) => b[1] - a[1]).slice(0, 6));
@@ -312,7 +306,6 @@ function AnalyticsPanel({ profileId }) {
           ))}
         </div>
       </div>
-
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader2 size={24} className="animate-spin" color="rgba(99,102,241,0.6)" /></div>
       ) : (
@@ -323,7 +316,6 @@ function AnalyticsPanel({ profileId }) {
             <MiniStat label="Taux de clic" value={(stats?.ctr || 0) + '%'} icon={TrendingUp} color="#22c55e" />
             <MiniStat label="Pays atteints" value={geoData.length} icon={Globe} color="#0ea5e9" />
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
@@ -347,7 +339,6 @@ function AnalyticsPanel({ profileId }) {
                 </div>
               ))}
             </div>
-
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                 <MousePointerClick size={14} color="#f59e0b" />
@@ -457,7 +448,6 @@ function LeadsCRMPanel({ profileId }) {
           </button>
         </div>
       </div>
-
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {TAGS.map(t => (
           <button key={t.id} onClick={() => setFilter(filter === t.id ? 'all' : t.id)}
@@ -468,14 +458,13 @@ function LeadsCRMPanel({ profileId }) {
           </button>
         ))}
       </div>
-
       <AnimatePresence>
         {showAddLead && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '18px', padding: '16px', overflow: 'hidden' }}>
             <h3 style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: '0 0 12px' }}>Nouveau lead</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-              {[['name', 'Nom *', ''], ['email', 'Email', ''], ['phone', 'Téléphone', '']].map(([key, placeholder]) => (
+              {[['name', 'Nom *'], ['email', 'Email'], ['phone', 'Téléphone']].map(([key, placeholder]) => (
                 <input key={key} type="text" placeholder={placeholder} value={newLead[key]} onChange={e => setNewLead(p => ({ ...p, [key]: e.target.value }))}
                   style={{ padding: '9px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none' }} />
               ))}
@@ -493,19 +482,16 @@ function LeadsCRMPanel({ profileId }) {
           </motion.div>
         )}
       </AnimatePresence>
-
       <div style={{ position: 'relative' }}>
         <Search size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un lead..." style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 32px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: '12px', outline: 'none' }} />
       </div>
-
       {loading ? (
         <div style={{ textAlign: 'center', padding: '32px' }}><Loader2 size={20} className="animate-spin" color="rgba(99,102,241,0.6)" /></div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
           <UserPlus size={24} color="rgba(255,255,255,0.15)" style={{ margin: '0 auto 10px' }} />
           <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', margin: 0 }}>Aucun lead pour l'instant</p>
-          <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: '11px', margin: '4px 0 0' }}>Ajoutez vos premiers contacts</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -523,7 +509,6 @@ function LeadsCRMPanel({ profileId }) {
                     {lead.email && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}><Mail size={10} />{lead.email}</span>}
                     {lead.phone && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={10} />{lead.phone}</span>}
                   </div>
-                  {lead.notes && <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', margin: '3px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.notes}</p>}
                 </div>
                 <select value={lead.tag} onChange={e => updateTag(lead.id, e.target.value)}
                   style={{ padding: '5px 8px', background: tag.color + '22', border: '1px solid ' + tag.color + '55', borderRadius: '8px', color: tag.color, fontSize: '11px', fontWeight: 600, cursor: 'pointer', outline: 'none', flexShrink: 0 }}>
@@ -546,56 +531,13 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
   const windowWidth = useWindowWidth();
   const isMob = windowWidth < 768;
 
-  // Cartes de navigation (modèle screenshot)
   const navCards = [
-    {
-      section: 'platforms',
-      label: 'Plateformes',
-      icon: Link2,
-      color: '#818cf8',
-      bg: 'rgba(99,102,241,0.18)',
-      sub: (profile?.links?.length || 0) + ' lien(s)',
-    },
-    {
-      section: 'event',
-      label: 'Événement',
-      icon: CalendarDays,
-      color: '#facc15',
-      bg: 'rgba(234,179,8,0.18)',
-      sub: profile?.is_event ? 'Activé' : 'Désactivé',
-    },
-    {
-      section: 'analytics',
-      label: 'Analytics',
-      icon: BarChart3,
-      color: '#c084fc',
-      bg: 'rgba(139,92,246,0.18)',
-      sub: 'Actifs',
-    },
-    {
-      section: 'marketplace',
-      label: 'Marketplace',
-      icon: ShoppingBag,
-      color: '#4ade80',
-      bg: 'rgba(34,197,94,0.18)',
-      sub: '∞ produits max',
-    },
-    {
-      section: 'leads',
-      label: 'CRM',
-      icon: UserPlus,
-      color: '#f472b6',
-      bg: 'rgba(236,72,153,0.18)',
-      sub: 'Actif',
-    },
-    {
-      section: 'documents',
-      label: 'Documents',
-      icon: FileText,
-      color: '#9ca3af',
-      bg: 'rgba(107,114,128,0.25)',
-      sub: '10 doc(s) max',
-    },
+    { section: 'platforms',  label: 'Plateformes', icon: Link2,       color: '#818cf8', bg: 'rgba(99,102,241,0.18)',  sub: (profile?.links?.length || 0) + ' lien(s)' },
+    { section: 'event',      label: 'Événement',   icon: CalendarDays, color: '#facc15', bg: 'rgba(234,179,8,0.18)',  sub: profile?.is_event ? 'Activé' : 'Désactivé' },
+    { section: 'analytics',  label: 'Analytics',   icon: BarChart3,   color: '#c084fc', bg: 'rgba(139,92,246,0.18)', sub: 'Actifs' },
+    { section: 'marketplace',label: 'Marketplace', icon: ShoppingBag, color: '#4ade80', bg: 'rgba(34,197,94,0.18)',  sub: '∞ produits max' },
+    { section: 'leads',      label: 'CRM',         icon: UserPlus,    color: '#f472b6', bg: 'rgba(236,72,153,0.18)', sub: 'Actif' },
+    { section: 'documents',  label: 'Documents',   icon: FileText,    color: '#9ca3af', bg: 'rgba(107,114,128,0.25)',sub: '10 doc(s) max' },
   ];
 
   return (
@@ -604,11 +546,7 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
         <h2 style={{ color: 'white', fontSize: '20px', fontWeight: 800, margin: 0 }}>Dashboard</h2>
         <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px', margin: '4px 0 0' }}>Bienvenue sur votre dashboard SocialApp</p>
       </div>
-
-      {/* ══ LIGNE 1 : Profil | QR Code | Statistiques ══ */}
       <div style={{ display: 'grid', gridTemplateColumns: isMob ? '1fr' : 'repeat(3,1fr)', gap: '16px', alignItems: 'start' }}>
-
-        {/* ── Colonne 1 : Profil ── */}
         <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', overflow: 'hidden' }}>
           <ProfileHeader profile={profile} onUpdate={onUpdate} />
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -642,61 +580,16 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
             </div>
           )}
         </div>
-
-        {/* ── Colonne 2 : QR Code ── */}
-        <div>
-          <QRCodeDisplay profileId={profile?.id} username={profile?.username} isActive={profile?.is_activated} />
-        </div>
-
-        {/* ── Colonne 3 : Statistiques ── */}
-        <div>
-          <StatsCard profileId={profile?.id} />
-        </div>
+        <div><QRCodeDisplay profileId={profile?.id} username={profile?.username} isActive={profile?.is_activated} /></div>
+        <div><StatsCard profileId={profile?.id} /></div>
       </div>
-
-      {/* ══ LIGNE 2 : Cartes navigation (style screenshot) ══ */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMob ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-        gap: '12px',
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMob ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
         {navCards.map(card => (
-          <button
-            key={card.section}
-            onClick={() => onNavigate(card.section)}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              padding: '20px 18px',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.09)',
-              borderRadius: '16px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.16)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)';
-            }}
-          >
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '11px',
-              background: card.bg,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
+          <button key={card.section} onClick={() => onNavigate(card.section)}
+            style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '20px 18px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.16)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '11px', background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <card.icon size={18} color={card.color} />
             </div>
             <div>
@@ -710,221 +603,23 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
   );
 }
 
-// ─── Settings Panel ───────────────────────────────────────────────────────────
-function SettingsPanel({ profile }) {
-  const [newPwd,      setNewPwd]      = useState('');
-  const [confirmPwd,  setConfirmPwd]  = useState('');
-  const [pwdLoading,  setPwdLoading]  = useState(false);
-  const [language,    setLanguage]    = useState(() => localStorage.getItem('app_language') || 'fr');
-  const [notifView,   setNotifView]   = useState(() => localStorage.getItem('notif_view')   !== 'false');
-  const [notifClick,  setNotifClick]  = useState(() => localStorage.getItem('notif_click')  !== 'false');
-  const [notifExpiry, setNotifExpiry] = useState(() => localStorage.getItem('notif_expiry') !== 'false');
-  const [threshold,   setThreshold]   = useState(() => parseInt(localStorage.getItem('notif_threshold') || '10'));
-
-  const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-
-  const LANGUAGES = [
-    { code: 'fr', label: '🇫🇷 Français' },
-    { code: 'en', label: '🇬🇧 English' },
-    { code: 'es', label: '🇪🇸 Español' },
-    { code: 'ar', label: '🇲🇦 العربية' },
-    { code: 'pt', label: '🇧🇷 Português' },
-  ];
-
-  const handlePasswordChange = async () => {
-    if (!newPwd || newPwd.length < 6)  { toast.error('Mot de passe trop court (6 car. min)'); return; }
-    if (newPwd !== confirmPwd)         { toast.error('Les mots de passe ne correspondent pas'); return; }
-    setPwdLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPwd });
-    setPwdLoading(false);
-    if (error) { toast.error('Erreur : ' + error.message); return; }
-    toast.success('Mot de passe mis à jour !');
-    setNewPwd(''); setConfirmPwd('');
-  };
-
-  const saveLanguage = (code) => {
-    setLanguage(code);
-    localStorage.setItem('app_language', code);
-    toast.success('Langue mise à jour');
-  };
-
-  const saveNotifPref = (key, value) => {
-    if (key === 'view')      { setNotifView(value);   localStorage.setItem('notif_view',      String(value)); }
-    if (key === 'click')     { setNotifClick(value);  localStorage.setItem('notif_click',     String(value)); }
-    if (key === 'expiry')    { setNotifExpiry(value); localStorage.setItem('notif_expiry',    String(value)); }
-    if (key === 'threshold') { setThreshold(value);   localStorage.setItem('notif_threshold', String(value)); }
-    toast.success('Préférence sauvegardée');
-  };
-
-  const Toggle = ({ value, onChange }) => (
-    <button onClick={() => onChange(!value)}
-      style={{ width: '44px', height: '24px', borderRadius: '100px', background: value ? '#6366f1' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>
-      <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: value ? '23px' : '3px', transition: 'left 0.3s' }} />
-    </button>
-  );
-
-  const Row = ({ icon: Icon, label, desc, right }) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Icon size={15} color="rgba(255,255,255,0.35)" />
-        <div>
-          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 500, margin: 0 }}>{label}</p>
-          {desc && <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: '2px 0 0' }}>{desc}</p>}
-        </div>
-      </div>
-      {right}
-    </div>
-  );
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '640px' }}>
-      <div>
-        <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: 0 }}>Paramètres</h2>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '4px 0 0' }}>Sécurité, langue et préférences de notification</p>
-      </div>
-
-      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', overflow: 'hidden' }}>
-        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldCheck size={15} color="#a78bfa" />
-          </div>
-          <div>
-            <p style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: 0 }}>Changer le mot de passe</p>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: '2px 0 0' }}>Sécurisez votre compte</p>
-          </div>
-        </div>
-        <div style={{ padding: '4px 16px 16px', display: 'flex', flexDirection: 'column', gap: '9px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-          {[
-            { val: newPwd,     set: setNewPwd,     ph: 'Nouveau mot de passe' },
-            { val: confirmPwd, set: setConfirmPwd, ph: 'Confirmer le mot de passe' },
-          ].map(({ val, set, ph }) => (
-            <input key={ph} type="password" value={val} onChange={e => set(e.target.value)} placeholder={ph}
-              style={{ marginTop: '8px', width: '100%', boxSizing: 'border-box', padding: '10px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none' }} />
-          ))}
-          <button onClick={handlePasswordChange} disabled={pwdLoading || !newPwd || !confirmPwd}
-            style={{ marginTop: '4px', padding: '10px', background: newPwd && confirmPwd ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.07)', border: 'none', borderRadius: '10px', color: newPwd && confirmPwd ? 'white' : 'rgba(255,255,255,0.3)', fontSize: '12px', fontWeight: 600, cursor: newPwd && confirmPwd ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            {pwdLoading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />} Mettre à jour le mot de passe
-          </button>
-        </div>
-      </div>
-
-      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', overflow: 'hidden' }}>
-        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: 'rgba(14,165,233,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Globe size={15} color="#38bdf8" />
-          </div>
-          <div>
-            <p style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: 0 }}>Langue de l'interface</p>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: '2px 0 0' }}>Choisissez votre langue préférée</p>
-          </div>
-        </div>
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '12px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {LANGUAGES.map(lang => (
-            <button key={lang.code} onClick={() => saveLanguage(lang.code)}
-              style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid ' + (language === lang.code ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.1)'), background: language === lang.code ? 'rgba(56,189,248,0.12)' : 'rgba(255,255,255,0.04)', color: language === lang.code ? '#38bdf8' : 'rgba(255,255,255,0.55)', fontSize: '12px', fontWeight: language === lang.code ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s' }}>
-              {lang.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', overflow: 'hidden' }}>
-        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bell size={15} color="#22c55e" />
-            </div>
-            <div>
-              <p style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: 0 }}>Notifications</p>
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: '2px 0 0' }}>
-                {notifGranted ? '🟢 Push activées' : '🔴 Push désactivées'}
-              </p>
-            </div>
-          </div>
-          {!notifGranted && (
-            <button onClick={async () => { const p = await Notification.requestPermission(); if (p === 'granted') toast.success('Notifications push activées !'); }}
-              style={{ padding: '7px 12px', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '9px', color: '#22c55e', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-              Activer
-            </button>
-          )}
-        </div>
-        <Row icon={Eye}               label="Nouvelle visite"      desc="Alerte à chaque vue de profil" right={<Toggle value={notifView}   onChange={v => saveNotifPref('view',   v)} />} />
-        <Row icon={MousePointerClick} label="Clic sur un lien"     desc="Alerte lors d'un clic"         right={<Toggle value={notifClick}  onChange={v => saveNotifPref('click',  v)} />} />
-        <Row icon={CalendarClock}     label="Expiration du profil" desc="Rappel avant expiration"       right={<Toggle value={notifExpiry} onChange={v => saveNotifPref('expiry', v)} />} />
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Activity size={15} color="rgba(255,255,255,0.35)" />
-            <div>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 500, margin: 0 }}>Seuil de regroupement</p>
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', margin: '2px 0 0' }}>Notifier tous les <strong style={{ color: '#a78bfa' }}>{threshold}</strong> visiteurs</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {[1, 5, 10, 25, 50].map(n => (
-              <button key={n} onClick={() => saveNotifPref('threshold', n)}
-                style={{ width: '32px', height: '28px', borderRadius: '8px', border: '1px solid ' + (threshold === n ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.1)'), background: threshold === n ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)', color: threshold === n ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: threshold === n ? 700 : 400, cursor: 'pointer' }}>{n}</button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collapsed, onToggle, isMobile }) {
   const activeProfile = profiles.find(p => p.id === activeProfileId);
   const [search, setSearch] = useState('');
-
-  const filteredNav = SIDEBAR_NAV.filter(n =>
-    !search || n.label.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleNav = (id) => {
-    onNavigate(id);
-    if (isMobile) onToggle();
-  };
-
+  const filteredNav = SIDEBAR_NAV.filter(n => !search || n.label.toLowerCase().includes(search.toLowerCase()));
+  const handleNav = (id) => { onNavigate(id); if (isMobile) onToggle(); };
   const desktopWidth = collapsed ? 64 : 220;
-
   const sidebarStyle = isMobile
-    ? {
-        position: 'fixed',
-        top: 0, left: 0,
-        width: '260px',
-        height: '100vh',
-        transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
-        transition: 'transform 0.25s ease',
-        zIndex: 20,
-      }
-    : {
-        position: 'sticky',
-        top: 0,
-        width: desktopWidth + 'px',
-        minWidth: desktopWidth + 'px',
-        height: '100vh',
-        transition: 'width 0.25s ease, min-width 0.25s ease',
-        zIndex: 20,
-        flexShrink: 0,
-      };
+    ? { position: 'fixed', top: 0, left: 0, width: '260px', height: '100vh', transform: collapsed ? 'translateX(-100%)' : 'translateX(0)', transition: 'transform 0.25s ease', zIndex: 20 }
+    : { position: 'sticky', top: 0, width: desktopWidth + 'px', minWidth: desktopWidth + 'px', height: '100vh', transition: 'width 0.25s ease, min-width 0.25s ease', zIndex: 20, flexShrink: 0 };
 
   return (
     <>
       {isMobile && !collapsed && (
         <div onClick={onToggle} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 19 }} />
       )}
-
-      <div style={{
-        ...sidebarStyle,
-        background: 'rgba(6,4,18,0.97)',
-        backdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        boxShadow: isMobile && !collapsed ? '8px 0 40px rgba(0,0,0,0.7)' : 'none',
-      }}>
-
+      <div style={{ ...sidebarStyle, background: 'rgba(6,4,18,0.97)', backdropFilter: 'blur(24px)', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: isMobile && !collapsed ? '8px 0 40px rgba(0,0,0,0.7)' : 'none' }}>
         <div style={{ padding: collapsed && !isMobile ? '18px 0' : '16px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', justifyContent: collapsed && !isMobile ? 'center' : 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
             <img src="/Logo_SocialApp.png" alt="" style={{ width: '30px', height: '30px', borderRadius: '9px', objectFit: 'cover', flexShrink: 0 }} />
@@ -935,16 +630,13 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
               </div>
             )}
           </div>
-          <button onClick={onToggle}
-            style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button onClick={onToggle} style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {collapsed && !isMobile ? <ChevronRight size={13} color="rgba(255,255,255,0.6)" /> : <ChevronLeft size={13} color="rgba(255,255,255,0.6)" />}
           </button>
         </div>
-
         {(!collapsed || isMobile) && activeProfile && (
           <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-            <div onClick={() => handleNav('profiles')}
-              style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <div onClick={() => handleNav('profiles')} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0, overflow: 'hidden' }}>
                 {activeProfile.avatar_url ? <img src={activeProfile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (activeProfile.display_name?.[0]?.toUpperCase() || '?')}
               </div>
@@ -956,27 +648,15 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
             </div>
           </div>
         )}
-
-        {collapsed && !isMobile && activeProfile && (
-          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-            <div onClick={() => handleNav('profiles')} title={activeProfile.display_name}
-              style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white', overflow: 'hidden', cursor: 'pointer' }}>
-              {activeProfile.avatar_url ? <img src={activeProfile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (activeProfile.display_name?.[0]?.toUpperCase() || '?')}
-            </div>
-          </div>
-        )}
-
         {(!collapsed || isMobile) && (
           <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '9px', padding: '7px 10px', border: '1px solid rgba(255,255,255,0.08)' }}>
               <Search size={12} color="rgba(255,255,255,0.3)" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
-                style={{ background: 'none', border: 'none', outline: 'none', color: 'white', fontSize: '12px', flex: 1, minWidth: 0 }} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…" style={{ background: 'none', border: 'none', outline: 'none', color: 'white', fontSize: '12px', flex: 1, minWidth: 0 }} />
               {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex', padding: 0 }}><X size={11} /></button>}
             </div>
           </div>
         )}
-
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px' }}>
           {GROUPS.map(group => {
             const items = (search ? filteredNav : SIDEBAR_NAV).filter(n => n.group === group.id);
@@ -990,8 +670,7 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
                 {items.map(item => {
                   const isActive = activeSection === item.id;
                   return (
-                    <button key={item.id} onClick={() => handleNav(item.id)}
-                      title={collapsed && !isMobile ? item.label : ''}
+                    <button key={item.id} onClick={() => handleNav(item.id)} title={collapsed && !isMobile ? item.label : ''}
                       style={{ width: '100%', display: 'flex', alignItems: 'center', gap: collapsed && !isMobile ? 0 : '10px', padding: collapsed && !isMobile ? '10px 0' : '9px 10px', borderRadius: '11px', border: 'none', background: isActive ? 'rgba(99,102,241,0.18)' : 'transparent', cursor: 'pointer', transition: 'background 0.12s', justifyContent: collapsed && !isMobile ? 'center' : 'flex-start', position: 'relative', marginBottom: '2px' }}>
                       {isActive && <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '3px', height: '20px', background: 'linear-gradient(180deg,#6366f1,#8b5cf6)', borderRadius: '0 3px 3px 0' }} />}
                       <div style={{ width: '30px', height: '30px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: isActive ? 'rgba(99,102,241,0.25)' : 'transparent' }}>
@@ -1010,7 +689,6 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
             );
           })}
         </div>
-
         {(!collapsed || isMobile) && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1053,7 +731,7 @@ function UserActivationPanel() {
     return matchSearch && matchFilter;
   });
   const pendingCount = allProfiles.filter(p => !p.is_activated).length;
-  const activeCount = allProfiles.filter(p => p.is_activated).length;
+  const activeCount  = allProfiles.filter(p =>  p.is_activated).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1081,20 +759,23 @@ function UserActivationPanel() {
         ))}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '400px', overflowY: 'auto' }}>
-        {isLoading ? <div style={{ textAlign: 'center', padding: '24px' }}><Loader2 size={16} className="animate-spin" color="rgba(255,255,255,0.3)" /></div>
-          : filtered.length === 0 ? <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', padding: '24px' }}>{filter === 'pending' ? '🎉 Aucun compte en attente' : 'Aucun résultat'}</p>
-          : filtered.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div style={{ width: '34px', height: '34px', borderRadius: '9px', background: p.is_activated ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0 }}>{(p.display_name || '?')[0].toUpperCase()}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: 'white', fontSize: '12px', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name || 'Sans nom'}</p>
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: 0 }}>{p.username ? '@' + p.username : 'Sans username'}</p>
+        {isLoading
+          ? <div style={{ textAlign: 'center', padding: '24px' }}><Loader2 size={16} className="animate-spin" color="rgba(255,255,255,0.3)" /></div>
+          : filtered.length === 0
+            ? <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', padding: '24px' }}>{filter === 'pending' ? '🎉 Aucun compte en attente' : 'Aucun résultat'}</p>
+            : filtered.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '9px', background: p.is_activated ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0 }}>{(p.display_name || '?')[0].toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ color: 'white', fontSize: '12px', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name || 'Sans nom'}</p>
+                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: 0 }}>{p.username ? '@' + p.username : 'Sans username'}</p>
+                </div>
+                {p.is_activated
+                  ? <button onClick={() => deactivateMutation.mutate(p.id)} style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><X size={10} />Désact.</button>
+                  : <button onClick={() => activateMutation.mutate(p.id)} style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Check size={10} />Activer</button>}
               </div>
-              {p.is_activated
-                ? <button onClick={() => deactivateMutation.mutate(p.id)} style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><X size={10} />Désact.</button>
-                : <button onClick={() => activateMutation.mutate(p.id)} style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Check size={10} />Activer</button>}
-            </div>
-          ))}
+            ))
+        }
       </div>
     </div>
   );
@@ -1110,8 +791,8 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
 
   const handleDragStart = useCallback((e, idx) => { dragIndexRef.current = idx; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => { if (e.currentTarget) e.currentTarget.style.opacity = '0.4'; }, 0); }, []);
-  const handleDragEnd = useCallback((e) => { e.currentTarget.style.opacity = '1'; dragIndexRef.current = null; setDragOverIndex(null); }, []);
-  const handleDragOver = useCallback((e, idx) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIndex(idx); }, []);
+  const handleDragEnd   = useCallback((e) => { e.currentTarget.style.opacity = '1'; dragIndexRef.current = null; setDragOverIndex(null); }, []);
+  const handleDragOver  = useCallback((e, idx) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIndex(idx); }, []);
   const handleDragLeave = useCallback(() => setDragOverIndex(null), []);
   const handleDrop = useCallback((e, toIdx) => {
     e.preventDefault();
@@ -1141,7 +822,6 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '2px dashed rgba(255,255,255,0.12)', borderRadius: '18px', padding: '48px 24px', textAlign: 'center' }}>
           <Link2 size={28} color="rgba(255,255,255,0.15)" style={{ margin: '0 auto 10px' }} />
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', margin: 0 }}>Aucune plateforme configurée</p>
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '12px', margin: '4px 0 0' }}>Cliquez sur Ajouter pour commencer</p>
         </div>
       ) : (
         <>
@@ -1175,7 +855,7 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
 }
 
 // ─── Profiles Panel ───────────────────────────────────────────────────────────
-function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete, localProfile }) {
+function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const filtered = profiles.filter(p => !search || (p.display_name || '').toLowerCase().includes(search.toLowerCase()) || (p.username || '').toLowerCase().includes(search.toLowerCase()));
@@ -1199,32 +879,25 @@ function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {paged.map(p => {
-          const expiry = getExpiryStatus(p.expiry_date);
           const isActive = p.id === activeProfileId;
           return (
-            <div key={p.id} onClick={() => onSwitch(p)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: isActive ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (isActive ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.07)'), borderRadius: '14px', cursor: 'pointer', transition: 'all 0.12s' }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}>
+            <div key={p.id} onClick={() => onSwitch(p)}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: isActive ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (isActive ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.07)'), borderRadius: '14px', cursor: 'pointer' }}>
               <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: isActive ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 700, color: 'white', flexShrink: 0, overflow: 'hidden' }}>
                 {p.avatar_url ? <img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.display_name?.[0]?.toUpperCase() || '?')}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ color: 'white', fontSize: '13px', fontWeight: isActive ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name || 'Sans nom'}</span>
+                  <span style={{ color: 'white', fontSize: '13px', fontWeight: isActive ? 700 : 500 }}>{p.display_name || 'Sans nom'}</span>
                   {p.is_verified && <span style={{ color: '#22c55e', fontSize: '11px' }}>✓</span>}
-                  {p.is_event && <span style={{ fontSize: '11px' }}>🎉</span>}
                   {p.is_activated && <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: 600 }}>✅</span>}
                 </div>
-                <div style={{ display: 'flex', align: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-                  {p.username && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px' }}>@{p.username}</span>}
-                  {expiry && <span style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '3px' }} className={expiry.color}><CalendarClock size={9} />{expiry.label}</span>}
-                </div>
+                {p.username && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px' }}>@{p.username}</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                 {isActive && <Check size={14} color="#6366f1" />}
                 {profiles.length > 1 && (
-                  <button onClick={e => { e.stopPropagation(); onDelete(p); }} style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0.6 }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.6'}>
+                  <button onClick={e => { e.stopPropagation(); onDelete(p); }} style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <Trash2 size={11} />
                   </button>
                 )}
@@ -1247,7 +920,6 @@ function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete
 // ─── Event Panel ──────────────────────────────────────────────────────────────
 function EventPanel({ localProfile, updateLocal }) {
   const [uploadingEventImages, setUploadingEventImages] = useState(false);
-  const [eventCarouselIndex, setEventCarouselIndex] = useState(0);
   const eventImages = Array.isArray(localProfile.event_images) ? localProfile.event_images : localProfile.event_image_url ? [localProfile.event_image_url] : [];
 
   const handleEventImagesUpload = async (e) => {
@@ -1276,7 +948,6 @@ function EventPanel({ localProfile, updateLocal }) {
     const current = localProfile.event_images || (localProfile.event_image_url ? [localProfile.event_image_url] : []);
     const updated = current.filter((_, i) => i !== idx);
     updateLocal({ event_images: updated, event_image_url: updated[0] || null });
-    setEventCarouselIndex(prev => Math.min(prev, Math.max(0, updated.length - 1)));
   };
 
   return (
@@ -1293,16 +964,15 @@ function EventPanel({ localProfile, updateLocal }) {
           </button>
         </div>
       </div>
-
       {localProfile.is_event && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input type="text" value={localProfile.event_name || ''} onChange={e => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', outline: 'none' }} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <input type="datetime-local" value={localProfile.event_date || ''} onChange={e => updateLocal({ event_date: e.target.value })} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', outline: 'none' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px' }}>
-                <MapPin size={14} color="rgba(255,255,255,0.3)" />
-                <input type="text" value={localProfile.event_location || ''} onChange={e => updateLocal({ event_location: e.target.value })} placeholder="Lieu" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '13px', outline: 'none', flex: 1 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+              <input type="datetime-local" value={localProfile.event_date || ''} onChange={e => updateLocal({ event_date: e.target.value })} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px', minWidth: 0 }}>
+                <MapPin size={14} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
+                <input type="text" value={localProfile.event_location || ''} onChange={e => updateLocal({ event_location: e.target.value })} placeholder="Lieu" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '13px', outline: 'none', flex: 1, minWidth: 0 }} />
               </div>
             </div>
             <textarea value={localProfile.event_description || ''} onChange={e => updateLocal({ event_description: e.target.value })} placeholder="Description…" rows={3} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '13px', outline: 'none', resize: 'none' }} />
@@ -1311,7 +981,6 @@ function EventPanel({ localProfile, updateLocal }) {
               <input type="url" value={localProfile.event_booking_url || ''} onChange={e => updateLocal({ event_booking_url: e.target.value })} placeholder="Lien réservation" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '13px', outline: 'none', flex: 1 }} />
             </div>
           </div>
-
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}><Palette size={14} color="rgba(255,255,255,0.4)" /><span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: 600 }}>Couleurs de l'événement</span></div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1321,7 +990,6 @@ function EventPanel({ localProfile, updateLocal }) {
               ))}
             </div>
           </div>
-
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ImagePlus size={14} color="rgba(255,255,255,0.4)" /><span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: 600 }}>Images {eventImages.length > 0 && '(' + eventImages.length + ')'}</span></div>
@@ -1374,9 +1042,7 @@ function TemplatesModal({ onClose, onApply }) {
             const [c1, c2] = t.theme_color.split('|');
             return (
               <button key={t.id} onClick={() => onApply(t)}
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.transform = 'scale(1.01)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: 'linear-gradient(135deg,' + c1 + ',' + c2 + ')', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>{t.emoji}</div>
                   <div>
@@ -1401,24 +1067,27 @@ export default function Dashboard() {
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
 
-  const [activeSection, setActiveSection] = useState('overview');
+  // ✅ useLanguage branché — re-render global quand la langue change via app_language_change
+  const { t, i18n } = useTranslation();
+const language = i18n.language;
+const isRtl = language === 'ar';
+
+  const [activeSection, setActiveSection]     = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [localProfile, setLocalProfile] = useState(null);
-  const [hasChanges, setHasChanges] = useState(false);
+  const [showAddDialog, setShowAddDialog]     = useState(false);
+  const [showPreview, setShowPreview]         = useState(false);
+  const [localProfile, setLocalProfile]       = useState(null);
+  const [hasChanges, setHasChanges]           = useState(false);
   const [activeProfileId, setActiveProfileId] = useState(null);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [showNotifPanel, setShowNotifPanel] = useState(false);
-  const notifPanelRef = useRef(null);
-  const notifCountRef = useRef(0);
-  const notifThreshold = parseInt(localStorage.getItem('notif_threshold') || '10');
+  const [showTemplates, setShowTemplates]     = useState(false);
+  const [showNotifPanel, setShowNotifPanel]   = useState(false);
+  const notifPanelRef  = useRef(null);
+  const notifCountRef  = useRef(0);
+  const notifThreshold = (() => { try { return parseInt(localStorage.getItem('notif_threshold') || '10'); } catch { return 10; } })();
 
   const { data: profiles = [], isLoading } = useQuery({ queryKey: ['linkProfiles'], queryFn: db.list });
 
-  useEffect(() => {
-    setSidebarCollapsed(isMobile);
-  }, [isMobile]);
+  useEffect(() => { setSidebarCollapsed(isMobile); }, [isMobile]);
 
   useEffect(() => {
     if (!profiles.length) return;
@@ -1426,6 +1095,23 @@ export default function Dashboard() {
     setLocalProfile(prev => (!prev || prev.id !== target.id) ? target : prev);
     setActiveProfileId(prev => prev || target.id);
   }, [profiles, activeProfileId]);
+
+  useEffect(() => {
+    if (!localProfile) return;
+    const html = document.documentElement;
+    const colors = parseColors(localProfile.theme_color);
+    if (localProfile.bg_image_url) {
+      html.style.backgroundImage = 'url(' + localProfile.bg_image_url + ')';
+      html.style.backgroundSize = 'cover';
+      html.style.backgroundPosition = 'center';
+      html.style.backgroundAttachment = 'fixed';
+      html.style.background = '';
+    } else {
+      html.style.backgroundImage = 'none';
+      html.style.background = 'linear-gradient(135deg,' + colors.bg1 + ' 0%,' + colors.bg2 + ' 100%)';
+    }
+    return () => { ['backgroundImage','backgroundSize','backgroundPosition','backgroundAttachment','background'].forEach(k => { html.style[k] = ''; }); };
+  }, [localProfile?.theme_color, localProfile?.bg_image_url]);
 
   useEffect(() => {
     const handler = (e) => { if (notifPanelRef.current && !notifPanelRef.current.contains(e.target)) setShowNotifPanel(false); };
@@ -1530,39 +1216,34 @@ export default function Dashboard() {
 
   if (!localProfile) return null;
 
-  const colors = parseColors(localProfile.theme_color);
-  const bgStyle = localProfile.bg_image_url
-    ? { backgroundImage: 'url(' + localProfile.bg_image_url + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }
-    : { background: 'linear-gradient(135deg,' + colors.bg1 + ' 0%,' + colors.bg2 + ' 100%)' };
-
   const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  const currentNav = SIDEBAR_NAV.find(n => n.id === activeSection);
 
   const renderSection = () => {
     switch (activeSection) {
-      case 'overview':    return <OverviewPanel profile={localProfile} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} />;
-      case 'realtime':    return <RealtimePanel profileId={localProfile.id} />;
-      case 'analytics':   return <AnalyticsPanel profileId={localProfile.id} />;
-      case 'leads':       return <LeadsCRMPanel profileId={localProfile.id} />;
-      case 'profiles':    return <ProfilesPanel profiles={profiles} activeProfileId={activeProfileId} onSwitch={handleSwitchProfile} onCreate={handleCreateProfile} onDelete={handleDeleteProfile} localProfile={localProfile} />;
-      case 'platforms':   return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} />;
-     case 'event':        return <EventPanel localProfile={localProfile} updateLocal={updateLocal} />;
+      case 'overview':     return <OverviewPanel profile={localProfile} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} />;
+      case 'realtime':     return <RealtimePanel profileId={localProfile.id} />;
+      case 'analytics':    return <AnalyticsPanel profileId={localProfile.id} />;
+      case 'leads':        return <LeadsCRMPanel profileId={localProfile.id} />;
+      case 'profiles':     return <ProfilesPanel profiles={profiles} activeProfileId={activeProfileId} onSwitch={handleSwitchProfile} onCreate={handleCreateProfile} onDelete={handleDeleteProfile} />;
+      case 'platforms':    return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} />;
+      case 'event':        return <EventPanel localProfile={localProfile} updateLocal={updateLocal} />;
       case 'eventmanager': return <EventManager profileId={localProfile.id} />;
-      case 'marketplace': return <div style={{ maxWidth: '640px' }}><MarketplacePanel profileId={localProfile.id} userPlan="admin" /></div>;
-      case 'documents':   return <div style={{ maxWidth: '640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan || 'admin'} /></div>;
-      case 'automations': return <AutomationsPanel profileId={localProfile.id} />;
-      case 'integrations':return <IntegrationsPanel profileId={localProfile.id} />;
-      case 'accounts':    return <UserActivationPanel />;
-      case 'settings':    return <SettingsPanel profile={localProfile} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} />;
-      default:            return null;
+      case 'marketplace':  return <div style={{ maxWidth: '640px' }}><MarketplacePanel profileId={localProfile.id} userPlan="admin" /></div>;
+      case 'documents':    return <div style={{ maxWidth: '640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan || 'admin'} /></div>;
+      case 'automations':  return <AutomationsPanel profileId={localProfile.id} />;
+      case 'integrations': return <IntegrationsPanel profileId={localProfile.id} />;
+      case 'accounts':     return <UserActivationPanel />;
+      // ✅ UserSettingsPanel standalone — pas de props
+      case 'settings':     return <UserSettingsPanel />;
+      default: return null;
     }
   };
 
-  const currentNav = SIDEBAR_NAV.find(n => n.id === activeSection);
-
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', ...bgStyle, position: 'relative' }}>
-      {localProfile.bg_image_url && <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'rgba(0,0,0,0.5)', pointerEvents: 'none' }} />}
+    <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', position: 'relative' }}>
 
+      {/* Sidebar */}
       <div style={{ position: 'relative', zIndex: 10, flexShrink: 0, width: isMobile ? 0 : undefined }}>
         <Sidebar
           activeSection={activeSection}
@@ -1576,25 +1257,25 @@ export default function Dashboard() {
         />
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative', zIndex: 1 }}>
+      {/* Main column */}
+      <div style={{ flex: 1, height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative', zIndex: 1 }}>
+
         {/* Top bar */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 15, background: 'rgba(4,2,16,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '10px 14px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+        <div style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 15, background: 'rgba(4,2,16,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '10px 14px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {isMobile && (
-              <img src="/Logo_SocialApp.png" alt="" style={{ width: '28px', height: '28px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
-            )}
-            <div>
-              <h2 style={{ color: 'white', fontSize: '14px', fontWeight: 700, margin: 0 }}>{currentNav?.label || 'Dashboard'}</h2>
-            </div>
+            {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width: '28px', height: '28px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />}
+            <h2 style={{ color: 'white', fontSize: '14px', fontWeight: 700, margin: 0 }}>{currentNav?.label || t('dashboard_title')}</h2>
             {hasChanges && (
-              <span style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', color: '#fbbf24', fontWeight: 600 }}>Non sauvegardé</span>
+              // ✅ t('unsaved') — traduit selon la langue active
+              <span style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', color: '#fbbf24', fontWeight: 600 }}>
+                {t('unsaved')}
+              </span>
             )}
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
             <button onClick={() => setShowPreview(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '9px', color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-              <Eye size={13} />{!isMobile && 'Aperçu'}
+              <Eye size={13} />{!isMobile && t('preview')}
             </button>
             <div ref={notifPanelRef} style={{ position: 'relative' }}>
               <button onClick={() => setShowNotifPanel(v => !v)} style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: notifGranted ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.07)', border: '1px solid ' + (notifGranted ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.12)'), borderRadius: '9px', cursor: 'pointer' }}>
@@ -1608,17 +1289,18 @@ export default function Dashboard() {
                       <span style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>Notifications push</span>
                       <button onClick={() => setShowNotifPanel(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={13} /></button>
                     </div>
-                    {!notifGranted && (
-                      <button onClick={async () => { const p = await Notification.requestPermission(); if (p === 'granted') { toast.success('Notifications activées !'); setShowNotifPanel(false); } }} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>🔔 Activer les notifications</button>
-                    )}
-                    {notifGranted && <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0, textAlign: 'center' }}>✅ Notifications actives</p>}
+                    {!notifGranted
+                      ? <button onClick={async () => { const p = await Notification.requestPermission(); if (p === 'granted') { toast.success('Notifications activées !'); setShowNotifPanel(false); } }} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>🔔 Activer les notifications</button>
+                      : <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0, textAlign: 'center' }}>✅ Notifications actives</p>
+                    }
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
+            {/* ✅ t('save') — traduit selon la langue active */}
             <button onClick={handleSave} disabled={!hasChanges || updateMutation.isPending}
               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: hasChanges ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.07)', border: '1px solid ' + (hasChanges ? 'transparent' : 'rgba(255,255,255,0.12)'), borderRadius: '9px', color: hasChanges ? 'white' : 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: 600, cursor: hasChanges ? 'pointer' : 'default', opacity: updateMutation.isPending ? 0.7 : 1 }}>
-              {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}{!isMobile && 'Sauvegarder'}
+              {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}{!isMobile && t('save')}
             </button>
             <button onClick={handleSignOut} style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '9px', cursor: 'pointer' }} title={user?.email}>
               <LogOut size={14} color="rgba(255,255,255,0.5)" />
@@ -1626,21 +1308,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section content */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', paddingBottom: isMobile ? '100px' : '24px', overflowY: 'auto', overflowX: 'hidden' }}>
-        <AnimatePresence mode="wait" initial={false}>
-  <motion.div key={activeSection} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+        {/* Zone scrollable */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: isMobile ? '16px' : '24px', paddingBottom: isMobile ? '100px' : '24px' }}>
+          <AnimatePresence>
+            <motion.div key={activeSection} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
               {renderSection()}
             </motion.div>
           </AnimatePresence>
         </div>
 
         {isMobile && (
-          <MobileNav
-            activeSection={activeSection}
-            onNavigate={setActiveSection}
-            profile={localProfile}
-          />
+          <MobileNav activeSection={activeSection} onNavigate={setActiveSection} profile={localProfile} />
         )}
       </div>
 
@@ -1659,3 +1337,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

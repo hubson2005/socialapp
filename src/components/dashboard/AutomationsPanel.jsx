@@ -1,6 +1,7 @@
 // AutomationsPanel.jsx — intégré au Dashboard SocialApp
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../supabase";
+import { useTranslation } from 'react-i18next';
 
 /* ─── CSS ────────────────────────────────────────────────── */
 const STYLE = `

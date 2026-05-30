@@ -5,6 +5,7 @@ import { Plus, Loader2, X, Heart, ShoppingBag, Tag, Pencil, Trash2, ImagePlus, C
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 const MAX_PRODUCTS = 10;
 const MAX_SIZE_KB = 2000;

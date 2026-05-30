@@ -28,9 +28,10 @@ import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
 import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/dashboard/UserSidebar";
-import OverviewPanel from "@/components/dashboard/OverviewPanel";
+import OverviewPanel from "@/components/dashboard/OverviewPanel"; // ← extracted
 import EventPanel from "@/components/dashboard/EventPanel";
 import { useTranslation } from 'react-i18next';
+
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
@@ -339,8 +340,8 @@ export default function UserDashboard() {
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
 
-  // ✅ useLanguage branché — re-render global quand la langue change
   const { t, i18n } = useTranslation();
+
 const language = i18n.language;
 const isRtl = language === 'ar';
 
@@ -510,17 +511,15 @@ const isRtl = language === 'ar';
       case 'crm':          return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} />   : null;
       case 'automations':  return <AutomationsPanel  profileId={localProfile.id} />;
       case 'integrations': return <IntegrationsPanel profileId={localProfile.id} />;
-      // ✅ UserSettingsPanel standalone — pas de props
-      case 'settings':     return <UserSettingsPanel />;
+      case 'settings': return <UserSettingsPanel />;
       default: return null;
     }
   };
 
   return (
-    <div style={{
-      height: '100dvh',
-      minHeight: '100dvh', overflow: 'hidden', display: 'flex', position: 'relative', overflowX: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-    }}>
+   <div style={{
+    height: '100dvh',
+    minHeight: '100dvh', overflow: 'hidden', display: 'flex', position: 'relative', overflowX: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', }} >
 
       {/* Sidebar */}
       <div style={{ position: 'relative', zIndex: 10, flexShrink: 0, width: isMobile ? 0 : undefined }}>
@@ -537,12 +536,13 @@ const isRtl = language === 'ar';
       </div>
 
       {/* Main */}
-      <div style={{
-        flex: 1, height: '100dvh',
-        minHeight: '100dvh', overflowX: 'hidden', overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', minWidth: 0,
-        position: 'relative',
-        zIndex: 1, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-      }}>
+      <div
+  style={{
+    flex: 1, height: '100dvh',
+    minHeight: '100dvh', overflowX: 'hidden', overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', minWidth: 0,
+
+    position: 'relative',
+    zIndex: 1, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', }} >
 
         {/* Top bar */}
         <div style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 15, background: 'rgba(4,2,16,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '10px 14px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
@@ -551,7 +551,7 @@ const isRtl = language === 'ar';
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width: '26px', height: '26px', borderRadius: '7px', objectFit: 'cover', flexShrink: 0 }} />}
             <h2 style={{ color: 'white', fontSize: '14px', fontWeight: 700, margin: 0, whiteSpace: 'nowrap' }}>
-              {currentNav?.label || t('dashboard_title')}
+              {currentNav?.label || 'Dashboard'}
             </h2>
             <AnimatePresence>
               {hasChanges && (
@@ -559,7 +559,7 @@ const isRtl = language === 'ar';
                   initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }} transition={{ duration: 0.15 }}
                   style={{ background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', color: '#fbbf24', fontWeight: 600, flexShrink: 0 }}
                 >
-                  {t('unsaved')}
+                 ● {t('unsaved')}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -623,4 +623,3 @@ const isRtl = language === 'ar';
     </div>
   );
 }
-

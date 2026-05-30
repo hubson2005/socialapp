@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, MapPin, Calendar, Ticket } from 'lucide-react';
 import { FaYoutube, FaFacebook, FaWhatsapp, FaInstagram, FaTiktok, FaLinkedin, FaTwitter, FaGlobe } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 
 const PLATFORM_CONFIG = {
   youtube:   { bg: '#FF0000', Icon: FaYoutube },

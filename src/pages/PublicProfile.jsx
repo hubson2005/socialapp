@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { ExternalLink, Phone, Eye, ShoppingBag, Tag, FileText, X, ZoomIn, Download } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
+import { useTranslation } from 'react-i18next';
 
 // ─── Tracking enrichi ─────────────────────────────────────────────────────────
 

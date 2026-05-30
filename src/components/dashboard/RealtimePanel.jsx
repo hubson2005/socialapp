@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, Activity, MousePointerClick, CircleDot, Wifi } from 'lucide-react';
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 function MiniStat({ label, value, icon: Icon, color }) {
   return (

@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import StatsCard from "@/components/dashboard/StatsCard";
+import { useTranslation } from 'react-i18next';
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 function useWindowWidth() {

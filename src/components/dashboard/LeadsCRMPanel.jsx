@@ -13,6 +13,7 @@ import {
 
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 // ─────────────────────────────────────────────────────────────
 // Leads CRM Panel

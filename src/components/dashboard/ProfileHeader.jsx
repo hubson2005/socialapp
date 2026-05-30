@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Camera, User, Loader2 } from 'lucide-react';
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 export default function ProfileHeader({ profile, onUpdate }) {
   const fileRef = useRef();

@@ -4,6 +4,7 @@ import {
   ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 // ─── Mini Stat ────────────────────────────────────────────────────────────────
 function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {

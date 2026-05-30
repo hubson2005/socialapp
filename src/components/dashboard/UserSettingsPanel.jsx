@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
+import { useTranslation } from 'react-i18next';
 
 // ─── Traductions (paramètres uniquement) ─────────────────────────────────────
 const TRANSLATIONS = {

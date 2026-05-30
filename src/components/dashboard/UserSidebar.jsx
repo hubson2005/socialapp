@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch,
 } from "lucide-react";
-
+import { useTranslation } from 'react-i18next';
 // ─── Nav config ───────────────────────────────────────────────────────────────
 export const USER_NAV = [
   { id: 'overview',     label: 'Dashboard',       icon: LayoutDashboard, group: 'main',      locked: null       },

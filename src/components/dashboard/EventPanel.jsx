@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/supabase";
 import useMediaQuery from "@/hooks/useMediaQuery";
+import { useTranslation } from 'react-i18next';
 
 // ─────────────────────────────────────────────────────────────
 // Helpers

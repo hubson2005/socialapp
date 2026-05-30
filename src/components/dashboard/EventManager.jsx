@@ -11,6 +11,7 @@ import {
   Eye,
   BarChart3,
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 export default function EventManager({ profileId }) {
   const [eventData, setEventData] = useState({

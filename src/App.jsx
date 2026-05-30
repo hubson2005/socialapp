@@ -78,6 +78,7 @@ function PublicApp() {
       {/* Pages légales */}
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/delete-account" element={<DeleteAccount />} />
 
       {/* Login */}
       <Route

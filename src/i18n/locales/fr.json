@@ -1,15 +1,13 @@
 {
-  "sidebar": {
-    "dashboard": "Dashboard",
-    "platforms": "Plateformes",
-    "event": "Événement",
-    "marketplace": "Marketplace",
-    "documents": "Documents",
-    "analytics": "Analytics",
-    "realtime": "Temps réel",
-    "crm": "CRM / Leads",
-    "automations": "Automatisations",
-    "integrations": "Intégrations",
-    "settings": "Paramètres"
-  }
+  "overview": "Tableau de bord",
+  "platforms": "Plateformes",
+  "event": "Événement",
+  "marketplace": "Marketplace",
+  "documents": "Documents",
+  "analytics": "Analytics",
+  "realtime": "Temps réel",
+  "crm": "CRM / Leads",
+  "automations": "Automatisations",
+  "integrations": "Intégrations",
+  "settings": "Paramètres"
 }

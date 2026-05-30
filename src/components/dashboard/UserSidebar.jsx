@@ -246,7 +246,7 @@ export default function UserSidebar({
                 {collapsed && !isMobile
                   ? <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '6px 4px 8px' }} />
                   : <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '8px 10px 4px', margin: 0 }}>
-                      {group.label}
+                      {t(`group_${group.id}`, group.label)}
                     </p>
                 }
 
@@ -306,7 +306,7 @@ export default function UserSidebar({
                             fontWeight: isActive && !locked ? 700 : 500,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>
-                            {t(item.id)}
+                          {t(item.id, item.label)}
                           </span>
                           {locked && (
                             <span style={{

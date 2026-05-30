@@ -6,16 +6,21 @@ import Dashboard from "./pages/Dashboard";
 import UserDashboard from "./pages/UserDashboard";
 import PublicProfile from "./pages/PublicProfile";
 import Home from "./pages/Home";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 import {
   ProtectedRoute,
   AdminRoute,
-  PublicOnlyRoute
+  PublicOnlyRoute,
 } from "./routes/AuthRoutes";
 
+// ─────────────────────────────────────────────
 // Détection admin sous-domaine
+// ─────────────────────────────────────────────
 const isAdminDomain = () => {
   const hostname = window.location.hostname;
+
   return (
     hostname === "admin.socialapp.work" ||
     hostname === "localhost"
@@ -67,9 +72,12 @@ function AdminApp() {
 function PublicApp() {
   return (
     <Routes>
-
       {/* Accueil */}
       <Route path="/" element={<Home />} />
+
+      {/* Pages légales */}
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
 
       {/* Login */}
       <Route
@@ -91,13 +99,12 @@ function PublicApp() {
         }
       />
 
-      {/* ✅ Profil public — https://www.socialapp.work/:username
-          Doit être EN DERNIER pour ne pas intercepter /login, /dashboard, etc. */}
+      {/* Profil public */}
+      {/* IMPORTANT : toujours après les routes fixes */}
       <Route path="/:username" element={<PublicProfile />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 }
@@ -112,4 +119,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

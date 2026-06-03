@@ -1,77 +1,83 @@
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../AuthContext";
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { useAuth } from '../AuthContext';
+import Dashboard     from '../pages/Dashboard';
+import UserDashboard from '../pages/UserDashboard';
 
-// ─── Spinner minimal pendant le chargement de la session ──────────────────
-function LoadingScreen() {
-  return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#1a1825",
-    }}>
-      <div style={{
-        width: "32px", height: "32px",
-        border: "3px solid rgba(255,140,0,0.2)",
-        borderTop: "3px solid #ff8c00",
-        borderRadius: "50%",
-        animation: "spin 0.8s linear infinite",
-      }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
-
-// ─── Route protégée — utilisateur connecté uniquement ─────────────────────
+// ─── GUARD 1 — Utilisateur connecté requis ───────────────────────────────────
 export function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <LoadingScreen />;
-
-  if (!user) {
-    // Mémorise la page demandée pour y revenir après connexion
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  if (loading) return <AuthLoadingScreen />;
+  if (!user)   return <Navigate to="/login" state={{ from: location }} replace />;
 
   return children;
 }
 
-// ─── Route admin — utilisateur connecté + rôle "admin" ────────────────────
+// ─── GUARD 2 — Rôle "admin" requis ───────────────────────────────────────────
 export function AdminRoute({ children }) {
   const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <LoadingScreen />;
+  if (loading)  return <AuthLoadingScreen />;
+  if (!user)    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
-  // Pas connecté → page de login
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  return children;
+}
 
-  // Connecté mais pas admin → dashboard utilisateur
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+// ─── GUARD 3 — Page publique uniquement (login) ──────────────────────────────
+export function PublicOnlyRoute({ children }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <AuthLoadingScreen />;
+
+  if (user) {
+    const from = location.state?.from?.pathname || '/dashboard';
+    return <Navigate to={from} replace />;
   }
 
   return children;
 }
 
-// ─── Route publique uniquement — redirige si déjà connecté ────────────────
-export function PublicOnlyRoute({ children, redirectTo = "/dashboard" }) {
-  const { user, isAdmin, loading } = useAuth();
+// ─── GUARD 4 — Dashboard selon le rôle ──────────────────────────────────────
+export function RoleBasedDashboard() {
+  const { isAdmin, loading } = useAuth();
 
-  if (loading) return <LoadingScreen />;
+  if (loading) return <AuthLoadingScreen />;
 
-  if (user) {
-    // Admin sur le domaine public → sous-domaine admin en production
-    if (isAdmin && window.location.hostname === "socialapp.work") {
-      window.location.href = "https://admin.socialapp.work/dashboard";
+  if (isAdmin) {
+    if (window.location.hostname === 'socialapp.work') {
+      window.location.href = 'https://admin.socialapp.work/dashboard';
       return null;
     }
-    return <Navigate to={redirectTo} replace />;
+    return <Dashboard />;
   }
 
-  return children;
+  return <UserDashboard />;
+}
+
+// ─── Écran de chargement ─────────────────────────────────────────────────────
+function AuthLoadingScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#060412',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '14px',
+    }}>
+      <img
+        src="/Logo_SocialApp.png"
+        alt="SocialApp"
+        style={{ width: 54, height: 54, borderRadius: 14, boxShadow: '0 8px 28px rgba(255,140,0,0.4)' }}
+      />
+      <Loader2 size={22} color="#ff8c00" className="animate-spin" />
+    </div>
+  );
 }

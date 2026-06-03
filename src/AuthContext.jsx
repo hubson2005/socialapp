@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user,    setUser]    = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -13,7 +13,15 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // ✅ FIX : quand Supabase détecte un lien de reset password,
+      // on redirige vers /reset-password au lieu de connecter l'utilisateur
+      if (event === 'PASSWORD_RECOVERY') {
+        setUser(null); // on ne connecte pas l'utilisateur
+        window.location.href = '/reset-password';
+        return;
+      }
+
       setUser(session?.user ?? null);
     });
 
@@ -35,4 +43,3 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
-

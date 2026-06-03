@@ -8,6 +8,8 @@ import PublicProfile from "./pages/PublicProfile";
 import Home from "./pages/Home";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import DeleteAccount from "./pages/DeleteAccount";
+import ResetPassword from "./pages/ResetPassword"; // ✅ NOUVEAU
 
 import {
   ProtectedRoute,
@@ -15,16 +17,9 @@ import {
   PublicOnlyRoute,
 } from "./routes/AuthRoutes";
 
-// ─────────────────────────────────────────────
-// Détection admin sous-domaine
-// ─────────────────────────────────────────────
 const isAdminDomain = () => {
   const hostname = window.location.hostname;
-
-  return (
-    hostname === "admin.socialapp.work" ||
-    hostname === "localhost"
-  );
+  return hostname === "admin.socialapp.work" || hostname === "localhost";
 };
 
 // ─────────────────────────────────────────────
@@ -33,33 +28,10 @@ const isAdminDomain = () => {
 function AdminApp() {
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicOnlyRoute>
-            <Login />
-          </PublicOnlyRoute>
-        }
-      />
-
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <Dashboard />
-          </AdminRoute>
-        }
-      />
-
+      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/reset-password" element={<ResetPassword />} /> {/* ✅ NOUVEAU */}
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
@@ -72,39 +44,14 @@ function AdminApp() {
 function PublicApp() {
   return (
     <Routes>
-      {/* Accueil */}
       <Route path="/" element={<Home />} />
-
-      {/* Pages légales */}
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/delete-account" element={<DeleteAccount />} />
-
-      {/* Login */}
-      <Route
-        path="/login"
-        element={
-          <PublicOnlyRoute>
-            <Login />
-          </PublicOnlyRoute>
-        }
-      />
-
-      {/* Dashboard utilisateur */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <UserDashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Profil public */}
-      {/* IMPORTANT : toujours après les routes fixes */}
+      <Route path="/reset-password" element={<ResetPassword />} /> {/* ✅ NOUVEAU */}
+      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
       <Route path="/:username" element={<PublicProfile />} />
-
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

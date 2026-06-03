@@ -6,6 +6,59 @@ import {
 import { supabase } from '../../supabase';
 import { useTranslation } from 'react-i18next';
 
+const PLATFORMS = {
+  youtube: {
+    label: 'YouTube',
+    icon: '📺',
+    color: '#FF0000',
+  },
+  tiktok: {
+    label: 'TikTok',
+    icon: '🎵',
+    color: '#000000',
+  },
+  instagram: {
+    label: 'Instagram',
+    icon: '📸',
+    color: '#E1306C',
+  },
+  facebook: {
+    label: 'Facebook',
+    icon: '📘',
+    color: '#1877F2',
+  },
+  linkedin: {
+    label: 'LinkedIn',
+    icon: '💼',
+    color: '#0A66C2',
+  },
+  whatsapp: {
+    label: 'WhatsApp',
+    icon: '💬',
+    color: '#25D366',
+  },
+  telegram: {
+    label: 'Telegram',
+    icon: '✈️',
+    color: '#229ED9',
+  },
+  snapchat: {
+    label: 'Snapchat',
+    icon: '👻',
+    color: '#FFFC00',
+  },
+  pinterest: {
+    label: 'Pinterest',
+    icon: '📌',
+    color: '#E60023',
+  },
+  twitter: {
+    label: 'X',
+    icon: '𝕏',
+    color: '#ffffff',
+  },
+};
+
 // ─── Mini Stat ────────────────────────────────────────────────────────────────
 function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
   return (
@@ -157,9 +210,9 @@ export default function AnalyticsPanel({ profileId }) {
           {/* ── KPI Cards ── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '10px' }}>
             <MiniStat label="Vues totales"  value={stats?.views   || 0}           icon={Eye}              color="#6366f1" trend={stats?.trend} trendUp={stats?.trendUp} />
-            <MiniStat label="Clics totaux"  value={stats?.clicks  || 0}           icon={MousePointerClick} color="#22c55e" />
-            <MiniStat label="Taux de clic"  value={(stats?.ctr    || 0) + '%'}    icon={TrendingUp}        color="#f59e0b" />
-            <MiniStat label="Pays atteints" value={geoData.length}                icon={Globe}             color="#a78bfa" />
+            <MiniStat label="Clics totaux"  value={stats?.clicks  || 0}           icon={MousePointerClick} color="#f59e0b" />
+            <MiniStat label="Taux de clic"  value={(stats?.ctr    || 0) + '%'}    icon={TrendingUp}        color="#22c55e" />
+            <MiniStat label="Pays atteints" value={geoData.length}                icon={Globe}             color="#0ea5e9" />
           </div>
 
           {/* ── Bar chart ── */}
@@ -168,7 +221,7 @@ export default function AnalyticsPanel({ profileId }) {
               <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Activité — 7 derniers jours</span>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#6366f1', display: 'inline-block' }} /> Vues
+                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#e5683b', display: 'inline-block' }} /> Vues
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#22c55e', display: 'inline-block' }} /> Clics
@@ -180,7 +233,7 @@ export default function AnalyticsPanel({ profileId }) {
                 <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%' }}>
                   <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
                     {/* Vues */}
-                    <div style={{ flex: 1, height: `${Math.round((d.views / maxViews) * 100)}%`, minHeight: '3px', background: '#6366f1', borderRadius: '3px 3px 0 0', transition: 'height 0.5s ease' }} />
+                    <div style={{ flex: 1, height: `${Math.round((d.views / maxViews) * 100)}%`, minHeight: '3px', background: '#e5683b', borderRadius: '3px 3px 0 0', transition: 'height 0.5s ease' }} />
                     {/* Clics */}
                     <div style={{ flex: 1, height: `${Math.round((d.clicks / maxClicks) * 100)}%`, minHeight: '3px', background: '#22c55e', borderRadius: '3px 3px 0 0', transition: 'height 0.5s ease' }} />
                   </div>
@@ -218,29 +271,114 @@ export default function AnalyticsPanel({ profileId }) {
               }
             </div>
 
-            {/* Top liens */}
+            {/*   */}
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <MousePointerClick size={14} color="#22c55e" />
+                <MousePointerClick size={14} color="#f59e0b" />
                 <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Top liens</span>
               </div>
-              {topLinks.length === 0
-                ? <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>Pas encore de données</p>
-                : topLinks.map(([platform, count], i) => (
-                  <div key={platform} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px', width: '14px', flexShrink: 0 }}>#{i + 1}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 600, textTransform: 'capitalize' }}>{platform}</span>
-                        <span style={{ color: 'white', fontSize: '11px', fontWeight: 700 }}>{count}</span>
-                      </div>
-                      <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }}>
-                        <div style={{ width: Math.round((count / maxLink) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#22c55e,#6366f1)', borderRadius: '2px', transition: 'width 0.6s ease' }} />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              }
+              {topLinks.length === 0 ? (
+  <p
+    style={{
+      color: 'rgba(255,255,255,0.25)',
+      fontSize: '12px',
+      textAlign: 'center',
+      padding: '12px 0',
+      margin: 0,
+    }}
+  >
+    Pas encore de données
+  </p>
+) : (
+  topLinks.map(([platform, count]) => {
+    const social = PLATFORMS[platform?.toLowerCase()] || {
+      label: platform,
+      icon: '🔗',
+      color: '#6366f1',
+    };
+
+    return (
+      <div
+        key={platform}
+        style={{
+          marginBottom: '16px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '6px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                background: social.color + '20',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '13px',
+                flexShrink: 0,
+              }}
+            >
+              {social.icon}
+            </div>
+
+            <span
+              style={{
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              {social.label}
+            </span>
+          </div>
+
+          <span
+            style={{
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '12px',
+              fontWeight: 700,
+            }}
+          >
+            {count}
+          </span>
+        </div>
+
+        <div
+          style={{
+            height: '4px',
+            background: 'rgba(255,255,255,0.08)',
+            borderRadius: '999px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: `${(count / maxLink) * 100}%`,
+              height: '100%',
+              background: social.color,
+              borderRadius: '999px',
+              transition: 'width .4s ease',
+            }}
+          />
+        </div>
+      </div>
+    );
+  })
+)}
             </div>
           </div>
         </>

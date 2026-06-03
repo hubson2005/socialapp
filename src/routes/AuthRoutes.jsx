@@ -1,120 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { useAuth } from '../AuthContext';
-import { supabase } from '../supabase';
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ✅ GUARD 1 — Route protégée : utilisateur connecté requis
-// Usage : <ProtectedRoute><Dashboard /></ProtectedRoute>
-// ─────────────────────────────────────────────────────────────────────────────
-export function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) return <AuthLoadingScreen />;
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return children;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ✅ GUARD 2 — Route admin : rôle "admin" requis en base
-// Usage : <AdminRoute><AdminPanel /></AdminRoute>
-// ─────────────────────────────────────────────────────────────────────────────
-export function AdminRoute({ children }) {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(null);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setChecking(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle(); // 🔥 mieux que single()
-
-      if (error || !data) {
-        setIsAdmin(false);
-      } else {
-        setIsAdmin(data.role === 'admin');
-      }
-
-      setChecking(false);
-    };
-
-    if (!loading) checkAdmin();
-  }, [user, loading]);
-
-  if (loading || checking) return <AuthLoadingScreen />;
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  if (!isAdmin) {
-    return <Navigate to="/dashboard?error=unauthorized" replace />;
-  }
-
-  return children;
-}
-// ─────────────────────────────────────────────────────────────────────────────
-// ✅ GUARD 3 — Route publique uniquement (login, register)
-// Redirige vers /dashboard si déjà connecté
-// Usage : <PublicOnlyRoute><Login /></PublicOnlyRoute>
-// ─────────────────────────────────────────────────────────────────────────────
-export function PublicOnlyRoute({ children }) {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) return <AuthLoadingScreen />;
-
-  if (user) {
-    const from = location.state?.from?.pathname || '/dashboard';
-    return <Navigate to={from} replace />;
-  }
-
-  return children;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Écran de chargement pendant la vérification de session
-// ─────────────────────────────────────────────────────────────────────────────
-function AuthLoadingScreen() {
+// ─── Spinner minimal pendant le chargement de la session ──────────────────
+function LoadingScreen() {
   return (
     <div style={{
-      minHeight: '100vh',
-      background: '#060412',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '14px',
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#1a1825",
     }}>
-      <img
-        src="/Logo_SocialApp.png"
-        alt="SocialApp"
-        style={{
-          width: 54,
-          height: 54,
-          borderRadius: 14,
-          boxShadow: '0 8px 28px rgba(255,140,0,0.4)'
-        }}
-      />
-
-      <Loader2 size={22} color="#ff8c00" className="animate-spin" />
+      <div style={{
+        width: "32px", height: "32px",
+        border: "3px solid rgba(255,140,0,0.2)",
+        borderTop: "3px solid #ff8c00",
+        borderRadius: "50%",
+        animation: "spin 0.8s linear infinite",
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
+// ─── Route protégée — utilisateur connecté uniquement ─────────────────────
+export function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <LoadingScreen />;
+
+  if (!user) {
+    // Mémorise la page demandée pour y revenir après connexion
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+}
+
+// ─── Route admin — utilisateur connecté + rôle "admin" ────────────────────
+export function AdminRoute({ children }) {
+  const { user, isAdmin, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <LoadingScreen />;
+
+  // Pas connecté → page de login
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Connecté mais pas admin → dashboard utilisateur
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
+// ─── Route publique uniquement — redirige si déjà connecté ────────────────
+export function PublicOnlyRoute({ children, redirectTo = "/dashboard" }) {
+  const { user, isAdmin, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+
+  if (user) {
+    // Admin sur le domaine public → sous-domaine admin en production
+    if (isAdmin && window.location.hostname === "socialapp.work") {
+      window.location.href = "https://admin.socialapp.work/dashboard";
+      return null;
+    }
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  return children;
+}

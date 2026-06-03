@@ -33,34 +33,72 @@ import { useTranslation } from "react-i18next";
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
-  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [width, setWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
+
   useEffect(() => {
-    const handler = () => setWidth(window.innerWidth);
+    let frame;
+
+    const handler = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setWidth(window.innerWidth);
+      });
+    };
+
     window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', handler);
+    };
   }, []);
+
   return width;
 }
 
 // ─── DB ───────────────────────────────────────────────────────────────────────
 const db = {
   list: async () => {
-    const { data, error } = await supabase.from('link_profiles').select('*').order('created_at', { ascending: true });
+    const { data, error } = await supabase
+      .from('link_profiles')
+      .select('*')
+      .order('created_at', { ascending: true });
+
     if (error) throw error;
-    return data;
+    return data ?? [];
   },
+
   create: async (data) => {
-    const { data: created, error } = await supabase.from('link_profiles').insert([data]).select().single();
+    const { data: created, error } = await supabase
+      .from('link_profiles')
+      .insert([data])
+      .select()
+      .maybeSingle(); // ✅ FIX IMPORTANT
+
     if (error) throw error;
     return created;
   },
+
   update: async (id, data) => {
-    const { data: updated, error } = await supabase.from('link_profiles').update(data).eq('id', id).select().single();
+    const { data: updated, error } = await supabase
+      .from('link_profiles')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .maybeSingle(); // ✅ FIX IMPORTANT
+
     if (error) throw error;
     return updated;
   },
+
   delete: async (id) => {
-    const { error } = await supabase.from('link_profiles').delete().eq('id', id);
+    const { error } = await supabase
+      .from('link_profiles')
+      .delete()
+      .eq('id', id);
+
     if (error) throw error;
     return { id };
   },

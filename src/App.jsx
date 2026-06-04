@@ -2,8 +2,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
 
 import Login          from "./pages/Login";
-import Dashboard      from "./pages/Dashboard";       // dashboard ADMIN
-import UserDashboard  from "./pages/UserDashboard";   // dashboard UTILISATEUR
+import Dashboard      from "./pages/Dashboard";
+import UserDashboard  from "./pages/UserDashboard";
 import PublicProfile  from "./pages/PublicProfile";
 import Home           from "./pages/Home";
 import PrivacyPolicy  from "./pages/PrivacyPolicy";
@@ -18,7 +18,6 @@ import {
   PublicOnlyRoute,
 } from "./routes/AuthRoutes";
 
-// ─── Détecte si on est sur le sous-domaine admin ───────────────────────────
 const isAdminDomain = () => {
   const hostname = window.location.hostname;
   return (
@@ -27,9 +26,6 @@ const isAdminDomain = () => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// APP ADMIN  (admin.socialapp.work)
-// ─────────────────────────────────────────────────────────────────────────────
 function AdminApp() {
   return (
     <Routes>
@@ -56,9 +52,6 @@ function AdminApp() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// APP PUBLIQUE  (socialapp.work)
-// ─────────────────────────────────────────────────────────────────────────────
 function PublicApp() {
   return (
     <Routes>
@@ -89,51 +82,46 @@ function PublicApp() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ✅ CORRECTION PRINCIPALE : attend que le rôle soit chargé avant de rendre
-// ─────────────────────────────────────────────────────────────────────────────
-function RoleBasedDashboard() {
-  const { isAdmin, loading } = useAuth();
+function AuthLoadingScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#060412',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '14px',
+    }}>
+      <img
+        src="/Logo_SocialApp.png"
+        alt="SocialApp"
+        style={{ width: 54, height: 54, borderRadius: 14, boxShadow: '0 8px 28px rgba(255,140,0,0.4)' }}
+      />
+      <Loader2 size={22} color="#ff8c00" className="animate-spin" />
+    </div>
+  );
+}
 
-  // ✅ Attend que fetchRole soit terminé — évite le flash UserDashboard pour les admins
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: '#060412',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '14px',
-      }}>
-        <img
-          src="/Logo_SocialApp.png"
-          alt="SocialApp"
-          style={{ width: 54, height: 54, borderRadius: 14, boxShadow: '0 8px 28px rgba(255,140,0,0.4)' }}
-        />
-        <Loader2 size={22} color="#ff8c00" className="animate-spin" />
-      </div>
-    );
-  }
+function RoleBasedDashboard() {
+  const { isAdmin, loading, role } = useAuth();
+
+  // LOG TEMPORAIRE — à retirer après diagnostic
+  console.log('RoleBasedDashboard:', { loading, role, isAdmin });
+
+  if (loading) return <AuthLoadingScreen />;
 
   if (isAdmin) {
-    // En production → redirige vers le sous-domaine admin
     if (window.location.hostname === "socialapp.work") {
       window.location.href = "https://admin.socialapp.work/dashboard";
       return null;
     }
-    // En développement → affiche directement le Dashboard admin
     return <Dashboard />;
   }
 
-  // ✅ Seulement ici, on est sûr que l'utilisateur n'est PAS admin
   return <UserDashboard />;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ROOT
-// ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>

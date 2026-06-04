@@ -1138,9 +1138,19 @@ export default function Dashboard() {
   });
 
   const handleCreateProfile = () => {
-    const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
-    createMutation.mutate({ display_name: 'Profil ' + ((profiles.length || 0) + 1), bio: '', links: [], theme_color: '#6366f1', expiry_date: expiry.toISOString().split('T')[0], is_verified: false, is_event: false });
-  };
+  if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
+  const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
+  createMutation.mutate({
+    user_id: user.id,
+    display_name: 'Profil ' + ((profiles.length || 0) + 1),
+    bio: '',
+    links: [],
+    theme_color: '#6366f1',
+    expiry_date: expiry.toISOString().split('T')[0],
+    is_verified: false,
+    is_event: false,
+  });
+};
 
   const handleSwitchProfile = useCallback((p) => {
     if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;

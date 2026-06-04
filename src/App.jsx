@@ -10,6 +10,7 @@ import PrivacyPolicy  from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import DeleteAccount  from "./pages/DeleteAccount";
 import ResetPassword  from "./pages/ResetPassword";
+import { Loader2 } from "lucide-react";
 
 import {
   ProtectedRoute,
@@ -18,24 +19,20 @@ import {
 } from "./routes/AuthRoutes";
 
 // ─── Détecte si on est sur le sous-domaine admin ───────────────────────────
-// ⚠️  "localhost" est RETIRÉ : en dev, on passe toujours par PublicApp.
-//     Pour tester AdminApp en local, utilise la variable d'environnement.
 const isAdminDomain = () => {
   const hostname = window.location.hostname;
   return (
     hostname === "admin.socialapp.work" ||
-    import.meta.env.VITE_FORCE_ADMIN === "true" // yarn dev avec VITE_FORCE_ADMIN=true
+    import.meta.env.VITE_FORCE_ADMIN === "true"
   );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// APP ADMIN  (sous-domaine admin.socialapp.work)
-// Toutes les routes sont protégées par AdminRoute → seuls les admins accèdent
+// APP ADMIN  (admin.socialapp.work)
 // ─────────────────────────────────────────────────────────────────────────────
 function AdminApp() {
   return (
     <Routes>
-      {/* Connexion — redirige vers /dashboard si déjà connecté */}
       <Route
         path="/login"
         element={
@@ -44,11 +41,7 @@ function AdminApp() {
           </PublicOnlyRoute>
         }
       />
-
-      {/* Réinitialisation mot de passe — toujours accessible */}
       <Route path="/reset-password" element={<ResetPassword />} />
-
-      {/* Dashboard admin — AdminRoute vérifie user connecté + rôle "admin" */}
       <Route
         path="/dashboard"
         element={
@@ -57,8 +50,6 @@ function AdminApp() {
           </AdminRoute>
         }
       />
-
-      {/* Racine → dashboard admin */}
       <Route path="/"  element={<Navigate to="/dashboard" replace />} />
       <Route path="*"  element={<Navigate to="/dashboard" replace />} />
     </Routes>
@@ -66,19 +57,16 @@ function AdminApp() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// APP PUBLIQUE  (socialapp.work + localhost)
+// APP PUBLIQUE  (socialapp.work)
 // ─────────────────────────────────────────────────────────────────────────────
 function PublicApp() {
   return (
     <Routes>
-      {/* Pages publiques */}
       <Route path="/"               element={<Home />} />
       <Route path="/privacy"        element={<PrivacyPolicy />} />
       <Route path="/terms"          element={<TermsOfService />} />
       <Route path="/delete-account" element={<DeleteAccount />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-
-      {/* Connexion — si déjà connecté, redirige selon le rôle */}
       <Route
         path="/login"
         element={
@@ -87,8 +75,6 @@ function PublicApp() {
           </PublicOnlyRoute>
         }
       />
-
-      {/* Dashboard utilisateur — ProtectedRoute vérifie uniquement la connexion */}
       <Route
         path="/dashboard"
         element={
@@ -97,25 +83,42 @@ function PublicApp() {
           </ProtectedRoute>
         }
       />
-
-      {/* Profil public — doit être en dernier pour ne pas capturer /login etc. */}
       <Route path="/:username" element={<PublicProfile />} />
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Redirige automatiquement les admins vers le bon dashboard
-// Un admin qui arrive sur /dashboard dans PublicApp est envoyé sur le
-// sous-domaine admin (ou sur /dashboard avec le bon composant en dev).
+// ✅ CORRECTION PRINCIPALE : attend que le rôle soit chargé avant de rendre
 // ─────────────────────────────────────────────────────────────────────────────
 function RoleBasedDashboard() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading } = useAuth();
+
+  // ✅ Attend que fetchRole soit terminé — évite le flash UserDashboard pour les admins
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#060412',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '14px',
+      }}>
+        <img
+          src="/Logo_SocialApp.png"
+          alt="SocialApp"
+          style={{ width: 54, height: 54, borderRadius: 14, boxShadow: '0 8px 28px rgba(255,140,0,0.4)' }}
+        />
+        <Loader2 size={22} color="#ff8c00" className="animate-spin" />
+      </div>
+    );
+  }
 
   if (isAdmin) {
-    // En production → sous-domaine admin
+    // En production → redirige vers le sous-domaine admin
     if (window.location.hostname === "socialapp.work") {
       window.location.href = "https://admin.socialapp.work/dashboard";
       return null;
@@ -124,6 +127,7 @@ function RoleBasedDashboard() {
     return <Dashboard />;
   }
 
+  // ✅ Seulement ici, on est sûr que l'utilisateur n'est PAS admin
   return <UserDashboard />;
 }
 

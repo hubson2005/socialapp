@@ -8,12 +8,13 @@ export function AuthProvider({ children }) {
   const [role,    setRole]    = useState('user');
   const [loading, setLoading] = useState(true);
 
-  // ✅ Lit le rôle depuis user_metadata — pas de table, pas de RLS, pas de récursion
+  // ✅ Lit le rôle depuis app_metadata — non modifiable par l'utilisateur
   const fetchRole = useCallback(async () => {
     try {
       const { data: { user: u }, error } = await supabase.auth.getUser();
       if (error || !u) { setRole('user'); return; }
-      setRole(u.user_metadata?.role ?? 'user');
+      // app_metadata est réservé au serveur, jamais modifiable par le client
+      setRole(u.app_metadata?.role ?? 'user');
     } catch {
       setRole('user');
     }
@@ -33,7 +34,6 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-
         console.log('[Auth] Event:', event, '| Email:', session?.user?.email);
 
         if (event === 'PASSWORD_RECOVERY') {

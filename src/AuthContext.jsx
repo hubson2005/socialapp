@@ -8,33 +8,11 @@ export function AuthProvider({ children }) {
   const [role,    setRole]    = useState('user');
   const [loading, setLoading] = useState(true);
 
-  const fetchRole = useCallback(async (currentUser) => {
-    if (!currentUser) { setRole('user'); return; }
-    try {
-      // ✅ Le rôle est déjà dans la session — pas besoin d'un appel réseau supplémentaire
-      setRole(currentUser.app_metadata?.role ?? 'user');
-    } catch {
-      setRole('user');
-    }
-  }, []);
-
   useEffect(() => {
     let mounted = true;
 
-    // ✅ Timeout de sécurité : si ça tarde trop, on débloque quand même
-    const timeout = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 3000);
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return;
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      await fetchRole(currentUser);
-      clearTimeout(timeout);
-      if (mounted) setLoading(false);
-    });
-
+    // ✅ On utilise UNIQUEMENT onAuthStateChange — plus de getSession() séparé
+    // INITIAL_SESSION est le premier event, il remplace getSession()
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
@@ -51,19 +29,32 @@ export function AuthProvider({ children }) {
           return;
         }
 
+        // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED
         const currentUser = session?.user ?? null;
         setUser(currentUser);
-        await fetchRole(currentUser);
-        if (mounted) setLoading(false);
+
+        // ✅ Rôle lu depuis app_metadata de la session — aucun appel réseau
+        const role = currentUser?.app_metadata?.role ?? 'user';
+        setRole(role);
+
+        // ✅ loading = false une seule fois après INITIAL_SESSION ou SIGNED_IN
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          if (mounted) setLoading(false);
+        }
       }
     );
+
+    // ✅ Timeout de sécurité au cas où INITIAL_SESSION ne se déclenche pas
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 4000);
 
     return () => {
       mounted = false;
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [fetchRole]);
+  }, []);
 
   const signIn = (email, password) =>
     supabase.auth.signInWithPassword({ email, password });

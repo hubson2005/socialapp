@@ -11,10 +11,8 @@ export function AuthProvider({ children }) {
   const fetchRole = useCallback(async (currentUser) => {
     if (!currentUser) { setRole('user'); return; }
     try {
-      const { data: { user: u }, error } = await supabase.auth.getUser();
-      if (error || !u) { setRole('user'); return; }
-      // ✅ app_metadata — non modifiable par le client
-      setRole(u.app_metadata?.role ?? 'user');
+      // ✅ Le rôle est déjà dans la session — pas besoin d'un appel réseau supplémentaire
+      setRole(currentUser.app_metadata?.role ?? 'user');
     } catch {
       setRole('user');
     }
@@ -23,15 +21,17 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
 
+    // ✅ Timeout de sécurité : si ça tarde trop, on débloque quand même
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 3000);
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-
-      // ✅ CORRECTION : attend fetchRole AVANT de passer loading à false
-      // Sans ça : loading=false trop tôt → isAdmin=false → UserDashboard s'affiche
       await fetchRole(currentUser);
-
+      clearTimeout(timeout);
       if (mounted) setLoading(false);
     });
 
@@ -60,6 +60,7 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, [fetchRole]);

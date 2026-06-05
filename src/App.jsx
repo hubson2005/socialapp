@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
-
 import Login          from "./pages/Login";
 import Dashboard      from "./pages/Dashboard";
 import UserDashboard  from "./pages/UserDashboard";
@@ -11,7 +10,6 @@ import TermsOfService from "./pages/TermsOfService";
 import DeleteAccount  from "./pages/DeleteAccount";
 import ResetPassword  from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
-
 import {
   ProtectedRoute,
   AdminRoute,
@@ -104,10 +102,7 @@ function AuthLoadingScreen() {
 }
 
 function RoleBasedDashboard() {
-  const { isAdmin, loading, role } = useAuth();
-
-  // LOG TEMPORAIRE — à retirer après diagnostic
-  console.log('RoleBasedDashboard:', { loading, role, isAdmin });
+  const { isAdmin, loading } = useAuth();
 
   if (loading) return <AuthLoadingScreen />;
 

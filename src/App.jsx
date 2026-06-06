@@ -9,6 +9,7 @@ import PrivacyPolicy  from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import DeleteAccount  from "./pages/DeleteAccount";
 import ResetPassword  from "./pages/ResetPassword";
+import WhatsAppCRM    from "./pages/WhatsAppCRM";
 import { Loader2 } from "lucide-react";
 import {
   ProtectedRoute,
@@ -44,6 +45,14 @@ function AdminApp() {
           </AdminRoute>
         }
       />
+      <Route
+        path="/dashboard/whatsapp-crm"
+        element={
+          <AdminRoute>
+            <WhatsAppCRM />
+          </AdminRoute>
+        }
+      />
       <Route path="/"  element={<Navigate to="/dashboard" replace />} />
       <Route path="*"  element={<Navigate to="/dashboard" replace />} />
     </Routes>
@@ -71,6 +80,14 @@ function PublicApp() {
         element={
           <ProtectedRoute>
             <RoleBasedDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/whatsapp-crm"
+        element={
+          <ProtectedRoute>
+            <WhatsAppCRM />
           </ProtectedRoute>
         }
       />
@@ -103,9 +120,7 @@ function AuthLoadingScreen() {
 
 function RoleBasedDashboard() {
   const { isAdmin, loading } = useAuth();
-
   if (loading) return <AuthLoadingScreen />;
-
   if (isAdmin) {
     if (window.location.hostname === "socialapp.work") {
       window.location.href = "https://admin.socialapp.work/dashboard";
@@ -113,7 +128,6 @@ function RoleBasedDashboard() {
     }
     return <Dashboard />;
   }
-
   return <UserDashboard />;
 }
 

@@ -1,23 +1,26 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Lock, Crown, Search, X,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
-  Settings, BarChart2, Activity, Users, Zap, GitBranch,
+  Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
+
 // ─── Nav config ───────────────────────────────────────────────────────────────
 export const USER_NAV = [
-  { id: 'overview',     label: 'Dashboard',       icon: LayoutDashboard, group: 'main',      locked: null       },
-  { id: 'platforms',    label: 'Plateformes',     icon: Link2,           group: 'content',   locked: null       },
-  { id: 'event',        label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: 'pro'      },
-  { id: 'marketplace',  label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null       },
-  { id: 'documents',    label: 'Documents',       icon: FileText,        group: 'content',   locked: null       },
-  { id: 'analytics',    label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro'      },
-  { id: 'realtime',     label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro'      },
-  { id: 'crm',          label: 'CRM / Leads',     icon: Users,           group: 'business',  locked: 'business' },
-  { id: 'automations',  label: 'Automatisations', icon: Zap,             group: 'business',  locked: 'business' },
-  { id: 'integrations', label: 'Intégrations',    icon: GitBranch,       group: 'business',  locked: 'business' },
-  { id: 'settings',     label: 'Paramètres',      icon: Settings,        group: 'admin',     locked: null       },
+  { id: 'overview',      label: 'Dashboard',       icon: LayoutDashboard, group: 'main',      locked: null,       path: null                        },
+  { id: 'platforms',     label: 'Plateformes',     icon: Link2,           group: 'content',   locked: null,       path: null                        },
+  { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: 'pro',      path: null                        },
+  { id: 'marketplace',   label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null,       path: null                        },
+  { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null                        },
+  { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null                        },
+  { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null                        },
+  { id: 'crm',           label: 'CRM / Leads',     icon: Users,           group: 'business',  locked: 'business', path: null                        },
+  { id: 'whatsapp-crm',  label: 'WhatsApp CRM',    icon: MessageCircle,   group: 'business',  locked: 'business', path: '/dashboard/whatsapp-crm'   },
+  { id: 'automations',   label: 'Automatisations', icon: Zap,             group: 'business',  locked: 'business', path: null                        },
+  { id: 'integrations',  label: 'Intégrations',    icon: GitBranch,       group: 'business',  locked: 'business', path: null                        },
+  { id: 'settings',      label: 'Paramètres',      icon: Settings,        group: 'admin',     locked: null,       path: null                        },
 ];
 
 export const USER_GROUPS = [
@@ -256,7 +259,7 @@ export default function UserSidebar({
                   const lockColor = item.locked === 'business' ? '#f7c948' : '#ff8c00';
                   const lockLabel = item.locked === 'business' ? 'BUSINESS' : 'PRO';
 
-                  return (
+                  const buttonEl = (
                     <button
                       key={item.id}
                       onClick={() => handleNav(item.id, locked)}
@@ -306,7 +309,7 @@ export default function UserSidebar({
                             fontWeight: isActive && !locked ? 700 : 500,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>
-                          {t(item.id, item.label)}
+                            {t(item.id, item.label)}
                           </span>
                           {locked && (
                             <span style={{
@@ -336,6 +339,20 @@ export default function UserSidebar({
                       )}
                     </button>
                   );
+
+                  // Si l'item a un path et n'est pas locked → on wrappe avec <Link>
+                  return item.path && !locked
+                    ? (
+                      <Link
+                        key={item.id}
+                        to={item.path}
+                        style={{ textDecoration: 'none', display: 'block' }}
+                        onClick={() => { onNavigate(item.id); if (isMobile) onToggle(); }}
+                      >
+                        {buttonEl}
+                      </Link>
+                    )
+                    : buttonEl;
                 })}
               </div>
             );
@@ -375,4 +392,3 @@ export default function UserSidebar({
     </>
   );
 }
-

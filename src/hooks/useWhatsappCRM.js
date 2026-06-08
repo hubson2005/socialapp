@@ -1,5 +1,5 @@
 // src/hooks/useWhatsappCRM.js
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
 export function useWhatsappCRM() {
@@ -7,44 +7,11 @@ export function useWhatsappCRM() {
   const [campaigns, setCampaigns] = useState([])
   const [notifs,    setNotifs]    = useState([])
   const [webhook,   setWebhook]   = useState('')
+  const [connected, setConnected] = useState(false)
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
 
-  // ── Chargement initial ──────────────────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const [
-          { data: c,  error: e1 },
-          { data: ca, error: e2 },
-          { data: n,  error: e3 },
-          { data: s,  error: e4 },
-        ] = await Promise.all([
-          supabase.from('whatsapp_contacts').select('*').order('created_at', { ascending: false }),
-          supabase.from('whatsapp_campaigns').select('*').order('created_at', { ascending: false }),
-          supabase.from('whatsapp_notifications').select('*').order('created_at', { ascending: false }),
-          supabase.from('whatsapp_settings').select('*').maybeSingle(),
-        ])
-        if (e1) throw e1
-        if (e2) throw e2
-        if (e3) throw e3
-        if (e4) throw e4
-        setContacts(c  || [])
-        setCampaigns(ca || [])
-        setNotifs(n    || [])
-        setWebhook(s?.webhook_url || '')
-      } catch (err) {
-        setError(err.message || 'Erreur de chargement')
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [])
-
-  // ── Stats calculées ─────────────────────────────────────────────
+  // ── Computed stats ─────────────────────────────────────────────
   const stats = {
     totalContacts:  contacts.length,
     activeContacts: contacts.filter(c => c.status === 'actif').length,
@@ -53,22 +20,53 @@ export function useWhatsappCRM() {
     activeNotifs:   notifs.filter(n => n.active).length,
   }
 
-  const connected = Boolean(webhook)
+  // ── Load all data ──────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const [cRes, camRes, nRes, wRes] = await Promise.all([
+          supabase.from('whatsapp_contacts').select('*').order('created_at', { ascending: false }),
+          supabase.from('whatsapp_campaigns').select('*').order('created_at', { ascending: false }),
+          supabase.from('whatsapp_notifications').select('*').order('created_at', { ascending: false }),
+          supabase.from('whatsapp_settings').select('*').limit(1).single(),
+        ])
 
-  // ── Ajouter un contact ──────────────────────────────────────────
-  const addContact = useCallback(async ({ name, phone, email, tag }) => {
+        if (cRes.error   && cRes.error.code !== 'PGRST116')   throw cRes.error
+        if (camRes.error && camRes.error.code !== 'PGRST116') throw camRes.error
+        if (nRes.error   && nRes.error.code !== 'PGRST116')   throw nRes.error
+
+        setContacts(cRes.data   || [])
+        setCampaigns(camRes.data || [])
+        setNotifs(nRes.data     || [])
+
+        const wh = wRes.data?.webhook_url || ''
+        setWebhook(wh)
+        setConnected(!!wh)
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  // ── Add contact ────────────────────────────────────────────────
+  const addContact = async ({ name, phone, email, tag }) => {
     const { data, error } = await supabase
       .from('whatsapp_contacts')
-      .insert({ name, phone, email: email || null, tag: tag || 'Client', status: 'actif' })
+      .insert([{ name, phone, email: email || null, tag, status: 'actif' }])
       .select()
       .single()
     if (error) throw error
     setContacts(prev => [data, ...prev])
     return data
-  }, [])
+  }
 
-  // ── Envoyer un message via webhook Make.com ─────────────────────
-  const sendMessage = useCallback(async ({ to, name, message }) => {
+  // ── Send message (via Make.com webhook) ───────────────────────
+  const sendMessage = async ({ to, name, message }) => {
     if (!webhook) return { reason: 'no_webhook' }
     try {
       await fetch(webhook, {
@@ -76,42 +74,38 @@ export function useWhatsappCRM() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to, name, message }),
       })
-      // Mettre à jour last_msg_at du contact
-      const contact = contacts.find(c => c.phone === to)
-      if (contact) {
-        await supabase
-          .from('whatsapp_contacts')
-          .update({ last_msg_at: new Date().toISOString() })
-          .eq('id', contact.id)
-        setContacts(prev =>
-          prev.map(c => c.id === contact.id ? { ...c, last_msg_at: new Date().toISOString() } : c)
-        )
-      }
+      // Log dans Supabase
+      await supabase.from('whatsapp_messages').insert([{
+        contact_phone: to,
+        message,
+        direction: 'out',
+      }])
+      // Incrémenter compteur si appartient à une campagne active
       return { reason: 'sent' }
-    } catch {
-      return { reason: 'error' }
+    } catch (e) {
+      throw new Error('Erreur envoi : ' + e.message)
     }
-  }, [webhook, contacts])
+  }
 
-  // ── Créer une campagne et envoyer via webhook ───────────────────
-  const createCampaign = useCallback(async ({ name, message, recipientIds }) => {
+  // ── Create & launch campaign ───────────────────────────────────
+  const createCampaign = async ({ name, message, recipientIds }) => {
     const recipients = contacts.filter(c => recipientIds.includes(c.id))
 
-    // Créer la campagne en base
-    const { data: campaign, error } = await supabase
+    const { data: cam, error: camErr } = await supabase
       .from('whatsapp_campaigns')
-      .insert({
+      .insert([{
         name,
         message,
         status: 'envoyé',
         sent_count: recipients.length,
+        read_count: 0,
         launched_at: new Date().toISOString(),
-      })
+      }])
       .select()
       .single()
-    if (error) throw error
+    if (camErr) throw camErr
 
-    // Envoyer via webhook si configuré
+    // Envoi réel si webhook configuré
     if (webhook) {
       await Promise.allSettled(
         recipients.map(c =>
@@ -124,55 +118,50 @@ export function useWhatsappCRM() {
       )
     }
 
-    setCampaigns(prev => [campaign, ...prev])
-    return campaign
-  }, [contacts, webhook])
+    setCampaigns(prev => [cam, ...prev])
+    return cam
+  }
 
-  // ── Ajouter une automatisation ──────────────────────────────────
-  const addNotification = useCallback(async ({ name, trigger_type }) => {
+  // ── Add notification / automation ─────────────────────────────
+  const addNotification = async ({ name, trigger_type }) => {
     const { data, error } = await supabase
       .from('whatsapp_notifications')
-      .insert({ name, trigger_type: trigger_type || 'Automatique', active: true })
+      .insert([{ name, trigger_type, active: true }])
       .select()
       .single()
     if (error) throw error
     setNotifs(prev => [data, ...prev])
     return data
-  }, [])
+  }
 
-  // ── Activer / désactiver une automatisation ─────────────────────
-  const toggleNotification = useCallback(async (id, currentActive) => {
-    const { error } = await supabase
+  // ── Toggle notification active state ──────────────────────────
+  const toggleNotification = async (id, currentActive) => {
+    const { data, error } = await supabase
       .from('whatsapp_notifications')
       .update({ active: !currentActive })
       .eq('id', id)
+      .select()
+      .single()
     if (error) throw error
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, active: !currentActive } : n))
-  }, [])
+    setNotifs(prev => prev.map(n => n.id === id ? data : n))
+  }
 
-  // ── Sauvegarder le webhook ──────────────────────────────────────
-  const saveWebhook = useCallback(async (url) => {
+  // ── Save webhook URL ───────────────────────────────────────────
+  const saveWebhook = async (url) => {
     const { error } = await supabase
       .from('whatsapp_settings')
-      .upsert({ webhook_url: url, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      .upsert([{ id: 1, webhook_url: url }])
     if (error) throw error
     setWebhook(url)
-  }, [])
+    setConnected(!!url)
+  }
 
   return {
-    contacts,
-    campaigns,
-    notifs,
-    webhook,
-    connected,
-    loading,
-    error,
-    stats,
-    addContact,
-    sendMessage,
+    contacts, campaigns, notifs,
+    webhook, connected, loading, error, stats,
+    addContact, sendMessage,
     createCampaign,
-    addNotification,
-    toggleNotification,
+    addNotification, toggleNotification,
     saveWebhook,
   }
 }

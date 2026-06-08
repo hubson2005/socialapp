@@ -31,6 +31,7 @@ import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/das
 import OverviewPanel from "@/components/dashboard/OverviewPanel";
 import EventPanel from "@/components/dashboard/EventPanel";
 import { useTranslation } from 'react-i18next';
+import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
 
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────

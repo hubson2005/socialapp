@@ -30,6 +30,7 @@ import MobileNav from "@/components/dashboard/MobileNav";
 import EventManager from "@/components/dashboard/EventManager";
 import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
 import { useTranslation } from "react-i18next";
+import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
@@ -75,7 +76,7 @@ const db = {
       .from('link_profiles')
       .insert([data])
       .select()
-      .maybeSingle(); // ✅ FIX IMPORTANT
+      .maybeSingle();
 
     if (error) throw error;
     return created;
@@ -87,7 +88,7 @@ const db = {
       .update(data)
       .eq('id', id)
       .select()
-      .maybeSingle(); // ✅ FIX IMPORTANT
+      .maybeSingle();
 
     if (error) throw error;
     return updated;
@@ -1138,16 +1139,16 @@ export default function Dashboard() {
   });
 
   const handleCreateProfile = () => {
-  if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
-  const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
-  createMutation.mutate({
-    user_id: user.id,  // ✅ AJOUT
-    display_name: 'Profil ' + ((profiles.length || 0) + 1),
-    bio: '', links: [], theme_color: '#6366f1',
-    expiry_date: expiry.toISOString().split('T')[0],
-    is_verified: false, is_event: false,
-  });
-};
+    if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
+    const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
+    createMutation.mutate({
+      user_id: user.id,
+      display_name: 'Profil ' + ((profiles.length || 0) + 1),
+      bio: '', links: [], theme_color: '#6366f1',
+      expiry_date: expiry.toISOString().split('T')[0],
+      is_verified: false, is_event: false,
+    });
+  };
 
   const handleSwitchProfile = useCallback((p) => {
     if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
@@ -1234,7 +1235,6 @@ export default function Dashboard() {
   };
 
   return (
-    // ✅ FIX : suppression de overflow:hidden sur le root + pas de transform → position:fixed fonctionne
     <div style={{
       height: '100dvh',
       minHeight: '100dvh',
@@ -1242,8 +1242,6 @@ export default function Dashboard() {
       position: 'relative',
       overflowX: 'hidden',
     }}>
-
-      {/* Sidebar */}
       <div style={{ position:'relative', zIndex:10, flexShrink:0, width:isMobile?0:undefined }}>
         <Sidebar
           activeSection={activeSection}
@@ -1256,7 +1254,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ✅ FIX : Main column — suppression de overflow:hidden et transform */}
       <div style={{
         flex: 1,
         height: '100dvh',
@@ -1268,8 +1265,6 @@ export default function Dashboard() {
         overflowX: 'hidden',
         overflowY: 'hidden',
       }}>
-
-        {/* Top bar */}
         <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(4,2,16,0.7)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'28px', height:'28px', borderRadius:'8px', objectFit:'cover', flexShrink:0 }}/>}
@@ -1315,7 +1310,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Zone scrollable */}
         <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':'24px', paddingBottom:isMobile?'100px':'24px' }}>
           <AnimatePresence>
             <motion.div key={activeSection} initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:0.12 }}>
@@ -1323,10 +1317,8 @@ export default function Dashboard() {
             </motion.div>
           </AnimatePresence>
         </div>
+      </div>
 
-      </div>{/* fin Main column */}
-
-      {/* ✅ FIX : MobileNav EN DEHORS du div principal → position:fixed fonctionne correctement */}
       {isMobile && (
         <MobileNav
           activeSection={activeSection}

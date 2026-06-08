@@ -48,21 +48,21 @@ export default function Home() {
       subtitle: 'Particulier, petit commerce, entrepreneur débutant',
       bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)',
       btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)',
-      features: ['1 profil · 3 liens sociaux','Page publique + QR Code standard','1 fichier PDF joint','Marketplace (4 produits)'],
+      features: ['1 profil · 3 liens sociaux','Page publique','QR Code standard','1 import PDF','Marketplace (4 produits)'],
     },
     {
       name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true,
       subtitle: 'Professionnels, influenceurs, restaurants, hôtels, boutiques',
       bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)',
       btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none',
-      features: ['1 profil · 8 liens sociaux','1 Carte NFC ou PVC (logo + QR)','Analytics & statistiques détaillées','Temps réel — flux visiteurs live','Mode Événement inclus','Marketplace (10 produits) · 3 PDF','QR Code premium · Support standard'],
+      features: ['1 profil · 8 liens sociaux','1 Carte NFC ou PVC (logo + QR CODE)','Analytics & statistiques détaillées','Temps réel — flux visiteurs live','Mode Événement inclus','Marketplace (10 produits)','3 imports PDFs','QR Code premium','Support standard'],
     },
     {
       name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948',
-      subtitle: 'Grandes entreprises, agences, marques établies',
+      subtitle: 'Grandes entreprises, agences com, marques établies',
       bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)',
       btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none',
-      features: ['1 profil · 17 liens sociaux','2 Cartes NFC ou PVC','Analytics avancés complets','CRM & Pipeline de leads','Automatisations','Toutes les intégrations','Marketplace illimitée · 10 PDF','QR Code dynamique','1 mois Événement offert','Support VIP prioritaire'],
+      features: ['1 profil · 17 liens sociaux','1 Carte NFC ou PVC (logo + QR CODE)','Analytics avancés complets','CRM & Pipeline de leads', 'CRM WHATSAPP','Automatisations','Toutes les intégrations','Marketplace illimitée','10 imports PDFs','QR Code dynamique','1 mois Événement offert','Support VIP prioritaire'],
     },
   ];
 
@@ -269,8 +269,7 @@ export default function Home() {
               <a key={h} href={h} className="sa-nav-link">{l}</a>
             ))}
           </div>
-          <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-            <button type="button" style={S.navLogin} onClick={() => navigate('/login')}>Se connecter</button>
+          <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
             <button type="button" style={S.navCta} className="sa-bpri" onClick={handleCTA}>Commencer →</button>
           </div>
         </nav>
@@ -633,7 +632,7 @@ export default function Home() {
                     <span style={{ fontSize:'38px', fontWeight:'900', letterSpacing:'-1.5px' }}>{p.price}</span>
                     <span style={{ fontSize:'14px', color:'rgba(255,255,255,.4)' }}>FCFA</span>
                   </div>
-                  <div style={{ fontSize:'12px', color:'rgba(255,255,255,.35)', marginBottom:'8px' }}>/ an · Paiement annuel</div>
+                  <div style={{ fontSize:'12px', color:'rgba(255,255,255,.35)', marginBottom:'8px' }}>/ Paiement annuel</div>
                   <div style={{ fontSize:'12px', color:'rgba(255,255,255,.45)', lineHeight:'1.55', marginBottom:'22px', minHeight:'36px' }}>{p.subtitle}</div>
                   <hr style={{ border:'none', borderTop:'1px solid rgba(255,255,255,.08)', marginBottom:'20px' }} />
                   {p.features.map((f, j) => (
@@ -734,7 +733,7 @@ export default function Home() {
                   <div style={{ fontSize:'14px', fontWeight:'800', color:'#fff', lineHeight:1.2 }}>+500 utilisateurs sur SocialApp</div>
                   <div style={{ display:'flex', gap:'2px', marginTop:'4px', alignItems:'center' }}>
                     {[...Array(5)].map((_, i) => <span key={i} style={{ color:'#f7c948', fontSize:'13px' }}>★</span>)}
-                    <span style={{ fontSize:'11px', color:'rgba(255,255,255,.45)', marginLeft:'5px' }}>4.9/5</span>
+                    <span style={{ fontSize:'11px', color:'rgba(255,255,255,.45)', marginLeft:'5px' }}>4.5/5</span>
                   </div>
                 </div>
               </div>

@@ -108,7 +108,7 @@ const STYLE = `
 /* ── Stats : grille 3 colonnes fixes sur mobile ── */
 .ap-stats{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(4,1fr);
   gap:8px;
   margin-bottom:18px;
 }
@@ -538,10 +538,54 @@ const STYLE = `
 `;
 
 const TEMPLATES = [
-  { id:"t1", ico:"💬", name:"Welcome WhatsApp", color:"c-green", desc:"Message de bienvenue automatique pour chaque nouveau lead.", tags:["WhatsApp","Lead","Bienvenue"] },
-  { id:"t2", ico:"📧", name:"Email de nurturing", color:"c-orange", desc:"Séquence d'emails pour convertir tes prospects en clients.", tags:["Email","Conversion","Séquence"] },
-  { id:"t3", ico:"📊", name:"Rapport auto", color:"c-blue", desc:"Rapport hebdomadaire envoyé automatiquement par email.", tags:["Rapport","Email","Planifié"] },
-  { id:"t4", ico:"🔥", name:"Relance leads froids", color:"c-purple", desc:"Réactivation des leads inactifs après 3 jours.", tags:["Lead","Relance","Automatique"] },
+{
+id:"lead-vip",
+ico:"🔥",
+name:"Lead VIP",
+color:"c-orange",
+desc:"Tag automatiquement les prospects chauds.",
+tags:["CRM","VIP","Lead"]
+},
+{
+id:"lead-cold",
+ico:"🥶",
+name:"Relance automatique",
+color:"c-purple",
+desc:"Relance les prospects inactifs après 3 jours.",
+tags:["CRM","Relance"]
+},
+{
+id:"whatsapp",
+ico:"💬",
+name:"WhatsApp Lead",
+color:"c-green",
+desc:"Créer un prospect lorsqu'un utilisateur clique sur WhatsApp.",
+tags:["WhatsApp","Lead"]
+},
+{
+id:"qr",
+ico:"📱",
+name:"QR Tracking",
+color:"c-blue",
+desc:"Ajoute des points lorsqu'un QR est scanné.",
+tags:["QR","Analytics"]
+},
+{
+id:"score",
+ico:"📊",
+name:"Lead Scoring",
+color:"c-orange",
+desc:"Calcule automatiquement le score des prospects.",
+tags:["Score","CRM"]
+},
+{
+id:"assign",
+ico:"👨‍💼",
+name:"Assignation auto",
+color:"c-green",
+desc:"Assigne automatiquement un prospect à un commercial.",
+tags:["CRM","Sales"]
+}
 ];
 
 const LOGS = [
@@ -551,16 +595,56 @@ const LOGS = [
 ];
 
 const TRIGGERS = [
-  "Nouveau lead","Lead froid","Lead chaud détecté",
-  "Planifié (Lundi 8h)","Scan QR Code","Clic WhatsApp","Formulaire soumis",
+  "Nouveau lead",
+  "Lead froid",
+  "Lead chaud",
+  "Visite profil",
+  "Scan QR Code",
+  "Clic WhatsApp",
+  "Formulaire soumis",
+  "Lien cliqué",
+  "Téléchargement brochure",
+  "Rendez-vous créé",
+  "Rendez-vous manqué",
+  "Abonnement expiré",
+  "Paiement reçu",
+  "Événement créé",
+  "Score > 50",
+  "Score > 100",
+  "Aucune activité 3 jours",
+  "Aucune activité 7 jours",
+  "Planifié"
 ];
 
 const ACTIONS = [
-  "Message WhatsApp","Email de relance","Export G. Sheets",
-  "Notif Slack","Email rapport","Mise à jour statut",
+  "Ajouter tag",
+  "Retirer tag",
+  "Changer statut",
+  "Créer tâche",
+  "Créer rendez-vous",
+  "Augmenter score",
+  "Réduire score",
+  "Ajouter à campagne",
+  "Retirer campagne",
+  "Attribuer commercial",
+  "Notification dashboard",
+  "Email",
+  "WhatsApp",
+  "Créer QR Code",
+  "Créer rapport",
+  "Webhook"
 ];
 
-const EMPTY_FORM = { name:"", desc:"", trigger:"", action:"", freq:"" };
+const EMPTY_FORM = {
+ name:"",
+ desc:"",
+ trigger:"",
+ action:"",
+ freq:"",
+ score:0,
+ tag:"",
+ actions:[]
+};
 
 export default function AutomationsPanel({ profileId }) {
   const [automations, setAutomations] = useState([]);
@@ -590,9 +674,13 @@ export default function AutomationsPanel({ profileId }) {
     if (!form.name.trim()) { alert("Le nom est requis"); return; }
     const payload = {
       profile_id:profileId, name:form.name.trim(), description:form.desc.trim(),
-      trigger:form.trigger, action:form.action, freq:form.freq, active:true,
+      trigger:form.trigger, action:form.action, actions:form.actions || [form.action], freq:form.freq, active:true,
       icon:"⚡", color:"rgba(245,132,31,.1)", runs:0, lastRun:"Jamais",
-      flow:[["🎯", form.trigger||"Trigger"],["⚡", form.action||"Action"],["✅","Exécuté"]],
+      flow:[
+["🎯", form.trigger || "Déclencheur"],
+...(form.actions || [form.action]).map(a => ["⚡",a]),
+["✅","Exécuté"]
+],
     };
     const { data, error } = await supabase.from("automations").insert(payload).select().single();
     if (error) { console.log("CREATE ERROR:", error); return; }
@@ -637,6 +725,7 @@ export default function AutomationsPanel({ profileId }) {
   }), [automations, filter, search]);
 
   const totalRuns  = automations.reduce((sum, a) => sum + (a.runs || 0), 0);
+  const totalScore = automations.reduce((sum,a)=>sum+(a.score||0), 0);
   const nbActive   = automations.filter(a => a.active).length;
   const nbInactive = automations.filter(a => !a.active).length;
 
@@ -663,10 +752,35 @@ export default function AutomationsPanel({ profileId }) {
         {/* STATS — 3 colonnes égales, toujours visibles */}
         <div className="ap-stats">
           {[
-            { ico:"✅", bg:"rgba(34,208,122,.1)",  num:nbActive,   lbl:"Actives",    col:"#22d07a" },
-            { ico:"⏸",  bg:"rgba(100,100,120,.1)", num:nbInactive, lbl:"Inactives",  col:"#9fa3b0" },
-            { ico:"🔄", bg:"rgba(77,156,248,.1)",  num:totalRuns,  lbl:"Exécutions", col:"#4d9cf8" },
-          ].map(s => (
+  {
+    ico:"✅",
+    bg:"rgba(34,208,122,.1)",
+    num:nbActive,
+    lbl:"Actives",
+    col:"#22d07a"
+  },
+  {
+    ico:"⏸",
+    bg:"rgba(100,100,120,.1)",
+    num:nbInactive,
+    lbl:"Inactives",
+    col:"#9fa3b0"
+  },
+  {
+    ico:"🔄",
+    bg:"rgba(77,156,248,.1)",
+    num:totalRuns,
+    lbl:"Exécutions",
+    col:"#4d9cf8"
+  },
+  {
+    ico:"🏆",
+    bg:"rgba(245,132,31,.1)",
+    num:totalScore,
+    lbl:"Score CRM",
+    col:"#f5841f"
+  }
+].map(s => (
             <div key={s.lbl} className="ap-stat">
               <div className="ap-stat-ico" style={{ background:s.bg }}>{s.ico}</div>
               <div className="ap-stat-num" style={{ color:s.col }}>{s.num}</div>

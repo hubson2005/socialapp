@@ -9,7 +9,7 @@ import {
   Zap, UserPlus, Globe, Link2, Settings, LayoutDashboard, FileText,
   ShoppingBag, MousePointerClick, ArrowUpRight, ArrowDownRight, Radio,
   Mail, Phone, Tag, Filter, Download, ChevronDown, Star, MessageSquare,
-  Wifi, WifiOff, CircleDot, Layers,
+  Wifi, WifiOff, CircleDot, Layers, MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,102 +29,81 @@ import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import MobileNav from "@/components/dashboard/MobileNav";
 import EventManager from "@/components/dashboard/EventManager";
 import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
-import { useTranslation } from "react-i18next";
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
+import { useTranslation } from "react-i18next";
+import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
+
+// ── Imports optionnels (commentez si les fichiers n'existent pas encore) ───────
+let BoostPanel = null;
+let MetaIntegrationPanel = null;
+let BoostAnalyticsPanel = null;
+try { BoostPanel = require("@/components/dashboard/BoostPanel").default; } catch {}
+try { MetaIntegrationPanel = require("@/components/dashboard/MetaIntegrationPanel").default; } catch {}
+try { BoostAnalyticsPanel = require("@/components/dashboard/BoostAnalyticsPanel").default; } catch {}
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
   const [width, setWidth] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1200
   );
-
   useEffect(() => {
     let frame;
-
-    const handler = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        setWidth(window.innerWidth);
-      });
-    };
-
+    const handler = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => setWidth(window.innerWidth)); };
     window.addEventListener('resize', handler);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', handler);
-    };
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', handler); };
   }, []);
-
   return width;
 }
 
 // ─── DB ───────────────────────────────────────────────────────────────────────
 const db = {
   list: async () => {
-    const { data, error } = await supabase
-      .from('link_profiles')
-      .select('*')
-      .order('created_at', { ascending: true });
-
+    const { data, error } = await supabase.from('link_profiles').select('*').order('created_at', { ascending: true });
     if (error) throw error;
     return data ?? [];
   },
-
   create: async (data) => {
-    const { data: created, error } = await supabase
-      .from('link_profiles')
-      .insert([data])
-      .select()
-      .maybeSingle();
-
+    const { data: created, error } = await supabase.from('link_profiles').insert([data]).select().maybeSingle();
     if (error) throw error;
     return created;
   },
-
   update: async (id, data) => {
-    const { data: updated, error } = await supabase
-      .from('link_profiles')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-
+    const { data: updated, error } = await supabase.from('link_profiles').update(data).eq('id', id).select().maybeSingle();
     if (error) throw error;
     return updated;
   },
-
   delete: async (id) => {
-    const { error } = await supabase
-      .from('link_profiles')
-      .delete()
-      .eq('id', id);
-
+    const { error } = await supabase.from('link_profiles').delete().eq('id', id);
     if (error) throw error;
     return { id };
   },
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const LINKS_PER_PAGE = 10;
+const LINKS_PER_PAGE    = 10;
 const PROFILES_PER_PAGE = 10;
-const MAX_SIZE_KB = 2000;
+const MAX_SIZE_KB       = 2000;
 
 const SIDEBAR_NAV = [
-  { id: 'overview',       label: 'Dashboard',        icon: LayoutDashboard, group: 'main' },
-  { id: 'realtime',       label: 'Temps réel',        icon: Radio,           group: 'main', badge: 'LIVE' },
-  { id: 'analytics',      label: 'Analytics',         icon: BarChart3,       group: 'main' },
-  { id: 'leads',          label: 'Leads / CRM',       icon: UserPlus,        group: 'crm' },
-  { id: 'automations',    label: 'Automatisations',   icon: Zap,             group: 'crm' },
-  { id: 'integrations',   label: 'Intégrations',      icon: Sparkles,        group: 'crm' },
-  { id: 'profiles',       label: 'Mes profils',        icon: Layers,          group: 'content' },
-  { id: 'platforms',      label: 'Plateformes',        icon: Link2,           group: 'content' },
-  { id: 'event',          label: 'Événement',          icon: CalendarDays,    group: 'content' },
-  { id: 'eventmanager',   label: 'Event Manager',      icon: CalendarDays,    group: 'content', badge: 'NEW' },
-  { id: 'marketplace',    label: 'Marketplace',        icon: ShoppingBag,     group: 'content' },
-  { id: 'documents',      label: 'Documents',          icon: FileText,        group: 'content' },
-  { id: 'accounts',       label: 'Comptes',            icon: Users,           group: 'admin' },
-  { id: 'settings',       label: 'Paramètres',         icon: Settings,        group: 'admin' },
+  { id: 'overview',        label: 'Dashboard',        icon: LayoutDashboard, group: 'main' },
+  { id: 'realtime',        label: 'Temps réel',        icon: Radio,           group: 'main', badge: 'LIVE' },
+  { id: 'analytics',       label: 'Analytics',         icon: BarChart3,       group: 'main' },
+  { id: 'leads',           label: 'Leads / CRM',       icon: UserPlus,        group: 'crm' },
+  { id: 'whatsapp-crm',    label: 'WhatsApp CRM',      icon: MessageCircle,   group: 'crm' },
+  { id: 'automations',     label: 'Automatisations',   icon: Zap,             group: 'crm' },
+  { id: 'integrations',    label: 'Intégrations',      icon: Sparkles,        group: 'crm' },
+  { id: 'meta',            label: 'Connexion Meta',    icon: Zap,             group: 'crm' },
+  { id: 'boost',           label: 'Boost',             icon: Sparkles,        group: 'crm' },
+  { id: 'boost-analytics', label: 'Analytics Boost',  icon: BarChart3,       group: 'crm' },
+  { id: 'promotions', label: 'Promotions', icon: Zap, group: 'crm', badge: 'NEW' },
+  { id: 'profiles',        label: 'Mes profils',        icon: Layers,          group: 'content' },
+  { id: 'platforms',       label: 'Plateformes',        icon: Link2,           group: 'content' },
+  { id: 'event',           label: 'Événement',          icon: CalendarDays,    group: 'content' },
+  { id: 'eventmanager',    label: 'Event Manager',      icon: CalendarDays,    group: 'content', badge: 'NEW' },
+  { id: 'marketplace',     label: 'Marketplace',        icon: ShoppingBag,     group: 'content' },
+  { id: 'documents',       label: 'Documents',          icon: FileText,        group: 'content' },
+  { id: 'accounts',        label: 'Comptes',            icon: Users,           group: 'admin' },
+  { id: 'settings',        label: 'Paramètres',         icon: Settings,        group: 'admin' },
 ];
 
 const GROUPS = [
@@ -153,30 +132,40 @@ const EVENT_COLOR_PRESETS = [
 ];
 
 const PROFILE_TEMPLATES = [
-  { id: 'artiste',   label: 'Artiste',    emoji: '🎨', desc: 'Instagram, TikTok, YouTube, Spotify',       theme_color: '#7c3aed|#db2777', bio: 'Artiste & créateur de contenu ✨',             platformKeys: ['instagram','tiktok','youtube','spotify'] },
-  { id: 'business',  label: 'Business',   emoji: '💼', desc: 'LinkedIn, Calendly, Email, Site web',       theme_color: '#0f172a|#1e40af', bio: 'Entrepreneur & consultant professionnel',      platformKeys: ['linkedin','calendly','email','website'] },
-  { id: 'createur',  label: 'Créateur',   emoji: '📱', desc: 'YouTube, TikTok, Instagram, X',            theme_color: '#0f0a1e|#2d1b69', bio: 'Créateur de contenu | Suivez mon aventure 🚀', platformKeys: ['youtube','tiktok','instagram','twitter'] },
-  { id: 'evenement', label: 'Événement',  emoji: '🎉', desc: 'Mode événement activé + compte à rebours', theme_color: '#1a0a00|#7c2d12', bio: 'Rejoins-nous pour un événement exceptionnel !', platformKeys: ['instagram','facebook','whatsapp'], is_event: true, event_color1: '#ff6b35', event_color2: '#f7c948' },
-  { id: 'musique',   label: 'Musique',    emoji: '🎵', desc: 'Spotify, Apple Music, SoundCloud',         theme_color: '#064e3b|#065f46', bio: 'Musicien | Écoutez mes derniers titres 🎶',    platformKeys: ['spotify','applemusic','soundcloud','youtube'] },
-  { id: 'gaming',    label: 'Gaming',     emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',         theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together",   platformKeys: ['twitch','discord','tiktok','youtube'] },
+  { id: 'artiste',   label: 'Artiste',   emoji: '🎨', desc: 'Instagram, TikTok, YouTube, Spotify',       theme_color: '#7c3aed|#db2777', bio: 'Artiste & créateur de contenu ✨',             platformKeys: ['instagram','tiktok','youtube','spotify'] },
+  { id: 'business',  label: 'Business',  emoji: '💼', desc: 'LinkedIn, Calendly, Email, Site web',       theme_color: '#0f172a|#1e40af', bio: 'Entrepreneur & consultant professionnel',      platformKeys: ['linkedin','calendly','email','website'] },
+  { id: 'createur',  label: 'Créateur',  emoji: '📱', desc: 'YouTube, TikTok, Instagram, X',            theme_color: '#0f0a1e|#2d1b69', bio: 'Créateur de contenu | Suivez mon aventure 🚀', platformKeys: ['youtube','tiktok','instagram','twitter'] },
+  { id: 'evenement', label: 'Événement', emoji: '🎉', desc: 'Mode événement activé + compte à rebours', theme_color: '#1a0a00|#7c2d12', bio: 'Rejoins-nous pour un événement exceptionnel !', platformKeys: ['instagram','facebook','whatsapp'], is_event: true, event_color1: '#ff6b35', event_color2: '#f7c948' },
+  { id: 'musique',   label: 'Musique',   emoji: '🎵', desc: 'Spotify, Apple Music, SoundCloud',         theme_color: '#064e3b|#065f46', bio: 'Musicien | Écoutez mes derniers titres 🎶',    platformKeys: ['spotify','applemusic','soundcloud','youtube'] },
+  { id: 'gaming',    label: 'Gaming',    emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',         theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together",   platformKeys: ['twitch','discord','tiktok','youtube'] },
 ];
+
+// ─── Composant placeholder pour modules optionnels ───────────────────────────
+function ComingSoon({ label }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'360px', gap:'12px', textAlign:'center', padding:'40px' }}>
+      <div style={{ width:'64px', height:'64px', borderRadius:'18px', background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'28px' }}>🚧</div>
+      <p style={{ color:'white', fontSize:'18px', fontWeight:700, margin:0 }}>{label}</p>
+      <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'13px', margin:0 }}>Ce module sera bientôt disponible.</p>
+    </div>
+  );
+}
 
 // ─── MiniStat ─────────────────────────────────────────────────────────────────
 function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px', fontWeight: 500 }}>{label}</span>
-        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={13} color={color} />
+    <div style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', padding:'14px 16px', display:'flex', flexDirection:'column', gap:'8px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span style={{ color:'rgba(255,255,255,0.45)', fontSize:'11px', fontWeight:500 }}>{label}</span>
+        <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:color+'22', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <Icon size={13} color={color}/>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <span style={{ color: 'white', fontSize: '22px', fontWeight: 800, lineHeight: 1 }}>{value}</span>
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
+        <span style={{ color:'white', fontSize:'22px', fontWeight:800, lineHeight:1 }}>{value}</span>
         {trend && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', color: trendUp ? '#22c55e' : '#ef4444', fontSize: '11px', fontWeight: 600 }}>
-            {trendUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-            {trend}
+          <div style={{ display:'flex', alignItems:'center', gap:'3px', color:trendUp?'#22c55e':'#ef4444', fontSize:'11px', fontWeight:600 }}>
+            {trendUp ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{trend}
           </div>
         )}
       </div>
@@ -186,9 +175,9 @@ function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
 
 // ─── RealtimePanel ────────────────────────────────────────────────────────────
 function RealtimePanel({ profileId }) {
-  const [visitors, setVisitors] = useState([]);
-  const [connected, setConnected] = useState(false);
-  const [totalToday, setTotalToday] = useState(0);
+  const [visitors, setVisitors]         = useState([]);
+  const [connected, setConnected]       = useState(false);
+  const [totalToday, setTotalToday]     = useState(0);
   const [recentClicks, setRecentClicks] = useState([]);
 
   useEffect(() => {
@@ -197,26 +186,24 @@ function RealtimePanel({ profileId }) {
     supabase.from('profile_stats').select('id',{count:'exact',head:true}).eq('profile_id',profileId).eq('event_type','view').gte('created_at',today.toISOString()).then(({count})=>{ if(count) setTotalToday(count); });
     const channel = supabase.channel('realtime-admin-'+profileId)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'profile_stats'},(payload)=>{
-        const ev = payload.new;
+        const ev=payload.new;
         if(ev.profile_id!==profileId) return;
         if(ev.event_type==='view'){
           setTotalToday(p=>p+1);
           setVisitors(prev=>[{id:ev.id||Date.now(),country:ev.country_name||ev.country||'?',device:ev.device||'desktop',time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),referrer:ev.referrer||'direct'},...prev].slice(0,20));
         }
-        if(ev.event_type==='click'){
-          setRecentClicks(prev=>[{id:Date.now(),platform:ev.platform||'lien',time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})},...prev].slice(0,10));
-        }
+        if(ev.event_type==='click') setRecentClicks(prev=>[{id:Date.now(),platform:ev.platform||'lien',time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})},...prev].slice(0,10));
       }).subscribe((status)=>setConnected(status==='SUBSCRIBED'));
     return ()=>{ supabase.removeChannel(channel); setConnected(false); };
   },[profileId]);
 
-  const flagEmoji=(code)=>{ try{ return code&&code.length===2?String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397)):'🌐'; }catch{ return '🌐'; } };
+  const flagEmoji=(code)=>{ try{ return code&&code.length===2?String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397)):'🌐'; }catch{ return '🌐'; }};
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
       <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
         <div style={{display:'flex',alignItems:'center',gap:'8px',background:connected?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',border:'1px solid '+(connected?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'),borderRadius:'20px',padding:'5px 12px'}}>
-          <span style={{width:'7px',height:'7px',borderRadius:'50%',background:connected?'#22c55e':'#ef4444',display:'inline-block',animation:connected?'pulse-dot 2s infinite':'none'}}/>
+          <span style={{width:'7px',height:'7px',borderRadius:'50%',background:connected?'#22c55e':'#ef4444',display:'inline-block'}}/>
           <span style={{color:connected?'#22c55e':'#ef4444',fontSize:'12px',fontWeight:600}}>{connected?'Connecté':'Connexion…'}</span>
         </div>
         <span style={{color:'rgba(255,255,255,0.35)',fontSize:'12px'}}>Flux en direct — profil actif</span>
@@ -229,8 +216,7 @@ function RealtimePanel({ profileId }) {
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
         <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'16px',overflow:'hidden'}}>
           <div style={{padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'8px'}}>
-            <CircleDot size={13} color="#22c55e"/>
-            <span style={{color:'white',fontSize:'12px',fontWeight:700}}>Flux visiteurs</span>
+            <CircleDot size={13} color="#22c55e"/><span style={{color:'white',fontSize:'12px',fontWeight:700}}>Flux visiteurs</span>
           </div>
           <div style={{maxHeight:'280px',overflowY:'auto'}}>
             {visitors.length===0?(<div style={{padding:'28px 16px',textAlign:'center'}}><Wifi size={20} color="rgba(255,255,255,0.15)" style={{margin:'0 auto 8px'}}/><p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',margin:0}}>En attente de visiteurs…</p></div>)
@@ -248,8 +234,7 @@ function RealtimePanel({ profileId }) {
         </div>
         <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'16px',overflow:'hidden'}}>
           <div style={{padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'8px'}}>
-            <MousePointerClick size={13} color="#f59e0b"/>
-            <span style={{color:'white',fontSize:'12px',fontWeight:700}}>Clics plateformes</span>
+            <MousePointerClick size={13} color="#f59e0b"/><span style={{color:'white',fontSize:'12px',fontWeight:700}}>Clics plateformes</span>
           </div>
           <div style={{maxHeight:'280px',overflowY:'auto'}}>
             {recentClicks.length===0?(<div style={{padding:'28px 16px',textAlign:'center'}}><MousePointerClick size={20} color="rgba(255,255,255,0.15)" style={{margin:'0 auto 8px'}}/><p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',margin:0}}>Aucun clic récent</p></div>)
@@ -269,8 +254,8 @@ function RealtimePanel({ profileId }) {
 
 // ─── AnalyticsPanel ───────────────────────────────────────────────────────────
 function AnalyticsPanel({ profileId }) {
-  const [period, setPeriod] = useState('7d');
-  const [stats, setStats] = useState(null);
+  const [period, setPeriod]   = useState('7d');
+  const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [geoData, setGeoData] = useState([]);
   const [topLinks, setTopLinks] = useState([]);
@@ -282,25 +267,25 @@ function AnalyticsPanel({ profileId }) {
       const days = period==='7d'?7:period==='30d'?30:90;
       const from = new Date(); from.setDate(from.getDate()-days);
       const {data:viewsData} = await supabase.from('profile_stats').select('created_at,country,country_name,platform').eq('profile_id',profileId).gte('created_at',from.toISOString());
-      const {data:prevData} = await supabase.from('profile_stats').select('id').eq('profile_id',profileId).eq('event_type','view').gte('created_at',new Date(from.getTime()-days*86400000).toISOString()).lt('created_at',from.toISOString());
-      const views=(viewsData||[]).filter(r=>!r.platform);
-      const clicks=(viewsData||[]).filter(r=>r.platform);
-      const prevCount=prevData?.length||0;
-      const trend=prevCount>0?Math.round(((views.length-prevCount)/prevCount)*100):null;
+      const {data:prevData}  = await supabase.from('profile_stats').select('id').eq('profile_id',profileId).eq('event_type','view').gte('created_at',new Date(from.getTime()-days*86400000).toISOString()).lt('created_at',from.toISOString());
+      const views  = (viewsData||[]).filter(r=>!r.platform);
+      const clicks = (viewsData||[]).filter(r=>r.platform);
+      const prevCount = prevData?.length||0;
+      const trend = prevCount>0?Math.round(((views.length-prevCount)/prevCount)*100):null;
       setStats({views:views.length,clicks:clicks.length,ctr:views.length>0?Math.round((clicks.length/views.length)*100):0,trend,trendUp:trend!==null?trend>=0:true});
       const geoMap={};
-      views.forEach(r=>{const k=r.country_name||r.country||'Inconnu';geoMap[k]={count:(geoMap[k]?.count||0)+1,code:r.country};});
+      views.forEach(r=>{ const k=r.country_name||r.country||'Inconnu'; geoMap[k]={count:(geoMap[k]?.count||0)+1,code:r.country}; });
       setGeoData(Object.entries(geoMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6));
       const clickMap={};
-      clicks.forEach(r=>{clickMap[r.platform]=(clickMap[r.platform]||0)+1;});
+      clicks.forEach(r=>{ clickMap[r.platform]=(clickMap[r.platform]||0)+1; });
       setTopLinks(Object.entries(clickMap).sort((a,b)=>b[1]-a[1]).slice(0,6));
       setLoading(false);
     })();
   },[profileId,period]);
 
-  const flagEmoji=(code)=>{ try{ return code&&code.length===2?String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397)):'🌐'; }catch{ return '🌐'; } };
-  const maxGeo=geoData[0]?.[1]?.count||1;
-  const maxLink=topLinks[0]?.[1]||1;
+  const flagEmoji=(code)=>{ try{ return code&&code.length===2?String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397)):'🌐'; }catch{ return '🌐'; }};
+  const maxGeo  = geoData[0]?.[1]?.count||1;
+  const maxLink = topLinks[0]?.[1]||1;
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
@@ -318,15 +303,15 @@ function AnalyticsPanel({ profileId }) {
       {loading?(<div style={{display:'flex',justifyContent:'center',padding:'40px'}}><Loader2 size={24} className="animate-spin" color="rgba(99,102,241,0.6)"/></div>):(
         <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px'}}>
-            <MiniStat label="Vues totales" value={stats?.views||0} icon={Eye} color="#6366f1" trend={stats?.trend!==null?Math.abs(stats.trend)+'%':null} trendUp={stats?.trendUp}/>
-            <MiniStat label="Clics liens" value={stats?.clicks||0} icon={MousePointerClick} color="#f59e0b"/>
-            <MiniStat label="Taux de clic" value={(stats?.ctr||0)+'%'} icon={TrendingUp} color="#22c55e"/>
-            <MiniStat label="Pays atteints" value={geoData.length} icon={Globe} color="#0ea5e9"/>
+            <MiniStat label="Vues totales"  value={stats?.views||0}              icon={Eye}              color="#6366f1" trend={stats?.trend!==null?Math.abs(stats.trend)+'%':null} trendUp={stats?.trendUp}/>
+            <MiniStat label="Clics liens"   value={stats?.clicks||0}             icon={MousePointerClick} color="#f59e0b"/>
+            <MiniStat label="Taux de clic"  value={(stats?.ctr||0)+'%'}          icon={TrendingUp}       color="#22c55e"/>
+            <MiniStat label="Pays atteints" value={geoData.length}               icon={Globe}            color="#0ea5e9"/>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
             <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
               <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><Globe size={14} color="#0ea5e9"/><h3 style={{color:'white',fontSize:'13px',fontWeight:700,margin:0}}>Top pays</h3></div>
-              {geoData.length===0?(<p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>)
+              {geoData.length===0?<p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
               :geoData.map(([country,{count,code}])=>(
                 <div key={country} style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
                   <span style={{fontSize:'16px',width:'22px',flexShrink:0}}>{flagEmoji(code)}</span>
@@ -344,10 +329,10 @@ function AnalyticsPanel({ profileId }) {
             </div>
             <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
               <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><MousePointerClick size={14} color="#f59e0b"/><h3 style={{color:'white',fontSize:'13px',fontWeight:700,margin:0}}>Liens les plus cliqués</h3></div>
-              {topLinks.length===0?(<p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>)
+              {topLinks.length===0?<p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
               :topLinks.map(([platform,count])=>{
-                const p=PLATFORMS[platform]||{label:platform,color:'#6366f1'};
-                return (
+                const p=(PLATFORMS&&PLATFORMS[platform])||{label:platform,color:'#6366f1'};
+                return(
                   <div key={platform} style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
                     <div style={{width:'22px',height:'22px',borderRadius:'6px',background:p.color,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                       {p.icon?React.cloneElement(p.icon,{width:11,height:11}):<span style={{color:'white',fontSize:'7px',fontWeight:'bold'}}>{(p.label||'?')[0]}</span>}
@@ -374,12 +359,12 @@ function AnalyticsPanel({ profileId }) {
 
 // ─── LeadsCRMPanel ────────────────────────────────────────────────────────────
 function LeadsCRMPanel({ profileId }) {
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [showAddLead, setShowAddLead] = useState(false);
-  const [newLead, setNewLead] = useState({ name:'', email:'', phone:'', tag:'prospect', notes:'' });
+  const [leads,        setLeads]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [filter,       setFilter]       = useState('all');
+  const [search,       setSearch]       = useState('');
+  const [showAddLead,  setShowAddLead]  = useState(false);
+  const [newLead,      setNewLead]      = useState({ name:'', email:'', phone:'', tag:'prospect', notes:'' });
 
   const TAGS = [
     { id:'prospect', label:'Prospect',  color:'#6366f1' },
@@ -412,7 +397,6 @@ function LeadsCRMPanel({ profileId }) {
   const updateTag = async (id, tag) => {
     await supabase.from('leads').update({ tag }).eq('id', id);
     setLeads(prev => prev.map(l => l.id === id ? { ...l, tag } : l));
-    toast.success('Tag mis à jour');
   };
 
   const deleteLead = async (id) => {
@@ -424,9 +408,8 @@ function LeadsCRMPanel({ profileId }) {
 
   const filtered = leads.filter(l => {
     const q = search.toLowerCase();
-    const matchSearch = !q || (l.name||'').toLowerCase().includes(q) || (l.email||'').toLowerCase().includes(q);
-    const matchFilter = filter === 'all' || l.tag === filter;
-    return matchSearch && matchFilter;
+    return (!q || (l.name||'').toLowerCase().includes(q) || (l.email||'').toLowerCase().includes(q))
+        && (filter === 'all' || l.tag === filter);
   });
 
   const tagCounts = TAGS.reduce((acc, t) => { acc[t.id] = leads.filter(l => l.tag === t.id).length; return acc; }, {});
@@ -451,8 +434,7 @@ function LeadsCRMPanel({ profileId }) {
         {TAGS.map(t=>(
           <button key={t.id} onClick={()=>setFilter(filter===t.id?'all':t.id)}
             style={{display:'flex',alignItems:'center',gap:'6px',padding:'6px 12px',borderRadius:'20px',border:'1px solid '+(filter===t.id?t.color:'rgba(255,255,255,0.1)'),background:filter===t.id?t.color+'22':'rgba(255,255,255,0.04)',color:filter===t.id?'white':'rgba(255,255,255,0.5)',fontSize:'11px',fontWeight:600,cursor:'pointer'}}>
-            <span style={{width:'7px',height:'7px',borderRadius:'50%',background:t.color,flexShrink:0}}/>
-            {t.label}
+            <span style={{width:'7px',height:'7px',borderRadius:'50%',background:t.color,flexShrink:0}}/>{t.label}
             <span style={{background:'rgba(255,255,255,0.15)',borderRadius:'4px',padding:'0 5px',fontSize:'10px'}}>{tagCounts[t.id]||0}</span>
           </button>
         ))}
@@ -522,16 +504,14 @@ function LeadsCRMPanel({ profileId }) {
 function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, saving }) {
   const windowWidth = useWindowWidth();
   const isMob = windowWidth < 768;
-
   const navCards = [
     { section:'platforms',  label:'Plateformes', icon:Link2,       color:'#818cf8', bg:'rgba(99,102,241,0.18)',  sub:(profile?.links?.length||0)+' lien(s)' },
-    { section:'event',      label:'Événement',   icon:CalendarDays, color:'#facc15', bg:'rgba(234,179,8,0.18)',  sub:profile?.is_event?'Activé':'Désactivé' },
+    { section:'event',      label:'Événement',   icon:CalendarDays,color:'#facc15', bg:'rgba(234,179,8,0.18)',  sub:profile?.is_event?'Activé':'Désactivé' },
     { section:'analytics',  label:'Analytics',   icon:BarChart3,   color:'#c084fc', bg:'rgba(139,92,246,0.18)', sub:'Actifs' },
     { section:'marketplace',label:'Marketplace', icon:ShoppingBag, color:'#4ade80', bg:'rgba(34,197,94,0.18)',  sub:'∞ produits max' },
     { section:'leads',      label:'CRM',         icon:UserPlus,    color:'#f472b6', bg:'rgba(236,72,153,0.18)', sub:'Actif' },
     { section:'documents',  label:'Documents',   icon:FileText,    color:'#9ca3af', bg:'rgba(107,114,128,0.25)',sub:'10 doc(s) max' },
   ];
-
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
       <div>
@@ -544,29 +524,25 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
           <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'11px 14px',display:'flex',alignItems:'center',gap:'10px'}}>
             <AtSign size={13} color="rgba(255,255,255,0.4)"/>
             <span style={{color:'rgba(255,255,255,0.45)',fontSize:'12px',flexShrink:0}}>@</span>
-            <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username"
-              style={{background:'transparent',border:'none',color:'white',fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
+            <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username" style={{background:'transparent',border:'none',color:'white',fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
           </div>
           <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'11px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
               <BadgeCheck size={13} color="rgba(255,255,255,0.4)"/>
               <span style={{color:'rgba(255,255,255,0.6)',fontSize:'12px'}}>Badge vérifié</span>
             </div>
-            <button onClick={()=>onUpdate({is_verified:!profile?.is_verified})}
-              style={{width:'38px',height:'20px',borderRadius:'100px',background:profile?.is_verified?'#22c55e':'rgba(255,255,255,0.1)',border:'none',cursor:'pointer',position:'relative',transition:'background 0.3s',flexShrink:0}}>
+            <button onClick={()=>onUpdate({is_verified:!profile?.is_verified})} style={{width:'38px',height:'20px',borderRadius:'100px',background:profile?.is_verified?'#22c55e':'rgba(255,255,255,0.1)',border:'none',cursor:'pointer',position:'relative',transition:'background 0.3s',flexShrink:0}}>
               <div style={{width:'14px',height:'14px',borderRadius:'50%',background:'white',position:'absolute',top:'3px',left:profile?.is_verified?'21px':'3px',transition:'left 0.3s'}}/>
             </button>
           </div>
           <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'11px 14px',display:'flex',alignItems:'center',gap:'8px'}}>
             <CalendarClock size={13} color="rgba(255,255,255,0.4)"/>
             <span style={{color:'rgba(255,255,255,0.45)',fontSize:'12px',flexShrink:0}}>Exp. :</span>
-            <input type="date" value={profile?.expiry_date||''} onChange={e=>onUpdate({expiry_date:e.target.value})}
-              style={{background:'transparent',border:'none',color:'white',fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
+            <input type="date" value={profile?.expiry_date||''} onChange={e=>onUpdate({expiry_date:e.target.value})} style={{background:'transparent',border:'none',color:'white',fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
           </div>
           {hasChanges&&(
             <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'10px 14px'}}>
-              <button onClick={onSave} disabled={saving}
-                style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',width:'100%',padding:'8px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
+              <button onClick={onSave} disabled={saving} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',width:'100%',padding:'8px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
                 {saving?<Loader2 size={12} className="animate-spin"/>:<Save size={12}/>} Sauvegarder
               </button>
             </div>
@@ -579,8 +555,8 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
         {navCards.map(card=>(
           <button key={card.section} onClick={()=>onNavigate(card.section)}
             style={{display:'flex',flexDirection:'column',gap:'14px',padding:'20px 18px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:'16px',cursor:'pointer',textAlign:'left',transition:'all 0.15s'}}
-            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.borderColor='rgba(255,255,255,0.16)';}}
-            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.borderColor='rgba(255,255,255,0.09)';}}>
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.transform='translateY(-2px)';}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.transform='translateY(0)';}}>
             <div style={{width:'40px',height:'40px',borderRadius:'11px',background:card.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
               <card.icon size={18} color={card.color}/>
             </div>
@@ -608,19 +584,12 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
 
   return (
     <>
-      {isMobile && !collapsed && (
-        <div onClick={onToggle} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',zIndex:19}}/>
-      )}
-      <div style={{...sidebarStyle, background:'rgba(6,4,18,0.97)', backdropFilter:'blur(24px)', borderRight:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:isMobile&&!collapsed?'8px 0 40px rgba(0,0,0,0.7)':'none'}}>
-        <div style={{padding:collapsed&&!isMobile?'18px 0':'16px', display:'flex', alignItems:'center', gap:'10px', borderBottom:'1px solid rgba(255,255,255,0.06)', justifyContent:collapsed&&!isMobile?'center':'space-between', flexShrink:0}}>
+      {isMobile && !collapsed && <div onClick={onToggle} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',zIndex:19}}/>}
+      <div style={{...sidebarStyle,background:'rgba(6,4,18,0.97)',backdropFilter:'blur(24px)',borderRight:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:isMobile&&!collapsed?'8px 0 40px rgba(0,0,0,0.7)':'none'}}>
+        <div style={{padding:collapsed&&!isMobile?'18px 0':'16px',display:'flex',alignItems:'center',gap:'10px',borderBottom:'1px solid rgba(255,255,255,0.06)',justifyContent:collapsed&&!isMobile?'center':'space-between',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:'10px',overflow:'hidden'}}>
             <img src="/Logo_SocialApp.png" alt="" style={{width:'30px',height:'30px',borderRadius:'9px',objectFit:'cover',flexShrink:0}}/>
-            {(!collapsed||isMobile)&&(
-              <div style={{overflow:'hidden'}}>
-                <span style={{color:'white',fontSize:'14px',fontWeight:800,display:'block',lineHeight:1,whiteSpace:'nowrap'}}>SocialApp</span>
-                <span style={{color:'rgba(255,255,255,0.3)',fontSize:'9px',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase'}}>Admin</span>
-              </div>
-            )}
+            {(!collapsed||isMobile)&&<div style={{overflow:'hidden'}}><span style={{color:'white',fontSize:'14px',fontWeight:800,display:'block',lineHeight:1,whiteSpace:'nowrap'}}>SocialApp</span><span style={{color:'rgba(255,255,255,0.3)',fontSize:'9px',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase'}}>Admin</span></div>}
           </div>
           <button onClick={onToggle} style={{width:'28px',height:'28px',borderRadius:'8px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
             {collapsed&&!isMobile?<ChevronRight size={13} color="rgba(255,255,255,0.6)"/>:<ChevronLeft size={13} color="rgba(255,255,255,0.6)"/>}
@@ -652,13 +621,11 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
         <div style={{flex:1,overflowY:'auto',overflowX:'hidden',padding:'8px'}}>
           {GROUPS.map(group=>{
             const items=(search?filteredNav:SIDEBAR_NAV).filter(n=>n.group===group.id);
-            if(items.length===0) return null;
+            if(!items.length) return null;
             return(
               <div key={group.id} style={{marginBottom:'4px'}}>
-                {collapsed&&!isMobile
-                  ?<div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'6px 4px 8px'}}/>
-                  :<p style={{color:'rgba(255,255,255,0.2)',fontSize:'9px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'8px 10px 4px',margin:0}}>{group.label}</p>
-                }
+                {collapsed&&!isMobile?<div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'6px 4px 8px'}}/>
+                :<p style={{color:'rgba(255,255,255,0.2)',fontSize:'9px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'8px 10px 4px',margin:0}}>{group.label}</p>}
                 {items.map(item=>{
                   const isActive=activeSection===item.id;
                   return(
@@ -718,9 +685,8 @@ function UserActivationPanel() {
   });
   const filtered = allProfiles.filter(p=>{
     const q=search.toLowerCase();
-    const matchSearch=!q||(p.display_name||'').toLowerCase().includes(q)||(p.username||'').toLowerCase().includes(q);
-    const matchFilter=filter==='all'||(filter==='pending'&&!p.is_activated)||(filter==='active'&&p.is_activated);
-    return matchSearch&&matchFilter;
+    return (!q||(p.display_name||'').toLowerCase().includes(q)||(p.username||'').toLowerCase().includes(q))
+        && (filter==='all'||(filter==='pending'&&!p.is_activated)||(filter==='active'&&p.is_activated));
   });
   const pendingCount=allProfiles.filter(p=>!p.is_activated).length;
   const activeCount=allProfiles.filter(p=>p.is_activated).length;
@@ -737,9 +703,9 @@ function UserActivationPanel() {
         </button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'10px'}}>
-        <MiniStat label="Total" value={allProfiles.length} icon={Users} color="#a78bfa"/>
-        <MiniStat label="Activés" value={activeCount} icon={ShieldCheck} color="#22c55e"/>
-        <MiniStat label="En attente" value={pendingCount} icon={Clock} color="#f97316"/>
+        <MiniStat label="Total"      value={allProfiles.length} icon={Users}       color="#a78bfa"/>
+        <MiniStat label="Activés"    value={activeCount}        icon={ShieldCheck} color="#22c55e"/>
+        <MiniStat label="En attente" value={pendingCount}       icon={Clock}       color="#f97316"/>
       </div>
       <div style={{display:'flex',gap:'8px'}}>
         <div style={{position:'relative',flex:1}}>
@@ -772,10 +738,10 @@ function UserActivationPanel() {
 
 // ─── PlatformsPanel ───────────────────────────────────────────────────────────
 function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDialog }) {
-  const [linksPage, setLinksPage] = useState(0);
-  const dragIndexRef = useRef(null);
+  const [linksPage, setLinksPage]     = useState(0);
+  const dragIndexRef                  = useRef(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
-  const links = localProfile?.links || [];
+  const links      = localProfile?.links || [];
   const pagedLinks = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
 
@@ -846,9 +812,9 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
 // ─── ProfilesPanel ────────────────────────────────────────────────────────────
 function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete }) {
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const filtered = profiles.filter(p=>!search||(p.display_name||'').toLowerCase().includes(search.toLowerCase())||(p.username||'').toLowerCase().includes(search.toLowerCase()));
-  const paged = filtered.slice(page*PROFILES_PER_PAGE,(page+1)*PROFILES_PER_PAGE);
+  const [page,   setPage]   = useState(0);
+  const filtered   = profiles.filter(p=>!search||(p.display_name||'').toLowerCase().includes(search.toLowerCase())||(p.username||'').toLowerCase().includes(search.toLowerCase()));
+  const paged      = filtered.slice(page*PROFILES_PER_PAGE,(page+1)*PROFILES_PER_PAGE);
   const totalPages = Math.ceil(filtered.length/PROFILES_PER_PAGE);
 
   return (
@@ -870,8 +836,7 @@ function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete
         {paged.map(p=>{
           const isActive=p.id===activeProfileId;
           return(
-            <div key={p.id} onClick={()=>onSwitch(p)}
-              style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',background:isActive?'rgba(99,102,241,0.12)':'rgba(255,255,255,0.04)',border:'1px solid '+(isActive?'rgba(99,102,241,0.35)':'rgba(255,255,255,0.07)'),borderRadius:'14px',cursor:'pointer'}}>
+            <div key={p.id} onClick={()=>onSwitch(p)} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',background:isActive?'rgba(99,102,241,0.12)':'rgba(255,255,255,0.04)',border:'1px solid '+(isActive?'rgba(99,102,241,0.35)':'rgba(255,255,255,0.07)'),borderRadius:'14px',cursor:'pointer'}}>
               <div style={{width:'38px',height:'38px',borderRadius:'10px',background:isActive?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,color:'white',flexShrink:0,overflow:'hidden'}}>
                 {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(p.display_name?.[0]?.toUpperCase()||'?')}
               </div>
@@ -1030,8 +995,7 @@ function TemplatesModal({ onClose, onApply }) {
           {PROFILE_TEMPLATES.map(t=>{
             const [c1,c2]=t.theme_color.split('|');
             return(
-              <button key={t.id} onClick={()=>onApply(t)}
-                style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px',textAlign:'left',cursor:'pointer',transition:'all 0.15s'}}>
+              <button key={t.id} onClick={()=>onApply(t)} style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px',textAlign:'left',cursor:'pointer',transition:'all 0.15s'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
                   <div style={{width:'44px',height:'44px',borderRadius:'13px',background:'linear-gradient(135deg,'+c1+','+c2+')',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',flexShrink:0}}>{t.emoji}</div>
                   <div>
@@ -1052,23 +1016,20 @@ function TemplatesModal({ onClose, onApply }) {
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const queryClient = useQueryClient();
-  const { signOut, user } = useAuth();
+  const { signOut, user, isAdmin } = useAuth();
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
+  const { t } = useTranslation();
 
-  const { t, i18n } = useTranslation();
-  const language = i18n.language;
-  const isRtl = language === 'ar';
-
-  const [activeSection, setActiveSection]       = useState('overview');
-  const [sidebarCollapsed, setSidebarCollapsed]  = useState(true);
-  const [showAddDialog, setShowAddDialog]        = useState(false);
-  const [showPreview, setShowPreview]            = useState(false);
-  const [localProfile, setLocalProfile]          = useState(null);
-  const [hasChanges, setHasChanges]              = useState(false);
-  const [activeProfileId, setActiveProfileId]    = useState(null);
-  const [showTemplates, setShowTemplates]        = useState(false);
-  const [showNotifPanel, setShowNotifPanel]      = useState(false);
+  const [activeSection,    setActiveSection]    = useState('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [showAddDialog,    setShowAddDialog]    = useState(false);
+  const [showPreview,      setShowPreview]      = useState(false);
+  const [localProfile,     setLocalProfile]     = useState(null);
+  const [hasChanges,       setHasChanges]       = useState(false);
+  const [activeProfileId,  setActiveProfileId]  = useState(null);
+  const [showTemplates,    setShowTemplates]    = useState(false);
+  const [showNotifPanel,   setShowNotifPanel]   = useState(false);
   const notifPanelRef  = useRef(null);
   const notifCountRef  = useRef(0);
   const notifThreshold = (() => { try { return parseInt(localStorage.getItem('notif_threshold') || '10'); } catch { return 10; } })();
@@ -1090,10 +1051,7 @@ export default function Dashboard() {
     const colors = parseColors(localProfile.theme_color);
     if (localProfile.bg_image_url) {
       html.style.backgroundImage = 'url(' + localProfile.bg_image_url + ')';
-      html.style.backgroundSize = 'cover';
-      html.style.backgroundPosition = 'center';
-      html.style.backgroundAttachment = 'fixed';
-      html.style.background = '';
+      html.style.backgroundSize = 'cover'; html.style.backgroundPosition = 'center'; html.style.backgroundAttachment = 'fixed'; html.style.background = '';
     } else {
       html.style.backgroundImage = 'none';
       html.style.background = 'linear-gradient(135deg,' + colors.bg1 + ' 0%,' + colors.bg2 + ' 100%)';
@@ -1141,13 +1099,7 @@ export default function Dashboard() {
   const handleCreateProfile = () => {
     if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
     const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
-    createMutation.mutate({
-      user_id: user.id,
-      display_name: 'Profil ' + ((profiles.length || 0) + 1),
-      bio: '', links: [], theme_color: '#6366f1',
-      expiry_date: expiry.toISOString().split('T')[0],
-      is_verified: false, is_event: false,
-    });
+    createMutation.mutate({ user_id: user.id, display_name: 'Profil ' + ((profiles.length || 0) + 1), bio: '', links: [], theme_color: '#6366f1', expiry_date: expiry.toISOString().split('T')[0], is_verified: false, is_event: false });
   };
 
   const handleSwitchProfile = useCallback((p) => {
@@ -1214,74 +1166,54 @@ export default function Dashboard() {
   const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
   const currentNav = SIDEBAR_NAV.find(n => n.id === activeSection);
 
+  // ── renderSection : tous les cas couverts, pas de variable undefined ────────
   const renderSection = () => {
     switch (activeSection) {
-      case 'overview':     return <OverviewPanel profile={localProfile} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending}/>;
-      case 'realtime':     return <RealtimePanel profileId={localProfile.id}/>;
-      case 'analytics':    return <AnalyticsPanel profileId={localProfile.id}/>;
-      case 'leads':        return <LeadsCRMPanel profileId={localProfile.id}/>;
-      case 'profiles':     return <ProfilesPanel profiles={profiles} activeProfileId={activeProfileId} onSwitch={handleSwitchProfile} onCreate={handleCreateProfile} onDelete={handleDeleteProfile}/>;
-      case 'platforms':    return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog}/>;
-      case 'event':        return <EventPanel localProfile={localProfile} updateLocal={updateLocal}/>;
-      case 'eventmanager': return <EventManager profileId={localProfile.id}/>;
-      case 'marketplace':  return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} userPlan="admin"/></div>;
-      case 'documents':    return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan||'admin'}/></div>;
-      case 'automations':  return <AutomationsPanel profileId={localProfile.id}/>;
-      case 'integrations': return <IntegrationsPanel profileId={localProfile.id}/>;
-      case 'accounts':     return <UserActivationPanel/>;
-      case 'settings':     return <UserSettingsPanel/>;
-      default: return null;
+      case 'overview':        return <OverviewPanel profile={localProfile} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending}/>;
+      case 'realtime':        return <RealtimePanel profileId={localProfile.id}/>;
+      case 'analytics':       return <AnalyticsPanel profileId={localProfile.id}/>;
+      case 'leads':           return <LeadsCRMPanel profileId={localProfile.id}/>;
+      case 'whatsapp-crm':    return <WhatsappCRMPanel profileId={localProfile.id}/>;
+      case 'automations':     return <AutomationsPanel profileId={localProfile.id}/>;
+      case 'integrations':    return <IntegrationsPanel profileId={localProfile.id}/>;
+      // modules optionnels — affiche ComingSoon si non disponibles
+      case 'boost':           return BoostPanel ? <BoostPanel profileId={localProfile.id} profile={localProfile}/> : <ComingSoon label="Boost"/>;
+      case 'meta':            return MetaIntegrationPanel ? <MetaIntegrationPanel profile={localProfile}/> : <ComingSoon label="Connexion Meta"/>;
+      case 'boost-analytics': return BoostAnalyticsPanel ? <BoostAnalyticsPanel profile={localProfile}/> : <ComingSoon label="Analytics Boost"/>;
+      case 'promotions': return ( <PromotionsDashboard profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} /> );
+      case 'profiles':        return <ProfilesPanel profiles={profiles} activeProfileId={activeProfileId} onSwitch={handleSwitchProfile} onCreate={handleCreateProfile} onDelete={handleDeleteProfile}/>;
+      case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog}/>;
+      case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal}/>;
+      case 'eventmanager':    return <EventManager profileId={localProfile.id}/>;
+      case 'marketplace':     return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} userPlan="admin"/></div>;
+      case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan||'admin'}/></div>;
+      case 'accounts':        return <UserActivationPanel/>;
+      case 'settings':        return <UserSettingsPanel/>;
+      default:                return null;
     }
   };
 
   return (
-    <div style={{
-      height: '100dvh',
-      minHeight: '100dvh',
-      display: 'flex',
-      position: 'relative',
-      overflowX: 'hidden',
-    }}>
+   <div style={{ height:'100dvh', minHeight:'100dvh', display:'flex', position:'relative', overflowX:'hidden', background:'#040210' }}>
       <div style={{ position:'relative', zIndex:10, flexShrink:0, width:isMobile?0:undefined }}>
-        <Sidebar
-          activeSection={activeSection}
-          onNavigate={setActiveSection}
-          profiles={profiles}
-          activeProfileId={activeProfileId}
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(v => !v)}
-          isMobile={isMobile}
-        />
+        <Sidebar activeSection={activeSection} onNavigate={setActiveSection} profiles={profiles} activeProfileId={activeProfileId} collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)} isMobile={isMobile}/>
       </div>
 
-      <div style={{
-        flex: 1,
-        height: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 0,
-        position: 'relative',
-        zIndex: 1,
-        overflowX: 'hidden',
-        overflowY: 'hidden',
-      }}>
+      <div style={{ flex:1, height:'100dvh', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1, overflowX:'hidden', overflowY:'hidden' }}>
+        {/* Top bar */}
         <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(4,2,16,0.7)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'28px', height:'28px', borderRadius:'8px', objectFit:'cover', flexShrink:0 }}/>}
-            <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0 }}>{currentNav?.label || t('dashboard_title')}</h2>
-            {hasChanges && (
-              <span style={{ background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.3)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600 }}>
-                {t('unsaved')}
-              </span>
-            )}
+            <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0 }}>{currentNav?.label || 'Dashboard'}</h2>
+            {hasChanges && <span style={{ background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.3)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600 }}>{t('unsaved')}</span>}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal}/>
-            <button onClick={() => setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
+            <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Eye size={13}/>{!isMobile && t('preview')}
             </button>
             <div ref={notifPanelRef} style={{ position:'relative' }}>
-              <button onClick={() => setShowNotifPanel(v => !v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.07)', border:'1px solid '+(notifGranted?'rgba(34,197,94,0.3)':'rgba(255,255,255,0.12)'), borderRadius:'9px', cursor:'pointer' }}>
+              <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.07)', border:'1px solid '+(notifGranted?'rgba(34,197,94,0.3)':'rgba(255,255,255,0.12)'), borderRadius:'9px', cursor:'pointer' }}>
                 {notifGranted ? <Bell size={14} color="#22c55e"/> : <BellOff size={14} color="rgba(255,255,255,0.5)"/>}
               </button>
               <AnimatePresence>
@@ -1290,10 +1222,10 @@ export default function Dashboard() {
                     style={{ position:'absolute', top:'calc(100% + 10px)', right:0, background:'rgba(10,8,25,0.97)', backdropFilter:'blur(20px)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'18px', padding:'18px', minWidth:'260px', zIndex:50, boxShadow:'0 16px 48px rgba(0,0,0,0.6)' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
                       <span style={{ color:'white', fontSize:'13px', fontWeight:600 }}>Notifications push</span>
-                      <button onClick={() => setShowNotifPanel(false)} style={{ background:'rgba(255,255,255,0.08)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)', width:'24px', height:'24px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={13}/></button>
+                      <button onClick={()=>setShowNotifPanel(false)} style={{ background:'rgba(255,255,255,0.08)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)', width:'24px', height:'24px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={13}/></button>
                     </div>
                     {!notifGranted
-                      ? <button onClick={async () => { const p = await Notification.requestPermission(); if (p === 'granted') { toast.success('Notifications activées !'); setShowNotifPanel(false); } }} style={{ width:'100%', padding:'10px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
+                      ? <button onClick={async()=>{ const p=await Notification.requestPermission(); if(p==='granted'){ toast.success('Notifications activées !'); setShowNotifPanel(false); }}} style={{ width:'100%', padding:'10px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
                       : <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'12px', margin:0, textAlign:'center' }}>✅ Notifications actives</p>
                     }
                   </motion.div>
@@ -1310,6 +1242,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Zone scrollable */}
         <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':'24px', paddingBottom:isMobile?'100px':'24px' }}>
           <AnimatePresence>
             <motion.div key={activeSection} initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:0.12 }}>
@@ -1319,17 +1252,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {isMobile && (
-        <MobileNav
-          activeSection={activeSection}
-          onNavigate={setActiveSection}
-          profile={localProfile}
-        />
-      )}
-
-      {showPreview && <ProfilePreview profile={localProfile} onClose={() => setShowPreview(false)}/>}
+      {isMobile && <MobileNav activeSection={activeSection} onNavigate={setActiveSection} profile={localProfile}/>}
+      {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)}/>}
       <AnimatePresence>
-        {showTemplates && <TemplatesModal onClose={() => setShowTemplates(false)} onApply={applyTemplate}/>}
+        {showTemplates && <TemplatesModal onClose={()=>setShowTemplates(false)} onApply={applyTemplate}/>}
       </AnimatePresence>
 
       <style>{`

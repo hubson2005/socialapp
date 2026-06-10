@@ -2,6 +2,40 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
+// ── Templates de notifications Boost ──────────────────────────────
+export const BOOST_NOTIF_TEMPLATES = [
+  {
+    id: 'boost_new_follower',
+    label: 'Nouveau follower',
+    trigger_type: 'new_follower',
+    message: '🎉 Bonjour {{nom}} ! Vous avez un nouveau follower sur SocialApp. Consultez votre profil : {{lien}}',
+  },
+  {
+    id: 'boost_promo_active',
+    label: 'Boost activé',
+    trigger_type: 'boost_active',
+    message: '🚀 Salut {{nom}} ! Votre boost est en ligne. Suivez vos résultats ici : {{lien}}',
+  },
+  {
+    id: 'boost_expiry',
+    label: 'Boost expiré',
+    trigger_type: 'boost_expired',
+    message: '⏳ Bonjour {{nom}}, votre boost SocialApp a expiré. Renouvelez-le ici : {{lien}}',
+  },
+  {
+    id: 'boost_payment_confirm',
+    label: 'Paiement confirmé',
+    trigger_type: 'payment_confirmed',
+    message: '✅ Paiement reçu ! Votre boost {{plan}} est activé. Merci {{nom}} 🙏',
+  },
+  {
+    id: 'boost_payment_failed',
+    label: 'Paiement échoué',
+    trigger_type: 'payment_failed',
+    message: '❌ Bonjour {{nom}}, votre paiement n\'a pas abouti. Réessayez ici : {{lien}}',
+  },
+]
+
 export function useWhatsappCRM() {
   const [contacts,  setContacts]  = useState([])
   const [campaigns, setCampaigns] = useState([])
@@ -80,7 +114,6 @@ export function useWhatsappCRM() {
         message,
         direction: 'out',
       }])
-      // Incrémenter compteur si appartient à une campagne active
       return { reason: 'sent' }
     } catch (e) {
       throw new Error('Erreur envoi : ' + e.message)

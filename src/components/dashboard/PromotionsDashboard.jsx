@@ -280,15 +280,18 @@ export default function PromotionsDashboard({ profile, isAdmin = false, onUpdate
           {activeTab === 'analytics' && (
             <BoostAnalyticsPanel profile={profile} />
           )}
-          {activeTab === 'meta' && (
-            <MetaIntegrationPanel profile={profile} isAdmin={isAdmin} />
-          )}
+         {activeTab === 'meta' && (
+  <MetaIntegrationPanel profile={profile} isAdmin={isAdmin} />
+)}
           {activeTab === 'whatsapp' && (
-            <WhatsAppPanel
-              profile={profile}
-              onUpdate={(updates) => {
-                onUpdateProfile?.(updates);
-                if (updates.whatsapp_phone) setHasWhatsApp(true);
+  <WhatsAppPanel
+    profile={profile}
+    onUpdate={(updates) => {
+      // On met à jour uniquement l'état local du PromotionsDashboard
+      // sans remonter au dashboard parent (évite le "unsaved" et le Save topbar)
+      if (updates.whatsapp_phone !== undefined) {
+        setHasWhatsApp(!!updates.whatsapp_phone);
+      }
               }}
             />
           )}

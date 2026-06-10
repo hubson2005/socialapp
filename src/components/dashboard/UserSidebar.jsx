@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Lock, Crown, Search, X,
+  ChevronLeft, ChevronRight, Lock, Crown, BarChart3, Search, X,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
+  Image, Loader2,
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
@@ -16,10 +17,14 @@ export const USER_NAV = [
   { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null                        },
   { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null                        },
   { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null                        },
+  { id:'meta', label:'Connexion Meta', icon:Zap, group:'crm' },
   { id: 'crm',           label: 'CRM / Leads',     icon: Users,           group: 'business',  locked: 'business', path: null                        },
   { id: 'whatsapp-crm',  label: 'WhatsApp CRM',    icon: MessageCircle,   group: 'business',  locked: 'business', path: '/dashboard/whatsapp-crm'   },
   { id: 'automations',   label: 'Automatisations', icon: Zap,             group: 'business',  locked: 'business', path: null                        },
   { id: 'integrations',  label: 'Intégrations',    icon: GitBranch,       group: 'business',  locked: 'business', path: null                        },
+  { id: 'boost', label: 'Boost & Promo', icon: Zap, group: 'crm', badge: 'NEW' },
+  { id: 'boost-analytics', label: 'Analytics Boost', icon: BarChart3, group: 'crm' },
+  { id: 'promotions', label: 'Promotions', icon: Zap, group: 'crm', badge: 'NEW' },
   { id: 'settings',      label: 'Paramètres',      icon: Settings,        group: 'admin',     locked: null,       path: null                        },
 ];
 
@@ -27,14 +32,12 @@ export const USER_GROUPS = [
   { id: 'main',      label: 'Menu'      },
   { id: 'content',   label: 'Contenu'   },
   { id: 'analytics', label: 'Analytics' },
+  { id: 'crm',       label: 'Boost & CRM' },  // ← ligne ajoutée
   { id: 'business',  label: 'Business'  },
   { id: 'admin',     label: 'Compte'    },
 ];
 
-// Plan order — exporté pour usage dans UserDashboard
 export const PLAN_ORDER = { basic: 0, événement: 0, pro: 1, business: 2 };
-
-// Rang maximum parmi tous les plans
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
 // ─── UserSidebar ──────────────────────────────────────────────────────────────
@@ -47,11 +50,13 @@ export default function UserSidebar({
   collapsed,
   onToggle,
   isMobile,
+  onBgUpload,
+  onBgRemove,
+  bgImageUrl,
+  uploadingBg,
 }) {
   const [search, setSearch] = useState('');
   const currentOrder = PLAN_ORDER[plan] ?? 0;
-
-  // L'utilisateur est sur le plan le plus élevé → pas de bouton "Changer d'offre"
   const isMaxPlan = currentOrder >= MAX_PLAN_ORDER;
 
   const isNavLocked = (item) => {
@@ -70,13 +75,15 @@ export default function UserSidebar({
   };
 
   const desktopWidth = collapsed ? 64 : 220;
-
   const { t } = useTranslation();
 
   const sidebarStyle = isMobile
     ? {
         position: 'fixed', top: 0, left: 0,
-        width: '260px', height: '100vh',
+        width: '260px',
+        // FIX 1 : 100dvh prend en compte la barre du navigateur mobile
+        // évite que le footer soit coupé sur iOS Safari / Chrome Android
+        height: '100dvh',
         transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
         zIndex: 20,
@@ -93,7 +100,6 @@ export default function UserSidebar({
 
   return (
     <>
-      {/* Overlay mobile */}
       {isMobile && !collapsed && (
         <div
           onClick={onToggle}
@@ -239,7 +245,15 @@ export default function UserSidebar({
         )}
 
         {/* ── Navigation ── */}
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px' }}>
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: '8px',
+          // FIX 2 : sans minHeight: 0, un enfant flex peut dépasser sa zone allouée
+          // et pousser le footer (Image de fond + Infos plan) hors de l'écran sur mobile
+          minHeight: 0,
+        }}>
           {USER_GROUPS.map(group => {
             const items = (search ? filtered : USER_NAV).filter(n => n.group === group.id);
             if (!items.length) return null;
@@ -340,7 +354,6 @@ export default function UserSidebar({
                     </button>
                   );
 
-                  // Si l'item a un path et n'est pas locked → on wrappe avec <Link>
                   return item.path && !locked
                     ? (
                       <Link
@@ -359,9 +372,48 @@ export default function UserSidebar({
           })}
         </div>
 
-        {/* ── Footer plan ── */}
+        {/* ── Footer ── */}
         {(!collapsed || isMobile) && (
           <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+
+            {/* ── Bouton image de fond ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+              <label style={{
+                flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
+                background: bgImageUrl ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
+                border: '1px solid ' + (bgImageUrl ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)'),
+                borderRadius: '8px', padding: '7px 10px', cursor: 'pointer',
+                position: 'relative',
+              }}>
+                {uploadingBg
+                  ? <Loader2 size={12} color="#a78bfa" className="animate-spin" />
+                  : <Image size={12} color={bgImageUrl ? '#a78bfa' : 'rgba(255,255,255,0.4)'} />
+                }
+                <span style={{ color: bgImageUrl ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600 }}>
+                  {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
+                </span>
+                <input
+                  type="file" accept="image/*"
+                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                  onChange={onBgUpload}
+                  disabled={uploadingBg}
+                />
+              </label>
+              {bgImageUrl && (
+                <button
+                  onClick={onBgRemove}
+                  style={{
+                    width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '8px', cursor: 'pointer', flexShrink: 0,
+                  }}
+                >
+                  <X size={11} color="#f87171" />
+                </button>
+              )}
+            </div>
+
+            {/* ── Infos plan ── */}
             <div style={{
               background: limits.color + '18',
               border: '1px solid ' + limits.color + '44',
@@ -379,7 +431,6 @@ export default function UserSidebar({
               <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: isMaxPlan ? 0 : '0 0 6px' }}>
                 {limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits
               </p>
-              {/* Masqué si l'utilisateur est déjà sur le plan maximum */}
               {!isMaxPlan && (
                 <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ff8c00', fontSize: '10px', fontWeight: 600, textDecoration: 'none' }}>
                   <Crown size={10} /> Changer d'offre

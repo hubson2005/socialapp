@@ -152,36 +152,36 @@ export default function MetaIntegrationPanel({ profile, isAdmin = false }) {
   // Problème original : if(!window.FB) return; empêchait l'init
   //                   + fbReady jamais mis à true si script déjà chargé
   useEffect(() => {
-    // Cas 1 : SDK déjà chargé et initialisé (ex: rechargement du composant)
-    if (window.FB) {
-      setFbReady(true);
-      return;
-    }
+  const initFB = () => {
+    if (!window.FB) return;
+    window.FB.init({
+      appId:   META_APP_ID,
+      cookie:  true,
+      xfbml:   false,
+      version: 'v19.0',
+    });
+    setFbReady(true);
+  };
 
-    // Cas 2 : SDK déjà en cours de chargement (script déjà dans le DOM)
-    // fbAsyncInit sera appelé quand il finit
-    window.fbAsyncInit = function () {
-      window.FB.init({
-        appId:   META_APP_ID,
-        cookie:  true,
-        xfbml:   false,   // inutile pour login
-        version: 'v19.0',
-      });
-      setFbReady(true);
-    };
+  // SDK déjà chargé → init immédiat
+  if (window.FB) {
+    initFB();
+    return;
+  }
 
-    // Cas 3 : Premier chargement — injecter le script
-    if (!document.getElementById('fb-sdk')) {
-      const script    = document.createElement('script');
-      script.id       = 'fb-sdk';
-      script.src      = 'https://connect.facebook.net/fr_FR/sdk.js';
-      script.async    = true;
-      script.defer    = true;
-      script.onerror  = () => toast.error('Impossible de charger le SDK Facebook');
-      document.body.appendChild(script);
-    }
-    // Pas de cleanup de fbAsyncInit car le SDK peut l'appeler après unmount
-  }, []);
+  // SDK pas encore chargé → callback + script
+  window.fbAsyncInit = initFB;
+
+  if (!document.getElementById('fb-sdk')) {
+    const script    = document.createElement('script');
+    script.id       = 'fb-sdk';
+    script.src      = 'https://connect.facebook.net/fr_FR/sdk.js';
+    script.async    = true;
+    script.defer    = true;
+    script.onerror  = () => toast.error('Impossible de charger le SDK Facebook');
+    document.body.appendChild(script);
+  }
+}, []);
 
   // ── Charge données ──────────────────────────────────────────────────────────
   useEffect(() => {

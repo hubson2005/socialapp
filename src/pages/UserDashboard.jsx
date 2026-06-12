@@ -38,6 +38,7 @@ import BoostPanel from "@/components/dashboard/BoostPanel";
 import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
 import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
+import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
 
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
 class PanelErrorBoundary extends React.Component {

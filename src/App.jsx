@@ -62,11 +62,19 @@ function AdminApp() {
 function PublicApp() {
   return (
     <Routes>
-      <Route path="/"               element={<Home />} />
-      <Route path="/privacy"        element={<PrivacyPolicy />} />
-      <Route path="/terms"          element={<TermsOfService />} />
-      <Route path="/delete-account" element={<DeleteAccount />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/"                  element={<Home />} />
+
+      {/* Routes légales — chemins longs (liens du footer) */}
+      <Route path="/privacy-policy"    element={<PrivacyPolicy />} />
+      <Route path="/terms-of-service"  element={<TermsOfService />} />
+
+      {/* Alias courts — redirigent vers les routes canoniques */}
+      <Route path="/privacy"           element={<Navigate to="/privacy-policy" replace />} />
+      <Route path="/terms"             element={<Navigate to="/terms-of-service" replace />} />
+
+      <Route path="/delete-account"    element={<DeleteAccount />} />
+      <Route path="/reset-password"    element={<ResetPassword />} />
+
       <Route
         path="/login"
         element={
@@ -92,7 +100,7 @@ function PublicApp() {
         }
       />
       <Route path="/:username" element={<PublicProfile />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*"          element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

@@ -498,6 +498,7 @@ export default function WhatsAppCRM({ profile }) {
         {/* ── CAMPAGNES ── */}
         {tab==='campaigns' && <>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <CampaignAIGenerator onApply={(msg) => setNewCam(p => ({ ...p, message: msg }))} />
             <div style={{fontSize:13,color:C.textMute}}>{campaigns.length} campagnes</div>
             <button style={S.btn()} onClick={()=>{setModal('campaign');setCamStep(1)}}>📢 Nouvelle campagne</button>
           </div>

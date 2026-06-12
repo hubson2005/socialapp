@@ -32,6 +32,7 @@ import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
 import { useTranslation } from "react-i18next";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
+import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
 
 // ── Imports optionnels (commentez si les fichiers n'existent pas encore) ───────
 let BoostPanel = null;

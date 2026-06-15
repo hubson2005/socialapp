@@ -229,7 +229,7 @@ export default function MetaIntegrationPanel({ profile, isAdmin = false }) {
         profile_id: profile.id,
         ...metaData,
         is_active: true,
-      }]).select().single();
+      }]).select().maybeSingle();
       if (error) throw error;
       setIntegration(data);
       toast.success('✅ Facebook & Instagram connectés !');

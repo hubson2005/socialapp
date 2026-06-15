@@ -64,7 +64,7 @@ export function useWhatsappCRM() {
           supabase.from('whatsapp_contacts').select('*').order('created_at', { ascending: false }),
           supabase.from('whatsapp_campaigns').select('*').order('created_at', { ascending: false }),
           supabase.from('whatsapp_notifications').select('*').order('created_at', { ascending: false }),
-          supabase.from('whatsapp_settings').select('*').limit(1).single(),
+          supabase.from('whatsapp_settings').select('*').limit(1).maybeSingle(),
         ])
 
         if (cRes.error   && cRes.error.code !== 'PGRST116')   throw cRes.error
@@ -93,7 +93,7 @@ export function useWhatsappCRM() {
       .from('whatsapp_contacts')
       .insert([{ name, phone, email: email || null, tag, status: 'actif' }])
       .select()
-      .single()
+      .maybeSingle()
     if (error) throw error
     setContacts(prev => [data, ...prev])
     return data
@@ -135,7 +135,7 @@ export function useWhatsappCRM() {
         launched_at: new Date().toISOString(),
       }])
       .select()
-      .single()
+      .maybeSingle()
     if (camErr) throw camErr
 
     // Envoi réel si webhook configuré
@@ -161,7 +161,7 @@ export function useWhatsappCRM() {
       .from('whatsapp_notifications')
       .insert([{ name, trigger_type, active: true }])
       .select()
-      .single()
+      .maybeSingle()
     if (error) throw error
     setNotifs(prev => [data, ...prev])
     return data
@@ -174,7 +174,7 @@ export function useWhatsappCRM() {
       .update({ active: !currentActive })
       .eq('id', id)
       .select()
-      .single()
+      .maybeSingle()
     if (error) throw error
     setNotifs(prev => prev.map(n => n.id === id ? data : n))
   }

@@ -86,8 +86,8 @@ const MAX_SIZE_KB = 2000;
 
 const db = {
   get: async (userId) => { const { data, error } = await supabase.from('link_profiles').select('*').eq('user_id', userId).order('created_at', { ascending: true }); if (error) throw error; return data || []; },
-  create: async (data) => { const { data: created, error } = await supabase.from('link_profiles').insert([data]).select().single(); if (error) throw error; return created; },
-  update: async (id, data) => { const { data: updated, error } = await supabase.from('link_profiles').update(data).eq('id', id).select().single(); if (error) throw error; return updated; },
+  create: async (data) => { const { data: created, error } = await supabase.from('link_profiles').insert([data]).select().maybeSingle(); if (error) throw error; return created; },
+  update: async (id, data) => { const { data: updated, error } = await supabase.from('link_profiles').update(data).eq('id', id).select().maybeSingle(); if (error) throw error; return updated; },
 };
 
 function PlanModal({ onClose, onSelect }) {

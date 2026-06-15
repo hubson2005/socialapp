@@ -387,7 +387,7 @@ function LeadsCRMPanel({ profileId }) {
 
   const addLead = async () => {
     if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
-    const { data, error } = await supabase.from('leads').insert([{ ...newLead, profile_id: profileId }]).select().single();
+    const { data, error } = await supabase.from('leads').insert([{ ...newLead, profile_id: profileId }]).select().maybeSingle();
     if (error) { toast.error('Erreur : ' + error.message); return; }
     setLeads(prev => [data, ...prev]);
     setNewLead({ name:'', email:'', phone:'', tag:'prospect', notes:'' });
@@ -677,11 +677,11 @@ function UserActivationPanel() {
     refetchInterval: 30000,
   });
   const activateMutation = useMutation({
-    mutationFn: async (id) => { const {data,error}=await supabase.from('link_profiles').update({is_activated:true}).eq('id',id).select().single(); if(error) throw error; return data; },
+    mutationFn: async (id) => { const {data,error}=await supabase.from('link_profiles').update({is_activated:true}).eq('id',id).select().maybeSingle(); if(error) throw error; return data; },
     onSuccess: (updated) => { queryClient.setQueryData(['adminAllProfiles'],(old)=>old.map(p=>p.id===updated.id?{...p,is_activated:true}:p)); toast.success('✅ Compte activé !'); },
   });
   const deactivateMutation = useMutation({
-    mutationFn: async (id) => { const {data,error}=await supabase.from('link_profiles').update({is_activated:false}).eq('id',id).select().single(); if(error) throw error; return data; },
+    mutationFn: async (id) => { const {data,error}=await supabase.from('link_profiles').update({is_activated:false}).eq('id',id).select().maybeSingle(); if(error) throw error; return data; },
     onSuccess: (updated) => { queryClient.setQueryData(['adminAllProfiles'],(old)=>old.map(p=>p.id===updated.id?{...p,is_activated:false}:p)); toast.success('Compte désactivé'); },
   });
   const filtered = allProfiles.filter(p=>{

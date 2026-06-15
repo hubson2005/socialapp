@@ -487,7 +487,7 @@ export default function LeadsCRMPanel({ profileId }) {
         profile_id: profileId,
         score: 0,           // ← forcé à 0, quoi qu'il arrive
       }])
-      .select().single();
+      .select().maybeSingle();
     if (error) { toast.error(error.message); setAdding(false); return; }
     await supabase.from('lead_activities').insert([{
       lead_id: data.id, type: 'created', description: 'Lead créé',

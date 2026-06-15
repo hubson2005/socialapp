@@ -180,15 +180,13 @@ export function useWhatsappCRM() {
   }
 
   // ── Save webhook URL ───────────────────────────────────────────
-  const saveWebhook = async (url) => {
-    const { error } = await supabase
-      .from('whatsapp_settings')
-      .upsert([{ id: 1, webhook_url: url }])
-    if (error) throw error
-    setWebhook(url)
-    setConnected(!!url)
-  }
-
+saveWebhook: async e => {
+  let { data: userData } = await U.auth.getUser();
+  let { error: t } = await U.from('whatsapp_settings')
+    .upsert([{ user_id: userData.user.id, webhook_url: e }], { onConflict: 'user_id' });
+  if (t) throw t;
+  s(e), l(!!e)
+}
   return {
     contacts, campaigns, notifs,
     webhook, connected, loading, error, stats,

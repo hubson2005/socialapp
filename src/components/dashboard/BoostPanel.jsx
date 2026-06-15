@@ -462,7 +462,7 @@ function NewBoostModal({ profile, onClose, onCreated }) {
         profile_id:profile.id, user_id:user.id, boost_type:selected,
         amount:plan.price, duration_days:plan.duration, status:'pending',
         networks:plan.networks, payment_method:'cinetpay',
-      }]).select().single();
+      }]).select().maybeSingle();
       if (error) throw error;
       await supabase.from('publication_queue').insert(plan.networks.map(network=>({ boost_id:data.id, network, status:'queued', scheduled_at:new Date().toISOString() })));
       toast.success('Boost créé ! En attente de validation admin.');

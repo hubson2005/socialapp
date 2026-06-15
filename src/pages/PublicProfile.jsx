@@ -319,7 +319,7 @@ export default function PublicProfile() {
         .from('link_profiles')
         .select('*')
         .eq('username', username)
-        .single();
+        .maybeSingle();
 
       if (error || !data) { setNotFound(true); setLoading(false); return; }
       setProfile(data);

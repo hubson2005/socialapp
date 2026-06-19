@@ -35,6 +35,24 @@ const STATUS_CONFIG = {
   failed:    { label:'Échoué',     color:'#ef4444', icon:AlertCircle },
 };
 
+// ─── Helper expiration ─────────────────────────────────────────────────────
+function isExpired(boost) {
+  if (boost.status !== 'active' || !boost.end_date) return false;
+  return new Date(boost.end_date) < new Date();
+}
+
+function effectiveStatus(boost) {
+  return isExpired(boost) ? 'completed' : boost.status;
+}
+
+async function syncExpiredBoosts(boostsList) {
+  const expiredIds = boostsList.filter(isExpired).map(b => b.id);
+  if (!expiredIds.length) return;
+  try {
+    await supabase.from('profile_boosts').update({ status: 'completed' }).in('id', expiredIds);
+  } catch { /* silencieux */ }
+}
+
 // ─── Helpers Canvas ───────────────────────────────────────────────────────────
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -418,7 +436,7 @@ function NetworkBadge({ network }) {
 function BoostCard({ boost, profile, onActivate, isAdmin }) {
   const [expanded, setExpanded]           = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
-  const status=STATUS_CONFIG[boost.status]||STATUS_CONFIG.pending;
+  const status=STATUS_CONFIG[effectiveStatus(boost)]||STATUS_CONFIG.pending;
   const StatusIcon=status.icon;
   const daysLeft=boost.end_date?Math.max(0,Math.ceil((new Date(boost.end_date)-new Date())/86400000)):null;
 
@@ -439,7 +457,7 @@ function BoostCard({ boost, profile, onActivate, isAdmin }) {
           </div>
           <div style={{ display:'flex',gap:'12px',marginTop:'3px',flexWrap:'wrap' }}>
             <span style={{ color:'rgba(255,255,255,0.4)',fontSize:'11px' }}>{boost.duration_days}j · {(boost.amount||0).toLocaleString()} FCFA</span>
-            {boost.status==='active'&&daysLeft!==null&&<span style={{ color:'#22c55e',fontSize:'11px',fontWeight:600 }}>{daysLeft}j restants</span>}
+        {effectiveStatus(boost)==='active'&&daysLeft!==null&&<span style={{ color:'#22c55e',fontSize:'11px',fontWeight:600 }}>{daysLeft}j restants</span>}
           </div>
         </div>
         <div style={{ display:'flex',gap:'6px',flexWrap:'wrap' }}>
@@ -470,14 +488,14 @@ function BoostCard({ boost, profile, onActivate, isAdmin }) {
                     <Play size={12}/> Activer ce boost
                   </button>
                 )}
-                {boost.status==='active'&&(
+             {effectiveStatus(boost)==='active'&&(
                   <button onClick={()=>setShowGenerator(v=>!v)} style={{ flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',padding:'9px',background:showGenerator?'rgba(245,158,11,0.15)':'linear-gradient(135deg,#f59e0b,#ef4444)',border:showGenerator?'1px solid rgba(245,158,11,0.4)':'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:700,cursor:'pointer' }}>
                     <Sparkles size={12}/> {showGenerator?'Masquer le générateur':'Générer le contenu IA'}
                   </button>
                 )}
               </div>
               <AnimatePresence>
-                {showGenerator&&boost.status==='active'&&(
+              {showGenerator&&effectiveStatus(boost)==='active'&&(
                   <motion.div initial={{ opacity:0,height:0 }} animate={{ opacity:1,height:'auto' }} exit={{ opacity:0,height:0 }} style={{ overflow:'hidden' }}>
                     <div style={{ background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'14px',padding:'14px' }}>
                       <BoostContentGenerator profile={profile} boost={boost} onContentReady={(content)=>{ console.log('Contenu prêt :',content); toast.success('🎉 Contenu prêt pour publication !'); setShowGenerator(false); }}/>
@@ -573,11 +591,13 @@ function AdminBoostManager() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter]   = useState('pending');
 
-  useEffect(()=>{
+ useEffect(()=>{
     (async()=>{
       setLoading(true);
       const { data } = await supabase.from('profile_boosts').select('*, link_profiles(display_name,username,avatar_url)').order('created_at',{ ascending:false });
-      setBoosts(data||[]); setLoading(false);
+      const list = data||[];
+      setBoosts(list); setLoading(false);
+      syncExpiredBoosts(list);
     })();
   },[]);
 
@@ -591,9 +611,8 @@ function AdminBoostManager() {
     toast.success('✅ Boost activé ! Publication en cours…');
   };
 
-  const filtered=boosts.filter(b=>filter==='all'||b.status===filter);
-  const counts={ pending:boosts.filter(b=>b.status==='pending').length, active:boosts.filter(b=>b.status==='active').length };
-
+  const filtered=boosts.filter(b=>filter==='all'||effectiveStatus(b)===filter);
+  const counts={ pending:boosts.filter(b=>effectiveStatus(b)==='pending').length, active:boosts.filter(b=>effectiveStatus(b)==='active').length };
   return (
     <div style={{ display:'flex',flexDirection:'column',gap:'16px' }}>
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
@@ -623,8 +642,8 @@ function AdminBoostManager() {
                 <p style={{ color:'rgba(255,255,255,0.35)',fontSize:'10px',margin:'2px 0 0' }}>{BOOST_TYPES.find(b=>b.id===boost.boost_type)?.emoji} {boost.boost_type} · {(boost.amount||0).toLocaleString()} FCFA</p>
               </div>
               <div style={{ display:'flex',gap:'6px',flexWrap:'wrap' }}>{(boost.networks||[]).map(n=><NetworkBadge key={n} network={n}/>)}</div>
-              {boost.status==='pending'&&<button onClick={()=>handleActivate(boost.id)} style={{ display:'flex',alignItems:'center',gap:'5px',padding:'6px 12px',background:'rgba(34,197,94,0.15)',border:'1px solid rgba(34,197,94,0.35)',borderRadius:'8px',color:'#22c55e',fontSize:'11px',fontWeight:700,cursor:'pointer',flexShrink:0 }}><Play size={10}/> Activer</button>}
-              {boost.status==='active'&&<div style={{ display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',borderRadius:'8px' }}><div style={{ width:'6px',height:'6px',borderRadius:'50%',background:'#22c55e',animation:'pulse-dot 2s infinite' }}/><span style={{ color:'#22c55e',fontSize:'10px',fontWeight:600 }}>Live</span></div>}
+           {effectiveStatus(boost)==='pending'&&<button onClick={()=>handleActivate(boost.id)} style={{ display:'flex',alignItems:'center',gap:'5px',padding:'6px 12px',background:'rgba(34,197,94,0.15)',border:'1px solid rgba(34,197,94,0.35)',borderRadius:'8px',color:'#22c55e',fontSize:'11px',fontWeight:700,cursor:'pointer',flexShrink:0 }}><Play size={10}/> Activer</button>}
+                            {effectiveStatus(boost)==='active'&&<div style={{ display:'flex',alignItems:'center',gap:'5px',padding:'6px 10px',background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',borderRadius:'8px' }}><div style={{ width:'6px',height:'6px',borderRadius:'50%',background:'#22c55e',animation:'pulse-dot 2s infinite' }}/><span style={{ color:'#22c55e',fontSize:'10px',fontWeight:600 }}>Live</span></div>}
             </div>
           ))
       }
@@ -639,12 +658,14 @@ export default function BoostPanel({ profile, isAdmin = false }) {
   const [showModal, setShowModal] = useState(false);
   const [tab, setTab]             = useState(isAdmin?'admin':'my');
 
-  useEffect(()=>{
+ useEffect(()=>{
     if (!profile?.id) return;
     (async()=>{
       setLoading(true);
       const { data } = await supabase.from('profile_boosts').select('*').eq('profile_id',profile.id).order('created_at',{ ascending:false });
-      setBoosts(data||[]); setLoading(false);
+      const list = data||[];
+      setBoosts(list); setLoading(false);
+      syncExpiredBoosts(list); // mise à jour silencieuse en base, n'attend pas le résultat
     })();
   },[profile?.id]);
 
@@ -658,9 +679,12 @@ export default function BoostPanel({ profile, isAdmin = false }) {
 
   const stats = {
     total:  boosts.length,
-    active: boosts.filter(b=>b.status==='active').length,
-    spent:  boosts.filter(b=>['active','completed'].includes(b.status)).reduce((s,b)=>s+(b.amount||0),0),
+    active: boosts.filter(b=>effectiveStatus(b)==='active').length,
+    spent:  boosts.filter(b=>['active','completed'].includes(effectiveStatus(b))).reduce((s,b)=>s+(b.amount||0),0),
   };
+
+  const currentBoosts = boosts.filter(b => ['pending','active'].includes(effectiveStatus(b)));
+  const pastBoosts     = boosts.filter(b => ['completed','cancelled','failed'].includes(effectiveStatus(b)));
 
   return (
     <div style={{ display:'flex',flexDirection:'column',gap:'20px' }}>
@@ -694,7 +718,7 @@ export default function BoostPanel({ profile, isAdmin = false }) {
         </div>
       )}
 
-      {tab==='admin'&&isAdmin
+     {tab==='admin'&&isAdmin
         ?<AdminBoostManager/>
         :loading
           ?<div style={{ textAlign:'center',padding:'32px' }}><Loader2 size={20} className="animate-spin" color="rgba(99,102,241,0.6)"/></div>
@@ -705,8 +729,29 @@ export default function BoostPanel({ profile, isAdmin = false }) {
                 <p style={{ color:'rgba(255,255,255,0.35)',fontSize:'13px',margin:'0 0 20px' }}>Boostez votre profil pour apparaître sur Facebook et Instagram automatiquement.</p>
                 <button onClick={()=>setShowModal(true)} style={{ display:'inline-flex',alignItems:'center',gap:'6px',padding:'10px 24px',background:'linear-gradient(135deg,#f59e0b,#ef4444)',border:'none',borderRadius:'12px',color:'white',fontSize:'13px',fontWeight:700,cursor:'pointer' }}><Zap size={14}/> Lancer mon premier boost</button>
               </div>
-            :<div style={{ display:'flex',flexDirection:'column',gap:'10px' }}>
-                {boosts.map(boost=><BoostCard key={boost.id} boost={boost} profile={profile} onActivate={handleActivate} isAdmin={isAdmin}/>)}
+            :<div style={{ display:'flex',flexDirection:'column',gap:'20px' }}>
+                {currentBoosts.length > 0 && (
+                  <div style={{ display:'flex',flexDirection:'column',gap:'10px' }}>
+                    {currentBoosts.map(boost=><BoostCard key={boost.id} boost={boost} profile={profile} onActivate={handleActivate} isAdmin={isAdmin}/>)}
+                  </div>
+                )}
+                {currentBoosts.length === 0 && (
+                  <div style={{ textAlign:'center',padding:'32px 24px',background:'rgba(255,255,255,0.03)',border:'2px dashed rgba(255,255,255,0.1)',borderRadius:'20px' }}>
+                    <p style={{ color:'rgba(255,255,255,0.35)',fontSize:'13px',margin:0 }}>Aucun boost en cours actuellement.</p>
+                  </div>
+                )}
+                {pastBoosts.length > 0 && (
+                  <div>
+                    <div style={{ display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px' }}>
+                      <Clock size={13} color="rgba(255,255,255,0.3)" />
+                      <span style={{ color:'rgba(255,255,255,0.4)',fontSize:'12px',fontWeight:700 }}>Boosts passés</span>
+                      <span style={{ color:'rgba(255,255,255,0.25)',fontSize:'11px' }}>({pastBoosts.length})</span>
+                    </div>
+                    <div style={{ display:'flex',flexDirection:'column',gap:'10px',opacity:0.7 }}>
+                      {pastBoosts.map(boost=><BoostCard key={boost.id} boost={boost} profile={profile} onActivate={handleActivate} isAdmin={isAdmin}/>)}
+                    </div>
+                  </div>
+                )}
               </div>
       }
 

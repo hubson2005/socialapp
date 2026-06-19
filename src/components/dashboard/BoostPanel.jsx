@@ -7,7 +7,7 @@ import {
   TrendingUp, Eye, MousePointerClick, Calendar, ChevronDown,
   Sparkles, AlertCircle, Play, BarChart3, Globe, Plus,
   Copy, Download, RefreshCw, Check, Hash, FileText, Palette,
-  Image as ImageIcon,
+  Image as ImageIcon, Wand2,
 } from 'lucide-react';
 import { FaFacebook, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import { FaXTwitter, FaWhatsapp } from 'react-icons/fa6';
@@ -116,17 +116,24 @@ async function generateSponsoredImage({ profile, canvasRef }) {
 }
 
 // ─── generatePostText — via Edge Function Supabase (CORS fix) ────────────────
-async function generatePostText({ profile, network, boostType }) {
+async function generatePostText({ profile, network, boostType, customPrompt }) {
   const netLabel=NETWORK_CONFIG[network]?.label||network;
   const maxChars=NETWORK_CONFIG[network]?.maxChars>500?280:150;
 
-  const prompt = `Tu es un expert en marketing digital pour l'Afrique francophone.
+  const basePrompt = `Tu es un expert en marketing digital pour l'Afrique francophone.
 Génère un post ${netLabel} percutant pour ce profil SocialApp :
 Nom : ${profile.display_name||'Professionnel'}
 Bio : ${profile.bio||'Expert dans son domaine'}
 Lien : https://socialapp.work/${profile.username||'profil'}
 Boost : ${boostType}
-Règles : ton chaleureux adapté Côte d'Ivoire, max ${maxChars} caractères, inclus le lien, CTA fort.
+Règles : ton chaleureux adapté Côte d'Ivoire, max ${maxChars} caractères, inclus le lien, CTA fort.`;
+
+  // Instructions facultatives saisies par l'utilisateur, ajoutées au prompt de base
+  const extra = customPrompt && customPrompt.trim()
+    ? `\nInstructions supplémentaires demandées par l'utilisateur (à respecter en priorité, sans jamais sortir du format JSON demandé) : ${customPrompt.trim()}`
+    : '';
+
+  const prompt = `${basePrompt}${extra}
 Réponds UNIQUEMENT en JSON valide sans markdown :
 {"text":"<texte>","hashtags":["tag1","tag2","tag3","tag4","tag5"],"hook":"<accroche 1 ligne>"}`;
 
@@ -167,18 +174,27 @@ function BoostContentGenerator({ profile, boost, onContentReady }) {
   const [generating, setGenerating]       = useState({});
   const [generatingImage, setGeneratingImage] = useState(false);
   const [activeTab, setActiveTab]         = useState('text');
+  const [customPrompt, setCustomPrompt]   = useState('');
   const canvasRef = useRef(null);
   const boostNetworks = boost?.networks||['facebook'];
 
   const handleGenerateText = useCallback(async (network) => {
     setGenerating(p=>({...p,[network]:true}));
     try {
-      const result = await generatePostText({ profile, network, boostType: boost?.boost_type||'standard' });
+      const result = await generatePostText({ profile, network, boostType: boost?.boost_type||'standard', customPrompt });
       setContents(p=>({...p,[network]:result}));
       toast.success(`✅ Texte ${NETWORK_CONFIG[network]?.label} généré !`);
     } catch(err) { toast.error('Erreur : '+err.message); }
     finally { setGenerating(p=>({...p,[network]:false})); }
-  }, [profile, boost]);
+  }, [profile, boost, customPrompt]);
+
+  // Mise à jour manuelle du texte par l'utilisateur (édition directe dans le champ)
+  const handleTextChange = useCallback((network, newText) => {
+    setContents(prev => ({
+      ...prev,
+      [network]: { ...(prev[network]||{}), text: newText },
+    }));
+  }, []);
 
   const handleGenerateImage = useCallback(async () => {
     setGeneratingImage(true);
@@ -239,6 +255,27 @@ function BoostContentGenerator({ profile, boost, onContentReady }) {
       {/* TEXT TAB */}
       {activeTab==='text' && (
         <div style={{ display:'flex',flexDirection:'column',gap:'10px' }}>
+          {/* Prompt personnalisé */}
+          <div style={{ display:'flex',flexDirection:'column',gap:'6px' }}>
+            <label style={{ display:'flex',alignItems:'center',gap:'5px',color:'rgba(255,255,255,0.4)',fontSize:'9px',fontWeight:600 }}>
+              <Wand2 size={10}/> INSTRUCTIONS PERSONNALISÉES (OPTIONNEL)
+            </label>
+            <textarea
+              value={customPrompt}
+              onChange={(e)=>setCustomPrompt(e.target.value)}
+              placeholder="Ex : Mets l'accent sur notre promo -20% cette semaine, ton plus humoristique, parle de notre nouveau service..."
+              rows={2}
+              style={{
+                width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
+                borderRadius:'9px', padding:'9px 11px', color:'rgba(255,255,255,0.85)', fontSize:'12px',
+                lineHeight:'1.5', resize:'vertical', fontFamily:'inherit', boxSizing:'border-box', outline:'none',
+              }}
+            />
+            <p style={{ color:'rgba(255,255,255,0.25)', fontSize:'10px', margin:0 }}>
+              Ces instructions seront prises en compte à chaque génération (Générer, Régénérer, Tout générer).
+            </p>
+          </div>
+
           <div style={{ display:'flex',gap:'6px',flexWrap:'wrap' }}>
             {boostNetworks.map(n => {
               const cfg=NETWORK_CONFIG[n]; if (!cfg) return null;
@@ -285,11 +322,19 @@ function BoostContentGenerator({ profile, boost, onContentReady }) {
                     )}
                     <div>
                       <p style={{ color:'rgba(255,255,255,0.4)',fontSize:'9px',fontWeight:600,margin:'0 0 5px' }}>
-                        TEXTE DU POST <span style={{ fontWeight:400,color:'rgba(255,255,255,0.2)',marginLeft:'6px' }}>{cur.text?.length} / {NETWORK_CONFIG[activeNetwork]?.maxChars} chars</span>
+                        TEXTE DU POST <span style={{ fontWeight:400,color:'rgba(255,255,255,0.2)',marginLeft:'6px' }}>{cur.text?.length||0} / {NETWORK_CONFIG[activeNetwork]?.maxChars} chars</span>
                       </p>
-                      <div style={{ background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'9px',padding:'11px',color:'rgba(255,255,255,0.85)',fontSize:'12px',lineHeight:'1.6',whiteSpace:'pre-wrap' }}>
-                        {cur.text}
-                      </div>
+                      <textarea
+                        value={cur.text||''}
+                        onChange={(e)=>handleTextChange(activeNetwork, e.target.value)}
+                        maxLength={NETWORK_CONFIG[activeNetwork]?.maxChars}
+                        rows={5}
+                        style={{
+                          width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
+                          borderRadius:'9px', padding:'11px', color:'rgba(255,255,255,0.85)', fontSize:'12px',
+                          lineHeight:'1.6', resize:'vertical', fontFamily:'inherit', boxSizing:'border-box', outline:'none',
+                        }}
+                      />
                     </div>
                     {cur.hashtags?.length>0&&(
                       <div>

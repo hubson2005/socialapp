@@ -301,7 +301,14 @@ const INTEGRATIONS = [
   { id: 'paypal', name: 'PayPal', desc: 'Notifications de transactions PayPal', category: 'Paiements', color: '#003087', bg: 'rgba(0,48,135,0.12)', LogoComponent: PayPalLogo, docsUrl: 'https://paypal.com', hasWebhook: true, fields: [{ key: 'client_id', label: 'Client ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }, { key: 'client_secret', label: 'Client Secret', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
 
   // ── Messagerie ──
-  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Envoyez des notifications via WhatsApp API', category: 'Messagerie', color: '#25D366', bg: 'rgba(37,211,102,0.12)', LogoComponent: WhatsAppLogo, docsUrl: 'https://business.whatsapp.com', hasWebhook: true, fields: [{ key: 'phone_id', label: 'Phone Number ID', placeholder: '123456789012345', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'EAAxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Messages entrants → leads + notifications automatiques', category: 'Messagerie', color: '#25D366', bg: 'rgba(37,211,102,0.12)', LogoComponent: WhatsAppLogo, 
+  docsUrl: 'https://business.whatsapp.com', hasWebhook: true, fields: [
+    { key: 'phone_id',           label: 'Phone Number ID',              placeholder: '123456789012345',    type: 'text'     },
+    { key: 'access_token',       label: 'Access Token',                 placeholder: 'EAAxxxxxxxxxxxxxxxx', type: 'password' },
+    { key: 'notification_phone', label: 'Votre numéro (notifications)', placeholder: '2250700000000',      type: 'text'     },
+    { key: 'verify_token',       label: 'Token de vérification webhook',placeholder: 'mon_token_secret',   type: 'text'     },
+  ] 
+},
   { id: 'telegram', name: 'Telegram', desc: 'Bot notifications vers vos canaux Telegram', category: 'Messagerie', color: '#2CA5E0', bg: 'rgba(44,165,224,0.12)', LogoComponent: TelegramLogo, docsUrl: 'https://telegram.org', hasWebhook: true, fields: [{ key: 'bot_token', label: 'Bot Token', placeholder: '123456789:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'chat_id', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' }] },
   { id: 'slack', name: 'Slack', desc: 'Recevez des notifications en temps réel', category: 'Messagerie', color: '#E01E5A', bg: 'rgba(74,21,75,0.15)', LogoComponent: SlackLogo, docsUrl: 'https://slack.com', hasWebhook: true, fields: [{ key: 'webhook_url', label: 'Webhook URL Slack', placeholder: 'https://hooks.slack.com/services/...', type: 'text' }] },
   { id: 'intercom', name: 'Intercom', desc: 'Support client & messaging en temps réel', category: 'Messagerie', color: '#1F8DED', bg: 'rgba(31,141,237,0.12)', LogoComponent: IntercomLogo, docsUrl: 'https://intercom.com', hasWebhook: true, fields: [{ key: 'access_token', label: 'Access Token', placeholder: 'dG9rxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'workspace_id', label: 'Workspace ID', placeholder: 'xxxxxxxx', type: 'text' }] },
@@ -327,8 +334,9 @@ const INTEGRATIONS = [
   { id: 'postgres', name: 'PostgreSQL', desc: 'Connexion directe à votre base de données', category: 'Données', color: '#336791', bg: 'rgba(51,103,145,0.12)', LogoComponent: PostgresLogo, docsUrl: 'https://postgresql.org', hasWebhook: false, fields: [{ key: 'connection_string', label: 'Connection String', placeholder: 'postgresql://user:password@host:5432/db', type: 'password' }] },
 ];
 
+// ─── URL webhook réelle (rewrite Vercel → Edge Function Supabase "webhooks") ──
 function generateWebhookUrl(profileId, integrationId) {
-  return `https://api.socialapp.work/webhooks/${profileId}/${integrationId}`;
+  return `https://admin.socialapp.work/webhooks/${profileId}/${integrationId}`;
 }
 
 // ─── Composant Carte Intégration ──────────────────────────────────────────────
@@ -353,17 +361,26 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(integration.id, { fields, connected: true });
-    setSaving(false);
-    setExpanded(false);
-    toast.success(`${integration.name} connecté !`);
+    try {
+      await onSave(integration.id, { fields, connected: true });
+      setExpanded(false);
+      toast.success(`${integration.name} connecté !`);
+    } catch {
+      // l'erreur est déjà notifiée par onSave (toast.error)
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDisconnect = async () => {
     if (!window.confirm(`Déconnecter ${integration.name} ?`)) return;
-    await onDisconnect(integration.id);
-    setFields({});
-    toast.success(`${integration.name} déconnecté`);
+    try {
+      await onDisconnect(integration.id);
+      setFields({});
+      toast.success(`${integration.name} déconnecté`);
+    } catch {
+      // l'erreur est déjà notifiée par onDisconnect (toast.error)
+    }
   };
 
   return (
@@ -462,44 +479,54 @@ export default function IntegrationsPanel({ profileId }) {
 
   const loadConfigs = async () => {
     setLoading(true);
-    try {
-      const { data, error } = await supabase.from('profile_integrations').select('*').eq('profile_id', profileId);
-      if (error) {
-        const stored = localStorage.getItem(`integrations_${profileId}`);
-        if (stored) setConfigs(JSON.parse(stored));
-      } else {
-        const map = {};
-        (data || []).forEach(row => {
-          map[row.integration_id] = { connected: row.is_connected, fields: row.config || {}, webhook_url: generateWebhookUrl(profileId, row.integration_id) };
-        });
-        setConfigs(map);
-      }
-    } catch {
-      const stored = localStorage.getItem(`integrations_${profileId}`);
-      if (stored) setConfigs(JSON.parse(stored));
+    const { data, error } = await supabase.from('profile_integrations').select('*').eq('profile_id', profileId);
+    if (error) {
+      toast.error('Erreur de chargement des intégrations : ' + error.message);
+      setConfigs({});
+      setLoading(false);
+      return;
     }
+    const map = {};
+    (data || []).forEach(row => {
+      map[row.integration_id] = { connected: row.is_connected, fields: row.config || {}, webhook_url: generateWebhookUrl(profileId, row.integration_id) };
+    });
+    setConfigs(map);
     setLoading(false);
   };
 
   const handleSave = useCallback(async (integrationId, data) => {
-    const newConfig = { ...data, webhook_url: generateWebhookUrl(profileId, integrationId) };
-    setConfigs(prev => ({ ...prev, [integrationId]: newConfig }));
-    const updated = { ...configs, [integrationId]: newConfig };
-    localStorage.setItem(`integrations_${profileId}`, JSON.stringify(updated));
-    try {
-      await supabase.from('profile_integrations').upsert({ profile_id: profileId, integration_id: integrationId, is_connected: data.connected, config: data.fields || {}, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,integration_id' });
-    } catch { }
-  }, [profileId, configs]);
+    const { error } = await supabase.from('profile_integrations').upsert({
+      profile_id: profileId,
+      integration_id: integrationId,
+      is_connected: data.connected,
+      config: data.fields || {},
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'profile_id,integration_id' });
+
+    if (error) {
+      toast.error('Échec de la connexion : ' + error.message);
+      throw error;
+    }
+
+    setConfigs(prev => ({
+      ...prev,
+      [integrationId]: { ...data, webhook_url: generateWebhookUrl(profileId, integrationId) },
+    }));
+  }, [profileId]);
 
   const handleDisconnect = useCallback(async (integrationId) => {
+    const { error } = await supabase.from('profile_integrations')
+      .update({ is_connected: false, config: {} })
+      .eq('profile_id', profileId)
+      .eq('integration_id', integrationId);
+
+    if (error) {
+      toast.error('Échec de la déconnexion : ' + error.message);
+      throw error;
+    }
+
     setConfigs(prev => { const next = { ...prev }; delete next[integrationId]; return next; });
-    const updated = { ...configs };
-    delete updated[integrationId];
-    localStorage.setItem(`integrations_${profileId}`, JSON.stringify(updated));
-    try {
-      await supabase.from('profile_integrations').update({ is_connected: false, config: {} }).eq('profile_id', profileId).eq('integration_id', integrationId);
-    } catch { }
-  }, [profileId, configs]);
+  }, [profileId]);
 
   const filtered = INTEGRATIONS.filter(i => {
     const matchCat = category === 'Tous' || i.category === category;
@@ -658,4 +685,3 @@ export default function IntegrationsPanel({ profileId }) {
     </div>
   );
 }
-

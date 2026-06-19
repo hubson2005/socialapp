@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
-// ── Templates de notifications Boost ──────────────────────────────
+const ENV_WEBHOOK = import.meta.env.VITE_MAKE_WEBHOOK_URL || ''
+
+// ── Templates de notifications Boost (automatisations) ─────────────
 export const BOOST_NOTIF_TEMPLATES = [
   {
     id: 'boost_new_follower',
@@ -36,22 +38,38 @@ export const BOOST_NOTIF_TEMPLATES = [
   },
 ]
 
-export function useWhatsappCRM() {
-  const [contacts,  setContacts]  = useState([])
-  const [campaigns, setCampaigns] = useState([])
-  const [notifs,    setNotifs]    = useState([])
-  const [webhook,   setWebhook]   = useState('')
-  const [connected, setConnected] = useState(false)
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState(null)
+// ── Générateurs de messages pour les notifications de boost ────────
+export const BOOST_NOTIF_BUILDERS = {
+  boost_activated: (profile, boost) =>
+    `🚀 Salut ${profile?.display_name || ''} ! Votre boost est activé sur ${boost?.networks?.join(', ') || 'vos réseaux'} pour ${boost?.duration_days || ''} jours.`,
+  boost_completed: (profile) =>
+    `📊 Salut ${profile?.display_name || ''}, votre boost SocialApp est terminé. Consultez vos résultats sur votre dashboard !`,
+  new_lead: (profile, lead) =>
+    `🔥 Nouveau lead pour ${profile?.display_name || ''} : ${lead?.name || ''} (${lead?.phone || lead?.email || ''})`,
+  view_milestone: (profile, count) =>
+    `👀 Bravo ${profile?.display_name || ''} ! Votre profil vient d'atteindre ${count} vues.`,
+  weekly_report: (profile, stats) =>
+    `📈 Rapport hebdo ${profile?.display_name || ''} : ${stats?.views || 0} vues, ${stats?.clicks || 0} clics, ${stats?.leads || 0} leads.`,
+}
+
+export function useWhatsappCRM(profileId) {
+  const [contacts,    setContacts]    = useState([])
+  const [campaigns,   setCampaigns]   = useState([])
+  const [notifs,      setNotifs]      = useState([])
+  const [webhook,     setWebhook]     = useState(ENV_WEBHOOK)
+  const [connected,   setConnected]   = useState(!!ENV_WEBHOOK)
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState(null)
+  const [boostNotifs, setBoostNotifs] = useState([])
 
   // ── Computed stats ─────────────────────────────────────────────
   const stats = {
-    totalContacts:  contacts.length,
-    activeContacts: contacts.filter(c => c.status === 'actif').length,
-    sentCampaigns:  campaigns.filter(c => c.status === 'envoyé').length,
-    totalMessages:  campaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0),
-    activeNotifs:   notifs.filter(n => n.active).length,
+    totalContacts:   contacts.length,
+    activeContacts:  contacts.filter(c => c.status === 'actif').length,
+    sentCampaigns:   campaigns.filter(c => c.status === 'envoyé').length,
+    totalMessages:   campaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0),
+    activeNotifs:    notifs.filter(n => n.active).length,
+    boostNotifsSent: boostNotifs.length,
   }
 
   // ── Load all data ──────────────────────────────────────────────
@@ -60,24 +78,31 @@ export function useWhatsappCRM() {
       setLoading(true)
       setError(null)
       try {
-        const [cRes, camRes, nRes, wRes] = await Promise.all([
+        const [cRes, camRes, nRes, wRes, bnRes] = await Promise.all([
           supabase.from('whatsapp_contacts').select('*').order('created_at', { ascending: false }),
           supabase.from('whatsapp_campaigns').select('*').order('created_at', { ascending: false }),
           supabase.from('whatsapp_notifications').select('*').order('created_at', { ascending: false }),
           supabase.from('whatsapp_settings').select('*').limit(1).maybeSingle(),
+          profileId
+            ? supabase.from('wa_boost_notifications').select('*').eq('profile_id', profileId).order('created_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
         ])
 
-        if (cRes.error   && cRes.error.code !== 'PGRST116')   throw cRes.error
+        if (cRes.error   && cRes.error.code !== 'PGRST116') throw cRes.error
         if (camRes.error && camRes.error.code !== 'PGRST116') throw camRes.error
-        if (nRes.error   && nRes.error.code !== 'PGRST116')   throw nRes.error
+        if (nRes.error   && nRes.error.code !== 'PGRST116') throw nRes.error
+        if (bnRes.error  && bnRes.error.code !== 'PGRST116') throw bnRes.error
 
         setContacts(cRes.data   || [])
         setCampaigns(camRes.data || [])
         setNotifs(nRes.data     || [])
+        setBoostNotifs(bnRes.data || [])
 
-        const wh = wRes.data?.webhook_url || ''
-        setWebhook(wh)
-        setConnected(!!wh)
+        // Priorité : webhook sauvegardé en DB > variable d'env
+        const dbWebhook = wRes.data?.webhook_url || ''
+        const activeWebhook = dbWebhook || ENV_WEBHOOK
+        setWebhook(activeWebhook)
+        setConnected(!!activeWebhook)
       } catch (e) {
         setError(e.message)
       } finally {
@@ -85,7 +110,7 @@ export function useWhatsappCRM() {
       }
     }
     load()
-  }, [])
+  }, [profileId])
 
   // ── Add contact ────────────────────────────────────────────────
   const addContact = async ({ name, phone, email, tag }) => {
@@ -101,14 +126,14 @@ export function useWhatsappCRM() {
 
   // ── Send message (via Make.com webhook) ───────────────────────
   const sendMessage = async ({ to, name, message }) => {
-    if (!webhook) return { reason: 'no_webhook' }
+    const wh = webhook || ENV_WEBHOOK
+    if (!wh) return { reason: 'no_webhook' }
     try {
-      await fetch(webhook, {
+      await fetch(wh, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to, name, message }),
       })
-      // Log dans Supabase
       await supabase.from('whatsapp_messages').insert([{
         contact_phone: to,
         message,
@@ -123,6 +148,7 @@ export function useWhatsappCRM() {
   // ── Create & launch campaign ───────────────────────────────────
   const createCampaign = async ({ name, message, recipientIds }) => {
     const recipients = contacts.filter(c => recipientIds.includes(c.id))
+    const wh = webhook || ENV_WEBHOOK
 
     const { data: cam, error: camErr } = await supabase
       .from('whatsapp_campaigns')
@@ -138,11 +164,10 @@ export function useWhatsappCRM() {
       .maybeSingle()
     if (camErr) throw camErr
 
-    // Envoi réel si webhook configuré
-    if (webhook) {
+    if (wh) {
       await Promise.allSettled(
         recipients.map(c =>
-          fetch(webhook, {
+          fetch(wh, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: c.phone, name: c.name, message }),
@@ -180,19 +205,75 @@ export function useWhatsappCRM() {
   }
 
   // ── Save webhook URL ───────────────────────────────────────────
-saveWebhook: async e => {
-  let { data: userData } = await U.auth.getUser();
-  let { error: t } = await U.from('whatsapp_settings')
-    .upsert([{ user_id: userData.user.id, webhook_url: e }], { onConflict: 'user_id' });
-  if (t) throw t;
-  s(e), l(!!e)
-}
+  const saveWebhook = async (url) => {
+    const { data: userData, error: userErr } = await supabase.auth.getUser()
+    if (userErr) throw userErr
+    const { error } = await supabase
+      .from('whatsapp_settings')
+      .upsert([{ user_id: userData.user.id, webhook_url: url }], { onConflict: 'user_id' })
+    if (error) throw error
+    setWebhook(url)
+    setConnected(!!url)
+  }
+
+  // ── Send boost notification (Make.com webhook + log) ───────────
+  const sendBoostNotification = async ({ profile, boost, notificationType, recipientPhone }) => {
+    const buildMsg = BOOST_NOTIF_BUILDERS[notificationType]
+    const message = buildMsg
+      ? buildMsg(profile, boost)
+      : `Notification SocialApp : ${notificationType}`
+
+    const wh = webhook || ENV_WEBHOOK
+    let status = 'failed'
+    let errorMessage = null
+
+    if (wh) {
+      try {
+        await fetch(wh, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: recipientPhone, name: profile?.display_name, message }),
+        })
+        status = 'sent'
+      } catch (e) {
+        errorMessage = e.message
+      }
+    } else {
+      errorMessage = 'no_webhook'
+    }
+
+    const { data, error } = await supabase
+      .from('wa_boost_notifications')
+      .insert([{
+        profile_id: profileId,
+        boost_id: boost?.id || null,
+        notification_type: notificationType,
+        recipient_phone: recipientPhone,
+        message_body: message,
+        status,
+        error_message: errorMessage,
+        sent_at: status === 'sent' ? new Date().toISOString() : null,
+      }])
+      .select()
+      .maybeSingle()
+    if (error) throw error
+
+    setBoostNotifs(prev => [data, ...prev])
+    if (status === 'failed') throw new Error(
+      errorMessage === 'no_webhook'
+        ? 'Configurez le webhook Make.com dans Paramètres'
+        : errorMessage
+    )
+    return data
+  }
+
   return {
-    contacts, campaigns, notifs,
+    contacts, campaigns, notifs, boostNotifs,
     webhook, connected, loading, error, stats,
     addContact, sendMessage,
     createCampaign,
     addNotification, toggleNotification,
     saveWebhook,
+    sendBoostNotification,
   }
 }

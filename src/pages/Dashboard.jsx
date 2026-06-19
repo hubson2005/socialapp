@@ -33,6 +33,7 @@ import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
 import { useTranslation } from "react-i18next";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
+import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
 
 // ── Imports optionnels (commentez si les fichiers n'existent pas encore) ───────
 let BoostPanel = null;
@@ -103,6 +104,7 @@ const SIDEBAR_NAV = [
   { id: 'eventmanager',    label: 'Event Manager',      icon: CalendarDays,    group: 'content', badge: 'NEW' },
   { id: 'marketplace',     label: 'Marketplace',        icon: ShoppingBag,     group: 'content' },
   { id: 'documents',       label: 'Documents',          icon: FileText,        group: 'content' },
+  { id: 'forms', label: 'Formulaires', icon: FileText, group: 'content' },
   { id: 'accounts',        label: 'Comptes',            icon: Users,           group: 'admin' },
   { id: 'settings',        label: 'Paramètres',         icon: Settings,        group: 'admin' },
 ];
@@ -1188,6 +1190,7 @@ export default function Dashboard() {
       case 'eventmanager':    return <EventManager profileId={localProfile.id}/>;
       case 'marketplace':     return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} userPlan="admin"/></div>;
       case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan||'admin'}/></div>;
+      case 'forms': return <div style={{ maxWidth:'1100px' }}><AdminFormsPanel profileId={localProfile.id} /></div>;
       case 'accounts':        return <UserActivationPanel/>;
       case 'settings':        return <UserSettingsPanel/>;
       default:                return null;

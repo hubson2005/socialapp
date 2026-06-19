@@ -2,6 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    {
+      "source": "/webhooks/:profileId/:integrationId",
+      "destination": "https://gxguirtpunmiiuxpxlap.supabase.co/functions/v1/webhooks/:profileId/:integrationId"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

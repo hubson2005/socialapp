@@ -289,18 +289,20 @@ export default function PublicProfile() {
 
   // ── Chargement + tracking ────────────────────────────────────────────────────
   useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const source = params.get('source');
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get('source');
+    const medium = params.get('medium'); // support physique/numérique du QR (carte_visite, affiche, instagram, etc.)
 
-  if (source === 'qr' && profile?.id) {
-    supabase.from('profile_stats').insert([
-      {
-        profile_id: profile.id,
-        event_type: 'qr_scan',
-      },
-    ]);
-  }
-}, [profile]);
+    if (source === 'qr' && profile?.id) {
+      supabase.from('profile_stats').insert([
+        {
+          profile_id: profile.id,
+          event_type: 'qr_scan',
+          referrer: medium || 'non_specifie',
+        },
+      ]);
+    }
+  }, [profile]);
 
   const handleDownload = (url) => {
     try {

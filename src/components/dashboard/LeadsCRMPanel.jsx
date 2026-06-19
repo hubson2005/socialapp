@@ -13,18 +13,21 @@ import { supabase } from '../../supabase';
 // ─── Constants ───────────────────────────────────────────────────
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
+  { id: 'chaud',     label: '🔥 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
   { id: 'client',   label: '✅ Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)'  },
   { id: 'froid',    label: '❄️ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)'  },
   { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
 ];
 
 const SOURCES = [
-  { id: 'manuel',      label: 'Manuel'           },
-  { id: 'qrcode',      label: 'QR Code'          },
-  { id: 'socialapp',   label: 'Profil SocialApp'  },
-  { id: 'rsvp',        label: 'RSVP'             },
-  { id: 'marketplace', label: 'Marketplace'      },
-  { id: 'formulaire',  label: 'Formulaire'       },
+  { id: 'manuel',         label: 'Manuel'             },
+  { id: 'qrcode',         label: 'QR Code'            },
+  { id: 'socialapp',      label: 'Profil SocialApp'   },
+  { id: 'rsvp',           label: 'RSVP'               },
+  { id: 'marketplace',    label: 'Marketplace'        },
+  { id: 'formulaire',     label: 'Formulaire'         },
+  { id: 'automatisation', label: '🤖 Automatisation'  },
+  { id: 'calendrier',     label: '📅 Calendly / RDV'  },
 ];
 
 const ACTIVITY_ICONS = {
@@ -437,7 +440,6 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-
 export default function LeadsCRMPanel({ profileId }) {
   const isMobile = useIsMobile();
   const [leads, setLeads]               = useState([]);
@@ -498,4 +500,277 @@ export default function LeadsCRMPanel({ profileId }) {
     setAdding(false);
     toast.success('Lead ajouté ✅');
   };
+
+  const deleteLead = async (id) => {
+    const { error } = await supabase.from('leads').delete().eq('id', id);
+    if (error) { toast.error(error.message); return; }
+    setLeads(prev => prev.filter(l => l.id !== id));
+    toast.success('Lead supprimé');
+  };
+
+  const updateLeadLocal = (updated) => {
+    setLeads(prev => prev.map(l => (l.id === updated.id ? updated : l)));
+  };
+
+  const exportCSV = () => {
+    if (leads.length === 0) { toast.error('Aucun lead à exporter'); return; }
+    const headers = ['Nom', 'Téléphone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Notes', 'Créé le'];
+    const rows = leads.map(l => [
+      l.name || '', l.phone || '', l.email || '', l.company || '',
+      STATUSES.find(s => s.id === l.status)?.label || l.status,
+      SOURCES.find(s => s.id === l.source)?.label || l.source,
+      l.score ?? '', (l.notes || '').replace(/\n/g, ' '),
+      l.created_at ? new Date(l.created_at).toLocaleDateString('fr-FR') : '',
+    ]);
+    const csv = [headers, ...rows]
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `leads-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredLeads = leads.filter(l => {
+    const matchesFilter = filter === 'all' || l.status === filter;
+    const q = search.trim().toLowerCase();
+    const matchesSearch = !q ||
+      l.name?.toLowerCase().includes(q) ||
+      l.phone?.toLowerCase().includes(q) ||
+      l.email?.toLowerCase().includes(q) ||
+      l.company?.toLowerCase().includes(q);
+    return matchesFilter && matchesSearch;
+  });
+
+  const statusCounts = STATUSES.reduce((acc, s) => {
+    acc[s.id] = leads.filter(l => l.status === s.id).length;
+    return acc;
+  }, {});
+
+  if (!profileId) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+        Sélectionnez un profil pour gérer vos leads.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>
+            Leads CRM
+          </h3>
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '4px 0 0' }}>
+            {leads.length} lead{leads.length !== 1 ? 's' : ''} au total
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={exportCSV} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 12, color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>
+            <Download size={13} /> {isMobile ? '' : 'Exporter CSV'}
+          </button>
+          <button onClick={() => setShowAdd(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px',
+            background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none',
+            borderRadius: 12, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}>
+            <UserPlus size={13} /> Ajouter un lead
+          </button>
+        </div>
+      </div>
+
+      {/* Search + filters */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={14} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher un lead (nom, téléphone, email, entreprise)..."
+            style={{ ...inp, paddingLeft: 38 }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button onClick={() => setFilter('all')} style={{
+            padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+            border: `1px solid ${filter === 'all' ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
+            background: filter === 'all' ? 'rgba(99,102,241,0.15)' : 'transparent',
+            color: filter === 'all' ? '#818cf8' : 'rgba(255,255,255,0.45)',
+            fontSize: 12, fontWeight: 600,
+          }}>
+            Tous ({leads.length})
+          </button>
+          {STATUSES.map(s => (
+            <button key={s.id} onClick={() => setFilter(s.id)} style={{
+              padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+              border: `1px solid ${filter === s.id ? s.color : 'rgba(255,255,255,0.08)'}`,
+              background: filter === s.id ? s.bg : 'transparent',
+              color: filter === s.id ? s.color : 'rgba(255,255,255,0.45)',
+              fontSize: 12, fontWeight: 600,
+            }}>
+              {s.label} ({statusCounts[s.id] || 0})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Leads list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" />
+          </div>
+        ) : filteredLeads.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
+            {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
+          </div>
+        ) : (
+          filteredLeads.map(lead => {
+            const { color: sc } = scoreLabel(lead.score || 0);
+            return (
+              <motion.div
+                key={lead.id}
+                layout
+                onClick={() => setSelectedLead(lead)}
+                whileHover={{ background: 'rgba(255,255,255,0.07)' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 14, cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                  background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
+                  border: `2px solid ${sc}55`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 15, fontWeight: 800, color: sc,
+                }}>
+                  {(lead.name || '?')[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{lead.name}</span>
+                    <StatusBadge status={lead.status} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, color: 'rgba(255,255,255,0.35)', fontSize: 12, flexWrap: 'wrap' }}>
+                    {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {lead.phone}</span>}
+                    {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={11} /> {lead.company}</span>}
+                    {!isMobile && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Tag size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {!isMobile && (
+                  <div style={{ width: 90, flexShrink: 0 }}>
+                    <ScoreBar score={lead.score || 0} />
+                  </div>
+                )}
+                <WhatsAppBtn
+                  phone={lead.phone}
+                  leadId={lead.id}
+                  compact
+                  onContact={async (id) => {
+                    await supabase.from('lead_activities').insert([{
+                      lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué',
+                    }]);
+                  }}
+                />
+              </motion.div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Add lead modal */}
+      <AnimatePresence>
+        {showAdd && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowAdd(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: 420, background: '#0f0f1a',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20,
+                padding: 24, display: 'flex', flexDirection: 'column', gap: 14,
+                maxHeight: '90vh', overflowY: 'auto',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>Nouveau lead</h3>
+                <button onClick={() => setShowAdd(false)} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>
+              </div>
+
+              <div>
+                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Nom *</label>
+                <input value={newLead.name} onChange={e => setNewLead(f => ({ ...f, name: e.target.value }))} style={inp} placeholder="Nom complet" />
+              </div>
+              <div>
+                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Téléphone</label>
+                <input value={newLead.phone} onChange={e => setNewLead(f => ({ ...f, phone: e.target.value }))} style={inp} placeholder="Ex: 0700000000" />
+              </div>
+              <div>
+                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Email</label>
+                <input value={newLead.email} onChange={e => setNewLead(f => ({ ...f, email: e.target.value }))} style={inp} placeholder="email@exemple.com" />
+              </div>
+              <div>
+                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Entreprise</label>
+                <input value={newLead.company} onChange={e => setNewLead(f => ({ ...f, company: e.target.value }))} style={inp} placeholder="Nom de l'entreprise" />
+              </div>
+              <div>
+                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Source</label>
+                <select value={newLead.source} onChange={e => setNewLead(f => ({ ...f, source: e.target.value }))} style={inp}>
+                  {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
+                <textarea value={newLead.notes} onChange={e => setNewLead(f => ({ ...f, notes: e.target.value }))} rows={3} style={{ ...inp, resize: 'none' }} placeholder="Notes additionnelles..." />
+              </div>
+
+              <button onClick={addLead} disabled={adding} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: 13, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                border: 'none', borderRadius: 12, color: 'white', fontSize: 13, fontWeight: 700,
+                cursor: adding ? 'not-allowed' : 'pointer', opacity: adding ? 0.7 : 1, marginTop: 4,
+              }}>
+                {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                Ajouter le lead
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lead detail modal */}
+      <AnimatePresence>
+        {selectedLead && (
+          <LeadModal
+            lead={selectedLead}
+            onClose={() => setSelectedLead(null)}
+            onUpdate={(updated) => { updateLeadLocal(updated); setSelectedLead(updated); }}
+            onDelete={deleteLead}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }

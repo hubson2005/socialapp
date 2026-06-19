@@ -7,7 +7,6 @@ import {
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import StatsCard from "@/components/dashboard/StatsCard";
-import { BioAIGenerator } from "@/components/dashboard/AIPanels";
 
 function useWindowWidth() {
   const [width, setWidth] = React.useState(
@@ -24,6 +23,7 @@ function useWindowWidth() {
 export default function OverviewPanel({
   profile, limits, isActivated, onNavigate,
   onUpdate, onSave, hasChanges, saving, plan,
+  onRequestActivation,
 }) {
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];
@@ -78,8 +78,17 @@ export default function OverviewPanel({
               <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username"
                 style={{ background:'transparent', border:'none', color:'white', fontSize:'12px', outline:'none', flex:1, minWidth:0 }}/>
             ) : (
-              <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px' }}>
-                <div style={{ flex:1, background:'rgba(0,0,0,0.2)', borderRadius:'8px', padding:'5px 10px', border:'1px dashed rgba(255,255,255,0.12)', display:'flex', alignItems:'center', gap:'6px', opacity:0.6 }}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={onRequestActivation}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onRequestActivation?.(); }}
+                title="Cliquez pour activer votre compte et débloquer le username personnalisé"
+                style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', cursor:'pointer' }}
+                onMouseEnter={e=>{ e.currentTarget.firstChild.style.borderColor='rgba(0,87,255,0.4)'; e.currentTarget.firstChild.style.opacity='0.85'; }}
+                onMouseLeave={e=>{ e.currentTarget.firstChild.style.borderColor='rgba(255,255,255,0.12)'; e.currentTarget.firstChild.style.opacity='0.6'; }}
+              >
+                <div style={{ flex:1, background:'rgba(0,0,0,0.2)', borderRadius:'8px', padding:'5px 10px', border:'1px dashed rgba(255,255,255,0.12)', display:'flex', alignItems:'center', gap:'6px', opacity:0.6, transition:'border-color 0.15s, opacity 0.15s' }}>
                   <Lock size={11} color="rgba(255,255,255,0.4)"/>
                   <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', fontStyle:'italic' }}>{profile?.username||'verrouillé'}</span>
                 </div>
@@ -120,14 +129,6 @@ export default function OverviewPanel({
             <span style={{ color:'rgba(255,255,255,0.6)', fontSize:'12px' }}>
               {isActivated ? '✅ Compte activé' : "⏳ En attente d'activation"}
             </span>
-          </div>
-
-          {/* ── BioAIGenerator intégré ── */}
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'10px 14px' }}>
-            <BioAIGenerator
-              profile={profile}
-              onApply={(bio) => onUpdate({ bio })}
-            />
           </div>
 
           {/* Save row */}

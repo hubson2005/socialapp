@@ -39,6 +39,7 @@ import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
 import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
+import FormsPanel from "@/components/forms/FormsPanel";
 
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
 class PanelErrorBoundary extends React.Component {
@@ -71,9 +72,9 @@ function useWindowWidth() {
 }
 
 const PLAN_LIMITS = {
-  basic: { maxLinks:3, maxProfiles:1, hasStats:false, maxMarketplace:4, maxDocs:1, hasEvent:false, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic', badge:false, label:'BASIC', color:'#6366f1', emoji:'⚡', price:'10 000 FCFA' },
-  pro: { maxLinks:8, maxProfiles:1, hasStats:true, maxMarketplace:10, maxDocs:3, hasEvent:true, hasRealtime:true, hasCRM:false, hasAutomations:false, hasIntegrations:'partial', hasAdvancedAnalytics:false, qrType:'premium', colorCustom:'advanced', badge:true, label:'PRO', color:'#ff8c00', emoji:'🚀', price:'15 000 FCFA' },
-  business: { maxLinks:17, maxProfiles:1, hasStats:true, maxMarketplace:Infinity, maxDocs:10, hasEvent:true, hasRealtime:true, hasCRM:true, hasAutomations:true, hasIntegrations:true, hasAdvancedAnalytics:true, qrType:'dynamic', colorCustom:'complete', badge:true, label:'BUSINESS', color:'#f7c948', emoji:'💼', price:'25 000 FCFA' },
+  basic: { maxLinks:3, maxProfiles:1, hasStats:false, maxMarketplace:4, maxDocs:1, maxForms:1, hasEvent:false, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic', badge:false, label:'BASIC', color:'#6366f1', emoji:'⚡', price:'10 000 FCFA' },
+  pro: { maxLinks:8, maxProfiles:1, hasStats:true, maxMarketplace:10, maxDocs:3, maxForms:5, hasEvent:true, hasRealtime:true, hasCRM:false, hasAutomations:false, hasIntegrations:'partial', hasAdvancedAnalytics:false, qrType:'premium', colorCustom:'advanced', badge:true, label:'PRO', color:'#ff8c00', emoji:'🚀', price:'15 000 FCFA' },
+  business: { maxLinks:17, maxProfiles:1, hasStats:true, maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true, hasRealtime:true, hasCRM:true, hasAutomations:true, hasIntegrations:true, hasAdvancedAnalytics:true, qrType:'dynamic', colorCustom:'complete', badge:true, label:'BUSINESS', color:'#f7c948', emoji:'💼', price:'25 000 FCFA' },
   événement: { maxLinks:3, maxProfiles:1, hasStats:false, maxMarketplace:0, maxDocs:0, hasEvent:true, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic', badge:false, label:'ÉVÉNEMENT', color:'#22c55e', emoji:'🎉', price:'' },
 };
 
@@ -266,7 +267,11 @@ export default function UserDashboard() {
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const rawPlan     = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
+  // ✅ FIX: user_metadata.plan est la source de vérité (mis à jour à l'inscription).
+  // localProfile?.plan n'est plus prioritaire — c'était une copie figée en base
+  // qui pouvait diverger silencieusement et faire retomber l'affichage sur un
+  // ancien plan (ex: "basic" alors que le compte est "business").
+  const rawPlan     = (user?.user_metadata?.plan || localProfile?.plan || 'basic').toLowerCase().trim();
   const limits      = PLAN_LIMITS[rawPlan] || PLAN_LIMITS.basic;
   const isActivated = localProfile?.is_activated === true;
   // FIX: isAdmin défini ici pour tous les panels qui en ont besoin
@@ -285,6 +290,20 @@ export default function UserDashboard() {
     setLocalProfile(prev => (!prev || prev.id !== target.id) ? target : prev);
     setActiveProfileId(prev => prev || target.id);
   }, [profiles, activeProfileId]);
+
+  // ✅ FIX: resynchronise automatiquement la colonne `plan` de link_profiles
+  // dès qu'elle diverge de user_metadata.plan (source de vérité). Corrige
+  // silencieusement les profils créés avec un plan périmé, sans intervention
+  // manuelle en base.
+  useEffect(() => {
+    if (!localProfile || !user) return;
+    const metaPlan = (user.user_metadata?.plan || 'basic').toLowerCase().trim();
+    if (localProfile.plan !== metaPlan) {
+      db.update(localProfile.id, { plan: metaPlan })
+        .then(updated => setLocalProfile(updated))
+        .catch(err => console.error('[Plan sync] échec de la mise à jour:', err));
+    }
+  }, [localProfile?.id, localProfile?.plan, user?.user_metadata?.plan]);
 
   // FIX background: fond appliqué sur html ET calculé pour le root div
   useEffect(() => {
@@ -362,6 +381,7 @@ export default function UserDashboard() {
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
       case 'marketplace':     return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
       case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={rawPlan} /></div>;
+      case 'forms': return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={handleOpenUpgrade} /></div>;
       case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
       case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
       case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;

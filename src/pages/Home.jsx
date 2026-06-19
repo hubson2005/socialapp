@@ -1,13 +1,16 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { Helmet } from "react-helmet-async";
 import logo from '../assets/Logo_SocialApp.png';
 import eventMockup from '../assets/MODE_EVENEMENT.png';
-import interfaceMockup from '../assets/INTERFACE_SOCIALAPP.png';
+import eventMockupWebp from '../assets/MODE_EVENEMENT.webp';
 import marketplaceMockup from '../assets/MARKETPLACE.png';
+import marketplaceMockupWebp from '../assets/MARKETPLACE.webp';
 import tempsReelMockup from '../assets/TEMPS_REEL.png';
+import tempsReelMockupWebp from '../assets/TEMPS_REEL.webp';
 import leadsCrmMockup from '../assets/LEADS_CRM.png';
+import leadsCrmMockupWebp from '../assets/LEADS_CRM.webp';
 
 /* ─────────────────────────────────────────────
    MODAL DE SÉLECTION D'OFFRE
@@ -22,7 +25,7 @@ function PlanModal({ onClose, onSelect }) {
     },
     {
       name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true,
-      subtitle: 'Professionnels, influenceurs, restaurants, boutiques',
+      subtitle: 'Professionnels, influenceurs, restaurants, hôtels, boutiques',
       bg: 'rgba(255,107,53,.1)', border: '2px solid rgba(255,107,53,.55)',
       features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC', 'Analytics & stats détaillées', 'Temps réel — visiteurs live', 'Mode Événement inclus', 'Marketplace (10 produits)', 'Support standard'],
     },
@@ -83,7 +86,6 @@ export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState(null);
-  const [countdown, setCountdown] = useState({ d: '12', h: '08', m: '34', s: '21' });
   const [showPlanModal, setShowPlanModal] = useState(false);
 
   const handleCTA = () => { if (user) { navigate('/dashboard'); } else { setShowPlanModal(true); } };
@@ -93,15 +95,6 @@ export default function Home() {
     const obs = new IntersectionObserver(entries => entries.forEach(e => e.target.classList.toggle('sa-vis', e.isIntersecting)), { threshold: 0.08 });
     document.querySelectorAll('.sa-rv').forEach(el => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const target = new Date('2025-06-14T20:00:00');
-    const tick = () => {
-      const diff = Math.max(0, target - new Date());
-      setCountdown({ d: String(Math.floor(diff / 86400000)).padStart(2, '0'), h: String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0'), m: String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0'), s: String(Math.floor((diff % 60000) / 1000)).padStart(2, '0') });
-    };
-    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
   }, []);
 
   const plans = [
@@ -255,9 +248,20 @@ export default function Home() {
             .sa-nav-links{display:none!important}
             .sa-hero-sec{padding:100px 20px 60px!important}
             .sa-sec{padding:70px 20px!important}
-            .sa-dash-mockup{display:none!important}
+            .sa-dash-mockup{margin-top:48px!important}
             .sa-fbadge{display:none!important}
             .sa-cta-outer{padding:48px 24px!important}
+            .sa-nav-brand-text{display:none!important}
+            .sa-nav-cta{padding:7px 16px!important;font-size:12px!important}
+            .sa-mockup-overflow{width:100%!important;max-width:100%!important}
+            .sa-footer-top{flex-direction:column!important;align-items:center!important;text-align:center!important}
+            .sa-footer-legal{flex-direction:column!important;text-align:center!important;gap:14px!important}
+            .sa-footer-legal-links{flex-direction:column!important;gap:10px!important}
+            .sa-footer-legal-links .sa-footer-dot{display:none!important}
+          }
+          @media(max-width:480px){
+            .sa-dash-mockup .sa-dash-body{grid-template-columns:44px 1fr!important;height:auto!important}
+            .sa-dash-mockup .sa-mini-cards{grid-template-columns:repeat(2,1fr)!important}
           }
         `}</style>
 
@@ -268,13 +272,13 @@ export default function Home() {
         <nav style={S.nav}>
           <div style={S.navLogo}>
             <div style={S.navIcon}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
-            <span style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-.5px' }}>SocialApp</span>
+            <span className="sa-nav-brand-text" style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-.5px' }}>SocialApp</span>
           </div>
           <div className="sa-nav-links" style={S.navLinks}>
             {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#event', 'Événement'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (<a key={h} href={h} className="sa-nav-link">{l}</a>))}
           </div>
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-            <button type="button" style={S.navCta} className="sa-bpri" onClick={handleCTA}>Commencer →</button>
+            <button type="button" style={S.navCta} className="sa-bpri sa-nav-cta" onClick={handleCTA}>Commencer →</button>
           </div>
         </nav>
 
@@ -294,7 +298,7 @@ export default function Home() {
                 <span style={{ ...S.heroH1Big, background: 'linear-gradient(135deg,#a78bfa 0%,#ff6b35 50%,#f7c948 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }} className="sa-hero-h1">et CRM tout-en-un.</span>
               </h1>
               <div style={S.heroPitch}>
-                SocialApp est une plateforme tout-en-un qui permet aux entrepreneurs, entreprises, commerciaux et créateurs de contenu de créer un profil professionnel digital, <strong style={{ color: 'rgba(255,255,255,.85)' }}>partager leurs contacts via QR Code,</strong>collecter des prospects et gérer leurs relations clients grâce à un CRM intégré.
+                SocialApp est une plateforme tout-en-un qui permet aux entrepreneurs, entreprises, commerciaux et créateurs de contenu de créer un profil professionnel digital, <strong style={{ color: 'rgba(255,255,255,.85)' }}>partager leurs contacts via QR Code,</strong> collecter des prospects et gérer leurs relations clients grâce à un CRM intégré.
               </div>
               <p style={S.heroTagline}>Transformez chaque scan en contact,<br />client ou opportunité.</p>
               <div style={{ marginBottom: '32px' }}>
@@ -367,14 +371,14 @@ export default function Home() {
                   <div style={S.dashUrl}>🔒 socialapp.work/dashboard</div>
                   <div style={{ display: 'flex', gap: '4px' }}><div style={{ width: '18px', height: '12px', background: 'rgba(255,255,255,.1)', borderRadius: '3px' }} /><div style={{ width: '18px', height: '12px', background: 'rgba(255,255,255,.1)', borderRadius: '3px' }} /></div>
                 </div>
-                <div style={S.dashBody}>
+                <div style={S.dashBody} className="sa-dash-body">
                   <div style={S.dashSidebar}>
                     {[['📊', true], ['📈', false], ['🔴', false], ['👥', false], ['🛍️', false], ['🎉', false], ['📄', false]].map(([icon, active], i) => (<div key={i} style={{ ...S.dashNavIcon, background: active ? 'rgba(99,102,241,.25)' : 'transparent' }} className="sa-dash-icon">{icon}</div>))}
                     <div style={{ flex: 1 }} /><div style={S.dashNavIcon} className="sa-dash-icon">⚙️</div>
                   </div>
                   <div style={S.dashContent}>
                     <div><div style={{ fontSize: '13px', fontWeight: '800', color: '#fff', marginBottom: '2px' }}>Dashboard</div><div style={{ fontSize: '9px', color: 'rgba(255,255,255,.35)' }}>Bienvenue · Dorine Fashion</div></div>
-                    <div style={S.miniCards}>
+                    <div style={S.miniCards} className="sa-mini-cards">
                       {[['450', '#6366f1', 'Vues'], ['89', '#f59e0b', 'Clics'], ['22%', '#22c55e', 'CTR'], ['12', '#ec4899', 'Leads']].map(([v, c, l]) => (<div key={l} style={S.miniCard}><div style={{ fontSize: '18px', fontWeight: '900', color: c, lineHeight: 1 }}>{v}</div><div style={{ fontSize: '8px', color: 'rgba(255,255,255,.4)', marginTop: '3px' }}>{l}</div></div>))}
                     </div>
                     <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '12px', padding: '10px' }}>
@@ -441,7 +445,10 @@ export default function Home() {
           <div style={S.secInner}>
             <div className="sa-twocol sa-rv" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <img src={leadsCrmMockup} alt="Leads & CRM SocialApp" loading="lazy" className="sa-float" style={{ width: '110%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(236,72,153,.25))' }} />
+                <picture>
+                  <source srcSet={leadsCrmMockupWebp} type="image/webp" />
+                  <img src={leadsCrmMockup} alt="Leads & CRM SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '110%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(236,72,153,.25))' }} />
+                </picture>
               </div>
               <div>
                 <SectionLabel bg="rgba(236,72,153,.1)" border="1px solid rgba(236,72,153,.3)" color="#f472b6" dotBg="#f472b6">CRM intégré</SectionLabel>
@@ -474,7 +481,10 @@ export default function Home() {
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,107,53,.12)', border: '1px solid rgba(255,107,53,.3)', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', color: '#ff6b35', fontWeight: '600' }}>🚀 Disponible avec PRO & BUSINESS</div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <img src={tempsReelMockup} alt="Analytics temps réel SocialApp" loading="lazy" className="sa-float" style={{ width: '120%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(99,102,241,.3))' }} />
+                <picture>
+                  <source srcSet={tempsReelMockupWebp} type="image/webp" />
+                  <img src={tempsReelMockup} alt="Analytics temps réel SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '120%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(99,102,241,.3))' }} />
+                </picture>
               </div>
             </div>
           </div>
@@ -490,7 +500,10 @@ export default function Home() {
             </div>
             <div className="sa-twocol" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <img src={marketplaceMockup} alt="Boutique SocialApp sur mobile" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.28))', borderRadius: '32px' }} />
+                <picture>
+                  <source srcSet={marketplaceMockupWebp} type="image/webp" />
+                  <img src={marketplaceMockup} alt="Boutique SocialApp sur mobile" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.28))', borderRadius: '32px' }} />
+                </picture>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {[
@@ -525,7 +538,10 @@ export default function Home() {
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <img src={eventMockup} alt="Mode Événement SocialApp" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', borderRadius: '24px', boxShadow: '0 40px 80px rgba(0,0,0,.5)', objectFit: 'contain', animationDuration: '5.5s' }} />
+                <picture>
+                  <source srcSet={eventMockupWebp} type="image/webp" />
+                  <img src={eventMockup} alt="Mode Événement SocialApp" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', borderRadius: '24px', boxShadow: '0 40px 80px rgba(0,0,0,.5)', objectFit: 'contain', animationDuration: '5.5s' }} />
+                </picture>
               </div>
             </div>
           </div>
@@ -547,7 +563,7 @@ export default function Home() {
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginBottom: '8px' }}>/ Paiement annuel</div>
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', lineHeight: '1.55', marginBottom: '22px', minHeight: '36px' }}>{p.subtitle}</div>
                   <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '20px' }} />
-                  {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,.75)' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span><span dangerouslySetInnerHTML={{ __html: f }} /></div>))}
+                  {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,.75)' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span><span>{f}</span></div>))}
                   <button type="button" onClick={() => handlePlanSelect(p.name.toLowerCase())} style={{ display: 'block', width: '100%', padding: '14px', border: p.btnBorder, borderRadius: '14px', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', background: p.btnBg, marginTop: '8px', transition: 'transform .2s,box-shadow .2s' }}>Choisir {p.name} →</button>
                 </div>
               ))}
@@ -649,9 +665,9 @@ export default function Home() {
         </section>
 
         {/* ════════════ FOOTER ════════════ */}
-        <footer style={{ padding: '32px 48px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(0,0,0,.2)' }}>
+        <footer style={{ padding: '40px 48px 28px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(0,0,0,.25)' }}>
           {/* Ligne logo + liens */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+          <div className="sa-footer-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ ...S.navIcon, width: '30px', height: '30px', borderRadius: '8px', fontSize: '14px' }}>
                 <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -665,18 +681,18 @@ export default function Home() {
           </div>
 
           {/* À propos mini */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: '14px', marginBottom: '14px' }}>
-            <p style={{ color: 'rgba(255, 255, 255, 0.64)', fontSize: '11px', lineHeight: '1.7', maxWidth: '780px' }}>
-              <strong style={{ color: 'rgba(255, 255, 255, 0.81)' }}>À propos de SocialApp</strong> — Plateforme SaaS développée en Côte d'Ivoire 🇨🇮 qui aide les professionnels et entreprises à créer un profil digital public, gérer leurs prospects, suivre leurs statistiques et développer leur activité grâce à des outils CRM, QR Codes et automatisations intégrés. Données sécurisées · Mobile Money accepté · Mis en ligne en 5 min · Accessible partout en Afrique.
+          <div style={{ borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '20px', marginBottom: '20px' }}>
+            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', lineHeight: '1.8', maxWidth: '780px' }}>
+              <strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>À propos de SocialApp</strong> — Plateforme SaaS développée en Côte d'Ivoire 🇨🇮 qui aide les professionnels et entreprises à créer un profil digital public, gérer leurs prospects, suivre leurs statistiques et développer leur activité grâce à des outils CRM, QR Codes et automatisations intégrés. Données sécurisées · Mobile Money accepté · Mis en ligne en 5 min · Accessible partout en Afrique.
             </p>
           </div>
 
           {/* Ligne légale */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <p style={{ color: 'rgba(255,255,255,.73)', fontSize: '12px' }}>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire 🇨🇮</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="sa-footer-legal" style={{ borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <p style={{ color: 'rgba(255,255,255,.5)', fontSize: '12px' }}>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire 🇨🇮</p>
+            <div className="sa-footer-legal-links" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <a href="/privacy-policy.html" className="sa-footer-link">Politique de confidentialité</a>
-              <span style={{ color: 'rgba(255,255,255,.15)', fontSize: '12px' }}>·</span>
+              <span className="sa-footer-dot" style={{ color: 'rgba(255,255,255,.15)', fontSize: '12px' }}>·</span>
               <a href="/terms-of-service.html" className="sa-footer-link">Conditions d'utilisation</a>
             </div>
           </div>

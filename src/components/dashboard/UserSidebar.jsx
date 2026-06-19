@@ -15,6 +15,7 @@ export const USER_NAV = [
   { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: 'pro',      path: null                        },
   { id: 'marketplace',   label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null,       path: null                        },
   { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null                        },
+  { id: 'forms',         label: 'Formulaires',     icon: FileText,        group: 'content',   locked: null,       path: null                        },
   { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null                        },
   { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null                        },
   { id:'meta', label:'Connexion Meta', icon:Zap, group:'crm' },
@@ -81,8 +82,6 @@ export default function UserSidebar({
     ? {
         position: 'fixed', top: 0, left: 0,
         width: '260px',
-        // FIX 1 : 100dvh prend en compte la barre du navigateur mobile
-        // évite que le footer soit coupé sur iOS Safari / Chrome Android
         height: '100dvh',
         transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
@@ -250,8 +249,6 @@ export default function UserSidebar({
           overflowY: 'auto',
           overflowX: 'hidden',
           padding: '8px',
-          // FIX 2 : sans minHeight: 0, un enfant flex peut dépasser sa zone allouée
-          // et pousser le footer (Image de fond + Infos plan) hors de l'écran sur mobile
           minHeight: 0,
         }}>
           {USER_GROUPS.map(group => {

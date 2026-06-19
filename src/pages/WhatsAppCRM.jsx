@@ -106,7 +106,7 @@ const Spinner = () => (
 // ── BoostNotifsTab ────────────────────────────────────────────────
 function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected, flash }) {
   const [sending,  setSending]  = useState(false)
-  const [testType, setTestType] = useState('boost_activated')
+  const [testType, setTestType] = useState('boost_promo_active')
   const [preview,  setPreview]  = useState('')
 
   useEffect(() => {
@@ -114,14 +114,16 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
     const fakeLead  = { name:'Koffi Atta', email:'koffi@email.com', phone:'225XXXXXXXX' }
     const fakeStats = { views:142, clicks:38, leads:5 }
     const p = profile || { display_name:'Mon Profil', username:'monprofil', whatsapp_phone:'' }
-    switch (testType) {
-      case 'boost_activated': setPreview(BOOST_NOTIF_TEMPLATES.boost_activated(p, fakeBoost)); break
-      case 'boost_completed': setPreview(BOOST_NOTIF_TEMPLATES.boost_completed(p, fakeBoost)); break
-      case 'new_lead':        setPreview(BOOST_NOTIF_TEMPLATES.new_lead(p, fakeLead));          break
-      case 'view_milestone':  setPreview(BOOST_NOTIF_TEMPLATES.view_milestone(p, 500));          break
-      case 'weekly_report':   setPreview(BOOST_NOTIF_TEMPLATES.weekly_report(p, fakeStats));     break
-      default: setPreview('')
-    }
+
+ // NOUVEAU - compatible avec le tableau d'objets
+const tpl = BOOST_NOTIF_TEMPLATES.find(t => t.trigger_type === testType || t.id === testType)
+setPreview(tpl
+  ? tpl.message
+      .replace('{{nom}}',  p.display_name || 'Mon Profil')
+      .replace('{{lien}}', 'https://socialapp.work/' + (p.username || ''))
+      .replace('{{plan}}', 'Standard')
+  : ''
+)
   }, [testType, profile])
 
   const handleTest = async () => {

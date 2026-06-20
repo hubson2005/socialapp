@@ -5,7 +5,7 @@ import {
   Loader2, Download, X,
   MessageCircle, Building2, Tag,
   Pencil, Check,
-  Globe,
+  Globe, LayoutList, Columns3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
@@ -59,6 +59,14 @@ const scoreLabel = (s) =>
   s <= 80  ? { label: 'Chaud',  color: '#f97316', icon: '🔥'  } :
              { label: 'Brûlant',color: '#ef4444', icon: '🚀'  };
 
+// Palette stable pour les tags (déterminée par hash du nom, pas aléatoire)
+const TAG_COLORS = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#fb923c', '#22d3ee'];
+function tagColor(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+}
+
 // ─── Shared input style ──────────────────────────────────────────
 const inp = {
   width: '100%', background: '#2f2f2f',
@@ -106,6 +114,26 @@ function StatusBadge({ status }) {
   );
 }
 
+function TagChip({ tag, onRemove, small = false }) {
+  const color = tagColor(tag);
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: small ? '1px 6px' : '3px 9px', borderRadius: 99,
+      background: color + '1f', color, border: `1px solid ${color}44`,
+      fontSize: small ? 9.5 : 11, fontWeight: 600, whiteSpace: 'nowrap',
+    }}>
+      #{tag}
+      {onRemove && (
+        <button onClick={(e) => { e.stopPropagation(); onRemove(tag); }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color, display: 'flex', padding: 0, marginLeft: 1 }}>
+          <X size={small ? 9 : 10} />
+        </button>
+      )}
+    </span>
+  );
+}
+
 function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
   const hasPhone = !!phone?.trim();
   return (
@@ -142,6 +170,7 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(() => ({ ...lead, score: lead?.score ?? 50 }));
   const [note, setNote] = useState('');
+  const [newTag, setNewTag] = useState('');
   const [activities, setActivities] = useState([]);
   const [loadingAct, setLoadingAct] = useState(true);
 
@@ -200,6 +229,25 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
     onUpdate({ ...lead, status: newStatus });
     setForm(f => ({ ...f, status: newStatus }));
     loadActivities();
+  };
+
+  const addTag = async () => {
+    const tag = newTag.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!tag) return;
+    const currentTags = lead.tags || [];
+    if (currentTags.includes(tag)) { setNewTag(''); return; }
+    const updatedTags = [...currentTags, tag];
+    const { error } = await supabase.from('leads').update({ tags: updatedTags }).eq('id', lead.id);
+    if (error) { toast.error(error.message); return; }
+    onUpdate({ ...lead, tags: updatedTags });
+    setNewTag('');
+  };
+
+  const removeTag = async (tag) => {
+    const updatedTags = (lead.tags || []).filter(t => t !== tag);
+    const { error } = await supabase.from('leads').update({ tags: updatedTags }).eq('id', lead.id);
+    if (error) { toast.error(error.message); return; }
+    onUpdate({ ...lead, tags: updatedTags });
   };
 
   const current = editing ? form : lead;
@@ -330,6 +378,27 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
             </div>
           </Section>
 
+          {/* Tags */}
+          <Section title="Tags">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {(lead.tags || []).length === 0 ? (
+                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Aucun tag</span>
+              ) : (
+                (lead.tags || []).map(tag => (
+                  <TagChip key={tag} tag={tag} onRemove={removeTag} />
+                ))
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={newTag} onChange={e => setNewTag(e.target.value)}
+                placeholder="Nouveau tag (ex: vip, urgent...)" style={{ ...inp, flex: 1 }}
+                onKeyDown={e => e.key === 'Enter' && addTag()} />
+              <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}>
+                <Plus size={14} />
+              </button>
+            </div>
+          </Section>
+
           {/* Score */}
           <Section title="Score commercial">
             <ScoreBar score={editing ? form.score : (lead.score ?? 0)}
@@ -440,12 +509,121 @@ const useIsMobile = () => {
   return isMobile;
 };
 
+// ─── Kanban : carte lead ──────────────────────────────────────────
+function KanbanCard({ lead, onOpen, onDragStart, onDragEnd, isDragging }) {
+  const { color: sc } = scoreLabel(lead.score || 0);
+  return (
+    <div
+      draggable
+      onDragStart={e => onDragStart(e, lead)}
+      onDragEnd={onDragEnd}
+      onClick={() => onOpen(lead)}
+      style={{
+        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 12, padding: '10px 12px', cursor: 'grab', marginBottom: 8,
+        opacity: isDragging ? 0.4 : 1, transition: 'opacity .15s',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <div style={{
+          width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+          background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, fontWeight: 800, color: sc,
+        }}>
+          {(lead.name || '?')[0].toUpperCase()}
+        </div>
+        <span style={{ color: 'white', fontSize: 12.5, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lead.name}
+        </span>
+      </div>
+      {lead.phone && (
+        <p style={{ margin: '0 0 6px', color: 'rgba(255,255,255,0.4)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Phone size={10} /> {lead.phone}
+        </p>
+      )}
+      {!!(lead.tags || []).length && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
+          {(lead.tags || []).slice(0, 3).map(t => <TagChip key={t} tag={t} small />)}
+        </div>
+      )}
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 99, marginTop: 4 }}>
+        <div style={{ height: '100%', width: `${lead.score || 0}%`, background: sc, borderRadius: 99 }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Kanban : vue complète ────────────────────────────────────────
+function KanbanView({ leads, onOpenLead, onStatusChange }) {
+  const [draggedLead, setDraggedLead] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+
+  const handleDragStart = (e, lead) => {
+    setDraggedLead(lead);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragEnd = () => { setDraggedLead(null); setDragOverCol(null); };
+  const handleDrop = (e, statusId) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    if (!draggedLead || draggedLead.status === statusId) return;
+    onStatusChange(draggedLead, statusId);
+    setDraggedLead(null);
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+      {STATUSES.map(status => {
+        const colLeads = leads.filter(l => l.status === status.id);
+        const isOver = dragOverCol === status.id;
+        return (
+          <div
+            key={status.id}
+            onDragOver={e => { e.preventDefault(); setDragOverCol(status.id); }}
+            onDragLeave={() => setDragOverCol(null)}
+            onDrop={e => handleDrop(e, status.id)}
+            style={{
+              minWidth: 240, width: 240, flexShrink: 0,
+              background: isOver ? status.bg : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${isOver ? status.color + '66' : 'rgba(255,255,255,0.07)'}`,
+              borderRadius: 14, padding: 10, transition: 'all .12s',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: '0 2px' }}>
+              <span style={{ color: status.color, fontSize: 12, fontWeight: 700 }}>{status.label}</span>
+              <span style={{ background: status.bg, color: status.color, borderRadius: 99, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
+                {colLeads.length}
+              </span>
+            </div>
+            <div style={{ minHeight: 60 }}>
+              {colLeads.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>
+                  Aucun lead
+                </div>
+              ) : (
+                colLeads.map(lead => (
+                  <KanbanCard key={lead.id} lead={lead} onOpen={onOpenLead}
+                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                    isDragging={draggedLead?.id === lead.id} />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function LeadsCRMPanel({ profileId }) {
   const isMobile = useIsMobile();
   const [leads, setLeads]               = useState([]);
   const [loading, setLoading]           = useState(true);
   const [filter, setFilter]             = useState('all');
+  const [tagFilter, setTagFilter]       = useState(null);
   const [search, setSearch]             = useState('');
+  const [viewMode, setViewMode]         = useState('list'); // 'list' | 'kanban'
   const [showAdd, setShowAdd]           = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [newLead, setNewLead]           = useState({ ...EMPTY_LEAD });
@@ -512,14 +690,30 @@ export default function LeadsCRMPanel({ profileId }) {
     setLeads(prev => prev.map(l => (l.id === updated.id ? updated : l)));
   };
 
+  // Changement de statut depuis le Kanban (drag & drop)
+  const handleKanbanStatusChange = async (lead, newStatus) => {
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: newStatus } : l));
+    const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', lead.id);
+    if (error) {
+      toast.error(error.message);
+      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: lead.status } : l));
+      return;
+    }
+    await supabase.from('lead_activities').insert([{
+      lead_id: lead.id, type: 'status',
+      description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
+    }]);
+    toast.success(`${lead.name} → ${STATUSES.find(s => s.id === newStatus)?.label}`);
+  };
+
   const exportCSV = () => {
     if (leads.length === 0) { toast.error('Aucun lead à exporter'); return; }
-    const headers = ['Nom', 'Téléphone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Notes', 'Créé le'];
+    const headers = ['Nom', 'Téléphone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Tags', 'Notes', 'Créé le'];
     const rows = leads.map(l => [
       l.name || '', l.phone || '', l.email || '', l.company || '',
       STATUSES.find(s => s.id === l.status)?.label || l.status,
       SOURCES.find(s => s.id === l.source)?.label || l.source,
-      l.score ?? '', (l.notes || '').replace(/\n/g, ' '),
+      l.score ?? '', (l.tags || []).join('; '), (l.notes || '').replace(/\n/g, ' '),
       l.created_at ? new Date(l.created_at).toLocaleDateString('fr-FR') : '',
     ]);
     const csv = [headers, ...rows]
@@ -532,15 +726,19 @@ export default function LeadsCRMPanel({ profileId }) {
     URL.revokeObjectURL(url);
   };
 
+  // Tags uniques présents sur l'ensemble des leads (pour la barre de filtre)
+  const allTags = Array.from(new Set(leads.flatMap(l => l.tags || []))).sort();
+
   const filteredLeads = leads.filter(l => {
     const matchesFilter = filter === 'all' || l.status === filter;
+    const matchesTag = !tagFilter || (l.tags || []).includes(tagFilter);
     const q = search.trim().toLowerCase();
     const matchesSearch = !q ||
       l.name?.toLowerCase().includes(q) ||
       l.phone?.toLowerCase().includes(q) ||
       l.email?.toLowerCase().includes(q) ||
       l.company?.toLowerCase().includes(q);
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesTag && matchesSearch;
   });
 
   const statusCounts = STATUSES.reduce((acc, s) => {
@@ -570,24 +768,41 @@ export default function LeadsCRMPanel({ profileId }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          {/* Toggle Liste / Kanban */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 3 }}>
+            <button onClick={() => setViewMode('list')} title="Vue liste" style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '7px 11px', borderRadius: 9,
+              border: 'none', background: viewMode === 'list' ? 'rgba(99,102,241,0.3)' : 'transparent',
+              color: viewMode === 'list' ? 'white' : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}>
+              <LayoutList size={13} /> {!isMobile && 'Liste'}
+            </button>
+            <button onClick={() => setViewMode('kanban')} title="Vue Kanban" style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '7px 11px', borderRadius: 9,
+              border: 'none', background: viewMode === 'kanban' ? 'rgba(99,102,241,0.3)' : 'transparent',
+              color: viewMode === 'kanban' ? 'white' : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}>
+              <Columns3 size={13} /> {!isMobile && 'Kanban'}
+            </button>
+          </div>
           <button onClick={exportCSV} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px',
             background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 12, color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
           }}>
-            <Download size={13} /> {isMobile ? '' : 'Exporter CSV'}
+            <Download size={13} /> {!isMobile && 'Exporter CSV'}
           </button>
           <button onClick={() => setShowAdd(true)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px',
             background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none',
             borderRadius: 12, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
           }}>
-            <UserPlus size={13} /> Ajouter un lead
+            <UserPlus size={13} /> {!isMobile && 'Ajouter un lead'}
           </button>
         </div>
       </div>
 
-      {/* Search + filters */}
+      {/* Search + filters (masqués en vue Kanban — les colonnes remplacent le filtre statut) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ position: 'relative' }}>
           <Search size={14} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
@@ -598,99 +813,136 @@ export default function LeadsCRMPanel({ profileId }) {
             style={{ ...inp, paddingLeft: 38 }}
           />
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <button onClick={() => setFilter('all')} style={{
-            padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
-            border: `1px solid ${filter === 'all' ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
-            background: filter === 'all' ? 'rgba(99,102,241,0.15)' : 'transparent',
-            color: filter === 'all' ? '#818cf8' : 'rgba(255,255,255,0.45)',
-            fontSize: 12, fontWeight: 600,
-          }}>
-            Tous ({leads.length})
-          </button>
-          {STATUSES.map(s => (
-            <button key={s.id} onClick={() => setFilter(s.id)} style={{
+
+        {viewMode === 'list' && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button onClick={() => setFilter('all')} style={{
               padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
-              border: `1px solid ${filter === s.id ? s.color : 'rgba(255,255,255,0.08)'}`,
-              background: filter === s.id ? s.bg : 'transparent',
-              color: filter === s.id ? s.color : 'rgba(255,255,255,0.45)',
+              border: `1px solid ${filter === 'all' ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
+              background: filter === 'all' ? 'rgba(99,102,241,0.15)' : 'transparent',
+              color: filter === 'all' ? '#818cf8' : 'rgba(255,255,255,0.45)',
               fontSize: 12, fontWeight: 600,
             }}>
-              {s.label} ({statusCounts[s.id] || 0})
+              Tous ({leads.length})
             </button>
-          ))}
-        </div>
-      </div>
+            {STATUSES.map(s => (
+              <button key={s.id} onClick={() => setFilter(s.id)} style={{
+                padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+                border: `1px solid ${filter === s.id ? s.color : 'rgba(255,255,255,0.08)'}`,
+                background: filter === s.id ? s.bg : 'transparent',
+                color: filter === s.id ? s.color : 'rgba(255,255,255,0.45)',
+                fontSize: 12, fontWeight: 600,
+              }}>
+                {s.label} ({statusCounts[s.id] || 0})
+              </button>
+            ))}
+          </div>
+        )}
 
-      {/* Leads list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" />
+        {/* Filtre par tag — affiché seulement si des tags existent */}
+        {allTags.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Tag size={12} color="rgba(255,255,255,0.3)" />
+            {allTags.map(tag => (
+              <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 99,
+                  background: tagFilter === tag ? tagColor(tag) + '33' : tagColor(tag) + '14',
+                  color: tagColor(tag), border: `1px solid ${tagColor(tag)}${tagFilter === tag ? '88' : '33'}`,
+                  fontSize: 11, fontWeight: 600,
+                }}>#{tag}</span>
+              </button>
+            ))}
+            {tagFilter && (
+              <button onClick={() => setTagFilter(null)} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                Effacer
+              </button>
+            )}
           </div>
-        ) : filteredLeads.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
-            {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
-          </div>
-        ) : (
-          filteredLeads.map(lead => {
-            const { color: sc } = scoreLabel(lead.score || 0);
-            return (
-              <motion.div
-                key={lead.id}
-                layout
-                onClick={() => setSelectedLead(lead)}
-                whileHover={{ background: 'rgba(255,255,255,0.07)' }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 14, cursor: 'pointer',
-                }}
-              >
-                <div style={{
-                  width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                  background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
-                  border: `2px solid ${sc}55`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 15, fontWeight: 800, color: sc,
-                }}>
-                  {(lead.name || '?')[0].toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{lead.name}</span>
-                    <StatusBadge status={lead.status} />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, color: 'rgba(255,255,255,0.35)', fontSize: 12, flexWrap: 'wrap' }}>
-                    {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {lead.phone}</span>}
-                    {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={11} /> {lead.company}</span>}
-                    {!isMobile && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Tag size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {!isMobile && (
-                  <div style={{ width: 90, flexShrink: 0 }}>
-                    <ScoreBar score={lead.score || 0} />
-                  </div>
-                )}
-                <WhatsAppBtn
-                  phone={lead.phone}
-                  leadId={lead.id}
-                  compact
-                  onContact={async (id) => {
-                    await supabase.from('lead_activities').insert([{
-                      lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué',
-                    }]);
-                  }}
-                />
-              </motion.div>
-            );
-          })
         )}
       </div>
+
+      {/* Contenu : Liste ou Kanban */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40 }}>
+          <Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" />
+        </div>
+      ) : viewMode === 'kanban' ? (
+        <KanbanView leads={filteredLeads} onOpenLead={setSelectedLead} onStatusChange={handleKanbanStatusChange} />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {filteredLeads.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
+              {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
+            </div>
+          ) : (
+            filteredLeads.map(lead => {
+              const { color: sc } = scoreLabel(lead.score || 0);
+              return (
+                <motion.div
+                  key={lead.id}
+                  layout
+                  onClick={() => setSelectedLead(lead)}
+                  whileHover={{ background: 'rgba(255,255,255,0.07)' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 14, cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                    background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
+                    border: `2px solid ${sc}55`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, fontWeight: 800, color: sc,
+                  }}>
+                    {(lead.name || '?')[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{lead.name}</span>
+                      <StatusBadge status={lead.status} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, color: 'rgba(255,255,255,0.35)', fontSize: 12, flexWrap: 'wrap' }}>
+                      {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {lead.phone}</span>}
+                      {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={11} /> {lead.company}</span>}
+                      {!isMobile && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Globe size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}
+                        </span>
+                      )}
+                    </div>
+                    {!!(lead.tags || []).length && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                        {lead.tags.slice(0, 4).map(t => <TagChip key={t} tag={t} small />)}
+                        {lead.tags.length > 4 && (
+                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, alignSelf: 'center' }}>+{lead.tags.length - 4}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {!isMobile && (
+                    <div style={{ width: 90, flexShrink: 0 }}>
+                      <ScoreBar score={lead.score || 0} />
+                    </div>
+                  )}
+                  <WhatsAppBtn
+                    phone={lead.phone}
+                    leadId={lead.id}
+                    compact
+                    onContact={async (id) => {
+                      await supabase.from('lead_activities').insert([{
+                        lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué',
+                      }]);
+                    }}
+                  />
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Add lead modal */}
       <AnimatePresence>

@@ -231,6 +231,10 @@ const STYLE = `
 .ls-err{ background:rgba(244,91,91,.12); color:var(--red); }
 .ls-skip{ background:rgba(100,100,120,.2); color:var(--t2); }
 .log-time{ color:var(--t3); font-size:10.5px; flex-shrink:0; }
+.log-reason{
+  flex-basis:100%; font-size:11px; color:var(--t3);
+  padding-left:17px; margin-top:-2px;
+}
 
 .ap-modal-overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.65);
@@ -258,14 +262,45 @@ const STYLE = `
   text-transform:uppercase; color:var(--t3); margin-bottom:7px; margin-top:2px;
 }
 .ap-field-input,
-.ap-field-select{
+.ap-field-select,
+.ap-field-textarea{
   width:100%; background:var(--hover); border:1px solid var(--border);
   border-radius:9px; padding:10px 13px; font-size:13px; color:var(--t1);
   outline:none; font-family:'DM Sans',sans-serif;
 }
+.ap-field-textarea{ resize:vertical; min-height:64px; }
 .ap-field-input:focus,
-.ap-field-select:focus{ border-color:rgba(245,132,31,.4); }
-.ap-field-input::placeholder{ color:var(--t3); }
+.ap-field-select:focus,
+.ap-field-textarea:focus{ border-color:rgba(245,132,31,.4); }
+.ap-field-input::placeholder,
+.ap-field-textarea::placeholder{ color:var(--t3); }
+
+.ap-config-box{
+  background:rgba(245,132,31,.05);
+  border:1px solid rgba(245,132,31,.18);
+  border-radius:12px;
+  padding:12px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.ap-config-title{
+  font-size:11px; font-weight:700; color:var(--orange);
+  display:flex; align-items:center; gap:6px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.ap-config-note{
+  font-size:11.5px; color:var(--t2); line-height:1.5;
+  background:rgba(255,255,255,0.04); border:1px dashed var(--border);
+  border-radius:8px; padding:9px 11px;
+}
+.ap-radio-row{ display:flex; gap:8px; }
+.ap-radio-opt{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:8px; border-radius:9px; border:1px solid var(--border);
+  background:var(--hover); color:var(--t2); font-size:12px; cursor:pointer;
+  transition:all .12s;
+}
+.ap-radio-opt.on{ background:var(--orangeD); border-color:rgba(245,132,31,.4); color:var(--orange); font-weight:600; }
+
 .ap-modal-footer{
   display:flex; gap:8px; justify-content:flex-end;
   padding-top:4px; border-top:1px solid var(--border); flex-wrap:wrap;
@@ -274,13 +309,26 @@ const STYLE = `
 `;
 
 /* ─── Données statiques ──────────────────────────────────── */
+const LEAD_STATUSES = [
+  { id:'prospect', label:'Prospect' },
+  { id:'chaud',    label:'🔥 Chaud' },
+  { id:'client',   label:'✅ Client' },
+  { id:'froid',    label:'❄️ Froid' },
+  { id:'perdu',    label:'Perdu' },
+];
+
+// Actions réellement exécutées par le moteur (automation-engine)
+const IMPLEMENTED_ACTIONS = new Set([
+  'Ajouter tag', 'Retirer tag', 'Changer statut', 'Créer tâche',
+  'Augmenter score', 'Réduire score', 'Notification dashboard', 'WhatsApp', 'Webhook', 'Email',
+]);
+
 const TEMPLATE_PRESETS = {
-  'lead-vip':   { name:'Lead VIP',          desc:'Tag automatiquement les prospects chauds.',          trigger:'Lead chaud',                action:'Ajouter tag',          freq:'Immédiat' },
-  'lead-cold':  { name:'Relance automatique',desc:'Relance les prospects inactifs après 3 jours.',     trigger:'Aucune activité 3 jours',   action:'WhatsApp',             freq:'3 jours'  },
-  'whatsapp':   { name:'WhatsApp Lead',      desc:"Créer un prospect lorsqu'un utilisateur clique sur WhatsApp.", trigger:'Clic WhatsApp', action:'Créer tâche',           freq:'Immédiat' },
-  'qr':         { name:'QR Tracking',        desc:"Ajoute des points lorsqu'un QR est scanné.",        trigger:'Scan QR Code',              action:'Augmenter score',       freq:'Immédiat' },
-  'score':      { name:'Lead Scoring',       desc:'Calcule automatiquement le score des prospects.',   trigger:'Nouveau lead',              action:'Augmenter score',       freq:'Immédiat' },
-  'assign':     { name:'Assignation auto',   desc:'Assigne automatiquement un prospect à un commercial.', trigger:'Nouveau lead',           action:'Attribuer commercial',  freq:'Immédiat' },
+  'lead-vip':   { name:'Lead VIP',           desc:'Tag automatiquement les prospects chauds.',                    trigger:'Lead chaud',              action:'Ajouter tag',          freq:'Immédiat', config:{ tag:'vip' } },
+  'lead-cold':  { name:'Relance automatique',desc:'Relance les prospects inactifs après 3 jours.',                trigger:'Aucune activité 3 jours', action:'WhatsApp',             freq:'3 jours',  config:{ to:'lead', message:'Bonjour, nous n\'avons pas eu de nouvelles ! Toujours intéressé ?' } },
+  'whatsapp':   { name:'WhatsApp Lead',      desc:"Créer un prospect lorsqu'un utilisateur clique sur WhatsApp.", trigger:'Clic WhatsApp',           action:'Créer tâche',          freq:'Immédiat', config:{ task:'Rappeler ce contact WhatsApp' } },
+  'qr':         { name:'QR Tracking',        desc:"Ajoute des points lorsqu'un QR est scanné.",                   trigger:'Scan QR Code',            action:'Augmenter score',      freq:'Immédiat', config:{ amount:5 } },
+  'score':      { name:'Lead Scoring',       desc:'Calcule automatiquement le score des prospects.',              trigger:'Nouveau lead',            action:'Augmenter score',      freq:'Immédiat', config:{ amount:10 } },
 };
 
 const TEMPLATES = [
@@ -289,7 +337,6 @@ const TEMPLATES = [
   { id:'whatsapp',  ico:'💬', color:'c-green',  tags:['WhatsApp','Lead']       },
   { id:'qr',        ico:'📱', color:'c-blue',   tags:['QR','Analytics']        },
   { id:'score',     ico:'📊', color:'c-orange', tags:['Score','CRM']           },
-  { id:'assign',    ico:'👨‍💼', color:'c-green',  tags:['CRM','Sales']           },
 ].map(t => ({ ...t, ...TEMPLATE_PRESETS[t.id] }));
 
 const TRIGGERS = [
@@ -300,14 +347,15 @@ const TRIGGERS = [
   'Aucune activité 3 jours','Aucune activité 7 jours','Planifié',
 ];
 
+// Note : "Attribuer commercial" retiré — plateforme mono-propriétaire (un seul utilisateur par profil)
 const ACTIONS = [
   'Ajouter tag','Retirer tag','Changer statut','Créer tâche','Créer rendez-vous',
   'Augmenter score','Réduire score','Ajouter à campagne','Retirer campagne',
-  'Attribuer commercial','Notification dashboard','Email','WhatsApp',
+  'Notification dashboard','Email','WhatsApp',
   'Créer QR Code','Créer rapport','Webhook',
 ];
 
-const EMPTY_FORM = { name:'', desc:'', trigger:'', action:'', freq:'' };
+const EMPTY_FORM = { name:'', desc:'', trigger:'', action:'', freq:'', config:{} };
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function formatLastRun(isoDate) {
@@ -324,7 +372,151 @@ function formatLastRun(isoDate) {
   return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
 }
 
-/* ─── Composant ──────────────────────────────────────────── */
+/* ─── Composant : configuration dynamique selon l'action ─── */
+function ActionConfigFields({ action, config, setConfigField }) {
+  if (!action) return null;
+
+  if (!IMPLEMENTED_ACTIONS.has(action)) {
+    return (
+      <div className="ap-config-box">
+        <div className="ap-config-note">
+          ⚠️ Cette action n'est pas encore exécutée automatiquement par le moteur. L'automation sera enregistrée mais marquée "ignorée" à chaque déclenchement.
+        </div>
+      </div>
+    );
+  }
+
+  switch (action) {
+    case 'Ajouter tag':
+    case 'Retirer tag':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">Nom du tag</div>
+            <input className="ap-field-input" type="text" placeholder="Ex: vip, urgent, relance..." value={config.tag || ''} onChange={setConfigField('tag')} />
+          </div>
+        </div>
+      );
+
+    case 'Changer statut':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">Nouveau statut du lead</div>
+            <select className="ap-field-select" value={config.status || ''} onChange={setConfigField('status')}>
+              <option value="">Choisir un statut...</option>
+              {LEAD_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </div>
+        </div>
+      );
+
+    case 'Augmenter score':
+    case 'Réduire score':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">Montant (points)</div>
+            <input className="ap-field-input" type="number" min="1" max="100" placeholder="10" value={config.amount ?? ''} onChange={setConfigField('amount')} />
+          </div>
+        </div>
+      );
+
+    case 'Créer tâche':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">Description de la tâche</div>
+            <input className="ap-field-input" type="text" placeholder="Ex: Rappeler ce prospect" value={config.task || ''} onChange={setConfigField('task')} />
+          </div>
+        </div>
+      );
+
+    case 'Notification dashboard':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">Titre de la notification</div>
+            <input className="ap-field-input" type="text" placeholder="Ex: Nouveau lead chaud !" value={config.title || ''} onChange={setConfigField('title')} />
+          </div>
+          <div>
+            <div className="ap-field-label">Message</div>
+            <input className="ap-field-input" type="text" placeholder="Détail de la notification..." value={config.message || ''} onChange={setConfigField('message')} />
+          </div>
+        </div>
+      );
+
+    case 'WhatsApp':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">Destinataire</div>
+            <div className="ap-radio-row">
+              <div className={`ap-radio-opt${config.to !== 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'owner' } })}>👤 Moi (propriétaire)</div>
+              <div className={`ap-radio-opt${config.to === 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'lead' } })}>📇 Le lead/client</div>
+            </div>
+          </div>
+          <div>
+            <div className="ap-field-label">Message</div>
+            <textarea className="ap-field-textarea" placeholder="Ex: Bonjour, merci pour votre intérêt..." value={config.message || ''} onChange={setConfigField('message')} />
+          </div>
+          <div className="ap-config-note">
+            Nécessite que l'intégration WhatsApp Business soit connectée dans le panneau Intégrations.
+          </div>
+        </div>
+      );
+
+    case 'Email':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">Destinataire</div>
+            <div className="ap-radio-row">
+              <div className={`ap-radio-opt${config.to !== 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'owner' } })}>👤 Moi (propriétaire)</div>
+              <div className={`ap-radio-opt${config.to === 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'lead' } })}>📇 Le lead/client</div>
+            </div>
+          </div>
+          <div>
+            <div className="ap-field-label">Objet</div>
+            <input className="ap-field-input" type="text" placeholder="Ex: Bienvenue chez nous !" value={config.subject || ''} onChange={setConfigField('subject')} />
+          </div>
+          <div>
+            <div className="ap-field-label">Message</div>
+            <textarea className="ap-field-textarea" placeholder="Contenu de l'email..." value={config.message || ''} onChange={setConfigField('message')} />
+          </div>
+          <div className="ap-config-note">
+            Envoyé depuis notifications@socialapp.work
+          </div>
+        </div>
+      );
+
+    case 'Webhook':
+      return (
+        <div className="ap-config-box">
+          <div className="ap-config-title">⚙️ Configuration</div>
+          <div>
+            <div className="ap-field-label">URL du webhook</div>
+            <input className="ap-field-input" type="text" placeholder="https://..." value={config.url || ''} onChange={setConfigField('url')} />
+          </div>
+          <div className="ap-config-note">
+            Les données de l'événement (nom, téléphone, email...) seront envoyées en POST JSON à cette URL.
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+}
+
+/* ─── Composant principal ────────────────────────────────── */
 export default function AutomationsPanel({ profileId }) {
   const [automations, setAutomations] = useState([]);
   const [logs, setLogs]               = useState([]);
@@ -338,12 +530,10 @@ export default function AutomationsPanel({ profileId }) {
 
   const isCreate = modal === 'create';
   const setField = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const setConfigField = (key) => (e) => setForm(prev => ({ ...prev, config: { ...prev.config, [key]: e.target.value } }));
 
   useEffect(() => { if (profileId) loadAutomations(); }, [profileId]);
-
-  useEffect(() => {
-    if (tab === 'logs' && profileId) loadLogs();
-  }, [tab, profileId]);
+  useEffect(() => { if (tab === 'logs' && profileId) loadLogs(); }, [tab, profileId]);
 
   const loadAutomations = async () => {
     setLoading(true);
@@ -370,15 +560,13 @@ export default function AutomationsPanel({ profileId }) {
   /* ── CRUD ── */
   const openCreate = () => { setForm(EMPTY_FORM); setModal('create'); };
 
-  // Pré-remplit le formulaire avec les données du template
   const useTemplate = (t) => {
-    setForm({ name: t.name || '', desc: t.desc || '', trigger: t.trigger || '', action: t.action || '', freq: t.freq || '' });
+    setForm({ name: t.name || '', desc: t.desc || '', trigger: t.trigger || '', action: t.action || '', freq: t.freq || '', config: t.config || {} });
     setModal('create');
   };
 
   const handleCreate = async () => {
     if (!form.name.trim()) { alert('Le nom est requis'); return; }
-    // ✅ Fix : utilise form.action directement (plus fiable que form.actions qui était toujours [])
     const actionList = form.action ? [form.action] : [];
     const payload = {
       profile_id: profileId,
@@ -387,6 +575,7 @@ export default function AutomationsPanel({ profileId }) {
       trigger: form.trigger,
       action: form.action,
       actions: actionList,
+      action_config: form.config || {},
       freq: form.freq || 'Immédiat',
       active: true,
       icon: '⚡',
@@ -398,7 +587,6 @@ export default function AutomationsPanel({ profileId }) {
         ['✅', 'Exécuté'],
       ],
     };
-    // ✅ Fix : .maybeSingle() au lieu de .single() (évite les erreurs 406)
     const { data, error } = await supabase.from('automations').insert(payload).select().maybeSingle();
     if (error) { console.error('CREATE ERROR:', error); return; }
     if (data) setAutomations(prev => [{ ...data, desc: data.description || '' }, ...prev]);
@@ -406,20 +594,20 @@ export default function AutomationsPanel({ profileId }) {
   };
 
   const openEdit = (auto) => {
-    setForm({ name: auto.name || '', desc: auto.desc || auto.description || '', trigger: auto.trigger || '', action: auto.action || '', freq: auto.freq || '' });
+    setForm({ name: auto.name || '', desc: auto.desc || auto.description || '', trigger: auto.trigger || '', action: auto.action || '', freq: auto.freq || '', config: auto.action_config || {} });
     setModal(auto);
   };
 
   const handleSave = async () => {
     if (!modal || modal === 'create') return;
     const actionList = form.action ? [form.action] : [];
-    // ✅ Fix : .maybeSingle() au lieu de .single()
     const { data, error } = await supabase.from('automations').update({
       name: form.name.trim(),
       description: form.desc.trim(),
       trigger: form.trigger,
       action: form.action,
       actions: actionList,
+      action_config: form.config || {},
       freq: form.freq,
       flow: [
         ['🎯', form.trigger || 'Déclencheur'],
@@ -533,6 +721,11 @@ export default function AutomationsPanel({ profileId }) {
                         <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.1)':'rgba(100,100,120,.2)', color:auto.active?'#22d07a':'#5c6070', padding:'2px 7px', borderRadius:20 }}>
                           {auto.active ? 'Actif' : 'Inactif'}
                         </span>
+                        {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
+                          <span style={{ fontSize:10, fontWeight:700, background:'rgba(251,191,36,.12)', color:'#fbbf24', padding:'2px 7px', borderRadius:20 }}>
+                            ⏭ Pas encore disponible
+                          </span>
+                        )}
                       </div>
                       <div className="auto-desc">{auto.desc}</div>
                       {!!auto.flow?.length && (
@@ -581,7 +774,6 @@ export default function AutomationsPanel({ profileId }) {
                   <div className="tmpl-name">{t.name}</div>
                   <div className="tmpl-desc">{t.desc}</div>
                   <div className="tmpl-tags">{t.tags.map(tag => <span key={tag} className="tmpl-tag">{tag}</span>)}</div>
-                  {/* ✅ Fix : pré-remplit le formulaire avec les données du template */}
                   <button className="tmpl-use" onClick={() => useTemplate(t)}>Utiliser ce template →</button>
                 </div>
               ))}
@@ -608,6 +800,9 @@ export default function AutomationsPanel({ profileId }) {
                     <span className="log-trigger">{log.trigger_label || '—'}</span>
                     <span className={logStatusCls(log.status)}>{logStatusLbl(log.status)}</span>
                     <span className="log-time">{formatLastRun(log.created_at)}</span>
+                    {log.error_message && (
+                      <span className="log-reason">{log.status === 'err' ? '✗' : 'ℹ'} {log.error_message}</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -650,6 +845,10 @@ export default function AutomationsPanel({ profileId }) {
                   {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
+
+              {/* Configuration dynamique selon l'action choisie */}
+              <ActionConfigFields action={form.action} config={form.config || {}} setConfigField={setConfigField} />
+
               <div>
                 <div className="ap-field-label">Délai</div>
                 <input className="ap-field-input" type="text" placeholder="Ex: Immédiat, 3 jours..." value={form.freq} onChange={setField('freq')} />

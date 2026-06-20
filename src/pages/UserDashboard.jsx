@@ -267,11 +267,12 @@ export default function UserDashboard() {
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // ✅ FIX: user_metadata.plan est la source de vérité (mis à jour à l'inscription).
-  // localProfile?.plan n'est plus prioritaire — c'était une copie figée en base
-  // qui pouvait diverger silencieusement et faire retomber l'affichage sur un
-  // ancien plan (ex: "basic" alors que le compte est "business").
-  const rawPlan     = (user?.user_metadata?.plan || localProfile?.plan || 'basic').toLowerCase().trim();
+  // ✅ Source de vérité : la colonne `plan` de link_profiles. C'est elle que
+  // modifie le Dashboard admin (activation manuelle) et, plus tard, tout
+  // système de paiement automatisé. user_metadata.plan ne sert que de repli
+  // tant que le profil n'existe pas encore (ex: juste après l'inscription,
+  // avant la création du premier profil dans link_profiles).
+  const rawPlan     = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
   const limits      = PLAN_LIMITS[rawPlan] || PLAN_LIMITS.basic;
   const isActivated = localProfile?.is_activated === true;
   // FIX: isAdmin défini ici pour tous les panels qui en ont besoin
@@ -291,19 +292,32 @@ export default function UserDashboard() {
     setActiveProfileId(prev => prev || target.id);
   }, [profiles, activeProfileId]);
 
-  // ✅ FIX: resynchronise automatiquement la colonne `plan` de link_profiles
-  // dès qu'elle diverge de user_metadata.plan (source de vérité). Corrige
-  // silencieusement les profils créés avec un plan périmé, sans intervention
-  // manuelle en base.
+  // ✅ Synchronisation en temps réel : si l'admin change le plan (ou active
+  // le compte) depuis le Dashboard admin, ce profil le reflète instantanément
+  // ici, sans rechargement de page. On ne touche qu'aux champs plan/is_activated
+  // pour ne jamais écraser des modifications locales non sauvegardées (hasChanges).
   useEffect(() => {
-    if (!localProfile || !user) return;
-    const metaPlan = (user.user_metadata?.plan || 'basic').toLowerCase().trim();
-    if (localProfile.plan !== metaPlan) {
-      db.update(localProfile.id, { plan: metaPlan })
-        .then(updated => setLocalProfile(updated))
-        .catch(err => console.error('[Plan sync] échec de la mise à jour:', err));
-    }
-  }, [localProfile?.id, localProfile?.plan, user?.user_metadata?.plan]);
+    if (!localProfile?.id) return;
+    const profileId = localProfile.id;
+    const channel = supabase
+      .channel('plan-sync-' + profileId)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'link_profiles', filter: 'id=eq.' + profileId }, (payload) => {
+        const newPlan = payload.new?.plan;
+        const newActivated = payload.new?.is_activated;
+        setLocalProfile(prev => {
+          if (!prev || prev.id !== profileId) return prev;
+          const planChanged = newPlan && newPlan !== prev.plan;
+          const activationChanged = typeof newActivated === 'boolean' && newActivated !== prev.is_activated;
+          if (!planChanged && !activationChanged) return prev;
+          if (planChanged) toast.success('🎉 Votre offre a été mise à jour : ' + newPlan.toUpperCase());
+          if (activationChanged && newActivated) toast.success('✅ Votre compte a été activé !');
+          return { ...prev, ...(newPlan ? { plan: newPlan } : {}), ...(typeof newActivated === 'boolean' ? { is_activated: newActivated } : {}) };
+        });
+        queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [localProfile?.id, user?.id, queryClient]);
 
   // FIX background: fond appliqué sur html ET calculé pour le root div
   useEffect(() => {

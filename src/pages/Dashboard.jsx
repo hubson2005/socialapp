@@ -9,7 +9,7 @@ import {
   Zap, UserPlus, Globe, Link2, Settings, LayoutDashboard, FileText,
   ShoppingBag, MousePointerClick, ArrowUpRight, ArrowDownRight, Radio,
   Mail, Phone, Tag, Filter, Download, ChevronDown, Star, MessageSquare,
-  Wifi, WifiOff, CircleDot, Layers, MessageCircle,
+  Wifi, WifiOff, CircleDot, Layers, MessageCircle, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -665,6 +665,12 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
 }
 
 // ─── UserActivationPanel ──────────────────────────────────────────────────────
+const PLAN_OPTIONS = [
+  { id: 'basic',    label: 'Basic',    color: '#9ca3af' },
+  { id: 'pro',      label: 'Pro',      color: '#f97316' },
+  { id: 'business', label: 'Business', color: '#a855f7' },
+];
+
 function UserActivationPanel() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -672,7 +678,7 @@ function UserActivationPanel() {
   const { data: allProfiles=[], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['adminAllProfiles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('link_profiles').select('id,display_name,username,is_activated,expiry_date,user_id,created_at').order('created_at',{ascending:false});
+      const { data, error } = await supabase.from('link_profiles').select('id,display_name,username,is_activated,plan,expiry_date,user_id,created_at').order('created_at',{ascending:false});
       if (error) throw error;
       return data;
     },
@@ -686,6 +692,15 @@ function UserActivationPanel() {
     mutationFn: async (id) => { const {data,error}=await supabase.from('link_profiles').update({is_activated:false}).eq('id',id).select().maybeSingle(); if(error) throw error; return data; },
     onSuccess: (updated) => { queryClient.setQueryData(['adminAllProfiles'],(old)=>old.map(p=>p.id===updated.id?{...p,is_activated:false}:p)); toast.success('Compte désactivé'); },
   });
+  const planMutation = useMutation({
+    mutationFn: async ({ id, plan }) => { const {data,error}=await supabase.from('link_profiles').update({plan}).eq('id',id).select().maybeSingle(); if(error) throw error; return data; },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['adminAllProfiles'],(old)=>old.map(p=>p.id===updated.id?{...p,plan:updated.plan}:p));
+      const label = PLAN_OPTIONS.find(o=>o.id===updated.plan)?.label || updated.plan;
+      toast.success('Plan mis à jour : ' + label);
+    },
+    onError: (error) => toast.error('Erreur : ' + error.message),
+  });
   const filtered = allProfiles.filter(p=>{
     const q=search.toLowerCase();
     return (!q||(p.display_name||'').toLowerCase().includes(q)||(p.username||'').toLowerCase().includes(q))
@@ -693,6 +708,7 @@ function UserActivationPanel() {
   });
   const pendingCount=allProfiles.filter(p=>!p.is_activated).length;
   const activeCount=allProfiles.filter(p=>p.is_activated).length;
+  const proCount=allProfiles.filter(p=>p.plan==='pro'||p.plan==='business').length;
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
@@ -705,10 +721,11 @@ function UserActivationPanel() {
           <RefreshCw size={13} color="rgba(255,255,255,0.5)" className={isFetching?'animate-spin':''}/>
         </button>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'10px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'10px'}}>
         <MiniStat label="Total"      value={allProfiles.length} icon={Users}       color="#a78bfa"/>
         <MiniStat label="Activés"    value={activeCount}        icon={ShieldCheck} color="#22c55e"/>
         <MiniStat label="En attente" value={pendingCount}       icon={Clock}       color="#f97316"/>
+        <MiniStat label="Pro/Business" value={proCount}         icon={Crown}       color="#facc15"/>
       </div>
       <div style={{display:'flex',gap:'8px'}}>
         <div style={{position:'relative',flex:1}}>
@@ -719,21 +736,34 @@ function UserActivationPanel() {
           <button key={v} onClick={()=>setFilter(v)} style={{padding:'8px 12px',borderRadius:'10px',border:'1px solid '+(filter===v?'rgba(99,102,241,0.5)':'rgba(255,255,255,0.1)'),background:filter===v?'rgba(99,102,241,0.15)':'transparent',color:filter===v?'#a78bfa':'rgba(255,255,255,0.4)',fontSize:'11px',cursor:'pointer',fontWeight:filter===v?600:400,whiteSpace:'nowrap'}}>{l}</button>
         ))}
       </div>
-      <div style={{display:'flex',flexDirection:'column',gap:'6px',maxHeight:'400px',overflowY:'auto'}}>
+      <div style={{display:'flex',flexDirection:'column',gap:'6px',maxHeight:'460px',overflowY:'auto'}}>
         {isLoading?(<div style={{textAlign:'center',padding:'24px'}}><Loader2 size={16} className="animate-spin" color="rgba(255,255,255,0.3)"/></div>)
         :filtered.length===0?(<p style={{color:'rgba(255,255,255,0.3)',fontSize:'12px',textAlign:'center',padding:'24px'}}>{filter==='pending'?'🎉 Aucun compte en attente':'Aucun résultat'}</p>)
-        :filtered.map(p=>(
-          <div key={p.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',background:'rgba(255,255,255,0.04)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.07)'}}>
+        :filtered.map(p=>{
+          const currentPlan = PLAN_OPTIONS.find(o=>o.id===p.plan) || PLAN_OPTIONS[0];
+          return(
+          <div key={p.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',background:'rgba(255,255,255,0.04)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.07)',flexWrap:'wrap'}}>
             <div style={{width:'34px',height:'34px',borderRadius:'9px',background:p.is_activated?'linear-gradient(135deg,#22c55e,#16a34a)':'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>{(p.display_name||'?')[0].toUpperCase()}</div>
-            <div style={{flex:1,minWidth:0}}>
+            <div style={{flex:1,minWidth:'120px'}}>
               <p style={{color:'white',fontSize:'12px',fontWeight:600,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.display_name||'Sans nom'}</p>
               <p style={{color:'rgba(255,255,255,0.35)',fontSize:'10px',margin:0}}>{p.username?'@'+p.username:'Sans username'}</p>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
+              <Crown size={11} color={currentPlan.color}/>
+              <select
+                value={p.plan || 'basic'}
+                onChange={e=>planMutation.mutate({ id: p.id, plan: e.target.value })}
+                disabled={planMutation.isPending}
+                style={{padding:'5px 8px',borderRadius:'8px',border:'1px solid '+currentPlan.color+'55',background:currentPlan.color+'1a',color:currentPlan.color,fontSize:'11px',fontWeight:700,cursor:'pointer',outline:'none'}}>
+                {PLAN_OPTIONS.map(o=><option key={o.id} value={o.id} style={{background:'#0a0817',color:'white'}}>{o.label}</option>)}
+              </select>
             </div>
             {p.is_activated
               ?<button onClick={()=>deactivateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.1)',color:'#f87171',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><X size={10}/>Désact.</button>
               :<button onClick={()=>activateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(34,197,94,0.35)',background:'rgba(34,197,94,0.12)',color:'#22c55e',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><Check size={10}/>Activer</button>}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
 import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
-import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
+import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/dashboard/UserSidebar";
 import OverviewPanel from "@/components/dashboard/OverviewPanel";
 import EventPanel from "@/components/dashboard/EventPanel";
@@ -40,6 +40,7 @@ import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
 import FormsPanel from "@/components/forms/FormsPanel";
+import NotificationBell from './NotificationBell';
 
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
 class PanelErrorBoundary extends React.Component {
@@ -405,7 +406,7 @@ export default function UserDashboard() {
       case 'boost':           return <BoostPanel           profile={localProfile}      isAdmin={isAdmin} />;
       case 'boost-analytics': return <BoostAnalyticsPanel  profile={localProfile} />;
       case 'promotions': return ( <PromotionsDashboard profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} /> );
-      case 'settings':        return <UserSettingsPanel />; default: return null;
+      case 'settings':        return <SettingsPanel />; default: return null;
     }
   };
 
@@ -432,8 +433,9 @@ export default function UserDashboard() {
             <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Dashboard'}</h2>
             <AnimatePresence>{hasChanges && <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }} style={{ background:'rgba(251,191,36,0.15)', border:'1px solid rgba(251,191,36,0.4)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600, flexShrink:0 }}>● {t('unsaved')}</motion.span>}</AnimatePresence>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
+            <NotificationBell />
             <button onClick={handleSave} disabled={!hasChanges||updateMutation.isPending} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.07)', border:'1px solid '+(hasChanges?'transparent':'rgba(255,255,255,0.12)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}{!isMobile && t('save')}
             </button>

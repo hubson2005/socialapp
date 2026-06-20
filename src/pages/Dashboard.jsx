@@ -28,12 +28,13 @@ import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import MobileNav from "@/components/dashboard/MobileNav";
 import EventManager from "@/components/dashboard/EventManager";
-import UserSettingsPanel from "@/components/dashboard/UserSettingsPanel";
+import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
 import { useTranslation } from "react-i18next";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
 import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
+import NotificationBell from './NotificationBell';
 
 // ── Imports optionnels (commentez si les fichiers n'existent pas encore) ───────
 let BoostPanel = null;
@@ -1062,10 +1063,36 @@ export default function Dashboard() {
   const [hasChanges,       setHasChanges]       = useState(false);
   const [activeProfileId,  setActiveProfileId]  = useState(null);
   const [showTemplates,    setShowTemplates]    = useState(false);
-  const [showNotifPanel,   setShowNotifPanel]   = useState(false);
-  const notifPanelRef  = useRef(null);
   const notifCountRef  = useRef(0);
-  const notifThreshold = (() => { try { return parseInt(localStorage.getItem('notif_threshold') || '10'); } catch { return 10; } })();
+
+  const [notifPrefs, setNotifPrefs] = useState({ notif_view: true, notif_click: true, notif_expiry: true, notif_threshold: 10 });
+  const expiryNotifiedRef = useRef(false);
+
+  // Charge les préférences depuis le cache par-compte (écrit par SettingsPanel),
+  // avec repli sur Supabase si le cache est absent.
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const cached = localStorage.getItem(`user_settings_${user.id}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setNotifPrefs(prev => ({ ...prev, ...parsed }));
+        return;
+      }
+    } catch {}
+    supabase.from('user_settings').select('notif_view, notif_click, notif_expiry, notif_threshold').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => { if (data) setNotifPrefs(prev => ({ ...prev, ...data })); });
+  }, [user?.id]);
+
+  // Reste synchronisé si l'utilisateur change ses préférences dans SettingsPanel sans recharger la page
+  useEffect(() => {
+    const handler = (e) => {
+      if (!e.detail?.key) return;
+      setNotifPrefs(prev => ({ ...prev, [e.detail.key]: e.detail.value }));
+    };
+    window.addEventListener('app_notif_prefs_change', handler);
+    return () => window.removeEventListener('app_notif_prefs_change', handler);
+  }, []);
 
   const { data: profiles = [], isLoading } = useQuery({ queryKey: ['linkProfiles'], queryFn: db.list });
 
@@ -1092,26 +1119,36 @@ export default function Dashboard() {
     return () => { ['backgroundImage','backgroundSize','backgroundPosition','backgroundAttachment','background'].forEach(k => { html.style[k] = ''; }); };
   }, [localProfile?.theme_color, localProfile?.bg_image_url]);
 
-  useEffect(() => {
-    const handler = (e) => { if (notifPanelRef.current && !notifPanelRef.current.contains(e.target)) setShowNotifPanel(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
+  // ── Notifications en temps réel (vues groupées par seuil + clics immédiats) ─
   useEffect(() => {
     if (!localProfile?.id || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const channel = supabase.channel('notif-' + localProfile.id)
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'profile_stats', filter:'profile_id=eq.'+localProfile.id }, (payload) => {
-        if (payload.new?.event_type === 'view') {
+        const ev = payload.new;
+        if (ev?.event_type === 'view' && notifPrefs.notif_view) {
           notifCountRef.current += 1;
-          if (notifCountRef.current >= notifThreshold) {
+          if (notifCountRef.current >= notifPrefs.notif_threshold) {
             new Notification('🔔 SocialApp — ' + (localProfile.display_name || 'Votre profil'), { body: notifCountRef.current + ' nouvelles visites !', icon: '/Logo_SocialApp.png' });
             notifCountRef.current = 0;
           }
         }
+        if (ev?.event_type === 'click' && notifPrefs.notif_click) {
+          new Notification('🔗 Clic sur un lien', { body: (ev.platform || 'Un lien') + ' a été cliqué', icon: '/Logo_SocialApp.png' });
+        }
       }).subscribe();
     return () => supabase.removeChannel(channel);
-  }, [localProfile?.id, notifThreshold]);
+  }, [localProfile?.id, notifPrefs]);
+
+  // ── Rappel d'expiration du profil — une seule fois par session, si activé ───
+  useEffect(() => {
+    if (!localProfile?.expiry_date || !notifPrefs.notif_expiry || expiryNotifiedRef.current) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const daysLeft = Math.ceil((new Date(localProfile.expiry_date) - new Date()) / 86400000);
+    if (daysLeft <= 7 && daysLeft >= 0) {
+      new Notification('⏳ Profil bientôt expiré', { body: 'Expire dans ' + daysLeft + ' jour(s) — pensez à renouveler.', icon: '/Logo_SocialApp.png' });
+      expiryNotifiedRef.current = true;
+    }
+  }, [localProfile?.expiry_date, notifPrefs.notif_expiry]);
 
   const deleteMutation = useMutation({
     mutationFn: id => db.delete(id),
@@ -1196,8 +1233,7 @@ export default function Dashboard() {
 
   if (!localProfile) return null;
 
-  const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-  const currentNav = SIDEBAR_NAV.find(n => n.id === activeSection);
+ const currentNav = SIDEBAR_NAV.find(n => n.id === activeSection);
 
   // ── renderSection : tous les cas couverts, pas de variable undefined ────────
   const renderSection = () => {
@@ -1222,7 +1258,7 @@ export default function Dashboard() {
       case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan||'admin'}/></div>;
       case 'forms': return <div style={{ maxWidth:'1100px' }}><AdminFormsPanel profileId={localProfile.id} /></div>;
       case 'accounts':        return <UserActivationPanel/>;
-      case 'settings':        return <UserSettingsPanel/>;
+      case 'settings':        return <SettingsPanel/>;
       default:                return null;
     }
   };
@@ -1246,26 +1282,7 @@ export default function Dashboard() {
             <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Eye size={13}/>{!isMobile && t('preview')}
             </button>
-            <div ref={notifPanelRef} style={{ position:'relative' }}>
-              <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.07)', border:'1px solid '+(notifGranted?'rgba(34,197,94,0.3)':'rgba(255,255,255,0.12)'), borderRadius:'9px', cursor:'pointer' }}>
-                {notifGranted ? <Bell size={14} color="#22c55e"/> : <BellOff size={14} color="rgba(255,255,255,0.5)"/>}
-              </button>
-              <AnimatePresence>
-                {showNotifPanel && (
-                  <motion.div initial={{ opacity:0, y:-8, scale:0.96 }} animate={{ opacity:1, y:0, scale:1 }} exit={{ opacity:0, y:-8 }} transition={{ duration:0.15 }}
-                    style={{ position:'absolute', top:'calc(100% + 10px)', right:0, background:'rgba(10,8,25,0.97)', backdropFilter:'blur(20px)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'18px', padding:'18px', minWidth:'260px', zIndex:50, boxShadow:'0 16px 48px rgba(0,0,0,0.6)' }}>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-                      <span style={{ color:'white', fontSize:'13px', fontWeight:600 }}>Notifications push</span>
-                      <button onClick={()=>setShowNotifPanel(false)} style={{ background:'rgba(255,255,255,0.08)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)', width:'24px', height:'24px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={13}/></button>
-                    </div>
-                    {!notifGranted
-                      ? <button onClick={async()=>{ const p=await Notification.requestPermission(); if(p==='granted'){ toast.success('Notifications activées !'); setShowNotifPanel(false); }}} style={{ width:'100%', padding:'10px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
-                      : <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'12px', margin:0, textAlign:'center' }}>✅ Notifications actives</p>
-                    }
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <NotificationBell />
             <button onClick={handleSave} disabled={!hasChanges || updateMutation.isPending}
               style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.07)', border:'1px solid '+(hasChanges?'transparent':'rgba(255,255,255,0.12)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin"/> : <Save size={13}/>}{!isMobile && t('save')}

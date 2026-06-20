@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Loader2, ShieldCheck, Globe, Bell, Eye, MousePointerClick,
   CalendarClock, Activity,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
-import { useTranslation } from 'react-i18next';
 
 // ─── Traductions (paramètres uniquement) ─────────────────────────────────────
 const TRANSLATIONS = {
@@ -26,6 +25,8 @@ const TRANSLATIONS = {
     notif_expiry: 'Expiration du profil', notif_expiry_desc: 'Rappel avant expiration',
     notif_threshold: 'Seuil de regroupement', notif_threshold_desc: 'Notifier tous les {n} visiteurs',
     pref_saved: 'Préférence sauvegardée',
+    pref_error: 'Erreur de sauvegarde : ',
+    loading: 'Chargement des paramètres…',
   },
   en: {
     title: 'Settings', subtitle: 'Security, language and notification preferences',
@@ -42,6 +43,8 @@ const TRANSLATIONS = {
     notif_expiry: 'Profile expiration', notif_expiry_desc: 'Reminder before expiration',
     notif_threshold: 'Grouping threshold', notif_threshold_desc: 'Notify every {n} visitors',
     pref_saved: 'Preference saved',
+    pref_error: 'Save error: ',
+    loading: 'Loading settings…',
   },
   es: {
     title: 'Configuración', subtitle: 'Seguridad, idioma y preferencias de notificación',
@@ -58,6 +61,8 @@ const TRANSLATIONS = {
     notif_expiry: 'Expiración de perfil', notif_expiry_desc: 'Recordatorio antes de expirar',
     notif_threshold: 'Umbral de agrupación', notif_threshold_desc: 'Notificar cada {n} visitantes',
     pref_saved: 'Preferencia guardada',
+    pref_error: 'Error al guardar: ',
+    loading: 'Cargando ajustes…',
   },
   ar: {
     title: 'الإعدادات', subtitle: 'الأمان واللغة وتفضيلات الإشعارات',
@@ -74,6 +79,8 @@ const TRANSLATIONS = {
     notif_expiry: 'انتهاء صلاحية الملف', notif_expiry_desc: 'تذكير قبل انتهاء الصلاحية',
     notif_threshold: 'حد التجميع', notif_threshold_desc: 'إشعار كل {n} زوار',
     pref_saved: 'تم حفظ التفضيل',
+    pref_error: 'خطأ في الحفظ: ',
+    loading: 'جارٍ تحميل الإعدادات…',
   },
   pt: {
     title: 'Configurações', subtitle: 'Segurança, idioma e preferências de notificação',
@@ -90,6 +97,8 @@ const TRANSLATIONS = {
     notif_expiry: 'Expiração do perfil', notif_expiry_desc: 'Lembrete antes da expiração',
     notif_threshold: 'Limite de agrupamento', notif_threshold_desc: 'Notificar a cada {n} visitantes',
     pref_saved: 'Preferência salva',
+    pref_error: 'Erro ao salvar: ',
+    loading: 'Carregando configurações…',
   },
 };
 
@@ -101,10 +110,75 @@ const LANGUAGES = [
   { code: 'pt', label: '🇧🇷 Português' },
 ];
 
-function Toggle({ value, onChange }) {
+const DEFAULT_SETTINGS = {
+  language: 'fr',
+  notif_view: true,
+  notif_click: true,
+  notif_expiry: true,
+  notif_threshold: 10,
+};
+
+// Anciennes clés globales (pré-migration), partagées par erreur entre admin et user
+const LEGACY_KEYS = {
+  language: 'app_language',
+  notif_view: 'notif_view',
+  notif_click: 'notif_click',
+  notif_expiry: 'notif_expiry',
+  notif_threshold: 'notif_threshold',
+};
+
+/**
+ * Lit les anciennes clés globales si elles existent encore, retourne un patch
+ * partiel ne contenant que les valeurs trouvées (sans toucher au localStorage).
+ * Ne s'exécute qu'une fois par appareil grâce au flag `legacy_settings_migrated`.
+ */
+function readLegacySettings() {
+  try {
+    if (localStorage.getItem('legacy_settings_migrated') === 'true') return null;
+
+    const patch = {};
+    let found = false;
+
+    if (localStorage.getItem(LEGACY_KEYS.language) !== null) {
+      patch.language = localStorage.getItem(LEGACY_KEYS.language);
+      found = true;
+    }
+    if (localStorage.getItem(LEGACY_KEYS.notif_view) !== null) {
+      patch.notif_view = localStorage.getItem(LEGACY_KEYS.notif_view) !== 'false';
+      found = true;
+    }
+    if (localStorage.getItem(LEGACY_KEYS.notif_click) !== null) {
+      patch.notif_click = localStorage.getItem(LEGACY_KEYS.notif_click) !== 'false';
+      found = true;
+    }
+    if (localStorage.getItem(LEGACY_KEYS.notif_expiry) !== null) {
+      patch.notif_expiry = localStorage.getItem(LEGACY_KEYS.notif_expiry) !== 'false';
+      found = true;
+    }
+    if (localStorage.getItem(LEGACY_KEYS.notif_threshold) !== null) {
+      const n = parseInt(localStorage.getItem(LEGACY_KEYS.notif_threshold), 10);
+      if (!Number.isNaN(n)) { patch.notif_threshold = n; found = true; }
+    }
+
+    return found ? patch : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Supprime les anciennes clés globales et marque la migration comme faite sur cet appareil. */
+function clearLegacySettings() {
+  try {
+    Object.values(LEGACY_KEYS).forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('legacy_settings_migrated', 'true');
+  } catch {}
+}
+
+function Toggle({ value, onChange, disabled }) {
   return (
-    <button onClick={() => onChange(!value)}
-      style={{ width: '44px', height: '24px', borderRadius: '100px', background: value ? '#6366f1' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>
+    <button onClick={() => !disabled && onChange(!value)}
+      disabled={disabled}
+      style={{ width: '44px', height: '24px', borderRadius: '100px', background: value ? '#6366f1' : 'rgba(255,255,255,0.1)', border: 'none', cursor: disabled ? 'default' : 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0, opacity: disabled ? 0.5 : 1 }}>
       <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: value ? '23px' : '3px', transition: 'left 0.3s' }} />
     </button>
   );
@@ -126,52 +200,125 @@ function Row({ icon: Icon, label, desc, right }) {
 }
 
 /**
- * UserSettingsPanel — utilisable dans les deux dashboards.
- * La section "profils" a été retirée : elle appartient à la section "Profils" dédiée.
+ * SettingsPanel — fichier unique partagé par le dashboard admin ET le dashboard user.
+ *
+ * Les préférences (langue, notifications) ne sont plus stockées dans localStorage
+ * sous des clés globales (ce qui causait des collisions entre admin et user sur le
+ * même navigateur). Elles sont désormais persistées dans Supabase, table
+ * `user_settings`, avec une ligne par `user_id` (RLS : chacun ne lit/écrit que la sienne).
+ * Un cache localStorage namespacé par `user.id` permet un affichage instantané
+ * avant la réponse réseau, sans jamais mélanger deux comptes.
  *
  * Le changement de langue dispatch `app_language_change` →
  * le hook `useLanguage()` dans chaque dashboard re-rend l'interface entière.
  */
-export default function UserSettingsPanel() {
-  const [newPwd,      setNewPwd]      = useState('');
-  const [confirmPwd,  setConfirmPwd]  = useState('');
-  const [pwdLoading,  setPwdLoading]  = useState(false);
-  const [language,    setLanguage]    = useState(() => {
-    try { return localStorage.getItem('app_language') || 'fr'; } catch { return 'fr'; }
-  });
-  const [notifView,   setNotifView]   = useState(() => {
-    try { return localStorage.getItem('notif_view')   !== 'false'; } catch { return true; }
-  });
-  const [notifClick,  setNotifClick]  = useState(() => {
-    try { return localStorage.getItem('notif_click')  !== 'false'; } catch { return true; }
-  });
-  const [notifExpiry, setNotifExpiry] = useState(() => {
-    try { return localStorage.getItem('notif_expiry') !== 'false'; } catch { return true; }
-  });
-  const [threshold,   setThreshold]   = useState(() => {
-    try { return parseInt(localStorage.getItem('notif_threshold') || '10'); } catch { return 10; }
-  });
+export default function SettingsPanel() {
+  const [userId, setUserId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
-  const t = (key, vars = {}) => {
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const cacheKey = useRef(null);
+
+  const { language, notif_view: notifView, notif_click: notifClick, notif_expiry: notifExpiry, notif_threshold: threshold } = settings;
+
+  const t = useCallback((key, vars = {}) => {
     const str = (TRANSLATIONS[language] || TRANSLATIONS.fr)[key] || key;
     return Object.entries(vars).reduce((s, [k, v]) => s.replace(`{${k}}`, v), str);
-  };
+  }, [language]);
 
   const isRtl = language === 'ar';
-  const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  const [notifGranted, setNotifGranted] = useState(
+    () => typeof Notification !== 'undefined' && Notification.permission === 'granted'
+  );
+
+  // ── Chargement initial : identité + cache local + valeurs serveur ──────────
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled || !user) { setLoading(false); return; }
+
+      setUserId(user.id);
+      cacheKey.current = `user_settings_${user.id}`;
+
+      // Cache local namespacé par compte → pas de collision admin/user
+      try {
+        const cached = localStorage.getItem(cacheKey.current);
+        if (cached) setSettings(prev => ({ ...prev, ...JSON.parse(cached) }));
+      } catch {}
+
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('language, notif_view, notif_click, notif_expiry, notif_threshold')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (!error && data) {
+        setSettings(data);
+        try { localStorage.setItem(cacheKey.current, JSON.stringify(data)); } catch {}
+        // Une ligne existe déjà côté serveur pour ce compte : on ne migre pas
+        // par-dessus (pourrait écraser des réglages faits sur un autre appareil).
+        clearLegacySettings();
+      } else if (!error && !data) {
+        // Première connexion pour ce compte : on part des valeurs par défaut,
+        // en y appliquant d'éventuelles anciennes valeurs globales trouvées
+        // sur CET appareil (ex. réglages faits avant la migration multi-comptes).
+        const legacyPatch = readLegacySettings();
+        const initial = legacyPatch ? { ...DEFAULT_SETTINGS, ...legacyPatch } : DEFAULT_SETTINGS;
+
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert({ user_id: user.id, ...initial });
+
+        if (!insertError) {
+          setSettings(initial);
+          try { localStorage.setItem(cacheKey.current, JSON.stringify(initial)); } catch {}
+          clearLegacySettings();
+          if (legacyPatch) {
+            window.dispatchEvent(new CustomEvent('app_language_change', { detail: { language: initial.language } }));
+          }
+        }
+      }
+
+      setLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const persist = useCallback(async (patch) => {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    try { if (cacheKey.current) localStorage.setItem(cacheKey.current, JSON.stringify(next)); } catch {}
+
+    if (!userId) return;
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({ user_id: userId, ...next }, { onConflict: 'user_id' });
+
+    if (error) {
+      toast.error(t('pref_error') + error.message);
+      return;
+    }
+  }, [settings, userId, t]);
 
   // ── Changement de langue : persiste + propage à tout le dashboard ──────────
-  const handleLanguageChange = (code) => {
-    setLanguage(code);
-    try { localStorage.setItem('app_language', code); } catch {}
-    // L'event est capté par useLanguage() dans chaque dashboard → re-render global
+  const handleLanguageChange = async (code) => {
+    await persist({ language: code });
     window.dispatchEvent(new CustomEvent('app_language_change', { detail: { language: code } }));
     toast.success(TRANSLATIONS[code]?.lang_success || 'Language updated');
   };
 
   const handlePasswordChange = async () => {
     if (!newPwd || newPwd.length < 6) { toast.error(t('password_short')); return; }
-    if (newPwd !== confirmPwd)        { toast.error(t('password_mismatch')); return; }
+    if (newPwd !== confirmPwd) { toast.error(t('password_mismatch')); return; }
     setPwdLoading(true);
     const { error } = await supabase.auth.updateUser({ password: newPwd });
     setPwdLoading(false);
@@ -181,10 +328,8 @@ export default function UserSettingsPanel() {
   };
 
   const saveNotifPref = (key, value) => {
-    if (key === 'view')      { setNotifView(value);   try { localStorage.setItem('notif_view',      String(value)); } catch {} }
-    if (key === 'click')     { setNotifClick(value);  try { localStorage.setItem('notif_click',     String(value)); } catch {} }
-    if (key === 'expiry')    { setNotifExpiry(value); try { localStorage.setItem('notif_expiry',    String(value)); } catch {} }
-    if (key === 'threshold') { setThreshold(value);   try { localStorage.setItem('notif_threshold', String(value)); } catch {} }
+    persist({ [key]: value });
+    window.dispatchEvent(new CustomEvent('app_notif_prefs_change', { detail: { key, value } }));
     toast.success(t('pref_saved'));
   };
 
@@ -197,6 +342,14 @@ export default function UserSettingsPanel() {
   };
 
   const sectionHeader = { padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px' };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.4)', fontSize: '13px', padding: '24px' }}>
+        <Loader2 size={16} className="animate-spin" /> {t('loading')}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '640px', direction: isRtl ? 'rtl' : 'ltr' }}>
@@ -266,15 +419,20 @@ export default function UserSettingsPanel() {
             </div>
           </div>
           {!notifGranted && (
-            <button onClick={async () => { const p = await Notification.requestPermission(); if (p === 'granted') toast.success(t('notif_enabled_success')); }}
+            <button onClick={async () => {
+              const p = await Notification.requestPermission();
+              setNotifGranted(p === 'granted');
+              if (p === 'granted') toast.success(t('notif_enabled_success'));
+              else if (p === 'denied') toast.error(t('pref_error') + 'permission refusée');
+            }}
               style={{ padding: '7px 12px', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '9px', color: '#22c55e', fontSize: '11px', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
               {t('notif_enable')}
             </button>
           )}
         </div>
-        <Row icon={Eye}               label={t('notif_view')}   desc={t('notif_view_desc')}   right={<Toggle value={notifView}   onChange={v => saveNotifPref('view',   v)} />} />
-        <Row icon={MousePointerClick} label={t('notif_click')}  desc={t('notif_click_desc')}  right={<Toggle value={notifClick}  onChange={v => saveNotifPref('click',  v)} />} />
-        <Row icon={CalendarClock}     label={t('notif_expiry')} desc={t('notif_expiry_desc')} right={<Toggle value={notifExpiry} onChange={v => saveNotifPref('expiry', v)} />} />
+        <Row icon={Eye}               label={t('notif_view')}   desc={t('notif_view_desc')}   right={<Toggle value={notifView}   onChange={v => saveNotifPref('notif_view',   v)} />} />
+        <Row icon={MousePointerClick} label={t('notif_click')}  desc={t('notif_click_desc')}  right={<Toggle value={notifClick}  onChange={v => saveNotifPref('notif_click',  v)} />} />
+        <Row icon={CalendarClock}     label={t('notif_expiry')} desc={t('notif_expiry_desc')} right={<Toggle value={notifExpiry} onChange={v => saveNotifPref('notif_expiry', v)} />} />
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
             <Activity size={15} color="rgba(255,255,255,0.35)" style={{ flexShrink: 0 }} />
@@ -286,7 +444,7 @@ export default function UserSettingsPanel() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
             {[1, 5, 10, 25, 50].map(n => (
-              <button key={n} onClick={() => saveNotifPref('threshold', n)}
+              <button key={n} onClick={() => saveNotifPref('notif_threshold', n)}
                 style={{ width: '30px', height: '28px', borderRadius: '8px', border: '1px solid ' + (threshold === n ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.1)'), background: threshold === n ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)', color: threshold === n ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: threshold === n ? 700 : 400, cursor: 'pointer' }}>
                 {n}
               </button>
@@ -298,4 +456,3 @@ export default function UserSettingsPanel() {
     </div>
   );
 }
-

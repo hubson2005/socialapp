@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Trash2, Mail, Phone, UserPlus,
   Loader2, Download, X,
-  MessageCircle, Building2, Tag,
+  MessageCircle, Building2, Tag as TagIcon,
   Pencil, Check,
-  Globe, LayoutList, Columns3,
+  Globe, List, Columns3, TagIcon as TagIconAlt,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
@@ -20,14 +20,14 @@ const STATUSES = [
 ];
 
 const SOURCES = [
-  { id: 'manuel',         label: 'Manuel'             },
-  { id: 'qrcode',         label: 'QR Code'            },
-  { id: 'socialapp',      label: 'Profil SocialApp'   },
-  { id: 'rsvp',           label: 'RSVP'               },
-  { id: 'marketplace',    label: 'Marketplace'        },
-  { id: 'formulaire',     label: 'Formulaire'         },
-  { id: 'automatisation', label: '🤖 Automatisation'  },
-  { id: 'calendrier',     label: '📅 Calendly / RDV'  },
+  { id: 'manuel',         label: 'Manuel'              },
+  { id: 'qrcode',         label: 'QR Code'             },
+  { id: 'socialapp',      label: 'Profil SocialApp'    },
+  { id: 'rsvp',           label: 'RSVP'                },
+  { id: 'marketplace',    label: 'Marketplace'         },
+  { id: 'formulaire',     label: 'Formulaire'          },
+  { id: 'automatisation', label: '🤖 Automatisation'   },
+  { id: 'calendrier',     label: '📅 Calendly / RDV'   },
 ];
 
 const ACTIVITY_ICONS = {
@@ -59,13 +59,13 @@ const scoreLabel = (s) =>
   s <= 80  ? { label: 'Chaud',  color: '#f97316', icon: '🔥'  } :
              { label: 'Brûlant',color: '#ef4444', icon: '🚀'  };
 
-// Palette stable pour les tags (déterminée par hash du nom, pas aléatoire)
-const TAG_COLORS = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#fb923c', '#22d3ee'];
-function tagColor(tag) {
+// Palette stable pour les tags (déterministe par nom de tag)
+const TAG_PALETTE = ['#a78bfa', '#22d3ee', '#f472b6', '#fbbf24', '#34d399', '#fb7185', '#818cf8'];
+const tagColor = (tag) => {
   let hash = 0;
   for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
-}
+  return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
+};
 
 // ─── Shared input style ──────────────────────────────────────────
 const inp = {
@@ -114,23 +114,26 @@ function StatusBadge({ status }) {
   );
 }
 
-function TagChip({ tag, onRemove, small = false }) {
-  const color = tagColor(tag);
+function TagChips({ tags = [], onRemove, size = 'normal' }) {
+  if (!tags.length) return null;
+  const isSmall = size === 'small';
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: small ? '1px 6px' : '3px 9px', borderRadius: 99,
-      background: color + '1f', color, border: `1px solid ${color}44`,
-      fontSize: small ? 9.5 : 11, fontWeight: 600, whiteSpace: 'nowrap',
-    }}>
-      #{tag}
-      {onRemove && (
-        <button onClick={(e) => { e.stopPropagation(); onRemove(tag); }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color, display: 'flex', padding: 0, marginLeft: 1 }}>
-          <X size={small ? 9 : 10} />
-        </button>
-      )}
-    </span>
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {tags.map(tag => (
+        <span key={tag} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: isSmall ? '1px 6px' : '2px 8px',
+          borderRadius: 99, background: `${tagColor(tag)}1f`,
+          border: `1px solid ${tagColor(tag)}44`,
+          color: tagColor(tag), fontSize: isSmall ? 9.5 : 10.5, fontWeight: 700,
+        }}>
+          #{tag}
+          {onRemove && (
+            <X size={isSmall ? 9 : 10} style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRemove(tag); }} />
+          )}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -380,18 +383,10 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
 
           {/* Tags */}
           <Section title="Tags">
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {(lead.tags || []).length === 0 ? (
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Aucun tag</span>
-              ) : (
-                (lead.tags || []).map(tag => (
-                  <TagChip key={tag} tag={tag} onRemove={removeTag} />
-                ))
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <TagChips tags={lead.tags || []} onRemove={removeTag} />
+            <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
               <input value={newTag} onChange={e => setNewTag(e.target.value)}
-                placeholder="Nouveau tag (ex: vip, urgent...)" style={{ ...inp, flex: 1 }}
+                placeholder="Ajouter un tag (ex: vip, urgent)..." style={{ ...inp, flex: 1 }}
                 onKeyDown={e => e.key === 'Enter' && addTag()} />
               <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}>
                 <Plus size={14} />
@@ -509,25 +504,26 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-// ─── Kanban : carte lead ──────────────────────────────────────────
-function KanbanCard({ lead, onOpen, onDragStart, onDragEnd, isDragging }) {
+// ─── Pipeline (Kanban) ─────────────────────────────────────────────
+function PipelineCard({ lead, onClick, onDragStart, onDragEnd }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   return (
     <div
       draggable
-      onDragStart={e => onDragStart(e, lead)}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(lead.id); }}
       onDragEnd={onDragEnd}
-      onClick={() => onOpen(lead)}
+      onClick={onClick}
       style={{
         background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 12, padding: '10px 12px', cursor: 'grab', marginBottom: 8,
-        opacity: isDragging ? 0.4 : 1, transition: 'opacity .15s',
+        borderRadius: 12, padding: '10px 12px', cursor: 'grab', display: 'flex',
+        flexDirection: 'column', gap: 8,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{
-          width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+          width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
           background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
+          border: `1.5px solid ${sc}55`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 11, fontWeight: 800, color: sc,
         }}>
@@ -537,81 +533,75 @@ function KanbanCard({ lead, onOpen, onDragStart, onDragEnd, isDragging }) {
           {lead.name}
         </span>
       </div>
-      {lead.phone && (
-        <p style={{ margin: '0 0 6px', color: 'rgba(255,255,255,0.4)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Phone size={10} /> {lead.phone}
-        </p>
-      )}
-      {!!(lead.tags || []).length && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
-          {(lead.tags || []).slice(0, 3).map(t => <TagChip key={t} tag={t} small />)}
+      {(lead.phone || lead.company) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {lead.phone && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}</span>}
+          {lead.company && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={9} /> {lead.company}</span>}
         </div>
       )}
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 99, marginTop: 4 }}>
+      {!!lead.tags?.length && <TagChips tags={lead.tags} size="small" />}
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
         <div style={{ height: '100%', width: `${lead.score || 0}%`, background: sc, borderRadius: 99 }} />
       </div>
     </div>
   );
 }
 
-// ─── Kanban : vue complète ────────────────────────────────────────
-function KanbanView({ leads, onOpenLead, onStatusChange }) {
-  const [draggedLead, setDraggedLead] = useState(null);
-  const [dragOverCol, setDragOverCol] = useState(null);
+function PipelineView({ leads, onCardClick, onStatusChange }) {
+  const [draggedId, setDraggedId] = useState(null);
+  const [overColumn, setOverColumn] = useState(null);
 
-  const handleDragStart = (e, lead) => {
-    setDraggedLead(lead);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-  const handleDragEnd = () => { setDraggedLead(null); setDragOverCol(null); };
-  const handleDrop = (e, statusId) => {
-    e.preventDefault();
-    setDragOverCol(null);
-    if (!draggedLead || draggedLead.status === statusId) return;
-    onStatusChange(draggedLead, statusId);
-    setDraggedLead(null);
-  };
+  const grouped = useMemo(() => {
+    const map = {};
+    STATUSES.forEach(s => { map[s.id] = []; });
+    leads.forEach(l => { if (map[l.status]) map[l.status].push(l); });
+    return map;
+  }, [leads]);
 
   return (
-    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
-      {STATUSES.map(status => {
-        const colLeads = leads.filter(l => l.status === status.id);
-        const isOver = dragOverCol === status.id;
-        return (
-          <div
-            key={status.id}
-            onDragOver={e => { e.preventDefault(); setDragOverCol(status.id); }}
-            onDragLeave={() => setDragOverCol(null)}
-            onDrop={e => handleDrop(e, status.id)}
-            style={{
-              minWidth: 240, width: 240, flexShrink: 0,
-              background: isOver ? status.bg : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${isOver ? status.color + '66' : 'rgba(255,255,255,0.07)'}`,
-              borderRadius: 14, padding: 10, transition: 'all .12s',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: '0 2px' }}>
-              <span style={{ color: status.color, fontSize: 12, fontWeight: 700 }}>{status.label}</span>
-              <span style={{ background: status.bg, color: status.color, borderRadius: 99, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
-                {colLeads.length}
-              </span>
-            </div>
-            <div style={{ minHeight: 60 }}>
-              {colLeads.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>
-                  Aucun lead
-                </div>
-              ) : (
-                colLeads.map(lead => (
-                  <KanbanCard key={lead.id} lead={lead} onOpen={onOpenLead}
-                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                    isDragging={draggedLead?.id === lead.id} />
-                ))
-              )}
-            </div>
+    <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
+      {STATUSES.map(status => (
+        <div
+          key={status.id}
+          onDragOver={(e) => { e.preventDefault(); setOverColumn(status.id); }}
+          onDragLeave={() => setOverColumn(prev => prev === status.id ? null : prev)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setOverColumn(null);
+            if (draggedId) onStatusChange(draggedId, status.id);
+            setDraggedId(null);
+          }}
+          style={{
+            minWidth: 230, width: 230, flexShrink: 0,
+            background: overColumn === status.id ? 'rgba(255,255,255,0.04)' : 'transparent',
+            border: overColumn === status.id ? `1.5px dashed ${status.color}66` : '1.5px dashed transparent',
+            borderRadius: 14, padding: 6, transition: 'all .12s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 10px' }}>
+            <span style={{ color: status.color, fontSize: 12, fontWeight: 700 }}>{status.label}</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 600, background: 'rgba(255,255,255,0.06)', borderRadius: 99, padding: '1px 7px' }}>
+              {grouped[status.id].length}
+            </span>
           </div>
-        );
-      })}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 60 }}>
+            {grouped[status.id].map(lead => (
+              <PipelineCard
+                key={lead.id}
+                lead={lead}
+                onClick={() => onCardClick(lead)}
+                onDragStart={setDraggedId}
+                onDragEnd={() => setDraggedId(null)}
+              />
+            ))}
+            {grouped[status.id].length === 0 && (
+              <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>
+                Aucun lead
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -620,10 +610,10 @@ export default function LeadsCRMPanel({ profileId }) {
   const isMobile = useIsMobile();
   const [leads, setLeads]               = useState([]);
   const [loading, setLoading]           = useState(true);
+  const [view, setView]                 = useState('list'); // 'list' | 'pipeline'
   const [filter, setFilter]             = useState('all');
   const [tagFilter, setTagFilter]       = useState(null);
   const [search, setSearch]             = useState('');
-  const [viewMode, setViewMode]         = useState('list'); // 'list' | 'kanban'
   const [showAdd, setShowAdd]           = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [newLead, setNewLead]           = useState({ ...EMPTY_LEAD });
@@ -690,18 +680,20 @@ export default function LeadsCRMPanel({ profileId }) {
     setLeads(prev => prev.map(l => (l.id === updated.id ? updated : l)));
   };
 
-  // Changement de statut depuis le Kanban (drag & drop)
-  const handleKanbanStatusChange = async (lead, newStatus) => {
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: newStatus } : l));
-    const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', lead.id);
+  // Drag & drop dans la vue Pipeline : met à jour le statut + log l'activité
+  const handlePipelineStatusChange = async (leadId, newStatus) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead || lead.status === newStatus) return;
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+    const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', leadId);
     if (error) {
       toast.error(error.message);
-      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: lead.status } : l));
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: lead.status } : l));
       return;
     }
     await supabase.from('lead_activities').insert([{
-      lead_id: lead.id, type: 'status',
-      description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
+      lead_id: leadId, type: 'status',
+      description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus} (glissé-déposé)`,
     }]);
     toast.success(`${lead.name} → ${STATUSES.find(s => s.id === newStatus)?.label}`);
   };
@@ -726,8 +718,12 @@ export default function LeadsCRMPanel({ profileId }) {
     URL.revokeObjectURL(url);
   };
 
-  // Tags uniques présents sur l'ensemble des leads (pour la barre de filtre)
-  const allTags = Array.from(new Set(leads.flatMap(l => l.tags || []))).sort();
+  // Tous les tags distincts présents sur les leads de ce profil
+  const allTags = useMemo(() => {
+    const set = new Set();
+    leads.forEach(l => (l.tags || []).forEach(t => set.add(t)));
+    return Array.from(set).sort();
+  }, [leads]);
 
   const filteredLeads = leads.filter(l => {
     const matchesFilter = filter === 'all' || l.status === filter;
@@ -737,7 +733,8 @@ export default function LeadsCRMPanel({ profileId }) {
       l.name?.toLowerCase().includes(q) ||
       l.phone?.toLowerCase().includes(q) ||
       l.email?.toLowerCase().includes(q) ||
-      l.company?.toLowerCase().includes(q);
+      l.company?.toLowerCase().includes(q) ||
+      (l.tags || []).some(t => t.toLowerCase().includes(q));
     return matchesFilter && matchesTag && matchesSearch;
   });
 
@@ -767,22 +764,22 @@ export default function LeadsCRMPanel({ profileId }) {
             {leads.length} lead{leads.length !== 1 ? 's' : ''} au total
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {/* Toggle Liste / Kanban */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Toggle vue Liste / Pipeline */}
           <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 3 }}>
-            <button onClick={() => setViewMode('list')} title="Vue liste" style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '7px 11px', borderRadius: 9,
-              border: 'none', background: viewMode === 'list' ? 'rgba(99,102,241,0.3)' : 'transparent',
-              color: viewMode === 'list' ? 'white' : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            <button onClick={() => setView('list')} title="Vue liste" style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none',
+              background: view === 'list' ? 'rgba(99,102,241,0.25)' : 'transparent',
+              color: view === 'list' ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer',
             }}>
-              <LayoutList size={13} /> {!isMobile && 'Liste'}
+              <List size={13} /> {!isMobile && 'Liste'}
             </button>
-            <button onClick={() => setViewMode('kanban')} title="Vue Kanban" style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '7px 11px', borderRadius: 9,
-              border: 'none', background: viewMode === 'kanban' ? 'rgba(99,102,241,0.3)' : 'transparent',
-              color: viewMode === 'kanban' ? 'white' : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            <button onClick={() => setView('pipeline')} title="Vue pipeline" style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none',
+              background: view === 'pipeline' ? 'rgba(99,102,241,0.25)' : 'transparent',
+              color: view === 'pipeline' ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer',
             }}>
-              <Columns3 size={13} /> {!isMobile && 'Kanban'}
+              <Columns3 size={13} /> {!isMobile && 'Pipeline'}
             </button>
           </div>
           <button onClick={exportCSV} style={{
@@ -790,31 +787,32 @@ export default function LeadsCRMPanel({ profileId }) {
             background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 12, color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
           }}>
-            <Download size={13} /> {!isMobile && 'Exporter CSV'}
+            <Download size={13} /> {isMobile ? '' : 'Exporter CSV'}
           </button>
           <button onClick={() => setShowAdd(true)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px',
             background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none',
             borderRadius: 12, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
           }}>
-            <UserPlus size={13} /> {!isMobile && 'Ajouter un lead'}
+            <UserPlus size={13} /> Ajouter un lead
           </button>
         </div>
       </div>
 
-      {/* Search + filters (masqués en vue Kanban — les colonnes remplacent le filtre statut) */}
+      {/* Search + filters */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ position: 'relative' }}>
           <Search size={14} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher un lead (nom, téléphone, email, entreprise)..."
+            placeholder="Rechercher un lead (nom, téléphone, email, entreprise, tag)..."
             style={{ ...inp, paddingLeft: 38 }}
           />
         </div>
 
-        {viewMode === 'list' && (
+        {/* Filtres statut — masqués en vue Pipeline (les colonnes font déjà le tri) */}
+        {view === 'list' && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button onClick={() => setFilter('all')} style={{
               padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
@@ -839,39 +837,50 @@ export default function LeadsCRMPanel({ profileId }) {
           </div>
         )}
 
-        {/* Filtre par tag — affiché seulement si des tags existent */}
+        {/* Filtre par tag — disponible dans les deux vues */}
         {allTags.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <Tag size={12} color="rgba(255,255,255,0.3)" />
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <TagIcon size={11} /> Tags :
+            </span>
             {allTags.map(tag => (
-              <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 99,
-                  background: tagFilter === tag ? tagColor(tag) + '33' : tagColor(tag) + '14',
-                  color: tagColor(tag), border: `1px solid ${tagColor(tag)}${tagFilter === tag ? '88' : '33'}`,
-                  fontSize: 11, fontWeight: 600,
-                }}>#{tag}</span>
+              <button key={tag} onClick={() => setTagFilter(prev => prev === tag ? null : tag)} style={{
+                padding: '3px 9px', borderRadius: 99, cursor: 'pointer',
+                border: `1px solid ${tagFilter === tag ? tagColor(tag) : 'rgba(255,255,255,0.08)'}`,
+                background: tagFilter === tag ? `${tagColor(tag)}22` : 'transparent',
+                color: tagFilter === tag ? tagColor(tag) : 'rgba(255,255,255,0.4)',
+                fontSize: 10.5, fontWeight: 600,
+              }}>
+                #{tag}
               </button>
             ))}
-            {tagFilter && (
-              <button onClick={() => setTagFilter(null)} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-                Effacer
-              </button>
-            )}
           </div>
         )}
       </div>
 
-      {/* Contenu : Liste ou Kanban */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" />
-        </div>
-      ) : viewMode === 'kanban' ? (
-        <KanbanView leads={filteredLeads} onOpenLead={setSelectedLead} onStatusChange={handleKanbanStatusChange} />
-      ) : (
+      {/* Vue Pipeline */}
+      {view === 'pipeline' && (
+        loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" />
+          </div>
+        ) : (
+          <PipelineView
+            leads={filteredLeads}
+            onCardClick={setSelectedLead}
+            onStatusChange={handlePipelineStatusChange}
+          />
+        )
+      )}
+
+      {/* Vue Liste */}
+      {view === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {filteredLeads.length === 0 ? (
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" />
+            </div>
+          ) : filteredLeads.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
               {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
             </div>
@@ -913,12 +922,9 @@ export default function LeadsCRMPanel({ profileId }) {
                         </span>
                       )}
                     </div>
-                    {!!(lead.tags || []).length && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                        {lead.tags.slice(0, 4).map(t => <TagChip key={t} tag={t} small />)}
-                        {lead.tags.length > 4 && (
-                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, alignSelf: 'center' }}>+{lead.tags.length - 4}</span>
-                        )}
+                    {!!lead.tags?.length && (
+                      <div style={{ marginTop: 6 }}>
+                        <TagChips tags={lead.tags} size="small" />
                       </div>
                     )}
                   </div>

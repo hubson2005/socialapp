@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Trash2, Mail, Phone, UserPlus,
   Loader2, Download, X,
   MessageCircle, Building2, Tag as TagIcon,
   Pencil, Check,
-  Globe, List, Columns3, TagIcon as TagIconAlt,
+  Globe, List, Columns3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
@@ -13,9 +13,9 @@ import { supabase } from '../../supabase';
 // ─── Constants ───────────────────────────────────────────────────
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
-  { id: 'chaud',     label: '🔥 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
-  { id: 'client',   label: '✅ Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)'  },
-  { id: 'froid',    label: '❄️ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)'  },
+  { id: 'chaud',    label: '\uD83D\uDD25 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
+  { id: 'client',   label: '\u2705 Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)'  },
+  { id: 'froid',    label: '\u2744\uFE0F Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)'  },
   { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
 ];
 
@@ -26,40 +26,32 @@ const SOURCES = [
   { id: 'rsvp',           label: 'RSVP'                },
   { id: 'marketplace',    label: 'Marketplace'         },
   { id: 'formulaire',     label: 'Formulaire'          },
-  { id: 'automatisation', label: '🤖 Automatisation'   },
-  { id: 'calendrier',     label: '📅 Calendly / RDV'   },
+  { id: 'automatisation', label: '\uD83E\uDD16 Automatisation'   },
+  { id: 'calendrier',     label: '\uD83D\uDCC5 Calendly / RDV'   },
 ];
 
 const ACTIVITY_ICONS = {
-  created:  '🆕',
-  edited:   '✏️',
-  note:     '📝',
-  whatsapp: '💬',
-  status:   '🔄',
+  created:  '\uD83C\uDD95',
+  edited:   '\u270F\uFE0F',
+  note:     '\uD83D\uDCDD',
+  whatsapp: '\uD83D\uDCAC',
+  status:   '\uD83D\uDD04',
 };
 
-// Normalise un numéro pour comparaison (retire tout sauf les chiffres)
 const normalizePhone = (phone = '') => phone.replace(/\D/g, '');
 
 const EMPTY_LEAD = {
-  name: '',
-  phone: '',
-  email: '',
-  company: '',
-  status: 'prospect',
-  source: 'manuel',
-  notes: '',
-  score: 0,
+  name: '', phone: '', email: '', company: '',
+  status: 'prospect', source: 'manuel', notes: '', score: 0,
 };
 
 // Score helpers
 const scoreLabel = (s) =>
-  s <= 30  ? { label: 'Froid',  color: '#06b6d4', icon: '❄️'  } :
-  s <= 60  ? { label: 'Tiède',  color: '#f59e0b', icon: '🌡️'  } :
-  s <= 80  ? { label: 'Chaud',  color: '#f97316', icon: '🔥'  } :
-             { label: 'Brûlant',color: '#ef4444', icon: '🚀'  };
+  s <= 30  ? { label: 'Froid',   color: '#06b6d4', icon: '\u2744\uFE0F' } :
+  s <= 60  ? { label: 'Ti\u00e8de',   color: '#f59e0b', icon: '\uD83C\uDF21\uFE0F' } :
+  s <= 80  ? { label: 'Chaud',   color: '#f97316', icon: '\uD83D\uDD25' } :
+             { label: 'Br\u00fblant', color: '#ef4444', icon: '\uD83D\uDE80' };
 
-// Palette stable pour les tags (déterministe par nom de tag)
 const TAG_PALETTE = ['#a78bfa', '#22d3ee', '#f472b6', '#fbbf24', '#34d399', '#fb7185', '#818cf8'];
 const tagColor = (tag) => {
   let hash = 0;
@@ -75,6 +67,28 @@ const inp = {
   fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit',
 };
 
+// ─── Checkbox component ──────────────────────────────────────────
+function Checkbox({ checked, indeterminate, onChange, style = {} }) {
+  return (
+    <div
+      onClick={e => { e.stopPropagation(); onChange(); }}
+      style={{
+        width: 17, height: 17, borderRadius: 5, flexShrink: 0,
+        border: `1.5px solid ${checked || indeterminate ? '#6366f1' : 'rgba(255,255,255,0.2)'}`,
+        background: checked ? '#6366f1' : indeterminate ? 'rgba(99,102,241,0.25)' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', transition: 'all .15s',
+        ...style,
+      }}
+    >
+      {checked && <Check size={10} color="white" strokeWidth={3} />}
+      {!checked && indeterminate && (
+        <div style={{ width: 7, height: 2, background: '#818cf8', borderRadius: 1 }} />
+      )}
+    </div>
+  );
+}
+
 // ─── Sub-components ──────────────────────────────────────────────
 function ScoreBar({ score, onChange }) {
   const { color, label, icon } = scoreLabel(score);
@@ -82,7 +96,7 @@ function ScoreBar({ score, onChange }) {
     <div style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Score prospect</span>
-        <span style={{ color, fontWeight: 700, fontSize: 13 }}>{icon} {score} — {label}</span>
+        <span style={{ color, fontWeight: 700, fontSize: 13 }}>{icon} {score} \u2014 {label}</span>
       </div>
       <div style={{ position: 'relative', height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99 }}>
         <div style={{
@@ -129,7 +143,8 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
         }}>
           #{tag}
           {onRemove && (
-            <X size={isSmall ? 9 : 10} style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRemove(tag); }} />
+            <X size={isSmall ? 9 : 10} style={{ cursor: 'pointer' }}
+              onClick={e => { e.stopPropagation(); onRemove(tag); }} />
           )}
         </span>
       ))}
@@ -146,11 +161,11 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
         e.stopPropagation();
         if (!hasPhone) return;
         const cleanPhone = normalizePhone(phone);
-        if (cleanPhone.length < 8) { toast.error('Numéro invalide'); return; }
+        if (cleanPhone.length < 8) { toast.error('Num\u00e9ro invalide'); return; }
         window.open(`https://wa.me/${cleanPhone}`, '_blank', 'noopener,noreferrer');
         onContact && onContact(leadId);
       }}
-      title={hasPhone ? `WhatsApp: ${phone}` : 'Numéro manquant'}
+      title={hasPhone ? `WhatsApp: ${phone}` : 'Num\u00e9ro manquant'}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         gap: compact ? 0 : 6,
@@ -177,17 +192,13 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
   const [activities, setActivities] = useState([]);
   const [loadingAct, setLoadingAct] = useState(true);
 
-  useEffect(() => {
-    loadActivities();
-  }, [lead.id]);
+  useEffect(() => { loadActivities(); }, [lead.id]);
 
   const loadActivities = async () => {
     setLoadingAct(true);
     const { data } = await supabase
-      .from('lead_activities')
-      .select('*')
-      .eq('lead_id', lead.id)
-      .order('created_at', { ascending: false });
+      .from('lead_activities').select('*')
+      .eq('lead_id', lead.id).order('created_at', { ascending: false });
     setActivities(data || []);
     setLoadingAct(false);
   };
@@ -200,34 +211,26 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
       updated_at: new Date().toISOString(),
     }).eq('id', lead.id);
     if (error) { toast.error(error.message); return; }
-
-    await supabase.from('lead_activities').insert([{
-      lead_id: lead.id, type: 'edited',
-      description: 'Fiche modifiée',
-    }]);
-    const updatedLead = { ...lead, ...form };
-    onUpdate(updatedLead);
+    await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'edited', description: 'Fiche modifi\u00e9e' }]);
+    onUpdate({ ...lead, ...form });
     setEditing(false);
-    toast.success('Lead mis à jour');
+    toast.success('Lead mis \u00e0 jour');
     loadActivities();
   };
 
   const addNote = async () => {
     if (!note.trim()) return;
-    await supabase.from('lead_activities').insert([{
-      lead_id: lead.id, type: 'note',
-      description: note.trim(),
-    }]);
+    await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'note', description: note.trim() }]);
     setNote('');
     loadActivities();
-    toast.success('Note ajoutée');
+    toast.success('Note ajout\u00e9e');
   };
 
   const handleStatusChange = async (newStatus) => {
     await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', lead.id);
     await supabase.from('lead_activities').insert([{
       lead_id: lead.id, type: 'status',
-      description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
+      description: `Statut \u2192 ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
     }]);
     onUpdate({ ...lead, status: newStatus });
     setForm(f => ({ ...f, status: newStatus }));
@@ -258,9 +261,7 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
@@ -269,30 +270,25 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
       }}
     >
       <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
+        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 460, height: '100vh',
-          background: '#0f0f1a',
-          borderLeft: '1px solid rgba(255,255,255,0.08)',
+          background: '#0f0f1a', borderLeft: '1px solid rgba(255,255,255,0.08)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
         {/* Modal header */}
         <div style={{
-          padding: '20px 24px 18px',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          padding: '20px 24px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: 'rgba(255,255,255,0.02)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 46, height: 46, borderRadius: '50%',
-              background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
-              border: `2px solid ${sc}55`,
+              background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `2px solid ${sc}55`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 18, fontWeight: 800, color: sc,
             }}>
@@ -309,31 +305,27 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {editing
-              ? <button onClick={saveEdit} style={{ ...actionBtn('#22c55e') }}><Check size={14} /></button>
-              : <button onClick={() => setEditing(true)} style={{ ...actionBtn('#6366f1') }}><Pencil size={14} /></button>
+              ? <button onClick={saveEdit} style={actionBtn('#22c55e')}><Check size={14} /></button>
+              : <button onClick={() => setEditing(true)} style={actionBtn('#6366f1')}><Pencil size={14} /></button>
             }
-            <button onClick={onClose} style={{ ...actionBtn('rgba(255,255,255,0.15)') }}><X size={14} /></button>
+            <button onClick={onClose} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>
           </div>
         </div>
 
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-
           {/* Quick actions */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             <WhatsAppBtn phone={current.phone} leadId={lead.id} onContact={async (id) => {
-              await supabase.from('lead_activities').insert([{
-                lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué',
-              }]);
+              await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectu\u00e9' }]);
               onContact && onContact();
               loadActivities();
             }} />
             {current.email && (
               <a href={`mailto:${current.email}`} onClick={e => e.stopPropagation()} style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                height: 38, padding: '0 14px', borderRadius: 10, textDecoration: 'none',
-                background: 'rgba(99,102,241,0.12)', color: '#818cf8',
-                fontWeight: 700, fontSize: 12, border: 'none',
+                display: 'flex', alignItems: 'center', gap: 6, height: 38, padding: '0 14px',
+                borderRadius: 10, textDecoration: 'none', background: 'rgba(99,102,241,0.12)',
+                color: '#818cf8', fontWeight: 700, fontSize: 12, border: 'none',
               }}>
                 <Mail size={14} /> Email
               </a>
@@ -344,31 +336,20 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
             </button>
           </div>
 
-          {/* Info fields */}
           <Section title="Informations">
-            <Field icon={<Phone size={13} />} label="Téléphone"
-              value={current.phone} editing={editing}
-              onChange={v => setForm(f => ({ ...f, phone: v }))} />
-            <Field icon={<Mail size={13} />} label="Email"
-              value={current.email} editing={editing}
-              onChange={v => setForm(f => ({ ...f, email: v }))} />
-            <Field icon={<Building2 size={13} />} label="Entreprise"
-              value={current.company} editing={editing}
-              onChange={v => setForm(f => ({ ...f, company: v }))} />
+            <Field icon={<Phone size={13} />} label="T\u00e9l\u00e9phone" value={current.phone} editing={editing} onChange={v => setForm(f => ({ ...f, phone: v }))} />
+            <Field icon={<Mail size={13} />} label="Email" value={current.email} editing={editing} onChange={v => setForm(f => ({ ...f, email: v }))} />
+            <Field icon={<Building2 size={13} />} label="Entreprise" value={current.company} editing={editing} onChange={v => setForm(f => ({ ...f, company: v }))} />
             <Field icon={<Globe size={13} />} label="Source"
               value={SOURCES.find(s => s.id === current.source)?.label || current.source}
               valueRaw={current.source} editing={editing} type="select" options={SOURCES}
               onChange={v => setForm(f => ({ ...f, source: v }))} />
           </Section>
 
-          {/* Status pills */}
           <Section title="Statut">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {STATUSES.map(s => (
-                <button key={s.id} onClick={() => editing
-                  ? setForm(f => ({ ...f, status: s.id }))
-                  : handleStatusChange(s.id)
-                } style={{
+                <button key={s.id} onClick={() => editing ? setForm(f => ({ ...f, status: s.id })) : handleStatusChange(s.id)} style={{
                   padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
                   border: `1px solid ${(editing ? form : lead).status === s.id ? s.color : 'rgba(255,255,255,0.08)'}`,
                   background: (editing ? form : lead).status === s.id ? s.bg : 'transparent',
@@ -381,7 +362,6 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
             </div>
           </Section>
 
-          {/* Tags */}
           <Section title="Tags">
             <TagChips tags={lead.tags || []} onRemove={removeTag} />
             <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
@@ -394,50 +374,37 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
             </div>
           </Section>
 
-          {/* Score */}
           <Section title="Score commercial">
             <ScoreBar score={editing ? form.score : (lead.score ?? 0)}
               onChange={editing ? v => setForm(f => ({ ...f, score: v })) : null} />
           </Section>
 
-          {/* Notes */}
           <Section title="Notes">
             {current.notes && (
               <p style={{ margin: '0 0 8px', color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.6 }}>
                 {editing
-                  ? <textarea value={form.notes} rows={3}
-                      onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                      style={{ ...inp, resize: 'none' }} />
+                  ? <textarea value={form.notes} rows={3} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={{ ...inp, resize: 'none' }} />
                   : current.notes
                 }
               </p>
             )}
             {!editing && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <input value={note} onChange={e => setNote(e.target.value)}
-                  placeholder="Ajouter une note..." style={{ ...inp, flex: 1 }}
+                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." style={{ ...inp, flex: 1 }}
                   onKeyDown={e => e.key === 'Enter' && addNote()} />
-                <button onClick={addNote} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}>
-                  <Plus size={14} />
-                </button>
+                <button onClick={addNote} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
               </div>
             )}
           </Section>
 
-          {/* Activity history */}
           <Section title="Historique">
             {loadingAct
               ? <div style={{ textAlign: 'center', padding: 20 }}><Loader2 size={16} color="rgba(255,255,255,0.3)" className="animate-spin" /></div>
               : activities.length === 0
-              ? <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activité</p>
-              : activities.map((a) => (
-                <div key={a.id} style={{
-                  display: 'flex', gap: 10, alignItems: 'flex-start',
-                  padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
-                }}>
-                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>
-                    {ACTIVITY_ICONS[a.type] || '📌'}
-                  </span>
+              ? <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activit\u00e9</p>
+              : activities.map(a => (
+                <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || '\uD83D\uDCCC'}</span>
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: 0, color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{a.description}</p>
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
@@ -457,8 +424,7 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
 function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 22 }}>
-      <h4 style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 700,
-        textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>
+      <h4 style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>
         {title}
       </h4>
       {children}
@@ -479,7 +445,7 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
           : <input value={value || ''} onChange={e => onChange(e.target.value)} style={{ ...inp, padding: '7px 10px' }} />
       ) : (
         <span style={{ color: value ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)', fontSize: 13 }}>
-          {value || '—'}
+          {value || '\u2014'}
         </span>
       )}
     </div>
@@ -504,13 +470,13 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-// ─── Pipeline (Kanban) ─────────────────────────────────────────────
+// ─── Pipeline (Kanban) ────────────────────────────────────────────
 function PipelineCard({ lead, onClick, onDragStart, onDragEnd }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   return (
     <div
       draggable
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart(lead.id); }}
+      onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(lead.id); }}
       onDragEnd={onDragEnd}
       onClick={onClick}
       style={{
@@ -522,8 +488,7 @@ function PipelineCard({ lead, onClick, onDragStart, onDragEnd }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{
           width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-          background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
-          border: `1.5px solid ${sc}55`,
+          background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `1.5px solid ${sc}55`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 11, fontWeight: 800, color: sc,
         }}>
@@ -563,11 +528,10 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
       {STATUSES.map(status => (
         <div
           key={status.id}
-          onDragOver={(e) => { e.preventDefault(); setOverColumn(status.id); }}
+          onDragOver={e => { e.preventDefault(); setOverColumn(status.id); }}
           onDragLeave={() => setOverColumn(prev => prev === status.id ? null : prev)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setOverColumn(null);
+          onDrop={e => {
+            e.preventDefault(); setOverColumn(null);
             if (draggedId) onStatusChange(draggedId, status.id);
             setDraggedId(null);
           }}
@@ -586,18 +550,11 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 60 }}>
             {grouped[status.id].map(lead => (
-              <PipelineCard
-                key={lead.id}
-                lead={lead}
-                onClick={() => onCardClick(lead)}
-                onDragStart={setDraggedId}
-                onDragEnd={() => setDraggedId(null)}
-              />
+              <PipelineCard key={lead.id} lead={lead} onClick={() => onCardClick(lead)}
+                onDragStart={setDraggedId} onDragEnd={() => setDraggedId(null)} />
             ))}
             {grouped[status.id].length === 0 && (
-              <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>
-                Aucun lead
-              </div>
+              <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>Aucun lead</div>
             )}
           </div>
         </div>
@@ -606,11 +563,12 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
   );
 }
 
+// ─── Main component ───────────────────────────────────────────────
 export default function LeadsCRMPanel({ profileId }) {
   const isMobile = useIsMobile();
   const [leads, setLeads]               = useState([]);
   const [loading, setLoading]           = useState(true);
-  const [view, setView]                 = useState('list'); // 'list' | 'pipeline'
+  const [view, setView]                 = useState('list');
   const [filter, setFilter]             = useState('all');
   const [tagFilter, setTagFilter]       = useState(null);
   const [search, setSearch]             = useState('');
@@ -619,25 +577,27 @@ export default function LeadsCRMPanel({ profileId }) {
   const [newLead, setNewLead]           = useState({ ...EMPTY_LEAD });
   const [adding, setAdding]             = useState(false);
 
+  // ── Bulk selection state ──────────────────────────────────────
+  const [selectedIds, setSelectedIds]   = useState(new Set());
+  const [bulkStatus, setBulkStatus]     = useState('');
+
   useEffect(() => {
     if (!profileId) return;
     loadLeads();
     const channel = supabase
       .channel(`leads-${profileId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'leads',
-        filter: `profile_id=eq.${profileId}`,
-      }, () => { loadLeads(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `profile_id=eq.${profileId}` }, () => loadLeads())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [profileId]);
 
+  // Clear selection whenever filters or view change
+  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); }, [view, filter, tagFilter, search]);
+
   const loadLeads = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('leads').select('*')
-      .eq('profile_id', profileId)
-      .order('created_at', { ascending: false });
+      .from('leads').select('*').eq('profile_id', profileId).order('created_at', { ascending: false });
     if (error) { toast.error(error.message); setLoading(false); return; }
     setLeads(data || []);
     setLoading(false);
@@ -646,41 +606,29 @@ export default function LeadsCRMPanel({ profileId }) {
   const addLead = async () => {
     if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
     setAdding(true);
-    const exists = leads.find(
-      l => normalizePhone(l.phone) === normalizePhone(newLead.phone) &&
-           normalizePhone(newLead.phone).length > 0
-    );
-    if (exists) { toast.error('Ce numéro existe déjà'); setAdding(false); return; }
-    const { data, error } = await supabase.from('leads')
-      .insert([{
-        ...newLead,
-        profile_id: profileId,
-        score: 0,           // ← forcé à 0, quoi qu'il arrive
-      }])
-      .select().maybeSingle();
+    const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
+    if (exists) { toast.error('Ce num\u00e9ro existe d\u00e9j\u00e0'); setAdding(false); return; }
+    const { data, error } = await supabase.from('leads').insert([{ ...newLead, profile_id: profileId, score: 0 }]).select().maybeSingle();
     if (error) { toast.error(error.message); setAdding(false); return; }
-    await supabase.from('lead_activities').insert([{
-      lead_id: data.id, type: 'created', description: 'Lead créé',
-    }]);
+    await supabase.from('lead_activities').insert([{ lead_id: data.id, type: 'created', description: 'Lead cr\u00e9\u00e9' }]);
     setLeads(p => [data, ...p]);
     setNewLead({ ...EMPTY_LEAD });
     setShowAdd(false);
     setAdding(false);
-    toast.success('Lead ajouté ✅');
+    toast.success('Lead ajout\u00e9 \u2705');
   };
 
   const deleteLead = async (id) => {
     const { error } = await supabase.from('leads').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     setLeads(prev => prev.filter(l => l.id !== id));
-    toast.success('Lead supprimé');
+    toast.success('Lead supprim\u00e9');
   };
 
   const updateLeadLocal = (updated) => {
-    setLeads(prev => prev.map(l => (l.id === updated.id ? updated : l)));
+    setLeads(prev => prev.map(l => l.id === updated.id ? updated : l));
   };
 
-  // Drag & drop dans la vue Pipeline : met à jour le statut + log l'activité
   const handlePipelineStatusChange = async (leadId, newStatus) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead || lead.status === newStatus) return;
@@ -693,32 +641,79 @@ export default function LeadsCRMPanel({ profileId }) {
     }
     await supabase.from('lead_activities').insert([{
       lead_id: leadId, type: 'status',
-      description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus} (glissé-déposé)`,
+      description: `Statut \u2192 ${STATUSES.find(s => s.id === newStatus)?.label || newStatus} (gliss\u00e9-d\u00e9pos\u00e9)`,
     }]);
-    toast.success(`${lead.name} → ${STATUSES.find(s => s.id === newStatus)?.label}`);
+    toast.success(`${lead.name} \u2192 ${STATUSES.find(s => s.id === newStatus)?.label}`);
   };
 
-  const exportCSV = () => {
-    if (leads.length === 0) { toast.error('Aucun lead à exporter'); return; }
-    const headers = ['Nom', 'Téléphone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Tags', 'Notes', 'Créé le'];
-    const rows = leads.map(l => [
+  // ── Bulk helpers ──────────────────────────────────────────────
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const bulkChangeStatus = async (newStatus) => {
+    if (!newStatus) return;
+    const ids = [...selectedIds];
+    // Optimistic update
+    setLeads(prev => prev.map(l => selectedIds.has(l.id) ? { ...l, status: newStatus } : l));
+    const { error } = await supabase.from('leads')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .in('id', ids);
+    if (error) { toast.error(error.message); loadLeads(); return; }
+    await supabase.from('lead_activities').insert(
+      ids.map(id => ({
+        lead_id: id, type: 'status',
+        description: `Statut \u2192 ${STATUSES.find(s => s.id === newStatus)?.label} (action group\u00e9e)`,
+      }))
+    );
+    setSelectedIds(new Set());
+    setBulkStatus('');
+    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} mis \u00e0 jour`);
+  };
+
+  const bulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (!window.confirm(`Supprimer d\u00e9finitivement ${ids.length} lead${ids.length > 1 ? 's' : ''} ?`)) return;
+    const { error } = await supabase.from('leads').delete().in('id', ids);
+    if (error) { toast.error(error.message); return; }
+    setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
+    setSelectedIds(new Set());
+    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} supprim\u00e9${ids.length > 1 ? 's' : ''}`);
+  };
+
+  const buildCSV = (rows) => {
+    const headers = ['Nom', 'T\u00e9l\u00e9phone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Tags', 'Notes', 'Cr\u00e9\u00e9 le'];
+    const data = rows.map(l => [
       l.name || '', l.phone || '', l.email || '', l.company || '',
       STATUSES.find(s => s.id === l.status)?.label || l.status,
       SOURCES.find(s => s.id === l.source)?.label || l.source,
       l.score ?? '', (l.tags || []).join('; '), (l.notes || '').replace(/\n/g, ' '),
       l.created_at ? new Date(l.created_at).toLocaleDateString('fr-FR') : '',
     ]);
-    const csv = [headers, ...rows]
-      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    return [headers, ...data].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  };
+
+  const exportCSV = () => {
+    if (!leads.length) { toast.error('Aucun lead \u00e0 exporter'); return; }
+    const blob = new Blob(['\uFEFF' + buildCSV(leads)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `leads-${Date.now()}.csv`; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `leads-${Date.now()}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
-  // Tous les tags distincts présents sur les leads de ce profil
+  const exportSelectedCSV = () => {
+    const selected = leads.filter(l => selectedIds.has(l.id));
+    if (!selected.length) return;
+    const blob = new Blob(['\uFEFF' + buildCSV(selected)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `leads-selection-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const allTags = useMemo(() => {
     const set = new Set();
     leads.forEach(l => (l.tags || []).forEach(t => set.add(t)));
@@ -743,10 +738,22 @@ export default function LeadsCRMPanel({ profileId }) {
     return acc;
   }, {});
 
+  // Derived selection state
+  const allSelected  = filteredLeads.length > 0 && filteredLeads.every(l => selectedIds.has(l.id));
+  const someSelected = filteredLeads.some(l => selectedIds.has(l.id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredLeads.map(l => l.id)));
+    }
+  };
+
   if (!profileId) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
-        Sélectionnez un profil pour gérer vos leads.
+        S\u00e9lectionnez un profil pour g\u00e9rer vos leads.
       </div>
     );
   }
@@ -754,18 +761,16 @@ export default function LeadsCRMPanel({ profileId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>
-            Leads CRM
-          </h3>
+          <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>Leads CRM</h3>
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '4px 0 0' }}>
             {leads.length} lead{leads.length !== 1 ? 's' : ''} au total
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {/* Toggle vue Liste / Pipeline */}
+          {/* Vue toggle */}
           <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 3 }}>
             <button onClick={() => setView('list')} title="Vue liste" style={{
               display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none',
@@ -799,27 +804,22 @@ export default function LeadsCRMPanel({ profileId }) {
         </div>
       </div>
 
-      {/* Search + filters */}
+      {/* ── Search + filters ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ position: 'relative' }}>
           <Search size={14} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher un lead (nom, téléphone, email, entreprise, tag)..."
-            style={{ ...inp, paddingLeft: 38 }}
-          />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher un lead (nom, t\u00e9l\u00e9phone, email, entreprise, tag)..."
+            style={{ ...inp, paddingLeft: 38 }} />
         </div>
 
-        {/* Filtres statut — masqués en vue Pipeline (les colonnes font déjà le tri) */}
         {view === 'list' && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button onClick={() => setFilter('all')} style={{
               padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
               border: `1px solid ${filter === 'all' ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
               background: filter === 'all' ? 'rgba(99,102,241,0.15)' : 'transparent',
-              color: filter === 'all' ? '#818cf8' : 'rgba(255,255,255,0.45)',
-              fontSize: 12, fontWeight: 600,
+              color: filter === 'all' ? '#818cf8' : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600,
             }}>
               Tous ({leads.length})
             </button>
@@ -828,8 +828,7 @@ export default function LeadsCRMPanel({ profileId }) {
                 padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
                 border: `1px solid ${filter === s.id ? s.color : 'rgba(255,255,255,0.08)'}`,
                 background: filter === s.id ? s.bg : 'transparent',
-                color: filter === s.id ? s.color : 'rgba(255,255,255,0.45)',
-                fontSize: 12, fontWeight: 600,
+                color: filter === s.id ? s.color : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600,
               }}>
                 {s.label} ({statusCounts[s.id] || 0})
               </button>
@@ -837,7 +836,6 @@ export default function LeadsCRMPanel({ profileId }) {
           </div>
         )}
 
-        {/* Filtre par tag — disponible dans les deux vues */}
         {allTags.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -848,8 +846,7 @@ export default function LeadsCRMPanel({ profileId }) {
                 padding: '3px 9px', borderRadius: 99, cursor: 'pointer',
                 border: `1px solid ${tagFilter === tag ? tagColor(tag) : 'rgba(255,255,255,0.08)'}`,
                 background: tagFilter === tag ? `${tagColor(tag)}22` : 'transparent',
-                color: tagFilter === tag ? tagColor(tag) : 'rgba(255,255,255,0.4)',
-                fontSize: 10.5, fontWeight: 600,
+                color: tagFilter === tag ? tagColor(tag) : 'rgba(255,255,255,0.4)', fontSize: 10.5, fontWeight: 600,
               }}>
                 #{tag}
               </button>
@@ -858,22 +855,87 @@ export default function LeadsCRMPanel({ profileId }) {
         )}
       </div>
 
-      {/* Vue Pipeline */}
+      {/* ── Bulk action toolbar ── */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && view === 'list' && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -6, height: 0 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+              padding: '10px 16px',
+              background: 'rgba(99,102,241,0.1)',
+              border: '1px solid rgba(99,102,241,0.3)',
+              borderRadius: 14,
+            }}>
+              {/* Count badge */}
+              <span style={{
+                background: 'rgba(99,102,241,0.25)', color: '#a78bfa',
+                fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 99,
+              }}>
+                {selectedIds.size} s\u00e9lectionn\u00e9{selectedIds.size > 1 ? 's' : ''}
+              </span>
+
+              {/* Deselect */}
+              <button onClick={() => setSelectedIds(new Set())} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
+                borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              }}>
+                <X size={11} /> D\u00e9s\u00e9lectionner
+              </button>
+
+              {/* Change status */}
+              <select
+                value={bulkStatus}
+                onChange={e => { setBulkStatus(e.target.value); bulkChangeStatus(e.target.value); }}
+                style={{
+                  padding: '6px 10px', borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: '#1a1a2e', color: 'rgba(255,255,255,0.75)',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none',
+                }}
+              >
+                <option value="">Changer le statut\u2026</option>
+                {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+
+              {/* Export selected */}
+              <button onClick={exportSelectedCSV} title="Exporter la s\u00e9lection en CSV" style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
+                borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              }}>
+                <Download size={11} /> CSV
+              </button>
+
+              {/* Delete selected */}
+              <button onClick={bulkDelete} title="Supprimer la s\u00e9lection" style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
+                borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)',
+                background: 'rgba(239,68,68,0.1)', color: '#f87171',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto',
+              }}>
+                <Trash2 size={11} /> Supprimer
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Pipeline view ── */}
       {view === 'pipeline' && (
-        loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" />
-          </div>
-        ) : (
-          <PipelineView
-            leads={filteredLeads}
-            onCardClick={setSelectedLead}
-            onStatusChange={handlePipelineStatusChange}
-          />
-        )
+        loading
+          ? <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" /></div>
+          : <PipelineView leads={filteredLeads} onCardClick={setSelectedLead} onStatusChange={handlePipelineStatusChange} />
       )}
 
-      {/* Vue Liste */}
+      {/* ── List view ── */}
       {view === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {loading ? (
@@ -882,75 +944,101 @@ export default function LeadsCRMPanel({ profileId }) {
             </div>
           ) : filteredLeads.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
-              {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
+              {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond \u00e0 votre recherche.'}
             </div>
           ) : (
-            filteredLeads.map(lead => {
-              const { color: sc } = scoreLabel(lead.score || 0);
-              return (
-                <motion.div
-                  key={lead.id}
-                  layout
-                  onClick={() => setSelectedLead(lead)}
-                  whileHover={{ background: 'rgba(255,255,255,0.07)' }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: 14, cursor: 'pointer',
-                  }}
-                >
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                    background: `linear-gradient(135deg, ${sc}44, ${sc}22)`,
-                    border: `2px solid ${sc}55`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 15, fontWeight: 800, color: sc,
-                  }}>
-                    {(lead.name || '?')[0].toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{lead.name}</span>
-                      <StatusBadge status={lead.status} />
+            <>
+              {/* Select-all header row */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '4px 16px',
+                color: 'rgba(255,255,255,0.3)', fontSize: 11,
+              }}>
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={someSelected && !allSelected}
+                  onChange={toggleSelectAll}
+                />
+                <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={toggleSelectAll}>
+                  {allSelected
+                    ? 'Tout d\u00e9s\u00e9lectionner'
+                    : `Tout s\u00e9lectionner (${filteredLeads.length})`}
+                </span>
+              </div>
+
+              {/* Lead rows */}
+              {filteredLeads.map(lead => {
+                const { color: sc } = scoreLabel(lead.score || 0);
+                const isSelected = selectedIds.has(lead.id);
+                return (
+                  <motion.div
+                    key={lead.id}
+                    layout
+                    onClick={() => setSelectedLead(lead)}
+                    whileHover={{ background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.07)' }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                      background: isSelected ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isSelected ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                      borderRadius: 14, cursor: 'pointer', transition: 'border-color .15s, background .15s',
+                    }}
+                  >
+                    {/* Checkbox — stops propagation to avoid opening modal */}
+                    <Checkbox
+                      checked={isSelected}
+                      onChange={() => toggleSelect(lead.id)}
+                    />
+
+                    {/* Avatar */}
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                      background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `2px solid ${sc}55`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 15, fontWeight: 800, color: sc,
+                    }}>
+                      {(lead.name || '?')[0].toUpperCase()}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, color: 'rgba(255,255,255,0.35)', fontSize: 12, flexWrap: 'wrap' }}>
-                      {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {lead.phone}</span>}
-                      {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={11} /> {lead.company}</span>}
-                      {!isMobile && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Globe size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}
-                        </span>
-                      )}
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{lead.name}</span>
+                        <StatusBadge status={lead.status} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, color: 'rgba(255,255,255,0.35)', fontSize: 12, flexWrap: 'wrap' }}>
+                        {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {lead.phone}</span>}
+                        {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={11} /> {lead.company}</span>}
+                        {!isMobile && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Globe size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}
+                          </span>
+                        )}
+                      </div>
+                      {!!lead.tags?.length && <div style={{ marginTop: 6 }}><TagChips tags={lead.tags} size="small" /></div>}
                     </div>
-                    {!!lead.tags?.length && (
-                      <div style={{ marginTop: 6 }}>
-                        <TagChips tags={lead.tags} size="small" />
+
+                    {/* Score bar */}
+                    {!isMobile && (
+                      <div style={{ width: 90, flexShrink: 0 }}>
+                        <ScoreBar score={lead.score || 0} />
                       </div>
                     )}
-                  </div>
-                  {!isMobile && (
-                    <div style={{ width: 90, flexShrink: 0 }}>
-                      <ScoreBar score={lead.score || 0} />
-                    </div>
-                  )}
-                  <WhatsAppBtn
-                    phone={lead.phone}
-                    leadId={lead.id}
-                    compact
-                    onContact={async (id) => {
-                      await supabase.from('lead_activities').insert([{
-                        lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué',
-                      }]);
-                    }}
-                  />
-                </motion.div>
-              );
-            })
+
+                    {/* WhatsApp */}
+                    <WhatsAppBtn phone={lead.phone} leadId={lead.id} compact
+                      onContact={async (id) => {
+                        await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectu\u00e9' }]);
+                      }}
+                    />
+                  </motion.div>
+                );
+              })}
+            </>
           )}
         </div>
       )}
 
-      {/* Add lead modal */}
+      {/* ── Add lead modal ── */}
       <AnimatePresence>
         {showAdd && (
           <motion.div
@@ -976,34 +1064,27 @@ export default function LeadsCRMPanel({ profileId }) {
                 <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>Nouveau lead</h3>
                 <button onClick={() => setShowAdd(false)} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>
               </div>
-
-              <div>
-                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Nom *</label>
-                <input value={newLead.name} onChange={e => setNewLead(f => ({ ...f, name: e.target.value }))} style={inp} placeholder="Nom complet" />
-              </div>
-              <div>
-                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Téléphone</label>
-                <input value={newLead.phone} onChange={e => setNewLead(f => ({ ...f, phone: e.target.value }))} style={inp} placeholder="Ex: 0700000000" />
-              </div>
-              <div>
-                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Email</label>
-                <input value={newLead.email} onChange={e => setNewLead(f => ({ ...f, email: e.target.value }))} style={inp} placeholder="email@exemple.com" />
-              </div>
-              <div>
-                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Entreprise</label>
-                <input value={newLead.company} onChange={e => setNewLead(f => ({ ...f, company: e.target.value }))} style={inp} placeholder="Nom de l'entreprise" />
-              </div>
+              {[
+                { key: 'name',    label: 'Nom *',       ph: 'Nom complet',           type: 'text' },
+                { key: 'phone',   label: 'T\u00e9l\u00e9phone', ph: 'Ex: 0700000000',  type: 'text' },
+                { key: 'email',   label: 'Email',        ph: 'email@exemple.com',     type: 'text' },
+                { key: 'company', label: 'Entreprise',   ph: "Nom de l'entreprise",   type: 'text' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>{f.label}</label>
+                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} style={inp} placeholder={f.ph} />
+                </div>
+              ))}
               <div>
                 <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Source</label>
-                <select value={newLead.source} onChange={e => setNewLead(f => ({ ...f, source: e.target.value }))} style={inp}>
+                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} style={inp}>
                   {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
-                <textarea value={newLead.notes} onChange={e => setNewLead(f => ({ ...f, notes: e.target.value }))} rows={3} style={{ ...inp, resize: 'none' }} placeholder="Notes additionnelles..." />
+                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} style={{ ...inp, resize: 'none' }} placeholder="Notes additionnelles..." />
               </div>
-
               <button onClick={addLead} disabled={adding} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: 13, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
@@ -1018,13 +1099,13 @@ export default function LeadsCRMPanel({ profileId }) {
         )}
       </AnimatePresence>
 
-      {/* Lead detail modal */}
+      {/* ── Lead detail modal ── */}
       <AnimatePresence>
         {selectedLead && (
           <LeadModal
             lead={selectedLead}
             onClose={() => setSelectedLead(null)}
-            onUpdate={(updated) => { updateLeadLocal(updated); setSelectedLead(updated); }}
+            onUpdate={updated => { updateLeadLocal(updated); setSelectedLead(updated); }}
             onDelete={deleteLead}
           />
         )}

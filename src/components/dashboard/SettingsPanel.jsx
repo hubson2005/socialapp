@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
+import { subscribeToPush, ensurePushSubscription } from '../../lib/push';
 
 // ─── Traductions (paramètres uniquement) ─────────────────────────────────────
 const TRANSLATIONS = {
@@ -293,6 +294,12 @@ export default function SettingsPanel() {
     return () => { cancelled = true; };
   }, []);
 
+  // Synchronise silencieusement l'abonnement push si la permission est déjà accordée
+  useEffect(() => {
+    if (!userId) return;
+    ensurePushSubscription();
+  }, [userId]);
+
   const persist = useCallback(async (patch) => {
     const next = { ...settings, ...patch };
     setSettings(next);
@@ -420,10 +427,10 @@ export default function SettingsPanel() {
           </div>
           {!notifGranted && (
             <button onClick={async () => {
-              const p = await Notification.requestPermission();
-              setNotifGranted(p === 'granted');
-              if (p === 'granted') toast.success(t('notif_enabled_success'));
-              else if (p === 'denied') toast.error(t('pref_error') + 'permission refusée');
+              const ok = await subscribeToPush();
+              setNotifGranted(typeof Notification !== 'undefined' && Notification.permission === 'granted');
+              if (ok) toast.success(t('notif_enabled_success'));
+              else toast.error(t('pref_error') + 'abonnement push échoué');
             }}
               style={{ padding: '7px 12px', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '9px', color: '#22c55e', fontSize: '11px', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
               {t('notif_enable')}

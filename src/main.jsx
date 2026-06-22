@@ -7,6 +7,19 @@ import App from './App'
 import './index.css'
 import './i18n';
 
+
+// ✅ Enregistrement du Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js');
+      console.log('Service Worker enregistré :', registration);
+    } catch (err) {
+      console.error('Erreur Service Worker :', err);
+    }
+  });
+}
+
 const queryClient = new QueryClient()
 
 ReactDOM.createRoot(document.getElementById('root')).render(

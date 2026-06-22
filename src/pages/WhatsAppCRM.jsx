@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useWhatsappCRM, BOOST_NOTIF_TEMPLATES } from '../hooks/useWhatsappCRM'
-import { CampaignAIGenerator } from '@/components/dashboard/AIPanels'
+import { CampaignAIGenerator } from '@/components/dashboard/AIPanels' 
 
 // ── TEMPLATES ────────────────────────────────────────────────────
 const TEMPLATES = [
@@ -106,48 +106,52 @@ const Spinner = () => (
 // ── BoostNotifsTab ────────────────────────────────────────────────
 function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected, flash }) {
   const [sending,  setSending]  = useState(false)
-  const [testType, setTestType] = useState('boost_promo_active')
+  // ✅ FIX Bug : valeur initiale alignée avec la première option du select
+  const [testType, setTestType] = useState('boost_activated')
   const [preview,  setPreview]  = useState('')
 
   useEffect(() => {
-    const fakeBoost = { boost_type:'standard', networks:['facebook','instagram'], duration_days:7 }
-    const fakeLead  = { name:'Koffi Atta', email:'koffi@email.com', phone:'225XXXXXXXX' }
-    const fakeStats = { views:142, clicks:38, leads:5 }
     const p = profile || { display_name:'Mon Profil', username:'monprofil', whatsapp_phone:'' }
-
- // NOUVEAU - compatible avec le tableau d'objets
-const tpl = BOOST_NOTIF_TEMPLATES.find(t => t.trigger_type === testType || t.id === testType)
-setPreview(tpl
-  ? tpl.message
-      .replace('{{nom}}',  p.display_name || 'Mon Profil')
-      .replace('{{lien}}', 'https://socialapp.work/' + (p.username || ''))
-      .replace('{{plan}}', 'Standard')
-  : ''
-)
+    const tpl = BOOST_NOTIF_TEMPLATES.find(t => t.trigger_type === testType || t.id === testType)
+    setPreview(tpl
+      ? tpl.message
+          .replace('{{nom}}',  p.display_name || 'Mon Profil')
+          .replace('{{lien}}', 'https://socialapp.work/' + (p.username || ''))
+          .replace('{{plan}}', 'Standard')
+      : ''
+    )
   }, [testType, profile])
 
   const handleTest = async () => {
     if (!profile?.whatsapp_phone) { flash('Configurez votre numéro WhatsApp dans les paramètres','error'); return }
     setSending(true)
     try {
-      await sendBoostNotification({ profile, boost:{ id:null, boost_type:'standard', networks:['facebook','instagram'], duration_days:7 }, notificationType:testType, recipientPhone:profile.whatsapp_phone })
+      await sendBoostNotification({
+        profile,
+        boost:{ id:null, boost_type:'standard', networks:['facebook','instagram'], duration_days:7 },
+        notificationType:testType,
+        recipientPhone:profile.whatsapp_phone
+      })
       flash(`Notification "${testType}" envoyée ✓`)
     } catch(e) { flash(e.message,'error') }
     finally { setSending(false) }
   }
 
   const typeLabel = {
-    boost_activated:'🚀 Boost activé', boost_completed:'📊 Boost terminé',
-    new_lead:'🔥 Nouveau lead', view_milestone:'👀 Jalon de vues', weekly_report:'📈 Rapport hebdo',
+    boost_activated:'🚀 Boost activé',
+    boost_completed:'📊 Boost terminé',
+    new_lead:'🔥 Nouveau lead',
+    view_milestone:'👀 Jalon de vues',
+    weekly_report:'📈 Rapport hebdo',
   }
 
   return (
     <div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
         {[
-          { lbl:'Envoyées', val:boostNotifs.length,                               bg:C.greenDim,              glow:C.green,   ico:'📤' },
-          { lbl:'Livrées',  val:boostNotifs.filter(n=>n.status==='sent').length,  bg:C.purpleDim,             glow:C.purple,  ico:'✅' },
-          { lbl:'Échecs',   val:boostNotifs.filter(n=>n.status==='failed').length, bg:'rgba(239,68,68,0.12)',  glow:'#ef4444', ico:'❌' },
+          { lbl:'Envoyées', val:boostNotifs.length,                                bg:C.greenDim,             glow:C.green,   ico:'📤' },
+          { lbl:'Livrées',  val:boostNotifs.filter(n=>n.status==='sent').length,   bg:C.purpleDim,            glow:C.purple,  ico:'✅' },
+          { lbl:'Échecs',   val:boostNotifs.filter(n=>n.status==='failed').length, bg:'rgba(239,68,68,0.12)', glow:'#ef4444', ico:'❌' },
         ].map((s,i) => (
           <div key={i} style={S.statCard}>
             <div style={S.statGlow(s.glow)}/>
@@ -267,7 +271,11 @@ function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
   )
 }
 
+// ✅ FIX Bug latent : findIndex par id au lieu de indexOf (évite -1 après re-fetch)
 function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, setSelectedTpl, connected, sending, closeModal, handleSendMsg }) {
+  const avatarIndex = contacts.findIndex(c => c.id === msgTarget?.id)
+  const avatarGrad  = AVAT[avatarIndex >= 0 ? avatarIndex % 5 : 0]
+
   return (
     <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
       <div style={S.modal}>
@@ -278,7 +286,8 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
           Envoyer via WhatsApp
         </div>
         <div style={{background:'rgba(255,255,255,0.04)',borderRadius:14,padding:'12px 14px',marginBottom:18,display:'flex',alignItems:'center',gap:12,border:`1px solid rgba(255,255,255,0.08)`}}>
-          <div style={S.avat(AVAT[contacts.indexOf(msgTarget)%5]||AVAT[0],44)}>{(msgTarget?.name||'?').slice(0,2).toUpperCase()}</div>
+          {/* ✅ avatarGrad calculé via findIndex, plus jamais AVAT[-1%5] = AVAT[0] par défaut */}
+          <div style={S.avat(avatarGrad,44)}>{(msgTarget?.name||'?').slice(0,2).toUpperCase()}</div>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{msgTarget?.name}</div>
             <div style={{fontSize:12,color:C.textMute,marginTop:2}}>{msgTarget?.phone}</div>
@@ -328,11 +337,9 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
         <div style={S.mT}>📢 Nouvelle campagne — Étape {camStep}/2</div>
 
         {camStep===1 && <>
-          {/* ── CampaignAIGenerator intégré ici ── */}
           <CampaignAIGenerator
             onApply={(msg) => setNewCam(p => ({ ...p, message: msg }))}
           />
-
           <div style={S.fg}>
             <label style={S.lbl}>Nom de la campagne</label>
             <input style={S.inp} placeholder="Ex : Promo été 2026" value={newCam.name} onChange={e=>setNewCam(p=>({...p,name:e.target.value}))}/>
@@ -414,6 +421,37 @@ function ModalNotif({ newN, setNewN, closeModal, handleAddNotif }) {
   )
 }
 
+// ── MODAL SÉLECTION CONTACT (nouveau) ────────────────────────────
+// ✅ FIX UX : remplace la présélection aveugle de contacts[0]
+function ModalPickContact({ contacts, onSelect, closeModal }) {
+  return (
+    <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
+      <div style={S.modal}>
+        <div style={S.mT}>📨 Choisir un destinataire</div>
+        {contacts.length===0
+          ? <div style={{textAlign:'center',color:C.textMute,padding:24,fontSize:13}}>Aucun contact disponible.</div>
+          : <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:340,overflowY:'auto'}}>
+              {contacts.map((c,i) => (
+                <div key={c.id} onClick={()=>onSelect(c)}
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:9,cursor:'pointer',border:`1px solid ${C.border}`,background:C.bg,transition:'all .15s'}}>
+                  <div style={S.avat(AVAT[i%5])}>{(c.name||'?').slice(0,2).toUpperCase()}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.text}}>{c.name}</div>
+                    <div style={{fontSize:11,color:C.textMute}}>{c.phone}</div>
+                  </div>
+                  <span style={S.badge(...(TAG_C[c.tag]||[C.purpleDim,C.purpleL]))}>{c.tag}</span>
+                </div>
+              ))}
+            </div>
+        }
+        <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
+          <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── COMPOSANT PRINCIPAL ───────────────────────────────────────────
 export default function WhatsAppCRM({ profile }) {
   const {
@@ -450,8 +488,12 @@ export default function WhatsAppCRM({ profile }) {
 
   const handleAddContact = async () => {
     if (!newC.name||!newC.phone) return
-    try { await addContact(newC); flash(`Contact "${newC.name}" ajouté ✓`); setModal(null); setNewC({name:'',phone:'',email:'',tag:'Client'}) }
-    catch(e) { flash(e.message,'error') }
+    try {
+      await addContact(newC)
+      flash(`Contact "${newC.name}" ajouté ✓`)
+      setModal(null)
+      setNewC({name:'',phone:'',email:'',tag:'Client'})
+    } catch(e) { flash(e.message,'error') }
   }
 
   const handleSendMsg = async () => {
@@ -468,14 +510,21 @@ export default function WhatsAppCRM({ profile }) {
 
   const handleLaunchCampaign = async () => {
     if (!newCam.name||!newCam.message||newCam.recipients.length===0) return
-    try { await createCampaign({ name:newCam.name, message:newCam.message, recipientIds:newCam.recipients }); flash(`Campagne "${newCam.name}" lancée ✓`); closeModal() }
-    catch(e) { flash(e.message,'error') }
+    try {
+      await createCampaign({ name:newCam.name, message:newCam.message, recipientIds:newCam.recipients })
+      flash(`Campagne "${newCam.name}" lancée ✓`)
+      closeModal()
+    } catch(e) { flash(e.message,'error') }
   }
 
   const handleAddNotif = async () => {
     if (!newN.name) return
-    try { await addNotification(newN); flash(`Automatisation "${newN.name}" créée ✓`); setModal(null); setNewN({name:'',trigger_type:'Automatique'}) }
-    catch(e) { flash(e.message,'error') }
+    try {
+      await addNotification(newN)
+      flash(`Automatisation "${newN.name}" créée ✓`)
+      setModal(null)
+      setNewN({name:'',trigger_type:'Automatique'})
+    } catch(e) { flash(e.message,'error') }
   }
 
   const handleSaveWebhook = async () => {
@@ -484,10 +533,12 @@ export default function WhatsAppCRM({ profile }) {
     catch(e) { flash(e.message,'error') }
   }
 
+  // ✅ FIX UX : ouvre d'abord un picker pour choisir le contact destinataire
   const handleQuickAction = (m) => {
     if (m==='msg') {
       if (contacts.length===0) { flash("Ajoutez d'abord un contact",'error'); return }
-      setMsgTarget(contacts[0])
+      setModal('pick_contact') // affiche le picker avant le modal message
+      return
     }
     setModal(m)
   }
@@ -539,10 +590,10 @@ export default function WhatsAppCRM({ profile }) {
         {tab==='dashboard' && <>
           <div style={S.g4}>
             {[
-              { lbl:'Contacts',     ico:'👥', val:stats.totalContacts,   glow:C.purple, bg:C.purpleDim },
-              { lbl:'Actifs',       ico:'✅', val:stats.activeContacts,  glow:C.green,  bg:C.greenDim  },
-              { lbl:'Campagnes',    ico:'📢', val:stats.sentCampaigns,   glow:C.orange, bg:C.orangeDim },
-              { lbl:'Notifs Boost', ico:'🚀', val:stats.boostNotifsSent||0, glow:C.blue, bg:C.blueDim  },
+              { lbl:'Contacts',     ico:'👥', val:stats.totalContacts,      glow:C.purple, bg:C.purpleDim },
+              { lbl:'Actifs',       ico:'✅', val:stats.activeContacts,     glow:C.green,  bg:C.greenDim  },
+              { lbl:'Campagnes',    ico:'📢', val:stats.sentCampaigns,      glow:C.orange, bg:C.orangeDim },
+              { lbl:'Notifs Boost', ico:'🚀', val:stats.boostNotifsSent||0, glow:C.blue,   bg:C.blueDim   },
             ].map((s,i) => (
               <div key={i} style={S.statCard}>
                 <div style={S.statGlow(s.glow)}/><div style={S.statIco(s.bg)}>{s.ico}</div>
@@ -716,11 +767,20 @@ export default function WhatsAppCRM({ profile }) {
 
       </div>
 
-      {/* MODALS */}
-      {modal==='contact'  && <ModalAddContact  newC={newC} setNewC={setNewC} closeModal={closeModal} handleAddContact={handleAddContact}/>}
-      {modal==='msg'      && msgTarget && <ModalSendMsg contacts={contacts} msgTarget={msgTarget} msgText={msgText} setMsgText={setMsgText} selectedTpl={selectedTpl} setSelectedTpl={setSelectedTpl} connected={connected} sending={sending} closeModal={closeModal} handleSendMsg={handleSendMsg}/>}
-      {modal==='campaign' && <ModalCampaign contacts={contacts} newCam={newCam} setNewCam={setNewCam} camStep={camStep} setCamStep={setCamStep} closeModal={closeModal} handleLaunchCampaign={handleLaunchCampaign}/>}
-      {modal==='notif'    && <ModalNotif newN={newN} setNewN={setNewN} closeModal={closeModal} handleAddNotif={handleAddNotif}/>}
+      {/* ── MODALS ── */}
+      {modal==='contact'      && <ModalAddContact newC={newC} setNewC={setNewC} closeModal={closeModal} handleAddContact={handleAddContact}/>}
+      {modal==='msg'          && msgTarget && <ModalSendMsg contacts={contacts} msgTarget={msgTarget} msgText={msgText} setMsgText={setMsgText} selectedTpl={selectedTpl} setSelectedTpl={setSelectedTpl} connected={connected} sending={sending} closeModal={closeModal} handleSendMsg={handleSendMsg}/>}
+      {modal==='campaign'     && <ModalCampaign contacts={contacts} newCam={newCam} setNewCam={setNewCam} camStep={camStep} setCamStep={setCamStep} closeModal={closeModal} handleLaunchCampaign={handleLaunchCampaign}/>}
+      {modal==='notif'        && <ModalNotif newN={newN} setNewN={setNewN} closeModal={closeModal} handleAddNotif={handleAddNotif}/>}
+
+      {/* ✅ FIX UX : picker de contact avant l'ouverture du modal message */}
+      {modal==='pick_contact' && (
+        <ModalPickContact
+          contacts={contacts}
+          onSelect={(c) => { setMsgTarget(c); setModal('msg') }}
+          closeModal={closeModal}
+        />
+      )}
 
       {/* TOAST */}
       {toast && <div style={S.toast(toast.type)}>{toast.type==='success'?'✓':'✕'} {toast.msg}</div>}

@@ -18,14 +18,15 @@ export const USER_NAV = [
   { id: 'forms',         label: 'Formulaires',     icon: FileText,        group: 'content',   locked: null,       path: null                        },
   { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null                        },
   { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null                        },
-  { id:'meta', label:'Connexion Meta', icon:Zap, group:'crm' },
+  // ── Masqués côté Dashboard utilisateur : en cours de test sur le Dashboard admin ──
+  { id:'meta', label:'Connexion Meta', icon:Zap, group:'crm', hidden: true },
   { id: 'crm',           label: 'CRM / Leads',     icon: Users,           group: 'business',  locked: 'business', path: null                        },
   { id: 'whatsapp-crm',  label: 'WhatsApp CRM',    icon: MessageCircle,   group: 'business',  locked: 'business', path: '/dashboard/whatsapp-crm'   },
   { id: 'automations',   label: 'Automatisations', icon: Zap,             group: 'business',  locked: 'business', path: null                        },
   { id: 'integrations',  label: 'Intégrations',    icon: GitBranch,       group: 'business',  locked: 'business', path: null                        },
-  { id: 'boost', label: 'Boost & Promo', icon: Zap, group: 'crm', badge: 'NEW' },
-  { id: 'boost-analytics', label: 'Analytics Boost', icon: BarChart3, group: 'crm' },
-  { id: 'promotions', label: 'Promotions', icon: Zap, group: 'crm', badge: 'NEW' },
+  { id: 'boost', label: 'Boost & Promo', icon: Zap, group: 'crm', badge: 'NEW', hidden: true },
+  { id: 'boost-analytics', label: 'Analytics Boost', icon: BarChart3, group: 'crm', hidden: true },
+  { id: 'promotions', label: 'Promotions', icon: Zap, group: 'crm', badge: 'NEW', hidden: true },
   { id: 'settings',      label: 'Paramètres',      icon: Settings,        group: 'admin',     locked: null,       path: null                        },
 ];
 
@@ -60,12 +61,15 @@ export default function UserSidebar({
   const currentOrder = PLAN_ORDER[plan] ?? 0;
   const isMaxPlan = currentOrder >= MAX_PLAN_ORDER;
 
+  // Liste de base : on retire systématiquement les items masqués (en test côté admin)
+  const visibleNav = USER_NAV.filter(n => !n.hidden);
+
   const isNavLocked = (item) => {
     if (!item.locked) return false;
     return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
   };
 
-  const filtered = USER_NAV.filter(
+  const filtered = visibleNav.filter(
     n => !search || n.label.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -252,7 +256,8 @@ export default function UserSidebar({
           minHeight: 0,
         }}>
           {USER_GROUPS.map(group => {
-            const items = (search ? filtered : USER_NAV).filter(n => n.group === group.id);
+            // visibleNav exclut déjà les items "hidden" (en test sur le Dashboard admin)
+            const items = (search ? filtered : visibleNav).filter(n => n.group === group.id);
             if (!items.length) return null;
 
             return (

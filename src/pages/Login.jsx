@@ -63,7 +63,6 @@ export default function Login() {
   const planFromUrl  = searchParams.get('plan') || 'basic';
   const selectedPlan = PLAN_INFO[planFromUrl] ? planFromUrl : 'basic';
 
-  // ✅ mode: 'login' | 'signup' | 'forgot' | 'success' | 'forgot-success'
   const [mode,            setMode]            = useState('login');
   const [email,           setEmail]           = useState('');
   const [password,        setPassword]        = useState('');
@@ -80,7 +79,6 @@ export default function Login() {
     import('../supabase').then(mod => setSupabase(mod.supabase));
   }, []);
 
-  // ✅ Si un plan est dans l'URL → basculer en mode signup
   useEffect(() => {
     if (searchParams.get('plan')) setMode('signup');
   }, [searchParams]);
@@ -111,15 +109,27 @@ export default function Login() {
     setLoading(true);
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email, password,
-        options: { emailRedirectTo: window.location.origin + '/dashboard', data: { plan: selectedPlan } },
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin + '/dashboard',
+          // ✅ Le plan est sauvegardé ici dans raw_user_meta_data —
+          //    le trigger trg_set_plan_from_auth_metadata sur link_profiles
+          //    lira cette valeur automatiquement à la création du profil.
+          data: { plan: selectedPlan },
+        },
       });
       if (signUpError) throw signUpError;
-      if (data?.user) await supabase.auth.updateUser({ data: { plan: selectedPlan } });
+      // ❌ SUPPRIMÉ : updateUser échouait silencieusement (pas de session
+      //    active avant confirmation email). data:{plan} ci-dessus suffit.
       setSuccessEmail(email);
       setMode('success');
     } catch (err) {
-      setError(err.message?.includes('already registered') ? 'Cet email est déjà utilisé. Connectez-vous.' : err.message || "Erreur lors de l'inscription.");
+      setError(
+        err.message?.includes('already registered')
+          ? 'Cet email est déjà utilisé. Connectez-vous.'
+          : err.message || "Erreur lors de l'inscription."
+      );
     } finally { setLoading(false); }
   };
 
@@ -134,8 +144,8 @@ export default function Login() {
       if (loginError) throw loginError;
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      if (err.message?.includes('Invalid login'))        setError('Email ou mot de passe incorrect.');
-      else if (err.message?.includes('Email not confirmed')) setError('Confirmez votre email avant de vous connecter.');
+      if (err.message?.includes('Invalid login'))             setError('Email ou mot de passe incorrect.');
+      else if (err.message?.includes('Email not confirmed'))  setError('Confirmez votre email avant de vous connecter.');
       else setError(err.message || 'Erreur de connexion.');
     } finally { setLoading(false); }
   };
@@ -164,7 +174,10 @@ export default function Login() {
     if (!supabase) return;
     const key = provider === 'Google' ? 'google' : provider === 'Apple' ? 'apple' : 'facebook';
     try {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: key, options: { redirectTo: window.location.origin + '/dashboard' } });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: key,
+        options: { redirectTo: window.location.origin + '/dashboard' },
+      });
       if (error) throw error;
     } catch (err) { setError(err.message || `Erreur via ${provider}.`); }
   };
@@ -175,10 +188,10 @@ export default function Login() {
   const pwdLabel    = password.length < 6 ? 'Faible' : password.length < 10 ? 'Moyen' : 'Fort';
 
   const modeTitle = {
-    login:          'Connectez-vous à votre espace',
-    signup:         'Créez votre compte gratuitement',
-    forgot:         'Réinitialisez votre mot de passe',
-    success:        'Vérifiez votre boîte mail',
+    login:            'Connectez-vous à votre espace',
+    signup:           'Créez votre compte gratuitement',
+    forgot:           'Réinitialisez votre mot de passe',
+    success:          'Vérifiez votre boîte mail',
     'forgot-success': 'Email envoyé !',
   };
 
@@ -319,25 +332,20 @@ export default function Login() {
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
-
-                {/* ✅ Mot de passe oublié */}
                 <div style={{ textAlign:'right', marginTop:'-6px' }}>
                   <button type="button" className="link-btn" style={{ fontSize:'11px' }} onClick={() => switchMode('forgot')}>
                     Mot de passe oublié ?
                   </button>
                 </div>
-
                 {error && (
                   <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.25)', borderRadius:'12px', padding:'10px 14px', display:'flex', alignItems:'flex-start', gap:'8px' }}>
                     <span style={{ fontSize:'14px', flexShrink:0 }}>⚠️</span>
                     <p style={{ color:'#f87171', fontSize:'12px', margin:0, lineHeight:1.5 }}>{error}</p>
                   </div>
                 )}
-
                 <button type="submit" className="auth-btn-primary" disabled={loading}>
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <>Se connecter <ArrowRight size={16} /></>}
                 </button>
-
                 <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
                   <div style={{ flex:1, height:'1px', background:'rgba(255,255,255,0.08)' }} />
                   <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px' }}>ou se connecter avec</span>

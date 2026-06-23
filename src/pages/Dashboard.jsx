@@ -38,6 +38,7 @@ import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
 import NotificationBell from './NotificationBell';
 import { subscribeToPush, ensurePushSubscription } from '../lib/push';
 
+
 // ── Imports optionnels (commentez si les fichiers n'existent pas encore) ───────
 let BoostPanel = null;
 let MetaIntegrationPanel = null;

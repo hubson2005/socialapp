@@ -1,6 +1,25 @@
 // AutomationsPanel.jsx — intégré au Dashboard SocialApp
+//
+// CORRECTIONS INTÉGRATION MOTEUR :
+//  [M1] Import depuis ../../lib/constants (source unique de vérité)
+//  [M2] TRIGGERS/ACTIONS locaux supprimés → TRIGGER_OPTIONS / ACTION_OPTIONS
+//  [M3] IMPLEMENTED_ACTIONS utilise les clés moteur (create_task, add_score…)
+//  [M4] TEMPLATE_PRESETS utilise les clés moteur + config keys corrects
+//  [M5] ActionConfigFields reécrit dynamiquement depuis ACTION_CONFIG_FIELDS
+//  [M6] handleCreate / handleSave : actions enregistrées en [{type, config}]
+//  [M7] openEdit : lit action_config + actions[0].config (merge)
+//  [M8] Badges et flow reconstruits depuis TRIGGER_LABELS / ACTION_LABELS
+
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../supabase";
+// [M1] Source unique de vérité partagée avec automationEngine.js
+import {
+  TRIGGER_OPTIONS,
+  TRIGGER_LABELS,
+  ACTION_OPTIONS,
+  ACTION_LABELS,
+  ACTION_CONFIG_FIELDS,
+} from "../../lib/constants";
 
 /* ─── CSS ────────────────────────────────────────────────── */
 const STYLE = `
@@ -292,14 +311,6 @@ const STYLE = `
   background:rgba(255,255,255,0.04); border:1px dashed var(--border);
   border-radius:8px; padding:9px 11px;
 }
-.ap-radio-row{ display:flex; gap:8px; }
-.ap-radio-opt{
-  flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-  padding:8px; border-radius:9px; border:1px solid var(--border);
-  background:var(--hover); color:var(--t2); font-size:12px; cursor:pointer;
-  transition:all .12s;
-}
-.ap-radio-opt.on{ background:var(--orangeD); border-color:rgba(245,132,31,.4); color:var(--orange); font-weight:600; }
 
 .ap-modal-footer{
   display:flex; gap:8px; justify-content:flex-end;
@@ -308,51 +319,44 @@ const STYLE = `
 .ap-loading{ padding:60px 20px; text-align:center; color:var(--t2); }
 `;
 
-/* ─── Données statiques ──────────────────────────────────── */
+/* ─── Constantes locales ──────────────────────────────────── */
+
+// [M3] Actions réellement exécutées par le moteur — clés moteur uniquement
+const IMPLEMENTED_ACTIONS = new Set([
+  'create_lead', 'create_task', 'send_whatsapp',
+  'add_score', 'add_tag', 'notify_owner',
+]);
+
+// Actions planifiées (non encore dans le moteur)
+const COMING_SOON_ACTIONS = [
+  { value: 'change_status', label: '🔄 Changer statut' },
+  { value: 'send_email',    label: '📧 Envoyer un email' },
+  { value: 'webhook_call',  label: '🔗 Appeler un webhook' },
+];
+
+// [M4] Templates avec clés moteur + config keys corrects
+const TEMPLATE_PRESETS = {
+  'lead-vip':   { name:'Lead VIP',            desc:'Tag automatiquement les nouveaux prospects.',             trigger:'new_lead',       action:'add_tag',       freq:'Immédiat', config:{ tag:'vip' } },
+  'lead-cold':  { name:'Relance WhatsApp',     desc:'Envoie un message de relance aux nouveaux contacts.',   trigger:'new_lead',       action:'send_whatsapp', freq:'Manuel',   config:{ message:"Bonjour, nous n'avons pas eu de vos nouvelles ! Toujours intéressé(e) ?" } },
+  'whatsapp':   { name:'WhatsApp Lead',        desc:"Crée une tâche quand un visiteur clique sur WhatsApp.", trigger:'whatsapp_click', action:'create_task',   freq:'Immédiat', config:{ taskTitle:'Rappeler ce contact WhatsApp' } },
+  'qr':         { name:'QR Tracking',          desc:"Ajoute des points au score lors d'un scan QR.",         trigger:'qr_scan',        action:'add_score',     freq:'Immédiat', config:{ score:5 } },
+  'score':      { name:'Lead Scoring',         desc:'Attribution automatique de score aux nouveaux leads.',  trigger:'new_lead',       action:'add_score',     freq:'Immédiat', config:{ score:10 } },
+};
+
+const TEMPLATES = [
+  { id:'lead-vip',  ico:'🔥', color:'c-orange', tags:['CRM','VIP','Lead']   },
+  { id:'lead-cold', ico:'💬', color:'c-purple', tags:['WhatsApp','Relance'] },
+  { id:'whatsapp',  ico:'📱', color:'c-green',  tags:['WhatsApp','Lead']    },
+  { id:'qr',        ico:'📷', color:'c-blue',   tags:['QR','Analytics']     },
+  { id:'score',     ico:'📊', color:'c-orange', tags:['Score','CRM']        },
+].map(t => ({ ...t, ...TEMPLATE_PRESETS[t.id] }));
+
 const LEAD_STATUSES = [
   { id:'prospect', label:'Prospect' },
   { id:'chaud',    label:'🔥 Chaud' },
   { id:'client',   label:'✅ Client' },
   { id:'froid',    label:'❄️ Froid' },
   { id:'perdu',    label:'Perdu' },
-];
-
-// Actions réellement exécutées par le moteur (automation-engine)
-const IMPLEMENTED_ACTIONS = new Set([
-  'Ajouter tag', 'Retirer tag', 'Changer statut', 'Créer tâche',
-  'Augmenter score', 'Réduire score', 'Notification dashboard', 'WhatsApp', 'Webhook', 'Email',
-]);
-
-const TEMPLATE_PRESETS = {
-  'lead-vip':   { name:'Lead VIP',           desc:'Tag automatiquement les prospects chauds.',                    trigger:'Lead chaud',              action:'Ajouter tag',          freq:'Immédiat', config:{ tag:'vip' } },
-  'lead-cold':  { name:'Relance automatique',desc:'Relance les prospects inactifs après 3 jours.',                trigger:'Aucune activité 3 jours', action:'WhatsApp',             freq:'3 jours',  config:{ to:'lead', message:'Bonjour, nous n\'avons pas eu de nouvelles ! Toujours intéressé ?' } },
-  'whatsapp':   { name:'WhatsApp Lead',      desc:"Créer un prospect lorsqu'un utilisateur clique sur WhatsApp.", trigger:'Clic WhatsApp',           action:'Créer tâche',          freq:'Immédiat', config:{ task:'Rappeler ce contact WhatsApp' } },
-  'qr':         { name:'QR Tracking',        desc:"Ajoute des points lorsqu'un QR est scanné.",                   trigger:'Scan QR Code',            action:'Augmenter score',      freq:'Immédiat', config:{ amount:5 } },
-  'score':      { name:'Lead Scoring',       desc:'Calcule automatiquement le score des prospects.',              trigger:'Nouveau lead',            action:'Augmenter score',      freq:'Immédiat', config:{ amount:10 } },
-};
-
-const TEMPLATES = [
-  { id:'lead-vip',  ico:'🔥', color:'c-orange', tags:['CRM','VIP','Lead']      },
-  { id:'lead-cold', ico:'🥶', color:'c-purple', tags:['CRM','Relance']         },
-  { id:'whatsapp',  ico:'💬', color:'c-green',  tags:['WhatsApp','Lead']       },
-  { id:'qr',        ico:'📱', color:'c-blue',   tags:['QR','Analytics']        },
-  { id:'score',     ico:'📊', color:'c-orange', tags:['Score','CRM']           },
-].map(t => ({ ...t, ...TEMPLATE_PRESETS[t.id] }));
-
-const TRIGGERS = [
-  'Nouveau lead','Lead froid','Lead chaud','Visite profil','Scan QR Code',
-  'Clic WhatsApp','Formulaire soumis','Lien cliqué','Téléchargement brochure',
-  'Rendez-vous créé','Rendez-vous manqué','Abonnement expiré','Paiement reçu',
-  'Événement créé','Score > 50','Score > 100',
-  'Aucune activité 3 jours','Aucune activité 7 jours','Planifié',
-];
-
-// Note : "Attribuer commercial" retiré — plateforme mono-propriétaire (un seul utilisateur par profil)
-const ACTIONS = [
-  'Ajouter tag','Retirer tag','Changer statut','Créer tâche','Créer rendez-vous',
-  'Augmenter score','Réduire score','Ajouter à campagne','Retirer campagne',
-  'Notification dashboard','Email','WhatsApp',
-  'Créer QR Code','Créer rapport','Webhook',
 ];
 
 const EMPTY_FORM = { name:'', desc:'', trigger:'', action:'', freq:'', config:{} };
@@ -372,148 +376,74 @@ function formatLastRun(isoDate) {
   return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
 }
 
-/* ─── Composant : configuration dynamique selon l'action ─── */
+/* ─── [M5] ActionConfigFields : dynamique depuis constants ─ */
 function ActionConfigFields({ action, config, setConfigField }) {
   if (!action) return null;
 
+  // Action non encore implémentée dans le moteur
   if (!IMPLEMENTED_ACTIONS.has(action)) {
     return (
       <div className="ap-config-box">
         <div className="ap-config-note">
-          ⚠️ Cette action n'est pas encore exécutée automatiquement par le moteur. L'automation sera enregistrée mais marquée "ignorée" à chaque déclenchement.
+          ⏳ Cette action sera disponible prochainement. L'automation sera enregistrée mais non exécutée par le moteur.
         </div>
       </div>
     );
   }
 
-  switch (action) {
-    case 'Ajouter tag':
-    case 'Retirer tag':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">Nom du tag</div>
-            <input className="ap-field-input" type="text" placeholder="Ex: vip, urgent, relance..." value={config.tag || ''} onChange={setConfigField('tag')} />
-          </div>
-        </div>
-      );
+  const fields = ACTION_CONFIG_FIELDS[action];
+  if (!fields?.length) return null;
 
-    case 'Changer statut':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">Nouveau statut du lead</div>
-            <select className="ap-field-select" value={config.status || ''} onChange={setConfigField('status')}>
-              <option value="">Choisir un statut...</option>
-              {LEAD_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+  return (
+    <div className="ap-config-box">
+      <div className="ap-config-title">⚙️ Configuration</div>
+
+      {fields.map(field => (
+        <div key={field.key}>
+          <div className="ap-field-label">{field.label}</div>
+
+          {field.type === 'select' ? (
+            <select
+              className="ap-field-select"
+              value={config[field.key] || ''}
+              onChange={setConfigField(field.key)}
+            >
+              <option value="">Choisir...</option>
+              {/* Statuts enrichis pour create_lead */}
+              {field.key === 'status'
+                ? LEAD_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)
+                : (field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)
+              }
             </select>
-          </div>
-        </div>
-      );
 
-    case 'Augmenter score':
-    case 'Réduire score':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">Montant (points)</div>
-            <input className="ap-field-input" type="number" min="1" max="100" placeholder="10" value={config.amount ?? ''} onChange={setConfigField('amount')} />
-          </div>
-        </div>
-      );
+          ) : field.type === 'textarea' ? (
+            <textarea
+              className="ap-field-textarea"
+              placeholder={field.placeholder || ''}
+              value={config[field.key] || ''}
+              onChange={setConfigField(field.key)}
+            />
 
-    case 'Créer tâche':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">Description de la tâche</div>
-            <input className="ap-field-input" type="text" placeholder="Ex: Rappeler ce prospect" value={config.task || ''} onChange={setConfigField('task')} />
-          </div>
+          ) : (
+            <input
+              className="ap-field-input"
+              type={field.type || 'text'}
+              placeholder={field.placeholder || ''}
+              value={config[field.key] ?? ''}
+              onChange={setConfigField(field.key)}
+            />
+          )}
         </div>
-      );
+      ))}
 
-    case 'Notification dashboard':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">Titre de la notification</div>
-            <input className="ap-field-input" type="text" placeholder="Ex: Nouveau lead chaud !" value={config.title || ''} onChange={setConfigField('title')} />
-          </div>
-          <div>
-            <div className="ap-field-label">Message</div>
-            <input className="ap-field-input" type="text" placeholder="Détail de la notification..." value={config.message || ''} onChange={setConfigField('message')} />
-          </div>
+      {/* Note spécifique à send_whatsapp */}
+      {action === 'send_whatsapp' && (
+        <div className="ap-config-note">
+          💡 Nécessite que l'intégration WhatsApp Business soit connectée dans le panneau Intégrations.
         </div>
-      );
-
-    case 'WhatsApp':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">Destinataire</div>
-            <div className="ap-radio-row">
-              <div className={`ap-radio-opt${config.to !== 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'owner' } })}>👤 Moi (propriétaire)</div>
-              <div className={`ap-radio-opt${config.to === 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'lead' } })}>📇 Le lead/client</div>
-            </div>
-          </div>
-          <div>
-            <div className="ap-field-label">Message</div>
-            <textarea className="ap-field-textarea" placeholder="Ex: Bonjour, merci pour votre intérêt..." value={config.message || ''} onChange={setConfigField('message')} />
-          </div>
-          <div className="ap-config-note">
-            Nécessite que l'intégration WhatsApp Business soit connectée dans le panneau Intégrations.
-          </div>
-        </div>
-      );
-
-    case 'Email':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">Destinataire</div>
-            <div className="ap-radio-row">
-              <div className={`ap-radio-opt${config.to !== 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'owner' } })}>👤 Moi (propriétaire)</div>
-              <div className={`ap-radio-opt${config.to === 'lead' ? ' on' : ''}`} onClick={() => setConfigField('to')({ target:{ value:'lead' } })}>📇 Le lead/client</div>
-            </div>
-          </div>
-          <div>
-            <div className="ap-field-label">Objet</div>
-            <input className="ap-field-input" type="text" placeholder="Ex: Bienvenue chez nous !" value={config.subject || ''} onChange={setConfigField('subject')} />
-          </div>
-          <div>
-            <div className="ap-field-label">Message</div>
-            <textarea className="ap-field-textarea" placeholder="Contenu de l'email..." value={config.message || ''} onChange={setConfigField('message')} />
-          </div>
-          <div className="ap-config-note">
-            Envoyé depuis notifications@socialapp.work
-          </div>
-        </div>
-      );
-
-    case 'Webhook':
-      return (
-        <div className="ap-config-box">
-          <div className="ap-config-title">⚙️ Configuration</div>
-          <div>
-            <div className="ap-field-label">URL du webhook</div>
-            <input className="ap-field-input" type="text" placeholder="https://..." value={config.url || ''} onChange={setConfigField('url')} />
-          </div>
-          <div className="ap-config-note">
-            Les données de l'événement (nom, téléphone, email...) seront envoyées en POST JSON à cette URL.
-          </div>
-        </div>
-      );
-
-    default:
-      return null;
-  }
+      )}
+    </div>
+  );
 }
 
 /* ─── Composant principal ────────────────────────────────── */
@@ -529,7 +459,7 @@ export default function AutomationsPanel({ profileId }) {
   const [form, setForm]               = useState(EMPTY_FORM);
 
   const isCreate = modal === 'create';
-  const setField = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const setField       = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
   const setConfigField = (key) => (e) => setForm(prev => ({ ...prev, config: { ...prev.config, [key]: e.target.value } }));
 
   useEffect(() => { if (profileId) loadAutomations(); }, [profileId]);
@@ -542,7 +472,7 @@ export default function AutomationsPanel({ profileId }) {
       .eq('profile_id', profileId)
       .order('created_at', { ascending: false });
     if (error) { console.error('LOAD ERROR:', error); setLoading(false); return; }
-    setAutomations((data || []).map(item => ({ ...item, desc: item.description || '', flow: item.flow || [] })));
+    setAutomations((data || []).map(item => ({ ...item, desc: item.description || '' })));
     setLoading(false);
   };
 
@@ -561,63 +491,86 @@ export default function AutomationsPanel({ profileId }) {
   const openCreate = () => { setForm(EMPTY_FORM); setModal('create'); };
 
   const useTemplate = (t) => {
-    setForm({ name: t.name || '', desc: t.desc || '', trigger: t.trigger || '', action: t.action || '', freq: t.freq || '', config: t.config || {} });
+    setForm({
+      name:    t.name    || '',
+      desc:    t.desc    || '',
+      trigger: t.trigger || '',   // clé moteur ex: 'whatsapp_click'
+      action:  t.action  || '',   // clé moteur ex: 'create_task'
+      freq:    t.freq    || '',
+      config:  t.config  || {},
+    });
     setModal('create');
+  };
+
+  // [M7] Ouvrir l'édition en lisant correctement les clés moteur
+  const openEdit = (auto) => {
+    // Merge action_config + actions[0].config pour récupérer tous les champs
+    const baseConfig  = auto.action_config || {};
+    const arrayConfig = Array.isArray(auto.actions) && auto.actions.length > 0
+      ? (auto.actions[0]?.config || {})
+      : {};
+    const mergedConfig = { ...baseConfig, ...arrayConfig };
+
+    setForm({
+      name:    auto.name        || '',
+      desc:    auto.desc        || auto.description || '',
+      trigger: auto.trigger     || '',   // ex: 'whatsapp_click'
+      action:  auto.action      || '',   // ex: 'create_task'
+      freq:    auto.freq        || '',
+      config:  mergedConfig,
+    });
+    setModal(auto);
+  };
+
+  // [M6] Construire le payload avec le format moteur correct
+  const buildPayload = () => {
+    const actionConfig = form.config || {};
+    // actions[] = [{type: 'create_task', config: {taskTitle: '...'}}]
+    const actionsList = form.action
+      ? [{ type: form.action, config: actionConfig }]
+      : [];
+
+    // [M8] Flow reconstruit avec les libellés lisibles (affichage UI uniquement)
+    const flow = [
+      ['🎯', TRIGGER_LABELS[form.trigger] || form.trigger || 'Déclencheur'],
+      ...(form.action ? [['⚡', ACTION_LABELS[form.action] || form.action]] : []),
+      ['✅', 'Exécuté'],
+    ];
+
+    return {
+      profile_id:   profileId,
+      name:         form.name.trim(),
+      description:  form.desc.trim(),
+      trigger:      form.trigger,     // clé moteur
+      action:       form.action,      // clé moteur (compatibilité legacy)
+      actions:      actionsList,      // [{type, config}]
+      action_config: actionConfig,    // config à plat (compatibilité legacy)
+      freq:         form.freq || 'Immédiat',
+      flow,
+      icon:         '⚡',
+      color:        'rgba(245,132,31,.1)',
+      updated_at:   new Date().toISOString(),
+    };
   };
 
   const handleCreate = async () => {
     if (!form.name.trim()) { alert('Le nom est requis'); return; }
-    const actionList = form.action ? [form.action] : [];
-    const payload = {
-      profile_id: profileId,
-      name: form.name.trim(),
-      description: form.desc.trim(),
-      trigger: form.trigger,
-      action: form.action,
-      actions: actionList,
-      action_config: form.config || {},
-      freq: form.freq || 'Immédiat',
-      active: true,
-      icon: '⚡',
-      color: 'rgba(245,132,31,.1)',
-      runs: 0,
-      flow: [
-        ['🎯', form.trigger || 'Déclencheur'],
-        ...actionList.map(a => ['⚡', a]),
-        ['✅', 'Exécuté'],
-      ],
-    };
+    const payload = { ...buildPayload(), active: true, runs: 0 };
     const { data, error } = await supabase.from('automations').insert(payload).select().maybeSingle();
     if (error) { console.error('CREATE ERROR:', error); return; }
-    if (data) setAutomations(prev => [{ ...data, desc: data.description || '' }, ...prev]);
+    if (data)  setAutomations(prev => [{ ...data, desc: data.description || '' }, ...prev]);
     setModal(null); setForm(EMPTY_FORM);
-  };
-
-  const openEdit = (auto) => {
-    setForm({ name: auto.name || '', desc: auto.desc || auto.description || '', trigger: auto.trigger || '', action: auto.action || '', freq: auto.freq || '', config: auto.action_config || {} });
-    setModal(auto);
   };
 
   const handleSave = async () => {
     if (!modal || modal === 'create') return;
-    const actionList = form.action ? [form.action] : [];
-    const { data, error } = await supabase.from('automations').update({
-      name: form.name.trim(),
-      description: form.desc.trim(),
-      trigger: form.trigger,
-      action: form.action,
-      actions: actionList,
-      action_config: form.config || {},
-      freq: form.freq,
-      flow: [
-        ['🎯', form.trigger || 'Déclencheur'],
-        ...actionList.map(a => ['⚡', a]),
-        ['✅', 'Exécuté'],
-      ],
-      updated_at: new Date().toISOString(),
-    }).eq('id', modal.id).select().maybeSingle();
+    const payload = buildPayload();
+    const { data, error } = await supabase
+      .from('automations').update(payload).eq('id', modal.id).select().maybeSingle();
     if (error) { console.error('SAVE ERROR:', error); return; }
-    if (data) setAutomations(prev => prev.map(a => a.id === modal.id ? { ...a, ...data, desc: data.description || '' } : a));
+    if (data) setAutomations(prev => prev.map(a =>
+      a.id === modal.id ? { ...a, ...data, desc: data.description || '' } : a
+    ));
     setModal(null);
   };
 
@@ -634,14 +587,18 @@ export default function AutomationsPanel({ profileId }) {
     if (!target) return;
     const newStatus = !target.active;
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: newStatus } : a));
-    const { error } = await supabase.from('automations').update({ active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+    const { error } = await supabase.from('automations')
+      .update({ active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: target.active } : a));
   };
 
   /* ── Filtres ── */
   const filtered = useMemo(() => automations.filter(a => {
     const matchFilter = filter === 'Tous' || (filter === 'Actives' && a.active) || (filter === 'Inactives' && !a.active);
-    const matchSearch = (a.name || '').toLowerCase().includes(search.toLowerCase()) || (a.trigger || '').toLowerCase().includes(search.toLowerCase());
+    // [M8] Recherche sur le nom ou le libellé du déclencheur
+    const triggerLabel = TRIGGER_LABELS[a.trigger] || a.trigger || '';
+    const matchSearch  = (a.name || '').toLowerCase().includes(search.toLowerCase())
+                      || triggerLabel.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   }), [automations, filter, search]);
 
@@ -712,49 +669,59 @@ export default function AutomationsPanel({ profileId }) {
               <div className="ap-loading">Chargement...</div>
             ) : (
               <div className="auto-list">
-                {filtered.map(auto => (
-                  <div key={auto.id} className={`auto-card${auto.active ? ' active-card' : ''}`} onClick={() => openEdit(auto)}>
-                    <div className="auto-ico" style={{ background: auto.color }}>{auto.icon}</div>
-                    <div className="auto-body">
-                      <div className="auto-name">
-                        {auto.name}
-                        <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.1)':'rgba(100,100,120,.2)', color:auto.active?'#22d07a':'#5c6070', padding:'2px 7px', borderRadius:20 }}>
-                          {auto.active ? 'Actif' : 'Inactif'}
-                        </span>
-                        {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
-                          <span style={{ fontSize:10, fontWeight:700, background:'rgba(251,191,36,.12)', color:'#fbbf24', padding:'2px 7px', borderRadius:20 }}>
-                            ⏭ Pas encore disponible
+                {filtered.map(auto => {
+                  // [M8] Libellés lisibles depuis les clés moteur
+                  const triggerLabel = TRIGGER_LABELS[auto.trigger] || auto.trigger || 'Aucun';
+                  const actionLabel  = ACTION_LABELS[auto.action]   || auto.action   || 'Aucune';
+                  // Flow reconstruit (remplace l'ancien stocké en FR)
+                  const cardFlow = [
+                    ['🎯', triggerLabel],
+                    ...(auto.action ? [['⚡', actionLabel]] : []),
+                    ['✅', 'Exécuté'],
+                  ];
+
+                  return (
+                    <div key={auto.id} className={`auto-card${auto.active ? ' active-card' : ''}`} onClick={() => openEdit(auto)}>
+                      <div className="auto-ico" style={{ background: auto.color }}>{auto.icon}</div>
+                      <div className="auto-body">
+                        <div className="auto-name">
+                          {auto.name}
+                          <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.1)':'rgba(100,100,120,.2)', color:auto.active?'#22d07a':'#5c6070', padding:'2px 7px', borderRadius:20 }}>
+                            {auto.active ? 'Actif' : 'Inactif'}
                           </span>
-                        )}
-                      </div>
-                      <div className="auto-desc">{auto.desc}</div>
-                      {!!auto.flow?.length && (
+                          {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
+                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(251,191,36,.12)', color:'#fbbf24', padding:'2px 7px', borderRadius:20 }}>
+                              ⏳ Bientôt
+                            </span>
+                          )}
+                        </div>
+                        <div className="auto-desc">{auto.desc}</div>
                         <div className="flow">
-                          {auto.flow.map(([ico, lbl], i) => (
+                          {cardFlow.map(([ico, lbl], i) => (
                             <span key={i} style={{ display:'flex', alignItems:'center' }}>
                               <span className="flow-step"><span style={{ fontSize:13 }}>{ico}</span>{lbl}</span>
-                              {i < auto.flow.length - 1 && <span className="flow-arrow">→</span>}
+                              {i < cardFlow.length - 1 && <span className="flow-arrow">→</span>}
                             </span>
                           ))}
                         </div>
-                      )}
-                      <div className="auto-meta">
-                        <span className="auto-badge ab-trigger">🎯 {auto.trigger || 'Aucun'}</span>
-                        <span className="auto-badge ab-action">⚡ {auto.action || 'Aucune'}</span>
-                        <span className="auto-badge ab-freq">🔄 {auto.freq || '—'}</span>
-                        <span className="auto-stat">🔄 {auto.runs || 0} exéc.</span>
-                        <span className="auto-stat">⏱ {formatLastRun(auto.last_run)}</span>
+                        <div className="auto-meta">
+                          <span className="auto-badge ab-trigger">{triggerLabel}</span>
+                          <span className="auto-badge ab-action">{actionLabel}</span>
+                          {auto.freq && <span className="auto-badge ab-freq">🔄 {auto.freq}</span>}
+                          <span className="auto-stat">🔄 {auto.runs || 0} exéc.</span>
+                          <span className="auto-stat">⏱ {formatLastRun(auto.last_run)}</span>
+                        </div>
+                      </div>
+                      <div className="auto-right" onClick={e => e.stopPropagation()}>
+                        <div className="ap-tog-wrap">
+                          <span className="ap-tog-lbl">{auto.active ? 'ON' : 'OFF'}</span>
+                          <button className={`ap-toggle ${auto.active ? 'on' : 'off'}`} onClick={() => toggleAuto(auto.id)} />
+                        </div>
+                        <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
                       </div>
                     </div>
-                    <div className="auto-right" onClick={e => e.stopPropagation()}>
-                      <div className="ap-tog-wrap">
-                        <span className="ap-tog-lbl">{auto.active ? 'ON' : 'OFF'}</span>
-                        <button className={`ap-toggle ${auto.active ? 'on' : 'off'}`} onClick={() => toggleAuto(auto.id)} />
-                      </div>
-                      <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {!filtered.length && (
                   <div style={{ textAlign:'center', padding:'50px 0', color:'#5c6070', fontSize:13 }}>Aucune automation trouvée</div>
                 )}
@@ -810,7 +777,7 @@ export default function AutomationsPanel({ profileId }) {
           </>
         )}
 
-        {/* ── MODAL ── */}
+        {/* ── MODAL CREATE / EDIT ── */}
         {modal && (
           <div className="ap-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
             <div className="ap-modal">
@@ -823,32 +790,55 @@ export default function AutomationsPanel({ profileId }) {
                 <button className="ap-modal-close" onClick={() => setModal(null)}>✕</button>
               </div>
 
+              {/* Nom */}
               <div>
                 <div className="ap-field-label">Nom de l'automation</div>
-                <input className="ap-field-input" type="text" placeholder="Ex: Welcome WhatsApp" value={form.name} onChange={setField('name')} />
+                <input className="ap-field-input" type="text" placeholder="Ex: WhatsApp Lead" value={form.name} onChange={setField('name')} />
               </div>
+
+              {/* Description */}
               <div>
                 <div className="ap-field-label">Description</div>
                 <input className="ap-field-input" type="text" placeholder="Décris ce que fait cette automation..." value={form.desc} onChange={setField('desc')} />
               </div>
+
+              {/* Déclencheur — [M2] options depuis constants */}
               <div>
                 <div className="ap-sec-lbl">Déclencheur</div>
                 <select className="ap-field-select" value={form.trigger} onChange={setField('trigger')}>
                   <option value="">Choisir un déclencheur...</option>
-                  {TRIGGERS.map(t => <option key={t} value={t}>{t}</option>)}
+                  {TRIGGER_OPTIONS.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
+
+              {/* Action — [M2] options depuis constants, avec section "Bientôt" */}
               <div>
                 <div className="ap-sec-lbl">Action</div>
                 <select className="ap-field-select" value={form.action} onChange={setField('action')}>
                   <option value="">Choisir une action...</option>
-                  {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+                  <optgroup label="── Disponibles ──">
+                    {ACTION_OPTIONS.map(a => (
+                      <option key={a.value} value={a.value}>{a.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="── Bientôt ──">
+                    {COMING_SOON_ACTIONS.map(a => (
+                      <option key={a.value} value={a.value}>{a.label}</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
-              {/* Configuration dynamique selon l'action choisie */}
-              <ActionConfigFields action={form.action} config={form.config || {}} setConfigField={setConfigField} />
+              {/* [M5] Configuration dynamique */}
+              <ActionConfigFields
+                action={form.action}
+                config={form.config || {}}
+                setConfigField={setConfigField}
+              />
 
+              {/* Délai */}
               <div>
                 <div className="ap-field-label">Délai</div>
                 <input className="ap-field-input" type="text" placeholder="Ex: Immédiat, 3 jours..." value={form.freq} onChange={setField('freq')} />

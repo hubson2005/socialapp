@@ -14,20 +14,13 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-import { supabase } from "../supabase";
+import { supabase } from '../supabase';
 import { executeAction } from './actions/index';
 import { logAutomation } from './logger';
+import { TRIGGER_LABELS } from './constants';
 
-// ─── Libellés des déclencheurs (pour l'UI et les logs) ────────────
-export const TRIGGER_LABELS = {
-  whatsapp_click: '📱 Clic WhatsApp',
-  qr_scan:        '📷 Scan QR code',
-  form_submit:    '📝 Formulaire rempli',
-  new_lead:       '👤 Nouveau contact',
-  payment_received:'💰 Paiement reçu',
-  calendly_booked:'📅 RDV Calendly',
-  marketplace_buy:'🛍️ Achat Marketplace',
-};
+// Re-export pour les consommateurs qui importaient depuis ce fichier
+export { TRIGGER_LABELS };
 
 // ─── Point d'entrée public ─────────────────────────────────────────
 /**

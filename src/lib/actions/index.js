@@ -47,14 +47,7 @@ export async function executeAction({ actionType, config, profileId, automation,
   return handler({ config, profileId, automation, context });
 }
 
-// Export de la liste des types d'actions (utile pour l'UI de l'AutomationsPanel)
-export const AVAILABLE_ACTIONS = Object.keys(ACTION_REGISTRY);
+import { ACTION_LABELS, ACTION_OPTIONS } from '../constants';
 
-export const ACTION_LABELS = {
-  create_lead:     '👤 Créer un lead',
-  create_task:     '✅ Créer une tâche',
-  send_whatsapp:   '💬 Envoyer un WhatsApp',
-  add_score:       '⭐ Modifier le score',
-  add_tag:         '🏷️ Ajouter un tag',
-  notify_owner:    '🔔 Notifier le propriétaire',
-};
+export { ACTION_LABELS, ACTION_OPTIONS };
+export const AVAILABLE_ACTIONS = Object.keys(ACTION_REGISTRY);

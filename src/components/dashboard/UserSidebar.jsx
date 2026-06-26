@@ -21,7 +21,7 @@ export const USER_NAV = [
   // ── Masqués côté Dashboard utilisateur : en cours de test sur le Dashboard admin ──
   { id:'meta', label:'Connexion Meta', icon:Zap, group:'crm', hidden: true },
   { id: 'crm',           label: 'CRM / Leads',     icon: Users,           group: 'business',  locked: 'business', path: null                        },
-  { id: 'whatsapp-crm',  label: 'WhatsApp CRM',    icon: MessageCircle,   group: 'business',  locked: 'business', path: '/dashboard/whatsapp-crm'   },
+  { id: 'whatsapp-crm',  label: 'WhatsApp CRM',    icon: MessageCircle,   group: 'business',  locked: 'business', path: null                        },
   { id: 'automations',   label: 'Automatisations', icon: Zap,             group: 'business',  locked: 'business', path: null                        },
   { id: 'integrations',  label: 'Intégrations',    icon: GitBranch,       group: 'business',  locked: 'business', path: null                        },
   { id: 'boost', label: 'Boost & Promo', icon: Zap, group: 'crm', badge: 'NEW', hidden: true },

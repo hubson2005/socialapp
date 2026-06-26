@@ -119,9 +119,9 @@ export default function RealtimePanel({ profileId }) {
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '12px' }}>
-        <MiniStat label="Vues aujourd'hui" value={totalToday}         icon={Eye}              color="#6366f1" />
-        <MiniStat label="Visiteurs live"   value={visitors.length}   icon={Activity}         color="#22c55e" />
-        <MiniStat label="Clics récents"    value={recentClicks.length} icon={MousePointerClick} color="#f59e0b" />
+        <MiniStat label="Vues aujourd'hui" value={totalToday}           icon={Eye}               color="#6366f1" />
+        <MiniStat label="Visiteurs live"   value={visitors.length}      icon={Activity}          color="#22c55e" />
+        <MiniStat label="Clics récents"    value={recentClicks.length}  icon={MousePointerClick} color="#f59e0b" />
       </div>
 
       {/* Flux */}
@@ -190,4 +190,3 @@ export default function RealtimePanel({ profileId }) {
     </div>
   );
 }
-

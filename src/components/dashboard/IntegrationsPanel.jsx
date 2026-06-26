@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Zap, Link2, Copy, Check, ExternalLink,
   Loader2, RefreshCw, X, ChevronDown, ChevronRight,
@@ -67,7 +66,6 @@ const MailchimpLogo = () => (
   <svg viewBox="0 0 256 256" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
     <circle cx="128" cy="128" r="128" fill="#FFE01B"/>
     <path d="M179.4 129.6c1.5-.4 2.8-.5 3.7-.2.5.2.7.4.8.6.3.8-.3 2.1-1 3.1-.7 1.1-1.6 2-1.6 2s1.7-.2 3-.9c.8-.4 1.4-1 1.4-1.8 0-1.1-1-2.1-2.8-2.6-.8-.2-1.7-.3-2.6-.3.3-.3.5-.6.8-.9-.3-.2-.6-.4-.9-.6-.3.2-.5.4-.8.6zM169 119.4c-2.7-1.3-6.2-2-10.1-2-4.2 0-8.7.8-12.8 2.7l.5 1.1c3.8-1.8 8.1-2.6 12-2.6 3.7 0 7 .7 9.5 1.9 4.2 2 5.8 5 5.3 8.7-.9 6.7-8.8 13.3-18.4 12.8-7.4-.4-11.4-4.2-11.4-9.2 0-1.9.6-3.9 1.9-5.8l-1-.7c-1.4 2.1-2.2 4.4-2.2 6.7 0 5.6 4.4 10.1 12.5 10.6 10.3.6 19.1-6.5 20.1-13.8.7-4.3-1.3-8.1-5.9-10.4z" fill="#241C15"/>
-    <path d="M158.4 131.7c.4-2 2.2-3.4 4.3-3.2 2 .2 3.4 1.8 3.2 3.8l-.1.6-7.5-.4.1-.8zm-1.2 1.5c0 3.6 2.6 6.2 6.5 6.2 2 0 3.8-.7 5.1-2l-.8-.8c-1.1 1.1-2.6 1.7-4.3 1.7-3.2 0-5.4-2.1-5.4-5.1h11.3c0-.4.1-.7.1-1.1 0-3.6-2.3-6-5.8-6-3.5 0-6.7 2.8-6.7 7.1zm-12.7 4.5l-1.7-11.5h-1.2l1.9 12.6h2l3.5-9.5 3.5 9.5h2l1.9-12.6h-1.2l-1.7 11.5-3.5-9.7h-1l-3.5 9.7zm-11.8 1.1h1.1v-12.6h-1.1v12.6zm.5-15.4c.5 0 .8-.4.8-.9s-.4-.9-.8-.9c-.5 0-.9.4-.9.9.1.5.4.9.9.9z" fill="#241C15"/>
   </svg>
 );
 
@@ -136,7 +134,6 @@ const StripeLogo = () => (
 const PayPalLogo = () => (
   <svg viewBox="0 0 512 512" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
     <rect width="512" height="512" rx="80" fill="#003087"/>
-    <path d="M176 120h120c50 0 86 28 80 82-8 70-56 96-112 96H224l-20 104H140L176 120zm48 40l-16 100h40c34 0 62-14 68-56 6-36-16-44-48-44h-44z" fill="#009CDE"/>
     <path d="M208 120h120c50 0 86 28 80 82-8 70-56 96-112 96H256l-20 104H172L208 120zm48 40l-16 100h40c34 0 62-14 68-56 6-36-16-44-48-44h-44z" fill="white"/>
   </svg>
 );
@@ -216,7 +213,6 @@ const ShopifyLogo = () => (
   <svg viewBox="0 0 512 512" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
     <rect width="512" height="512" rx="80" fill="#96BF48"/>
     <path d="M338 136s-2-2-4-2c-2 0-36-2-36-2s-24-24-26-26v270l88-22s-22-218-22-218zm-54-4s-14-4-30-4c0 0-8-24-34-24-46 0-68 58-68 58l-46 14s-2 8-6 22l100-26s16-60 50-60c14 0 20 8 20 8l14-4v16z" fill="white"/>
-    <path d="M284 132c-16 0-30 4-30 4v-16s-6-8-20-8c-34 0-50 60-50 60l-100 26c-14 54-34 166-34 166l248-48V132zm-54 148c0 0-14 4-30 4-24 0-34-16-34-16l-8 50s10 18 44 18c16 0 28-6 28-6v-50z" fill="#5E8E3E"/>
   </svg>
 );
 
@@ -260,11 +256,10 @@ const PostgresLogo = () => (
     <ellipse cx="256" cy="180" rx="120" ry="80" fill="none" stroke="white" strokeWidth="24"/>
     <path d="M136 180v152c0 44 54 80 120 80s120-36 120-80V180" fill="none" stroke="white" strokeWidth="24"/>
     <line x1="256" y1="260" x2="256" y2="412" stroke="white" strokeWidth="24"/>
-    <ellipse cx="256" cy="180" rx="120" ry="80" fill="none" stroke="white" strokeWidth="24"/>
   </svg>
 );
 
-// ─── Catégories et intégrations ───────────────────────────────────────────────
+// ─── Catégories ───────────────────────────────────────────────────────────────
 const CATEGORIES_CONFIG = [
   { id: 'Tous', label: 'Tous', emoji: '⚡' },
   { id: 'Automatisation', label: 'Automatisation', emoji: '🤖' },
@@ -279,67 +274,42 @@ const CATEGORIES_CONFIG = [
 ];
 
 const INTEGRATIONS = [
-  // ── Automatisation ──
   { id: 'zapier', name: 'Zapier', desc: 'Automatisez plus de 6 000 apps sans coder', category: 'Automatisation', color: '#FF4A00', bg: 'rgba(255,74,0,0.12)', LogoComponent: ZapierLogo, docsUrl: 'https://zapier.com', hasWebhook: true, fields: [] },
   { id: 'make', name: 'Make (Integromat)', desc: 'Créez des scénarios automation visuels', category: 'Automatisation', color: '#6D00CC', bg: 'rgba(109,0,204,0.12)', LogoComponent: MakeLogo, docsUrl: 'https://make.com', hasWebhook: true, fields: [] },
-
-  // ── CRM & Ventes ──
   { id: 'hubspot', name: 'HubSpot', desc: 'CRM tout-en-un pour gérer vos leads', category: 'CRM', color: '#FF7A59', bg: 'rgba(255,122,89,0.12)', LogoComponent: HubSpotLogo, docsUrl: 'https://hubspot.com', hasWebhook: true, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', type: 'password' }, { key: 'portal_id', label: 'Portal ID', placeholder: '12345678', type: 'text' }] },
   { id: 'salesforce', name: 'Salesforce', desc: 'CRM enterprise leader du marché', category: 'CRM', color: '#00A1E0', bg: 'rgba(0,161,224,0.12)', LogoComponent: SalesforceLogo, docsUrl: 'https://salesforce.com', hasWebhook: true, fields: [{ key: 'instance_url', label: 'Instance URL', placeholder: 'https://yourinstance.salesforce.com', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'pipedrive', name: 'Pipedrive', desc: 'Pipeline de ventes visuel et intuitif', category: 'CRM', color: '#00C85A', bg: 'rgba(0,200,90,0.12)', LogoComponent: PipedriveLogo, docsUrl: 'https://pipedrive.com', hasWebhook: true, fields: [{ key: 'api_token', label: 'API Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'notion', name: 'Notion', desc: 'Synchronisez vos leads dans votre workspace', category: 'CRM', color: '#ffffff', bg: 'rgba(255,255,255,0.08)', LogoComponent: NotionLogo, docsUrl: 'https://notion.so', hasWebhook: true, fields: [{ key: 'database_id', label: 'Database ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }] },
   { id: 'airtable', name: 'Airtable', desc: 'Exportez automatiquement vos contacts', category: 'CRM', color: '#18BFFF', bg: 'rgba(24,191,255,0.12)', LogoComponent: AirtableLogo, docsUrl: 'https://airtable.com', hasWebhook: true, fields: [{ key: 'base_id', label: 'Base ID', placeholder: 'appXXXXXXXXXXXXXX', type: 'text' }, { key: 'table_name', label: 'Table', placeholder: 'Leads', type: 'text' }] },
-
-  // ── Email ──
   { id: 'mailchimp', name: 'Mailchimp', desc: 'Ajoutez vos contacts à vos listes email', category: 'Email', color: '#FFE01B', bg: 'rgba(255,224,27,0.10)', LogoComponent: MailchimpLogo, docsUrl: 'https://mailchimp.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1', type: 'password' }, { key: 'list_id', label: 'Audience ID', placeholder: 'xxxxxxxxxx', type: 'text' }] },
   { id: 'brevo', name: 'Brevo', desc: 'Email marketing populaire en France', category: 'Email', color: '#0B996E', bg: 'rgba(11,153,110,0.12)', LogoComponent: BrevoLogo, docsUrl: 'https://brevo.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xkeysib-xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'list_id', label: 'List ID', placeholder: '12', type: 'text' }] },
   { id: 'activecampaign', name: 'ActiveCampaign', desc: 'Email marketing & automation avancée', category: 'Email', color: '#356AE6', bg: 'rgba(53,106,230,0.12)', LogoComponent: ActiveCampaignLogo, docsUrl: 'https://activecampaign.com', hasWebhook: false, fields: [{ key: 'api_url', label: 'API URL', placeholder: 'https://youraccountname.api-us1.com', type: 'text' }, { key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'convertkit', name: 'ConvertKit', desc: 'Email marketing pour créateurs de contenu', category: 'Email', color: '#FB6970', bg: 'rgba(251,105,112,0.12)', LogoComponent: ConvertKitLogo, docsUrl: 'https://convertkit.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'form_id', label: 'Form ID', placeholder: '1234567', type: 'text' }] },
-
-  // ── Paiements ──
   { id: 'stripe', name: 'Stripe', desc: 'Suivez paiements & abonnements en temps réel', category: 'Paiements', color: '#635BFF', bg: 'rgba(99,91,255,0.12)', LogoComponent: StripeLogo, docsUrl: 'https://stripe.com', hasWebhook: true, fields: [{ key: 'secret_key', label: 'Secret Key', placeholder: 'sk_live_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'webhook_secret', label: 'Webhook Secret', placeholder: 'whsec_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'paypal', name: 'PayPal', desc: 'Notifications de transactions PayPal', category: 'Paiements', color: '#003087', bg: 'rgba(0,48,135,0.12)', LogoComponent: PayPalLogo, docsUrl: 'https://paypal.com', hasWebhook: true, fields: [{ key: 'client_id', label: 'Client ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }, { key: 'client_secret', label: 'Client Secret', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-
-  // ── Messagerie ──
-  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Messages entrants → leads + notifications automatiques', category: 'Messagerie', color: '#25D366', bg: 'rgba(37,211,102,0.12)', LogoComponent: WhatsAppLogo, 
-  docsUrl: 'https://business.whatsapp.com', hasWebhook: true, fields: [
-    { key: 'phone_id',           label: 'Phone Number ID',              placeholder: '123456789012345',    type: 'text'     },
-    { key: 'access_token',       label: 'Access Token',                 placeholder: 'EAAxxxxxxxxxxxxxxxx', type: 'password' },
-    { key: 'notification_phone', label: 'Votre numéro (notifications)', placeholder: '2250700000000',      type: 'text'     },
-    { key: 'verify_token',       label: 'Token de vérification webhook',placeholder: 'mon_token_secret',   type: 'text'     },
-  ] 
-},
+  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Messages entrants → leads + notifications automatiques', category: 'Messagerie', color: '#25D366', bg: 'rgba(37,211,102,0.12)', LogoComponent: WhatsAppLogo, docsUrl: 'https://business.whatsapp.com', hasWebhook: true, fields: [{ key: 'phone_id', label: 'Phone Number ID', placeholder: '123456789012345', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'EAAxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'notification_phone', label: 'Votre numéro (notifications)', placeholder: '2250700000000', type: 'text' }, { key: 'verify_token', label: 'Token de vérification webhook', placeholder: 'mon_token_secret', type: 'text' }] },
   { id: 'telegram', name: 'Telegram', desc: 'Bot notifications vers vos canaux Telegram', category: 'Messagerie', color: '#2CA5E0', bg: 'rgba(44,165,224,0.12)', LogoComponent: TelegramLogo, docsUrl: 'https://telegram.org', hasWebhook: true, fields: [{ key: 'bot_token', label: 'Bot Token', placeholder: '123456789:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'chat_id', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' }] },
   { id: 'slack', name: 'Slack', desc: 'Recevez des notifications en temps réel', category: 'Messagerie', color: '#E01E5A', bg: 'rgba(74,21,75,0.15)', LogoComponent: SlackLogo, docsUrl: 'https://slack.com', hasWebhook: true, fields: [{ key: 'webhook_url', label: 'Webhook URL Slack', placeholder: 'https://hooks.slack.com/services/...', type: 'text' }] },
   { id: 'intercom', name: 'Intercom', desc: 'Support client & messaging en temps réel', category: 'Messagerie', color: '#1F8DED', bg: 'rgba(31,141,237,0.12)', LogoComponent: IntercomLogo, docsUrl: 'https://intercom.com', hasWebhook: true, fields: [{ key: 'access_token', label: 'Access Token', placeholder: 'dG9rxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'workspace_id', label: 'Workspace ID', placeholder: 'xxxxxxxx', type: 'text' }] },
   { id: 'crisp', name: 'Crisp', desc: 'Support client made in France 🇫🇷', category: 'Messagerie', color: '#1972F5', bg: 'rgba(25,114,245,0.12)', LogoComponent: CrispLogo, docsUrl: 'https://crisp.chat', hasWebhook: true, fields: [{ key: 'website_id', label: 'Website ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', type: 'text' }, { key: 'token', label: 'Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-
-  // ── Calendrier ──
   { id: 'calendly', name: 'Calendly', desc: 'Suivi automatique de vos bookings', category: 'Calendrier', color: '#006BFF', bg: 'rgba(0,107,255,0.12)', LogoComponent: CalendlyLogo, docsUrl: 'https://calendly.com', hasWebhook: true, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'eyJhbGxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'google_calendar', name: 'Google Calendar', desc: 'Synchronisez vos événements automatiquement', category: 'Calendrier', color: '#4285F4', bg: 'rgba(66,133,244,0.12)', LogoComponent: GoogleCalendarLogo, docsUrl: 'https://calendar.google.com', hasWebhook: false, fields: [{ key: 'calendar_id', label: 'Calendar ID', placeholder: 'xxxxxxxxxxxx@group.calendar.google.com', type: 'text' }] },
-
-  // ── Analytics ──
   { id: 'google_analytics', name: 'Google Analytics', desc: 'Suivez vos visiteurs et conversions en détail', category: 'Analytics', color: '#E37400', bg: 'rgba(227,116,0,0.12)', LogoComponent: GoogleAnalyticsLogo, docsUrl: 'https://analytics.google.com', hasWebhook: false, fields: [{ key: 'measurement_id', label: 'Measurement ID', placeholder: 'G-XXXXXXXXXX', type: 'text' }] },
   { id: 'meta_pixel', name: 'Meta Pixel', desc: 'Trackez les conversions Facebook & Instagram', category: 'Analytics', color: '#0082FB', bg: 'rgba(0,130,251,0.12)', LogoComponent: MetaLogo, docsUrl: 'https://business.facebook.com', hasWebhook: false, fields: [{ key: 'pixel_id', label: 'Pixel ID', placeholder: '123456789012345', type: 'text' }] },
   { id: 'mixpanel', name: 'Mixpanel', desc: 'Analytics produit avancée & funnels', category: 'Analytics', color: '#7856FF', bg: 'rgba(120,86,255,0.12)', LogoComponent: MixpanelLogo, docsUrl: 'https://mixpanel.com', hasWebhook: false, fields: [{ key: 'project_token', label: 'Project Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }] },
   { id: 'hotjar', name: 'Hotjar', desc: 'Heatmaps & enregistrements de sessions', category: 'Analytics', color: '#FF3C00', bg: 'rgba(255,60,0,0.12)', LogoComponent: HotjarLogo, docsUrl: 'https://hotjar.com', hasWebhook: false, fields: [{ key: 'site_id', label: 'Site ID', placeholder: '1234567', type: 'text' }] },
-
-  // ── E-commerce ──
   { id: 'shopify', name: 'Shopify', desc: 'Synchronisez commandes & clients Shopify', category: 'Ecommerce', color: '#96BF48', bg: 'rgba(150,191,72,0.12)', LogoComponent: ShopifyLogo, docsUrl: 'https://shopify.com', hasWebhook: true, fields: [{ key: 'shop_domain', label: 'Shop Domain', placeholder: 'yourstore.myshopify.com', type: 'text' }, { key: 'access_token', label: 'Admin API Token', placeholder: 'shpat_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'woocommerce', name: 'WooCommerce', desc: 'Sync automatique pour boutiques WordPress', category: 'Ecommerce', color: '#7F54B3', bg: 'rgba(127,84,179,0.12)', LogoComponent: WooCommerceLogo, docsUrl: 'https://woocommerce.com', hasWebhook: true, fields: [{ key: 'store_url', label: 'Store URL', placeholder: 'https://yourstore.com', type: 'text' }, { key: 'consumer_key', label: 'Consumer Key', placeholder: 'ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'consumer_secret', label: 'Consumer Secret', placeholder: 'cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-
-  // ── Données ──
   { id: 'google_sheets', name: 'Google Sheets', desc: 'Export automatique de vos données en tableur', category: 'Données', color: '#23A566', bg: 'rgba(35,165,102,0.12)', LogoComponent: GoogleSheetsLogo, docsUrl: 'https://sheets.google.com', hasWebhook: false, fields: [{ key: 'spreadsheet_id', label: 'Spreadsheet ID', placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms', type: 'text' }, { key: 'sheet_name', label: 'Sheet Name', placeholder: 'Leads', type: 'text' }] },
   { id: 'supabase', name: 'Supabase', desc: 'Base de données PostgreSQL open source', category: 'Données', color: '#3ECF8E', bg: 'rgba(62,207,142,0.12)', LogoComponent: SupabaseLogo, docsUrl: 'https://supabase.com', hasWebhook: false, fields: [{ key: 'project_url', label: 'Project URL', placeholder: 'https://xxxxxxxxxxxx.supabase.co', type: 'text' }, { key: 'anon_key', label: 'Anon Key', placeholder: 'eyJhbGxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'postgres', name: 'PostgreSQL', desc: 'Connexion directe à votre base de données', category: 'Données', color: '#336791', bg: 'rgba(51,103,145,0.12)', LogoComponent: PostgresLogo, docsUrl: 'https://postgresql.org', hasWebhook: false, fields: [{ key: 'connection_string', label: 'Connection String', placeholder: 'postgresql://user:password@host:5432/db', type: 'password' }] },
 ];
 
-// ─── URL webhook réelle (rewrite Vercel → Edge Function Supabase "webhooks") ──
 function generateWebhookUrl(profileId, integrationId) {
   return `https://admin.socialapp.work/webhooks/${profileId}/${integrationId}`;
 }
 
-// ─── Composant Carte Intégration ──────────────────────────────────────────────
+// ─── Carte intégration ────────────────────────────────────────────────────────
 function IntegrationCard({ integration, config, onSave, onDisconnect }) {
   const [expanded, setExpanded] = useState(false);
   const [fields, setFields] = useState(config?.fields || {});
@@ -350,6 +320,8 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
   const isConnected = !!config?.connected;
   const webhookUrl = config?.webhook_url || generateWebhookUrl('preview', integration.id);
   const { LogoComponent } = integration;
+
+  const toggleExpanded = () => setExpanded(v => !v);
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -366,7 +338,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
       setExpanded(false);
       toast.success(`${integration.name} connecté !`);
     } catch {
-      // l'erreur est déjà notifiée par onSave (toast.error)
+      // erreur déjà gérée dans onSave
     } finally {
       setSaving(false);
     }
@@ -379,89 +351,145 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
       setFields({});
       toast.success(`${integration.name} déconnecté`);
     } catch {
-      // l'erreur est déjà notifiée par onDisconnect (toast.error)
+      // erreur déjà gérée dans onDisconnect
     }
   };
 
   return (
-    <motion.div layout style={{
+    <div style={{
       background: 'rgba(255,255,255,0.04)',
       border: `1px solid ${isConnected ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)'}`,
-      borderRadius: '16px', overflow: 'hidden', transition: 'border-color 0.2s',
+      borderRadius: '16px',
+      overflow: 'hidden',
+      transition: 'border-color 0.2s',
+      minWidth: 0,
     }}>
-      <div onClick={() => setExpanded(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', cursor: 'pointer' }}>
-        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: integration.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${integration.color}33` }}>
-          <LogoComponent />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>{integration.name}</span>
-            {isConnected && (
-              <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', letterSpacing: '0.05em' }}>✓ CONNECTÉ</span>
-            )}
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0 }}>
+
+        {/* Zone cliquable logo + texte */}
+        <div
+          onClick={toggleExpanded}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0, cursor: 'pointer' }}
+        >
+          <div style={{
+            width: '42px', height: '42px', borderRadius: '12px',
+            background: integration.bg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+            border: `1px solid ${integration.color}33`,
+          }}>
+            <LogoComponent />
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{integration.desc}</p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              <span style={{ color: 'white', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {integration.name}
+              </span>
+              {isConnected && (
+                <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', letterSpacing: '0.05em', flexShrink: 0 }}>
+                  ✓ CONNECTÉ
+                </span>
+              )}
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {integration.desc}
+            </p>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+
+        {/* Boutons — frères (pas enfants) de la zone cliquable */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {isConnected && (
-            <button onClick={handleDisconnect} style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button
+              onClick={handleDisconnect}
+              style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
               <X size={11} />
             </button>
           )}
-          <button onClick={() => setExpanded(v => !v)} style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <button
+            onClick={toggleExpanded}
+            style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
         </div>
       </div>
 
-      <AnimatePresence>
-        {expanded && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '0 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {integration.hasWebhook && (
-                <div>
-                  <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Webhook URL</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '8px 12px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{webhookUrl}</span>
-                    <button onClick={() => handleCopy(webhookUrl)} style={{ width: '24px', height: '24px', borderRadius: '6px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {copied ? <Check size={10} color="#22c55e" /> : <Copy size={10} color="rgba(255,255,255,0.5)" />}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {integration.fields.map(f => (
-                <div key={f.key}>
-                  <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{f.label}</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={f.type === 'password' && !showSecret[f.key] ? 'password' : 'text'}
-                      value={fields[f.key] || ''}
-                      onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
-                      placeholder={f.placeholder}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: f.type === 'password' ? '8px 36px 8px 12px' : '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none', fontFamily: f.type === 'password' ? 'inherit' : 'monospace' }}
-                    />
-                    {f.type === 'password' && (
-                      <button type="button" onClick={() => setShowSecret(prev => ({ ...prev, [f.key]: !prev[f.key] }))} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex' }}>
-                        {showSecret[f.key] ? <EyeOff size={12} /> : <Eye size={12} />}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
-                <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: '9px', background: `linear-gradient(135deg, ${integration.color}, ${integration.color}aa)`, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: saving ? 0.7 : 1 }}>
-                  {saving ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
-                  {isConnected ? 'Mettre à jour' : 'Connecter'}
+      {/* ── Contenu déployé ── */}
+      {expanded && (
+        <div style={{ padding: '12px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+          {/* Webhook URL */}
+          {integration.hasWebhook && (
+            <div>
+              <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                Webhook URL
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '8px 12px', minWidth: 0 }}>
+                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                  {webhookUrl}
+                </span>
+                <button
+                  onClick={() => handleCopy(webhookUrl)}
+                  style={{ width: '24px', height: '24px', borderRadius: '6px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                  {copied ? <Check size={10} color="#22c55e" /> : <Copy size={10} color="rgba(255,255,255,0.5)" />}
                 </button>
-                <a href={integration.docsUrl} target="_blank" rel="noopener noreferrer" style={{ width: '34px', height: '34px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>
-                  <ExternalLink size={12} />
-                </a>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+          )}
+
+          {/* Champs */}
+          {integration.fields.map(f => (
+            <div key={f.key}>
+              <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                {f.label}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={f.type === 'password' && !showSecret[f.key] ? 'password' : 'text'}
+                  value={fields[f.key] || ''}
+                  onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: f.type === 'password' ? '8px 36px 8px 12px' : '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none', fontFamily: f.type === 'password' ? 'inherit' : 'monospace' }}
+                />
+                {f.type === 'password' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSecret(prev => ({ ...prev, [f.key]: !prev[f.key] }))}
+                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex' }}
+                  >
+                    {showSecret[f.key] ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ flex: 1, padding: '9px', background: `linear-gradient(135deg, ${integration.color}, ${integration.color}aa)`, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? <Loader2 size={11} /> : <Check size={11} />}
+              {isConnected ? 'Mettre à jour' : 'Connecter'}
+            </button>
+            <a
+              href={integration.docsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ width: '34px', height: '34px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}
+            >
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -536,38 +564,39 @@ export default function IntegrationsPanel({ profileId }) {
 
   const connectedCount = Object.values(configs).filter(c => c?.connected).length;
 
-  // Group by category for display
   const categoriesWithItems = category === 'Tous'
     ? CATEGORIES_CONFIG.filter(c => c.id !== 'Tous').filter(c => filtered.some(i => i.category === c.id))
     : [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '720px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '720px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-        <div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
           <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: 0 }}>Intégrations</h2>
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '4px 0 0' }}>
             {connectedCount} active{connectedCount !== 1 ? 's' : ''} · {INTEGRATIONS.length} disponibles
           </p>
         </div>
-        <button onClick={loadConfigs} style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+        <button onClick={loadConfigs} style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
           <RefreshCw size={13} color="rgba(255,255,255,0.5)" />
         </button>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', minWidth: 0 }}>
         {[
           { label: 'Connectées', value: connectedCount, icon: Check, color: '#22c55e' },
           { label: 'Disponibles', value: INTEGRATIONS.length, icon: Sparkles, color: '#6366f1' },
-          { label: 'Automatisations', value: INTEGRATIONS.filter(i => i.category === 'Automatisation' && configs[i.id]?.connected).length, icon: Zap, color: '#f59e0b' },
+          { label: 'Automations', value: INTEGRATIONS.filter(i => i.category === 'Automatisation' && configs[i.id]?.connected).length, icon: Zap, color: '#f59e0b' },
         ].map(s => (
-          <div key={s.label} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</span>
-              <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div key={s.label} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', minWidth: 0, gap: '6px' }}>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.label}
+              </span>
+              <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <s.icon size={12} color={s.color} />
               </div>
             </div>
@@ -577,7 +606,7 @@ export default function IntegrationsPanel({ profileId }) {
       </div>
 
       {/* Webhook universel */}
-      <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
         <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Link2 size={16} color="#a78bfa" />
         </div>
@@ -587,16 +616,23 @@ export default function IntegrationsPanel({ profileId }) {
             {generateWebhookUrl(profileId, '{integration}')}
           </p>
         </div>
-        <button onClick={() => { navigator.clipboard.writeText(generateWebhookUrl(profileId, 'universal')); toast.success('URL copiée !'); }} style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <button
+          onClick={() => { navigator.clipboard.writeText(generateWebhookUrl(profileId, 'universal')); toast.success('URL copiée !'); }}
+          style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+        >
           <Copy size={13} color="rgba(255,255,255,0.5)" />
         </button>
       </div>
 
       {/* Recherche */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', minWidth: 0 }}>
         <Sparkles size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une intégration…"
-          style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 34px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: '12px', outline: 'none' }} />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Rechercher une intégration…"
+          style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 34px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: '12px', outline: 'none' }}
+        />
         {search && (
           <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex' }}>
             <X size={13} />
@@ -604,20 +640,13 @@ export default function IntegrationsPanel({ profileId }) {
         )}
       </div>
 
-      {/* Filtres catégories */}
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+      {/* Filtres */}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
         {CATEGORIES_CONFIG.map(cat => {
           const count = cat.id === 'Tous' ? INTEGRATIONS.length : INTEGRATIONS.filter(i => i.category === cat.id).length;
           const active = category === cat.id;
           return (
-            <button key={cat.id} onClick={() => setCategory(cat.id)} style={{
-              padding: '5px 12px', borderRadius: '20px', border: '1px solid',
-              borderColor: active ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.1)',
-              background: active ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)',
-              color: active ? '#a78bfa' : 'rgba(255,255,255,0.5)',
-              fontSize: '11px', fontWeight: active ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s',
-              display: 'flex', alignItems: 'center', gap: '4px',
-            }}>
+            <button key={cat.id} onClick={() => setCategory(cat.id)} style={{ padding: '5px 12px', borderRadius: '20px', border: '1px solid', borderColor: active ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.1)', background: active ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)', color: active ? '#a78bfa' : 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: active ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
               <span>{cat.emoji}</span>
               <span>{cat.label}</span>
               {cat.id !== 'Tous' && <span style={{ opacity: 0.5, marginLeft: '2px' }}>{count}</span>}
@@ -637,31 +666,28 @@ export default function IntegrationsPanel({ profileId }) {
           <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', margin: 0 }}>Aucune intégration trouvée</p>
         </div>
       ) : category === 'Tous' && !search ? (
-        // Vue "Tous" : groupée par catégorie
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Actives en premier */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
           {connectedCount > 0 && (
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>Actives</p>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                 {INTEGRATIONS.filter(i => configs[i.id]?.connected).map(integration => (
                   <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} />
                 ))}
               </div>
             </div>
           )}
-          {/* Par catégorie */}
           {categoriesWithItems.map(cat => (
-            <div key={cat.id}>
+            <div key={cat.id} style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <span style={{ fontSize: '14px' }}>{cat.emoji}</span>
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{cat.label}</p>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                 {filtered.filter(i => i.category === cat.id && !configs[i.id]?.connected).map(integration => (
                   <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} />
                 ))}
@@ -670,8 +696,7 @@ export default function IntegrationsPanel({ profileId }) {
           ))}
         </div>
       ) : (
-        // Vue filtrée
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
           {filtered.filter(i => configs[i.id]?.connected).map(integration => (
             <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} />
           ))}

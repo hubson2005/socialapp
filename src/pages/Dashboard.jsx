@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import {
   Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight,
   CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck,
-  Palette, ImagePlus, X, GripVertical, Layout, Bell, BellOff, Smartphone, Search,
+  Palette, ImagePlus, X, GripVertical, Bell, BellOff, Search,
   ShieldCheck, Clock, Users, RefreshCw, Activity, BarChart3, TrendingUp,
   Zap, UserPlus, Globe, Link2, Settings, LayoutDashboard, FileText,
   ShoppingBag, MousePointerClick, ArrowUpRight, ArrowDownRight, Radio,
-  Mail, Phone, Tag, Filter, Download, ChevronDown, Star, MessageSquare,
-  Wifi, WifiOff, CircleDot, Layers, MessageCircle, Crown,
+  Wifi, CircleDot, Layers, MessageCircle, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,13 +30,12 @@ import MobileNav from "@/components/dashboard/MobileNav";
 import EventManager from "@/components/dashboard/EventManager";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
+import RealtimePanel from "@/components/dashboard/RealtimePanel";
 import { useTranslation } from "react-i18next";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
-import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
+import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels";
 import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
-import NotificationBell from './NotificationBell';
 import { subscribeToPush, ensurePushSubscription } from '../lib/push';
-
 
 // ── Imports optionnels (commentez si les fichiers n'existent pas encore) ───────
 let BoostPanel = null;
@@ -91,26 +89,26 @@ const PROFILES_PER_PAGE = 10;
 const MAX_SIZE_KB       = 2000;
 
 const SIDEBAR_NAV = [
-  { id: 'overview',        label: 'Dashboard',        icon: LayoutDashboard, group: 'main' },
-  { id: 'realtime',        label: 'Temps réel',        icon: Radio,           group: 'main', badge: 'LIVE' },
-  { id: 'analytics',       label: 'Analytics',         icon: BarChart3,       group: 'main' },
-  { id: 'leads',           label: 'Leads / CRM',       icon: UserPlus,        group: 'crm' },
-  { id: 'whatsapp-crm',    label: 'WhatsApp CRM',      icon: MessageCircle,   group: 'crm' },
-  { id: 'automations',     label: 'Automatisations',   icon: Zap,             group: 'crm' },
-  { id: 'integrations',    label: 'Intégrations',      icon: Sparkles,        group: 'crm' },
-  { id: 'meta',            label: 'Connexion Meta',    icon: Zap,             group: 'crm' },
-  { id: 'boost',           label: 'Boost',             icon: Sparkles,        group: 'crm' },
+  { id: 'overview',        label: 'Dashboard',       icon: LayoutDashboard, group: 'main' },
+  { id: 'realtime',        label: 'Temps réel',       icon: Radio,           group: 'main', badge: 'LIVE' },
+  { id: 'analytics',       label: 'Analytics',        icon: BarChart3,       group: 'main' },
+  { id: 'leads',           label: 'Leads / CRM',      icon: UserPlus,        group: 'crm' },
+  { id: 'whatsapp-crm',    label: 'WhatsApp CRM',     icon: MessageCircle,   group: 'crm' },
+  { id: 'automations',     label: 'Automatisations',  icon: Zap,             group: 'crm' },
+  { id: 'integrations',    label: 'Intégrations',     icon: Sparkles,        group: 'crm' },
+  { id: 'meta',            label: 'Connexion Meta',   icon: Zap,             group: 'crm' },
+  { id: 'boost',           label: 'Boost',            icon: Sparkles,        group: 'crm' },
   { id: 'boost-analytics', label: 'Analytics Boost',  icon: BarChart3,       group: 'crm' },
-  { id: 'promotions', label: 'Promotions', icon: Zap, group: 'crm', badge: 'NEW' },
-  { id: 'profiles',        label: 'Mes profils',        icon: Layers,          group: 'content' },
-  { id: 'platforms',       label: 'Plateformes',        icon: Link2,           group: 'content' },
-  { id: 'event',           label: 'Événement',          icon: CalendarDays,    group: 'content' },
-  { id: 'eventmanager',    label: 'Event Manager',      icon: CalendarDays,    group: 'content', badge: 'NEW' },
-  { id: 'marketplace',     label: 'Marketplace',        icon: ShoppingBag,     group: 'content' },
-  { id: 'documents',       label: 'Documents',          icon: FileText,        group: 'content' },
-  { id: 'forms', label: 'Formulaires', icon: FileText, group: 'content' },
-  { id: 'accounts',        label: 'Comptes',            icon: Users,           group: 'admin' },
-  { id: 'settings',        label: 'Paramètres',         icon: Settings,        group: 'admin' },
+  { id: 'promotions',      label: 'Promotions',       icon: Zap,             group: 'crm', badge: 'NEW' },
+  { id: 'profiles',        label: 'Mes profils',       icon: Layers,          group: 'content' },
+  { id: 'platforms',       label: 'Plateformes',       icon: Link2,           group: 'content' },
+  { id: 'event',           label: 'Événement',         icon: CalendarDays,    group: 'content' },
+  { id: 'eventmanager',    label: 'Event Manager',     icon: CalendarDays,    group: 'content', badge: 'NEW' },
+  { id: 'marketplace',     label: 'Marketplace',       icon: ShoppingBag,     group: 'content' },
+  { id: 'documents',       label: 'Documents',         icon: FileText,        group: 'content' },
+  { id: 'forms',           label: 'Formulaires',       icon: FileText,        group: 'content' },
+  { id: 'accounts',        label: 'Comptes',           icon: Users,           group: 'admin' },
+  { id: 'settings',        label: 'Paramètres',        icon: Settings,        group: 'admin' },
 ];
 
 const GROUPS = [
@@ -120,7 +118,7 @@ const GROUPS = [
   { id: 'admin',   label: 'Administration' },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const parseColors = (themeColor) => {
   if (themeColor && themeColor.includes('|')) {
     const parts = themeColor.split('|');
@@ -147,7 +145,7 @@ const PROFILE_TEMPLATES = [
   { id: 'gaming',    label: 'Gaming',    emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',         theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together",   platformKeys: ['twitch','discord','tiktok','youtube'] },
 ];
 
-// ─── Composant placeholder pour modules optionnels ───────────────────────────
+// ─── Composant placeholder pour modules optionnels ────────────────────────────
 function ComingSoon({ label }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'360px', gap:'12px', textAlign:'center', padding:'40px' }}>
@@ -180,91 +178,12 @@ function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
   );
 }
 
-// ─── RealtimePanel ────────────────────────────────────────────────────────────
-function RealtimePanel({ profileId }) {
-  const [visitors, setVisitors]         = useState([]);
-  const [connected, setConnected]       = useState(false);
-  const [totalToday, setTotalToday]     = useState(0);
-  const [recentClicks, setRecentClicks] = useState([]);
-
-  useEffect(() => {
-    if (!profileId) return;
-    const today = new Date(); today.setHours(0,0,0,0);
-    supabase.from('profile_stats').select('id',{count:'exact',head:true}).eq('profile_id',profileId).eq('event_type','view').gte('created_at',today.toISOString()).then(({count})=>{ if(count) setTotalToday(count); });
-    const channel = supabase.channel('realtime-admin-'+profileId)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'profile_stats'},(payload)=>{
-        const ev=payload.new;
-        if(ev.profile_id!==profileId) return;
-        if(ev.event_type==='view'){
-          setTotalToday(p=>p+1);
-          setVisitors(prev=>[{id:ev.id||Date.now(),country:ev.country_name||ev.country||'?',device:ev.device||'desktop',time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),referrer:ev.referrer||'direct'},...prev].slice(0,20));
-        }
-        if(ev.event_type==='click') setRecentClicks(prev=>[{id:Date.now(),platform:ev.platform||'lien',time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})},...prev].slice(0,10));
-      }).subscribe((status)=>setConnected(status==='SUBSCRIBED'));
-    return ()=>{ supabase.removeChannel(channel); setConnected(false); };
-  },[profileId]);
-
-  const flagEmoji=(code)=>{ try{ return code&&code.length===2?String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397)):'🌐'; }catch{ return '🌐'; }};
-
-  return (
-    <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
-      <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-        <div style={{display:'flex',alignItems:'center',gap:'8px',background:connected?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',border:'1px solid '+(connected?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'),borderRadius:'20px',padding:'5px 12px'}}>
-          <span style={{width:'7px',height:'7px',borderRadius:'50%',background:connected?'#22c55e':'#ef4444',display:'inline-block'}}/>
-          <span style={{color:connected?'#22c55e':'#ef4444',fontSize:'12px',fontWeight:600}}>{connected?'Connecté':'Connexion…'}</span>
-        </div>
-        <span style={{color:'rgba(255,255,255,0.35)',fontSize:'12px'}}>Flux en direct — profil actif</span>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px'}}>
-        <MiniStat label="Vues aujourd'hui" value={totalToday} icon={Eye} color="#6366f1"/>
-        <MiniStat label="Visiteurs live" value={visitors.length} icon={Activity} color="#22c55e"/>
-        <MiniStat label="Clics récents" value={recentClicks.length} icon={MousePointerClick} color="#f59e0b"/>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-        <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'16px',overflow:'hidden'}}>
-          <div style={{padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'8px'}}>
-            <CircleDot size={13} color="#22c55e"/><span style={{color:'white',fontSize:'12px',fontWeight:700}}>Flux visiteurs</span>
-          </div>
-          <div style={{maxHeight:'280px',overflowY:'auto'}}>
-            {visitors.length===0?(<div style={{padding:'28px 16px',textAlign:'center'}}><Wifi size={20} color="rgba(255,255,255,0.15)" style={{margin:'0 auto 8px'}}/><p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',margin:0}}>En attente de visiteurs…</p></div>)
-            :visitors.map(v=>(
-              <motion.div key={v.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 14px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                <span style={{fontSize:'16px',width:'20px',flexShrink:0}}>{flagEmoji(v.country)}</span>
-                <div style={{flex:1,minWidth:0}}>
-                  <p style={{color:'white',fontSize:'11px',fontWeight:600,margin:0}}>{v.country}</p>
-                  <p style={{color:'rgba(255,255,255,0.35)',fontSize:'10px',margin:0}}>{v.device} · {v.referrer}</p>
-                </div>
-                <span style={{color:'rgba(255,255,255,0.3)',fontSize:'10px',flexShrink:0}}>{v.time}</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-        <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'16px',overflow:'hidden'}}>
-          <div style={{padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'8px'}}>
-            <MousePointerClick size={13} color="#f59e0b"/><span style={{color:'white',fontSize:'12px',fontWeight:700}}>Clics plateformes</span>
-          </div>
-          <div style={{maxHeight:'280px',overflowY:'auto'}}>
-            {recentClicks.length===0?(<div style={{padding:'28px 16px',textAlign:'center'}}><MousePointerClick size={20} color="rgba(255,255,255,0.15)" style={{margin:'0 auto 8px'}}/><p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',margin:0}}>Aucun clic récent</p></div>)
-            :recentClicks.map(c=>(
-              <motion.div key={c.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 14px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                <div style={{width:'26px',height:'26px',borderRadius:'8px',background:'rgba(245,158,11,0.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><MousePointerClick size={12} color="#f59e0b"/></div>
-                <div style={{flex:1}}><p style={{color:'white',fontSize:'11px',fontWeight:600,margin:0,textTransform:'capitalize'}}>{c.platform}</p></div>
-                <span style={{color:'rgba(255,255,255,0.3)',fontSize:'10px'}}>{c.time}</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── AnalyticsPanel ───────────────────────────────────────────────────────────
 function AnalyticsPanel({ profileId }) {
-  const [period, setPeriod]   = useState('7d');
-  const [stats, setStats]     = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [geoData, setGeoData] = useState([]);
+  const [period, setPeriod]     = useState('7d');
+  const [stats, setStats]       = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [geoData, setGeoData]   = useState([]);
   const [topLinks, setTopLinks] = useState([]);
 
   useEffect(() => {
@@ -275,11 +194,11 @@ function AnalyticsPanel({ profileId }) {
       const from = new Date(); from.setDate(from.getDate()-days);
       const {data:viewsData} = await supabase.from('profile_stats').select('created_at,country,country_name,platform').eq('profile_id',profileId).gte('created_at',from.toISOString());
       const {data:prevData}  = await supabase.from('profile_stats').select('id').eq('profile_id',profileId).eq('event_type','view').gte('created_at',new Date(from.getTime()-days*86400000).toISOString()).lt('created_at',from.toISOString());
-      const views  = (viewsData||[]).filter(r=>!r.platform);
-      const clicks = (viewsData||[]).filter(r=>r.platform);
+      const views    = (viewsData||[]).filter(r=>!r.platform);
+      const clicks   = (viewsData||[]).filter(r=>r.platform);
       const prevCount = prevData?.length||0;
-      const trend = prevCount>0?Math.round(((views.length-prevCount)/prevCount)*100):null;
-      setStats({views:views.length,clicks:clicks.length,ctr:views.length>0?Math.round((clicks.length/views.length)*100):0,trend,trendUp:trend!==null?trend>=0:true});
+      const trend    = prevCount>0?Math.round(((views.length-prevCount)/prevCount)*100):null;
+      setStats({ views:views.length, clicks:clicks.length, ctr:views.length>0?Math.round((clicks.length/views.length)*100):0, trend, trendUp:trend!==null?trend>=0:true });
       const geoMap={};
       views.forEach(r=>{ const k=r.country_name||r.country||'Inconnu'; geoMap[k]={count:(geoMap[k]?.count||0)+1,code:r.country}; });
       setGeoData(Object.entries(geoMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6));
@@ -288,9 +207,9 @@ function AnalyticsPanel({ profileId }) {
       setTopLinks(Object.entries(clickMap).sort((a,b)=>b[1]-a[1]).slice(0,6));
       setLoading(false);
     })();
-  },[profileId,period]);
+  }, [profileId, period]);
 
-  const flagEmoji=(code)=>{ try{ return code&&code.length===2?String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397)):'🌐'; }catch{ return '🌐'; }};
+  const flagEmoji = (code) => { try { return code&&code.length===2?String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397)):'🌐'; } catch { return '🌐'; } };
   const maxGeo  = geoData[0]?.[1]?.count||1;
   const maxLink = topLinks[0]?.[1]||1;
 
@@ -307,19 +226,21 @@ function AnalyticsPanel({ profileId }) {
           ))}
         </div>
       </div>
-      {loading?(<div style={{display:'flex',justifyContent:'center',padding:'40px'}}><Loader2 size={24} className="animate-spin" color="rgba(99,102,241,0.6)"/></div>):(
+      {loading ? (
+        <div style={{display:'flex',justifyContent:'center',padding:'40px'}}><Loader2 size={24} className="animate-spin" color="rgba(99,102,241,0.6)"/></div>
+      ) : (
         <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px'}}>
-            <MiniStat label="Vues totales"  value={stats?.views||0}              icon={Eye}              color="#6366f1" trend={stats?.trend!==null?Math.abs(stats.trend)+'%':null} trendUp={stats?.trendUp}/>
-            <MiniStat label="Clics liens"   value={stats?.clicks||0}             icon={MousePointerClick} color="#f59e0b"/>
-            <MiniStat label="Taux de clic"  value={(stats?.ctr||0)+'%'}          icon={TrendingUp}       color="#22c55e"/>
-            <MiniStat label="Pays atteints" value={geoData.length}               icon={Globe}            color="#0ea5e9"/>
+            <MiniStat label="Vues totales"  value={stats?.views||0}       icon={Eye}               color="#6366f1" trend={stats?.trend!==null?Math.abs(stats.trend)+'%':null} trendUp={stats?.trendUp}/>
+            <MiniStat label="Clics liens"   value={stats?.clicks||0}      icon={MousePointerClick} color="#f59e0b"/>
+            <MiniStat label="Taux de clic"  value={(stats?.ctr||0)+'%'}   icon={TrendingUp}        color="#22c55e"/>
+            <MiniStat label="Pays atteints" value={geoData.length}        icon={Globe}             color="#0ea5e9"/>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
             <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
               <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><Globe size={14} color="#0ea5e9"/><h3 style={{color:'white',fontSize:'13px',fontWeight:700,margin:0}}>Top pays</h3></div>
-              {geoData.length===0?<p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
-              :geoData.map(([country,{count,code}])=>(
+              {geoData.length===0 ? <p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
+              : geoData.map(([country,{count,code}])=>(
                 <div key={country} style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
                   <span style={{fontSize:'16px',width:'22px',flexShrink:0}}>{flagEmoji(code)}</span>
                   <div style={{flex:1}}>
@@ -336,10 +257,10 @@ function AnalyticsPanel({ profileId }) {
             </div>
             <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
               <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><MousePointerClick size={14} color="#f59e0b"/><h3 style={{color:'white',fontSize:'13px',fontWeight:700,margin:0}}>Liens les plus cliqués</h3></div>
-              {topLinks.length===0?<p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
-              :topLinks.map(([platform,count])=>{
+              {topLinks.length===0 ? <p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
+              : topLinks.map(([platform,count])=>{
                 const p=(PLATFORMS&&PLATFORMS[platform])||{label:platform,color:'#6366f1'};
-                return(
+                return (
                   <div key={platform} style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
                     <div style={{width:'22px',height:'22px',borderRadius:'6px',background:p.color,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                       {p.icon?React.cloneElement(p.icon,{width:11,height:11}):<span style={{color:'white',fontSize:'7px',fontWeight:'bold'}}>{(p.label||'?')[0]}</span>}
@@ -364,18 +285,17 @@ function AnalyticsPanel({ profileId }) {
   );
 }
 
-
 // ─── OverviewPanel ────────────────────────────────────────────────────────────
 function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, saving }) {
   const windowWidth = useWindowWidth();
   const isMob = windowWidth < 768;
   const navCards = [
-    { section:'platforms',  label:'Plateformes', icon:Link2,       color:'#818cf8', bg:'rgba(99,102,241,0.18)',  sub:(profile?.links?.length||0)+' lien(s)' },
-    { section:'event',      label:'Événement',   icon:CalendarDays,color:'#facc15', bg:'rgba(234,179,8,0.18)',  sub:profile?.is_event?'Activé':'Désactivé' },
-    { section:'analytics',  label:'Analytics',   icon:BarChart3,   color:'#c084fc', bg:'rgba(139,92,246,0.18)', sub:'Actifs' },
-    { section:'marketplace',label:'Marketplace', icon:ShoppingBag, color:'#4ade80', bg:'rgba(34,197,94,0.18)',  sub:'∞ produits max' },
-    { section:'leads',      label:'CRM',         icon:UserPlus,    color:'#f472b6', bg:'rgba(236,72,153,0.18)', sub:'Actif' },
-    { section:'documents',  label:'Documents',   icon:FileText,    color:'#9ca3af', bg:'rgba(107,114,128,0.25)',sub:'10 doc(s) max' },
+    { section:'platforms',   label:'Plateformes', icon:Link2,       color:'#818cf8', bg:'rgba(99,102,241,0.18)',  sub:(profile?.links?.length||0)+' lien(s)' },
+    { section:'event',       label:'Événement',   icon:CalendarDays,color:'#facc15', bg:'rgba(234,179,8,0.18)',  sub:profile?.is_event?'Activé':'Désactivé' },
+    { section:'analytics',   label:'Analytics',   icon:BarChart3,   color:'#c084fc', bg:'rgba(139,92,246,0.18)', sub:'Actifs' },
+    { section:'marketplace', label:'Marketplace', icon:ShoppingBag, color:'#4ade80', bg:'rgba(34,197,94,0.18)',  sub:'∞ produits max' },
+    { section:'leads',       label:'CRM',         icon:UserPlus,    color:'#f472b6', bg:'rgba(236,72,153,0.18)', sub:'Actif' },
+    { section:'documents',   label:'Documents',   icon:FileText,    color:'#9ca3af', bg:'rgba(107,114,128,0.25)',sub:'10 doc(s) max' },
   ];
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
@@ -405,7 +325,7 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
             <span style={{color:'rgba(255,255,255,0.45)',fontSize:'12px',flexShrink:0}}>Exp. :</span>
             <input type="date" value={profile?.expiry_date||''} onChange={e=>onUpdate({expiry_date:e.target.value})} style={{background:'transparent',border:'none',color:'white',fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
           </div>
-          {hasChanges&&(
+          {hasChanges && (
             <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'10px 14px'}}>
               <button onClick={onSave} disabled={saving} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',width:'100%',padding:'8px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
                 {saving?<Loader2 size={12} className="animate-spin"/>:<Save size={12}/>} Sauvegarder
@@ -487,13 +407,15 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
           {GROUPS.map(group=>{
             const items=(search?filteredNav:SIDEBAR_NAV).filter(n=>n.group===group.id);
             if(!items.length) return null;
-            return(
+            return (
               <div key={group.id} style={{marginBottom:'4px'}}>
-                {collapsed&&!isMobile?<div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'6px 4px 8px'}}/>
-                :<p style={{color:'rgba(255,255,255,0.2)',fontSize:'9px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'8px 10px 4px',margin:0}}>{group.label}</p>}
+                {collapsed&&!isMobile
+                  ? <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'6px 4px 8px'}}/>
+                  : <p style={{color:'rgba(255,255,255,0.2)',fontSize:'9px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'8px 10px 4px',margin:0}}>{group.label}</p>
+                }
                 {items.map(item=>{
                   const isActive=activeSection===item.id;
-                  return(
+                  return (
                     <button key={item.id} onClick={()=>handleNav(item.id)} title={collapsed&&!isMobile?item.label:''}
                       style={{width:'100%',display:'flex',alignItems:'center',gap:collapsed&&!isMobile?0:'10px',padding:collapsed&&!isMobile?'10px 0':'9px 10px',borderRadius:'11px',border:'none',background:isActive?'rgba(99,102,241,0.18)':'transparent',cursor:'pointer',transition:'background 0.12s',justifyContent:collapsed&&!isMobile?'center':'flex-start',position:'relative',marginBottom:'2px'}}>
                       {isActive&&<div style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',width:'3px',height:'20px',background:'linear-gradient(180deg,#6366f1,#8b5cf6)',borderRadius:'0 3px 3px 0'}}/>}
@@ -568,9 +490,9 @@ function UserActivationPanel() {
     return (!q||(p.display_name||'').toLowerCase().includes(q)||(p.username||'').toLowerCase().includes(q))
         && (filter==='all'||(filter==='pending'&&!p.is_activated)||(filter==='active'&&p.is_activated));
   });
-  const pendingCount=allProfiles.filter(p=>!p.is_activated).length;
-  const activeCount=allProfiles.filter(p=>p.is_activated).length;
-  const proCount=allProfiles.filter(p=>p.plan==='pro'||p.plan==='business').length;
+  const pendingCount = allProfiles.filter(p=>!p.is_activated).length;
+  const activeCount  = allProfiles.filter(p=>p.is_activated).length;
+  const proCount     = allProfiles.filter(p=>p.plan==='pro'||p.plan==='business').length;
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
@@ -584,10 +506,10 @@ function UserActivationPanel() {
         </button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'10px'}}>
-        <MiniStat label="Total"      value={allProfiles.length} icon={Users}       color="#a78bfa"/>
-        <MiniStat label="Activés"    value={activeCount}        icon={ShieldCheck} color="#22c55e"/>
-        <MiniStat label="En attente" value={pendingCount}       icon={Clock}       color="#f97316"/>
-        <MiniStat label="Pro/Business" value={proCount}         icon={Crown}       color="#facc15"/>
+        <MiniStat label="Total"        value={allProfiles.length} icon={Users}       color="#a78bfa"/>
+        <MiniStat label="Activés"      value={activeCount}        icon={ShieldCheck} color="#22c55e"/>
+        <MiniStat label="En attente"   value={pendingCount}       icon={Clock}       color="#f97316"/>
+        <MiniStat label="Pro/Business" value={proCount}           icon={Crown}       color="#facc15"/>
       </div>
       <div style={{display:'flex',gap:'8px'}}>
         <div style={{position:'relative',flex:1}}>
@@ -599,31 +521,31 @@ function UserActivationPanel() {
         ))}
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:'6px',maxHeight:'460px',overflowY:'auto'}}>
-        {isLoading?(<div style={{textAlign:'center',padding:'24px'}}><Loader2 size={16} className="animate-spin" color="rgba(255,255,255,0.3)"/></div>)
-        :filtered.length===0?(<p style={{color:'rgba(255,255,255,0.3)',fontSize:'12px',textAlign:'center',padding:'24px'}}>{filter==='pending'?'🎉 Aucun compte en attente':'Aucun résultat'}</p>)
-        :filtered.map(p=>{
+        {isLoading ? (
+          <div style={{textAlign:'center',padding:'24px'}}><Loader2 size={16} className="animate-spin" color="rgba(255,255,255,0.3)"/></div>
+        ) : filtered.length===0 ? (
+          <p style={{color:'rgba(255,255,255,0.3)',fontSize:'12px',textAlign:'center',padding:'24px'}}>{filter==='pending'?'🎉 Aucun compte en attente':'Aucun résultat'}</p>
+        ) : filtered.map(p=>{
           const currentPlan = PLAN_OPTIONS.find(o=>o.id===p.plan) || PLAN_OPTIONS[0];
-          return(
-          <div key={p.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',background:'rgba(255,255,255,0.04)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.07)',flexWrap:'wrap'}}>
-            <div style={{width:'34px',height:'34px',borderRadius:'9px',background:p.is_activated?'linear-gradient(135deg,#22c55e,#16a34a)':'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>{(p.display_name||'?')[0].toUpperCase()}</div>
-            <div style={{flex:1,minWidth:'120px'}}>
-              <p style={{color:'white',fontSize:'12px',fontWeight:600,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.display_name||'Sans nom'}</p>
-              <p style={{color:'rgba(255,255,255,0.35)',fontSize:'10px',margin:0}}>{p.username?'@'+p.username:'Sans username'}</p>
+          return (
+            <div key={p.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',background:'rgba(255,255,255,0.04)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.07)',flexWrap:'wrap'}}>
+              <div style={{width:'34px',height:'34px',borderRadius:'9px',background:p.is_activated?'linear-gradient(135deg,#22c55e,#16a34a)':'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>{(p.display_name||'?')[0].toUpperCase()}</div>
+              <div style={{flex:1,minWidth:'120px'}}>
+                <p style={{color:'white',fontSize:'12px',fontWeight:600,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.display_name||'Sans nom'}</p>
+                <p style={{color:'rgba(255,255,255,0.35)',fontSize:'10px',margin:0}}>{p.username?'@'+p.username:'Sans username'}</p>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
+                <Crown size={11} color={currentPlan.color}/>
+                <select value={p.plan||'basic'} onChange={e=>planMutation.mutate({id:p.id,plan:e.target.value})} disabled={planMutation.isPending}
+                  style={{padding:'5px 8px',borderRadius:'8px',border:'1px solid '+currentPlan.color+'55',background:currentPlan.color+'1a',color:currentPlan.color,fontSize:'11px',fontWeight:700,cursor:'pointer',outline:'none'}}>
+                  {PLAN_OPTIONS.map(o=><option key={o.id} value={o.id} style={{background:'#0a0817',color:'white'}}>{o.label}</option>)}
+                </select>
+              </div>
+              {p.is_activated
+                ? <button onClick={()=>deactivateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.1)',color:'#f87171',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><X size={10}/>Désact.</button>
+                : <button onClick={()=>activateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(34,197,94,0.35)',background:'rgba(34,197,94,0.12)',color:'#22c55e',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><Check size={10}/>Activer</button>
+              }
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
-              <Crown size={11} color={currentPlan.color}/>
-              <select
-                value={p.plan || 'basic'}
-                onChange={e=>planMutation.mutate({ id: p.id, plan: e.target.value })}
-                disabled={planMutation.isPending}
-                style={{padding:'5px 8px',borderRadius:'8px',border:'1px solid '+currentPlan.color+'55',background:currentPlan.color+'1a',color:currentPlan.color,fontSize:'11px',fontWeight:700,cursor:'pointer',outline:'none'}}>
-                {PLAN_OPTIONS.map(o=><option key={o.id} value={o.id} style={{background:'#0a0817',color:'white'}}>{o.label}</option>)}
-              </select>
-            </div>
-            {p.is_activated
-              ?<button onClick={()=>deactivateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.1)',color:'#f87171',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><X size={10}/>Désact.</button>
-              :<button onClick={()=>activateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(34,197,94,0.35)',background:'rgba(34,197,94,0.12)',color:'#22c55e',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><Check size={10}/>Activer</button>}
-          </div>
           );
         })}
       </div>
@@ -633,11 +555,11 @@ function UserActivationPanel() {
 
 // ─── PlatformsPanel ───────────────────────────────────────────────────────────
 function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDialog }) {
-  const [linksPage, setLinksPage]     = useState(0);
-  const dragIndexRef                  = useRef(null);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
-  const links      = localProfile?.links || [];
-  const pagedLinks = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
+  const [linksPage, setLinksPage]           = useState(0);
+  const dragIndexRef                        = useRef(null);
+  const [dragOverIndex, setDragOverIndex]   = useState(null);
+  const links          = localProfile?.links || [];
+  const pagedLinks     = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
 
   const handleDragStart = useCallback((e,idx)=>{ dragIndexRef.current=idx; e.dataTransfer.effectAllowed='move'; setTimeout(()=>{ if(e.currentTarget) e.currentTarget.style.opacity='0.4'; },0); },[]);
@@ -657,7 +579,7 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
 
   const handleUpdateLink = useCallback((index,updated)=>{ const l=[...(localProfile?.links||[])]; l[index]=updated; updateLocal({links:l}); },[localProfile,updateLocal]);
   const handleRemoveLink = useCallback((index)=>{ const l=(localProfile?.links||[]).filter((_,i)=>i!==index); updateLocal({links:l}); setLinksPage(p=>Math.min(p,Math.max(0,Math.ceil(l.length/LINKS_PER_PAGE)-1))); },[localProfile,updateLocal]);
-  const handleAddPlatform=(key)=>{ updateLocal({links:[...(localProfile?.links||[]),{id:crypto.randomUUID(),platform:key,url:'',label:'',enabled:true}]}); setShowAddDialog(false); };
+  const handleAddPlatform = (key) => { updateLocal({links:[...(localProfile?.links||[]),{id:crypto.randomUUID(),platform:key,url:'',label:'',enabled:true}]}); setShowAddDialog(false); };
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
@@ -668,18 +590,18 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
         </div>
         <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs" onClick={()=>setShowAddDialog(true)}><Plus className="w-3.5 h-3.5"/> Ajouter</Button>
       </div>
-      {links.length===0?(
+      {links.length===0 ? (
         <div style={{background:'rgba(255,255,255,0.03)',border:'2px dashed rgba(255,255,255,0.12)',borderRadius:'18px',padding:'48px 24px',textAlign:'center'}}>
           <Link2 size={28} color="rgba(255,255,255,0.15)" style={{margin:'0 auto 10px'}}/>
           <p style={{color:'rgba(255,255,255,0.4)',fontSize:'14px',margin:0}}>Aucune plateforme configurée</p>
         </div>
-      ):(
+      ) : (
         <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))',gap:'10px'}}>
             {pagedLinks.map((link,i)=>{
               const absoluteIndex=linksPage*LINKS_PER_PAGE+i;
               const isDragOver=dragOverIndex===absoluteIndex;
-              return(
+              return (
                 <div key={link.id||link.platform+'-'+absoluteIndex}
                   draggable onDragStart={e=>handleDragStart(e,absoluteIndex)} onDragEnd={handleDragEnd}
                   onDragOver={e=>handleDragOver(e,absoluteIndex)} onDragLeave={handleDragLeave} onDrop={e=>handleDrop(e,absoluteIndex)}
@@ -730,7 +652,7 @@ function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete
       <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
         {paged.map(p=>{
           const isActive=p.id===activeProfileId;
-          return(
+          return (
             <div key={p.id} onClick={()=>onSwitch(p)} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',background:isActive?'rgba(99,102,241,0.12)':'rgba(255,255,255,0.04)',border:'1px solid '+(isActive?'rgba(99,102,241,0.35)':'rgba(255,255,255,0.07)'),borderRadius:'14px',cursor:'pointer'}}>
               <div style={{width:'38px',height:'38px',borderRadius:'10px',background:isActive?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,color:'white',flexShrink:0,overflow:'hidden'}}>
                 {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(p.display_name?.[0]?.toUpperCase()||'?')}
@@ -793,7 +715,7 @@ function EventPanel({ localProfile, updateLocal }) {
     finally{ setUploadingEventImages(false); e.target.value=''; }
   };
 
-  const handleRemoveEventImage=(idx)=>{
+  const handleRemoveEventImage = (idx) => {
     const current=localProfile.event_images||(localProfile.event_image_url?[localProfile.event_image_url]:[]);
     const updated=current.filter((_,i)=>i!==idx);
     updateLocal({event_images:updated,event_image_url:updated[0]||null});
@@ -849,13 +771,13 @@ function EventPanel({ localProfile, updateLocal }) {
                 </label>
               )}
             </div>
-            {eventImages.length===0?(
+            {eventImages.length===0 ? (
               <label style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',background:'rgba(255,255,255,0.04)',border:'2px dashed rgba(255,255,255,0.15)',borderRadius:'14px',padding:'28px',cursor:'pointer'}}>
                 {uploadingEventImages?<Loader2 size={20} color="rgba(99,102,241,0.8)" className="animate-spin"/>:<ImagePlus size={20} color="rgba(255,255,255,0.25)"/>}
                 <span style={{color:'rgba(255,255,255,0.4)',fontSize:'13px'}}>{uploadingEventImages?'Upload…':'Ajouter des images'}</span>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages}/>
               </label>
-            ):(
+            ) : (
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(100px,1fr))',gap:'8px'}}>
                 {eventImages.map((url,i)=>(
                   <div key={i} style={{position:'relative',aspectRatio:'16/9',borderRadius:'10px',overflow:'hidden'}}>
@@ -889,7 +811,7 @@ function TemplatesModal({ onClose, onApply }) {
         <div style={{overflowY:'auto',padding:'16px 24px 24px',display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'12px'}}>
           {PROFILE_TEMPLATES.map(t=>{
             const [c1,c2]=t.theme_color.split('|');
-            return(
+            return (
               <button key={t.id} onClick={()=>onApply(t)} style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px',textAlign:'left',cursor:'pointer',transition:'all 0.15s'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
                   <div style={{width:'44px',height:'44px',borderRadius:'13px',background:'linear-gradient(135deg,'+c1+','+c2+')',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',flexShrink:0}}>{t.emoji}</div>
@@ -925,34 +847,24 @@ export default function Dashboard() {
   const [activeProfileId,  setActiveProfileId]  = useState(null);
   const [showTemplates,    setShowTemplates]    = useState(false);
   const [showNotifPanel,   setShowNotifPanel]   = useState(false);
-  const notifPanelRef  = useRef(null);
-  const notifCountRef  = useRef(0);
+  const notifPanelRef = useRef(null);
+  const notifCountRef = useRef(0);
 
   const [notifPrefs, setNotifPrefs] = useState({ notif_view: true, notif_click: true, notif_expiry: true, notif_threshold: 10 });
   const expiryNotifiedRef = useRef(false);
 
-  // Charge les préférences depuis le cache par-compte (écrit par SettingsPanel),
-  // avec repli sur Supabase si le cache est absent.
   useEffect(() => {
     if (!user?.id) return;
     try {
       const cached = localStorage.getItem(`user_settings_${user.id}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        setNotifPrefs(prev => ({ ...prev, ...parsed }));
-        return;
-      }
+      if (cached) { setNotifPrefs(prev => ({ ...prev, ...JSON.parse(cached) })); return; }
     } catch {}
-    supabase.from('user_settings').select('notif_view, notif_click, notif_expiry, notif_threshold').eq('user_id', user.id).maybeSingle()
+    supabase.from('user_settings').select('notif_view,notif_click,notif_expiry,notif_threshold').eq('user_id',user.id).maybeSingle()
       .then(({ data }) => { if (data) setNotifPrefs(prev => ({ ...prev, ...data })); });
   }, [user?.id]);
 
-  // Reste synchronisé si l'utilisateur change ses préférences dans SettingsPanel sans recharger la page
   useEffect(() => {
-    const handler = (e) => {
-      if (!e.detail?.key) return;
-      setNotifPrefs(prev => ({ ...prev, [e.detail.key]: e.detail.value }));
-    };
+    const handler = (e) => { if (!e.detail?.key) return; setNotifPrefs(prev => ({ ...prev, [e.detail.key]: e.detail.value })); };
     window.addEventListener('app_notif_prefs_change', handler);
     return () => window.removeEventListener('app_notif_prefs_change', handler);
   }, []);
@@ -974,7 +886,8 @@ export default function Dashboard() {
     const colors = parseColors(localProfile.theme_color);
     if (localProfile.bg_image_url) {
       html.style.backgroundImage = 'url(' + localProfile.bg_image_url + ')';
-      html.style.backgroundSize = 'cover'; html.style.backgroundPosition = 'center'; html.style.backgroundAttachment = 'fixed'; html.style.background = '';
+      html.style.backgroundSize = 'cover'; html.style.backgroundPosition = 'center';
+      html.style.backgroundAttachment = 'fixed'; html.style.background = '';
     } else {
       html.style.backgroundImage = 'none';
       html.style.background = 'linear-gradient(135deg,' + colors.bg1 + ' 0%,' + colors.bg2 + ' 100%)';
@@ -988,9 +901,6 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ── Notifications en temps réel (vues groupées par seuil) ───────────────────
-  // Les notifications de clics sont désormais envoyées par l'Edge Function
-  // push-on-click (via Web Push), ce qui fonctionne même app fermée / écran éteint.
   useEffect(() => {
     if (!localProfile?.id || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const channel = supabase.channel('notif-' + localProfile.id)
@@ -1007,7 +917,6 @@ export default function Dashboard() {
     return () => supabase.removeChannel(channel);
   }, [localProfile?.id, notifPrefs]);
 
-  // ── Rappel d'expiration du profil — une seule fois par session, si activé ───
   useEffect(() => {
     if (!localProfile?.expiry_date || !notifPrefs.notif_expiry || expiryNotifiedRef.current) return;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
@@ -1018,9 +927,6 @@ export default function Dashboard() {
     }
   }, [localProfile?.expiry_date, notifPrefs.notif_expiry]);
 
-  // Si la permission de notification est déjà accordée (cas d'un utilisateur l'ayant
-  // acceptée avant la mise en place du push), s'assure qu'un abonnement push existe
-  // réellement en base — sans cela, aucune notif n'est jamais reçue malgré la permission.
   useEffect(() => {
     if (!localProfile?.id) return;
     ensurePushSubscription(localProfile.id);
@@ -1045,7 +951,7 @@ export default function Dashboard() {
   const handleCreateProfile = () => {
     if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
     const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
-    createMutation.mutate({ user_id: user.id, display_name: 'Profil ' + ((profiles.length || 0) + 1), bio: '', links: [], theme_color: '#6366f1', expiry_date: expiry.toISOString().split('T')[0], is_verified: false, is_event: false });
+    createMutation.mutate({ user_id: user.id, display_name: 'Profil ' + ((profiles.length||0)+1), bio: '', links: [], theme_color: '#6366f1', expiry_date: expiry.toISOString().split('T')[0], is_verified: false, is_event: false });
   };
 
   const handleSwitchProfile = useCallback((p) => {
@@ -1062,7 +968,7 @@ export default function Dashboard() {
 
   const applyTemplate = useCallback((template) => {
     const newLinks = template.platformKeys.map(key => ({ id: crypto.randomUUID(), platform: key, url: '', label: '', enabled: true }));
-    updateLocal({ theme_color: template.theme_color, bio: template.bio, links: newLinks, is_event: template.is_event || false, event_color1: template.event_color1 || null, event_color2: template.event_color2 || null });
+    updateLocal({ theme_color: template.theme_color, bio: template.bio, links: newLinks, is_event: template.is_event||false, event_color1: template.event_color1||null, event_color2: template.event_color2||null });
     setShowTemplates(false);
     toast.success('Template "' + template.label + '" appliqué !');
   }, [updateLocal]);
@@ -1072,16 +978,24 @@ export default function Dashboard() {
     const rawImages = localProfile.event_images || (localProfile.event_image_url ? [localProfile.event_image_url] : []);
     const eventImagesArray = rawImages.map(img => typeof img === 'string' ? img : img?.url).filter(Boolean);
     updateMutation.mutate({ id: localProfile.id, data: {
-      display_name: localProfile.display_name, bio: localProfile.bio, links: localProfile.links,
-      theme_color: localProfile.theme_color, expiry_date: localProfile.expiry_date,
-      username: localProfile.username ? localProfile.username.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'') : null,
-      is_verified: localProfile.is_verified || false, is_event: localProfile.is_event || false,
-      event_name: localProfile.event_name || null, event_date: localProfile.event_date || null,
-      event_location: localProfile.event_location || null, event_color1: localProfile.event_color1 || null,
-      event_color2: localProfile.event_color2 || null, event_booking_url: localProfile.event_booking_url || null,
-      event_description: localProfile.event_description || null,
-      event_images: eventImagesArray, event_image_url: eventImagesArray[0] || null,
-      bg_image_url: localProfile.bg_image_url || null,
+      display_name:       localProfile.display_name,
+      bio:                localProfile.bio,
+      links:              localProfile.links,
+      theme_color:        localProfile.theme_color,
+      expiry_date:        localProfile.expiry_date,
+      username:           localProfile.username ? localProfile.username.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'') : null,
+      is_verified:        localProfile.is_verified  || false,
+      is_event:           localProfile.is_event     || false,
+      event_name:         localProfile.event_name        || null,
+      event_date:         localProfile.event_date        || null,
+      event_location:     localProfile.event_location    || null,
+      event_color1:       localProfile.event_color1      || null,
+      event_color2:       localProfile.event_color2      || null,
+      event_booking_url:  localProfile.event_booking_url || null,
+      event_description:  localProfile.event_description || null,
+      event_images:       eventImagesArray,
+      event_image_url:    eventImagesArray[0] || null,
+      bg_image_url:       localProfile.bg_image_url || null,
     }});
   };
 
@@ -1092,14 +1006,14 @@ export default function Dashboard() {
 
   if (isLoading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#040210' }}>
-      <Loader2 className="w-6 h-6 animate-spin" style={{ color:'#6366f1' }} />
+      <Loader2 className="w-6 h-6 animate-spin" style={{ color:'#6366f1' }}/>
     </div>
   );
 
   if (!profiles.length && !createMutation.isPending) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#040210', padding:'24px' }}>
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', maxWidth:'360px' }}>
-        <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width:'80px', height:'80px', borderRadius:'24px', objectFit:'cover', margin:'0 auto 24px', display:'block' }} />
+        <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width:'80px', height:'80px', borderRadius:'24px', objectFit:'cover', margin:'0 auto 24px', display:'block' }}/>
         <h1 style={{ color:'white', fontSize:'24px', fontWeight:800, margin:'0 0 8px' }}>Bienvenue !</h1>
         <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'14px', margin:'0 0 24px' }}>Créez votre page de liens unique et partagez-la via un seul QR code.</p>
         <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2"><Plus className="w-4 h-4"/> Créer mon profil</Button>
@@ -1110,9 +1024,8 @@ export default function Dashboard() {
   if (!localProfile) return null;
 
   const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-  const currentNav = SIDEBAR_NAV.find(n => n.id === activeSection);
+  const currentNav   = SIDEBAR_NAV.find(n => n.id === activeSection);
 
-  // ── renderSection : tous les cas couverts, pas de variable undefined ────────
   const renderSection = () => {
     switch (activeSection) {
       case 'overview':        return <OverviewPanel profile={localProfile} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending}/>;
@@ -1122,18 +1035,17 @@ export default function Dashboard() {
       case 'whatsapp-crm':    return <WhatsappCRMPanel profileId={localProfile.id}/>;
       case 'automations':     return <AutomationsPanel profileId={localProfile.id}/>;
       case 'integrations':    return <IntegrationsPanel profileId={localProfile.id}/>;
-      // modules optionnels — affiche ComingSoon si non disponibles
       case 'boost':           return BoostPanel ? <BoostPanel profileId={localProfile.id} profile={localProfile}/> : <ComingSoon label="Boost"/>;
       case 'meta':            return MetaIntegrationPanel ? <MetaIntegrationPanel profile={localProfile}/> : <ComingSoon label="Connexion Meta"/>;
       case 'boost-analytics': return BoostAnalyticsPanel ? <BoostAnalyticsPanel profile={localProfile}/> : <ComingSoon label="Analytics Boost"/>;
-      case 'promotions': return ( <PromotionsDashboard profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} /> );
+      case 'promotions':      return <PromotionsDashboard profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal}/>;
       case 'profiles':        return <ProfilesPanel profiles={profiles} activeProfileId={activeProfileId} onSwitch={handleSwitchProfile} onCreate={handleCreateProfile} onDelete={handleDeleteProfile}/>;
       case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog}/>;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal}/>;
       case 'eventmanager':    return <EventManager profileId={localProfile.id}/>;
       case 'marketplace':     return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} userPlan="admin"/></div>;
       case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={localProfile.plan||'admin'}/></div>;
-      case 'forms': return <div style={{ maxWidth:'1100px' }}><AdminFormsPanel profileId={localProfile.id} /></div>;
+      case 'forms':           return <div style={{ maxWidth:'1100px' }}><AdminFormsPanel profileId={localProfile.id}/></div>;
       case 'accounts':        return <UserActivationPanel/>;
       case 'settings':        return <SettingsPanel/>;
       default:                return null;
@@ -1141,7 +1053,7 @@ export default function Dashboard() {
   };
 
   return (
-   <div style={{ height:'100dvh', minHeight:'100dvh', display:'flex', position:'relative', overflowX:'hidden', background:'#040210' }}>
+    <div style={{ height:'100dvh', minHeight:'100dvh', display:'flex', position:'relative', overflowX:'hidden', background:'#040210' }}>
       <div style={{ position:'relative', zIndex:10, flexShrink:0, width:isMobile?0:undefined }}>
         <Sidebar activeSection={activeSection} onNavigate={setActiveSection} profiles={profiles} activeProfileId={activeProfileId} collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)} isMobile={isMobile}/>
       </div>
@@ -1151,7 +1063,7 @@ export default function Dashboard() {
         <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(4,2,16,0.7)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'28px', height:'28px', borderRadius:'8px', objectFit:'cover', flexShrink:0 }}/>}
-            <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0 }}>{currentNav?.label || 'Dashboard'}</h2>
+            <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0 }}>{currentNav?.label||'Dashboard'}</h2>
             {hasChanges && <span style={{ background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.3)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600 }}>{t('unsaved')}</span>}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
@@ -1172,14 +1084,14 @@ export default function Dashboard() {
                       <button onClick={()=>setShowNotifPanel(false)} style={{ background:'rgba(255,255,255,0.08)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)', width:'24px', height:'24px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={13}/></button>
                     </div>
                     {!notifGranted
-                      ? <button onClick={async()=>{ const ok = await subscribeToPush(localProfile?.id); if(ok){ toast.success('Notifications activées !'); setShowNotifPanel(false); } else { toast.error('Abonnement push échoué'); } }} style={{ width:'100%', padding:'10px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
+                      ? <button onClick={async()=>{ const ok=await subscribeToPush(localProfile?.id); if(ok){ toast.success('Notifications activées !'); setShowNotifPanel(false); } else { toast.error('Abonnement push échoué'); } }} style={{ width:'100%', padding:'10px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
                       : <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'12px', margin:0, textAlign:'center' }}>✅ Notifications actives</p>
                     }
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-            <button onClick={handleSave} disabled={!hasChanges || updateMutation.isPending}
+            <button onClick={handleSave} disabled={!hasChanges||updateMutation.isPending}
               style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.07)', border:'1px solid '+(hasChanges?'transparent':'rgba(255,255,255,0.12)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin"/> : <Save size={13}/>}{!isMobile && t('save')}
             </button>

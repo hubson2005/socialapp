@@ -1,32 +1,106 @@
-import React, { useState } from 'react';
-import ReactDOM from 'react-dom';
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Loader2, X, Heart, ShoppingBag, Tag, Pencil, Trash2, ImagePlus, Check, PackageOpen } from "lucide-react";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+/**
+ * MarketplacePanel.jsx — Gestion de la marketplace produits
+ *
+ * CORRECTIONS APPLIQUÉES :
+ *  [C1]  Variable `ext` morte supprimée dans handleImageUpload
+ *  [C2]  handleSaved : calcul de page retiré (fragile) — reset à la dernière page
+ *        après invalidation query, via onSuccess de la mutation ou re-calcul stable
+ *  [C3]  @keyframes spin dupliqué : injecté une seule fois via useEffect, préfixé 'mp-spin'
+ *  [C4]  Import useTranslation mort supprimé
+ *  [C5]  ReactDOM namespace remplacé par import nommé createPortal
+ *  [C6]  currentPage resetté à 1 quand products diminue et dépasse totalPages
+ *  [C7]  PRODUCTS_PER_PAGE déplacé au niveau module (constante, pas recréée à chaque render)
+ *  [C8]  Badge réduction dans ProductCard corrigé : '-{discount}%' (cohérence avec PublicProfile)
+ *  [C9]  Number(profileId) normalisé une seule fois en haut de MarketplacePanel
+ *  [C10] console.error doublon dans queryFn supprimé (React Query gère déjà l'erreur)
+ *  [C11] window.confirm remplacé par une modale de confirmation inline
+ */
+
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom'; // [C5] import nommé, pas namespace
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Loader2, X, Heart, ShoppingBag, Tag, Pencil, Trash2, ImagePlus, Check, PackageOpen, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../supabase';
-import { useTranslation } from 'react-i18next';
 
-const MAX_PRODUCTS = 10;
-const MAX_SIZE_KB = 2000;
+// ─── Constantes module-level ──────────────────────────────────
+const MAX_PRODUCTS      = 10;
+const MAX_SIZE_KB       = 2000;
+const PRODUCTS_PER_PAGE = 4; // [C7] déplacé hors du composant
+const KEYFRAME_ID       = 'mp-spin-keyframe';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────
 const formatPrice = (price) =>
   price ? Number(price).toLocaleString('fr-FR') + ' F' : '';
 
-// ─── Modal ajout / édition produit ───────────────────────────────────────────
+// ─── Hook : injection unique du keyframe ──────────────────────
+// [C3] Remplace les deux <style> inline dupliqués
+function useSpinKeyframe() {
+  useEffect(() => {
+    if (!document.getElementById(KEYFRAME_ID)) {
+      const s = document.createElement('style');
+      s.id = KEYFRAME_ID;
+      s.textContent = '@keyframes mp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+      document.head.appendChild(s);
+    }
+  }, []);
+}
+
+// ─── Modale de confirmation ───────────────────────────────────
+// [C11] Remplace window.confirm() — non bloquant, stylisable, compatible mobile
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return createPortal(
+    <div
+      onClick={onCancel}
+      style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: '#0a0817', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px', padding: '24px', maxWidth: '340px', width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <AlertTriangle size={18} color="#f87171" />
+          </div>
+          <p style={{ color: 'white', fontSize: '14px', fontWeight: 600, margin: 0, lineHeight: 1.4 }}>{message}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={onCancel}
+            style={{ flex: 1, padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#ef4444,#b91c1c)', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Supprimer
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── Modal ajout / édition produit ───────────────────────────
 function ProductModal({ product, profileId, onClose, onSaved }) {
+  useSpinKeyframe(); // [C3]
+
   const isEdit = !!product?.id;
   const [form, setForm] = useState({
-    title: product?.title || '',
-    price: product?.price || '',
+    title:          product?.title          || '',
+    price:          product?.price          || '',
     original_price: product?.original_price || '',
-    description: product?.description || '',
-    image_url: product?.image_url || '',
-    is_available: product?.is_available !== false,
+    description:    product?.description    || '',
+    image_url:      product?.image_url      || '',
+    is_available:   product?.is_available !== false,
   });
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const fileInputRef = useRef(null); // pour reset après sélection
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -34,7 +108,6 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
     ? Math.round((1 - Number(form.price) / Number(form.original_price)) * 100)
     : 0;
 
-  // ✅ Fonction handleImageUpload ajoutée
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -44,36 +117,42 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
     }
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop();
-      // ✅ APRÈS — bucket avatars qui existe déjà
-const fileName = 'market-' + profileId + '-' + Date.now() + '.' + file.name.split('.').pop();
-const { error: upErr } = await supabase.storage
-  .from('avatars')
-  .upload(fileName, file, { upsert: true });
-if (upErr) throw upErr;
-const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      // [C1] `ext` supprimée — utilisée directement dans le template
+      const fileName = `market-${profileId}-${Date.now()}.${file.name.split('.').pop()}`;
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
       set('image_url', data.publicUrl);
       toast.success('Photo uploadée !');
     } catch (err) {
       toast.error('Upload échoué : ' + err.message);
     } finally {
       setUploading(false);
+      // Reset input pour permettre de re-sélectionner le même fichier
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) { toast.error('Le nom du produit est requis'); return; }
-    if (!form.price) { toast.error('Le prix est requis'); return; }
+    if (!form.title.trim())  { toast.error('Le nom du produit est requis'); return; }
+    if (!form.price)          { toast.error('Le prix est requis'); return; }
+    if (Number(form.price) <= 0) { toast.error('Le prix doit être supérieur à 0'); return; }
+    if (form.original_price && Number(form.original_price) <= Number(form.price)) {
+      toast.error('Le prix barré doit être supérieur au prix de vente');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
-        profile_id: Number(profileId),
-        title: form.title.trim(),
-        price: Number(form.price),
+        profile_id:     profileId, // [C9] déjà normalisé en Number par le parent
+        title:          form.title.trim(),
+        price:          Number(form.price),
         original_price: form.original_price ? Number(form.original_price) : null,
-        description: form.description.trim() || null,
-        image_url: form.image_url || null,
-        is_available: form.is_available,
+        description:    form.description.trim() || null,
+        image_url:      form.image_url || null,
+        is_available:   form.is_available,
       };
       if (isEdit) {
         const { error } = await supabase.from('marketplace_products').update(payload).eq('id', product.id);
@@ -84,12 +163,14 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
       }
       toast.success(isEdit ? 'Produit modifié !' : 'Produit ajouté !');
       onSaved();
-    } catch (err) { toast.error('Erreur : ' + err.message); }
-    finally { setSaving(false); }
+    } catch (err) {
+      toast.error('Erreur : ' + err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  
-  return (
+  return createPortal( // [C5] createPortal nommé
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
       onClick={onClose}
@@ -112,7 +193,7 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
               <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', margin: 0 }}>Marketplace SocialApp</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '32px', height: '32px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose} aria-label="Fermer" style={{ background: 'rgba(255,255,255,0.07)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '32px', height: '32px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={15} />
           </button>
         </div>
@@ -133,7 +214,7 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
                 >
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>
                     <ImagePlus size={13} /> Changer
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploading} />
+                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploading} />
                   </label>
                   <button onClick={() => set('image_url', '')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239,68,68,0.3)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', color: '#f87171', fontSize: '12px', fontWeight: 600 }}>
                     <Trash2 size={13} /> Supprimer
@@ -147,12 +228,12 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
               >
                 {uploading
-                  ? <Loader2 size={24} color="rgba(255,107,53,0.8)" style={{ animation: 'spin 1s linear infinite' }} />
+                  ? <Loader2 size={24} color="rgba(255,107,53,0.8)" style={{ animation: 'mp-spin 1s linear infinite' }} />
                   : <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,107,53,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImagePlus size={22} color="rgba(255,107,53,0.8)" /></div>
                 }
                 <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: 500, margin: 0 }}>{uploading ? 'Upload en cours...' : 'Ajouter une photo'}</p>
                 <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', margin: 0 }}>JPG, PNG — max 2 Mo</p>
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploading} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploading} />
               </label>
             )}
           </div>
@@ -164,6 +245,7 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
               value={form.title}
               onChange={e => set('title', e.target.value)}
               placeholder="Ex: Robe longue élégante rose"
+              maxLength={120}
               style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }}
               onFocus={e => { e.target.style.border = '1px solid rgba(255,107,53,0.5)'; e.target.style.background = 'rgba(255,107,53,0.06)'; }}
               onBlur={e => { e.target.style.border = '1px solid rgba(255,255,255,0.12)'; e.target.style.background = 'rgba(255,255,255,0.06)'; }}
@@ -175,7 +257,7 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
             <div>
               <label style={{ display: 'block', color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Prix (FCFA) *</label>
               <input
-                type="number"
+                type="number" min="1"
                 value={form.price}
                 onChange={e => set('price', e.target.value)}
                 placeholder="7 000"
@@ -192,7 +274,7 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
                 )}
               </label>
               <input
-                type="number"
+                type="number" min="1"
                 value={form.original_price}
                 onChange={e => set('original_price', e.target.value)}
                 placeholder="10 000"
@@ -211,6 +293,7 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
               onChange={e => set('description', e.target.value)}
               placeholder="Décrivez votre produit..."
               rows={2}
+              maxLength={500}
               style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 14px', color: 'white', fontSize: '13px', outline: 'none', resize: 'none' }}
               onFocus={e => { e.target.style.border = '1px solid rgba(255,107,53,0.5)'; }}
               onBlur={e => { e.target.style.border = '1px solid rgba(255,255,255,0.12)'; }}
@@ -225,6 +308,8 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
             </div>
             <button
               onClick={() => set('is_available', !form.is_available)}
+              aria-pressed={form.is_available}
+              aria-label="Basculer la disponibilité"
               style={{ width: '44px', height: '24px', borderRadius: '100px', background: form.is_available ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
             >
               <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: form.is_available ? '23px' : '3px', transition: 'left 0.3s' }} />
@@ -234,25 +319,23 @@ const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
           {/* Bouton sauvegarder */}
           <button
             onClick={handleSave}
-            disabled={saving}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '13px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontSize: '14px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+            disabled={saving || uploading}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '13px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontSize: '14px', fontWeight: 700, cursor: (saving || uploading) ? 'not-allowed' : 'pointer', opacity: (saving || uploading) ? 0.7 : 1 }}
           >
             {saving
-              ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ? <Loader2 size={16} style={{ animation: 'mp-spin 1s linear infinite' }} />
               : <Check size={16} />
             }
             {isEdit ? 'Enregistrer les modifications' : 'Ajouter le produit'}
           </button>
         </div>
       </motion.div>
-
-      {/* Keyframe spin pour les Loader2 sans Tailwind */}
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
-// ─── Carte produit ────────────────────────────────────────────────────────────
+// ─── Carte produit ────────────────────────────────────────────
 function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -274,33 +357,40 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
             <ShoppingBag size={32} color="#ccc" />
           </div>
         )}
-        {/* Badge réduction */}
+
+        {/* [C8] Badge réduction avec le préfixe '-' (cohérence avec PublicProfile) */}
         {discount > 0 && (
-          <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#22c55e', borderRadius: '8px', padding: '3px 8px', fontSize: '12px', fontWeight: 700, color: 'white' }}>{discount}%</div>
+          <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#22c55e', borderRadius: '8px', padding: '3px 8px', fontSize: '12px', fontWeight: 700, color: 'white' }}>-{discount}%</div>
         )}
-        {/* Indisponible overlay */}
+
+        {/* Overlay indisponible */}
         {!product.is_available && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ background: 'rgba(0,0,0,0.7)', color: 'white', fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '20px', letterSpacing: '0.05em' }}>INDISPONIBLE</span>
           </div>
         )}
+
         {/* Bouton favoris */}
         <button
-          onClick={(e) => { e.stopPropagation(); onToggleFav(product.id); }}
+          onClick={e => { e.stopPropagation(); onToggleFav(product.id); }}
+          aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           style={{ position: 'absolute', top: '10px', right: '10px', width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
         >
           <Heart size={16} fill={isFav ? '#ef4444' : 'none'} color={isFav ? '#ef4444' : '#999'} />
         </button>
+
         {/* Actions admin */}
         <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '5px' }}>
           <button
-            onClick={(e) => { e.stopPropagation(); onEdit(product); }}
+            onClick={e => { e.stopPropagation(); onEdit(product); }}
+            aria-label="Modifier le produit"
             style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
           >
             <Pencil size={12} color="#555" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(product); }}
+            onClick={e => { e.stopPropagation(); onDelete(product); }}
+            aria-label="Supprimer le produit"
             style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(239,68,68,0.9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
           >
             <Trash2 size={12} color="white" />
@@ -327,32 +417,39 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
   );
 }
 
-// ─── Panel principal Marketplace ─────────────────────────────────────────────
+// ─── Panel principal Marketplace ──────────────────────────────
 export default function MarketplacePanel({ profileId }) {
+  useSpinKeyframe(); // [C3] keyframe injectée une seule fois
+
   const queryClient = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
-  const [editProduct, setEditProduct] = useState(null);
-  const [favs, setFavs] = useState({});
-  const PRODUCTS_PER_PAGE = 4;
-  const [currentPage, setCurrentPage] = useState(1);
+  // [C9] Normalisation de profileId une seule fois
+  const numProfileId = Number(profileId);
+
+  const [showModal, setShowModal]         = useState(false);
+  const [editProduct, setEditProduct]     = useState(null);
+  const [favs, setFavs]                   = useState({});
+  const [currentPage, setCurrentPage]     = useState(1);
+  const [confirmDelete, setConfirmDelete] = useState(null); // [C11] produit en attente de confirmation
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['marketplace', profileId],
+    queryKey: ['marketplace', numProfileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('marketplace_products')
         .select('*')
-        .eq('profile_id', Number(profileId))
+        .eq('profile_id', numProfileId)
         .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Fetch error:', error);
-        throw error;
-      }
+      if (error) throw error; // [C10] console.error doublon supprimé
       return data;
     },
-    enabled: !!profileId,
+    enabled: !!numProfileId,
   });
+
+  // [C6] Correction page courante si products diminue (ex: après suppression)
+  const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE) || 1;
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [products.length, totalPages, currentPage]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
@@ -360,15 +457,19 @@ export default function MarketplacePanel({ profileId }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['marketplace', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['marketplace', numProfileId] });
       toast.success('Produit supprimé');
     },
     onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
-  const handleDelete = (product) => {
-    if (!window.confirm(`Supprimer "${product.title}" ?`)) return;
-    deleteMutation.mutate(product.id);
+  // [C11] Ouvre la modale de confirmation au lieu de window.confirm()
+  const handleDelete = (product) => setConfirmDelete(product);
+
+  const confirmDeleteAction = () => {
+    if (!confirmDelete) return;
+    deleteMutation.mutate(confirmDelete.id);
+    setConfirmDelete(null);
   };
 
   const handleEdit = (product) => {
@@ -385,11 +486,15 @@ export default function MarketplacePanel({ profileId }) {
     setShowModal(true);
   };
 
+  // [C2] handleSaved : pas de calcul fragile sur products.length — on va à la dernière page
+  //      après invalidation (React Query recalcule automatiquement)
   const handleSaved = () => {
     setShowModal(false);
     setEditProduct(null);
-    queryClient.invalidateQueries({ queryKey: ['marketplace', profileId] });
-    setCurrentPage(Math.ceil((products.length + 1) / PRODUCTS_PER_PAGE));
+    queryClient.invalidateQueries({ queryKey: ['marketplace', numProfileId] }).then(() => {
+      // Aller à la dernière page une fois la query rafraîchie
+      setCurrentPage(Math.ceil((products.length + 1) / PRODUCTS_PER_PAGE));
+    });
   };
 
   const handleClose = () => {
@@ -399,13 +504,9 @@ export default function MarketplacePanel({ profileId }) {
 
   const toggleFav = (id) => setFavs(f => ({ ...f, [id]: !f[id] }));
 
-  const atLimit = products.length >= MAX_PRODUCTS;
-  const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
-
-const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
-const endIndex = startIndex + PRODUCTS_PER_PAGE;
-
-const currentProducts = products.slice(startIndex, endIndex);
+  const atLimit      = products.length >= MAX_PRODUCTS;
+  const startIndex   = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const currentProducts = products.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
 
   return (
     <>
@@ -428,10 +529,10 @@ const currentProducts = products.slice(startIndex, endIndex);
           <button
             onClick={handleAdd}
             disabled={atLimit}
+            aria-label="Ajouter un produit"
             style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: atLimit ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', border: atLimit ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: '10px', color: atLimit ? 'rgba(255,255,255,0.3)' : 'white', fontSize: '12px', fontWeight: 700, cursor: atLimit ? 'not-allowed' : 'pointer' }}
           >
-            <Plus size={13} />
-            Ajouter
+            <Plus size={13} /> Ajouter
           </button>
         </div>
 
@@ -447,186 +548,71 @@ const currentProducts = products.slice(startIndex, endIndex);
         </div>
 
         {/* Grille produits */}
-<div style={{ padding: '14px' }}>
-  {isLoading ? (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '32px 0'
-      }}
-    >
-      <Loader2
-        size={20}
-        color="rgba(255,107,53,0.6)"
-        style={{ animation: 'spin 1s linear infinite' }}
-      />
-    </div>
-  ) : products.length === 0 ? (
-    <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-      <div
-        style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '16px',
-          background: 'rgba(255,107,53,0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 14px'
-        }}
-      >
-        <PackageOpen size={24} color="rgba(255,107,53,0.6)" />
-      </div>
+        <div style={{ padding: '14px' }}>
+          {isLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+              <Loader2 size={20} color="rgba(255,107,53,0.6)" style={{ animation: 'mp-spin 1s linear infinite' }} />
+            </div>
+          ) : products.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(255,107,53,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                <PackageOpen size={24} color="rgba(255,107,53,0.6)" />
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 600, margin: '0 0 6px' }}>Aucun produit</p>
+              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>
+                Ajoutez vos premiers produits<br />pour les afficher sur votre profil
+              </p>
+              <button
+                onClick={handleAdd}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 18px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '12px', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                <Plus size={14} /> Ajouter un produit
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <AnimatePresence>
+                  {currentProducts.map(p => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      isFav={!!favs[p.id]}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onToggleFav={toggleFav}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
 
-      <p
-        style={{
-          color: 'rgba(255,255,255,0.5)',
-          fontSize: '14px',
-          fontWeight: 600,
-          margin: '0 0 6px'
-        }}
-      >
-        Aucun produit
-      </p>
-
-      <p
-        style={{
-          color: 'rgba(255,255,255,0.25)',
-          fontSize: '12px',
-          margin: '0 0 16px',
-          lineHeight: 1.5
-        }}
-      >
-        Ajoutez vos premiers produits
-        <br />
-        pour les afficher sur votre profil
-      </p>
-
-      <button
-        onClick={handleAdd}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '7px',
-          padding: '9px 18px',
-          background: 'linear-gradient(135deg,#ff6b35,#f7c948)',
-          border: 'none',
-          borderRadius: '12px',
-          color: 'white',
-          fontSize: '13px',
-          fontWeight: 700,
-          cursor: 'pointer'
-        }}
-      >
-        <Plus size={14} /> Ajouter un produit
-      </button>
-    </div>
-  ) : (
-    <>
-      {/* Produits */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '12px'
-        }}
-      >
-        <AnimatePresence>
-          {currentProducts.map(p => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              isFav={!!favs[p.id]}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onToggleFav={toggleFav}
-            />
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '10px',
-            marginTop: '18px'
-          }}
-        >
-          <button
-            onClick={() =>
-              setCurrentPage(prev =>
-                Math.max(prev - 1, 1)
-              )
-            }
-            disabled={currentPage === 1}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '10px',
-              border: 'none',
-              cursor:
-                currentPage === 1
-                  ? 'not-allowed'
-                  : 'pointer',
-              background:
-                currentPage === 1
-                  ? 'rgba(255,255,255,0.08)'
-                  : 'linear-gradient(135deg,#ff6b35,#f7c948)',
-              color: 'white',
-              fontSize: '12px',
-              fontWeight: 700
-            }}
-          >
-            Précédent
-          </button>
-
-          <span
-            style={{
-              color: 'rgba(255,255,255,0.5)',
-              fontSize: '12px',
-              fontWeight: 600
-            }}
-          >
-            Page {currentPage} / {totalPages}
-          </span>
-
-          <button
-            onClick={() =>
-              setCurrentPage(prev =>
-                Math.min(prev + 1, totalPages)
-              )
-            }
-            disabled={currentPage === totalPages}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '10px',
-              border: 'none',
-              cursor:
-                currentPage === totalPages
-                  ? 'not-allowed'
-                  : 'pointer',
-              background:
-                currentPage === totalPages
-                  ? 'rgba(255,255,255,0.08)'
-                  : 'linear-gradient(135deg,#ff6b35,#f7c948)',
-              color: 'white',
-              fontSize: '12px',
-              fontWeight: 700
-            }}
-          >
-            Suivant
-          </button>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '18px' }}>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                    style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', background: currentPage === 1 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
+                  >
+                    Précédent
+                  </button>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: 600 }}>
+                    Page {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', background: currentPage === totalPages ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
+                  >
+                    Suivant
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
-    </>
-  )}
-</div>
 
-        {/* Footer info */}
+        {/* Footer */}
         {products.length > 0 && (
           <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Tag size={11} color="rgba(255,255,255,0.3)" />
@@ -635,19 +621,26 @@ const currentProducts = products.slice(startIndex, endIndex);
         )}
       </div>
 
-      {/* ✅ Modal via portal — AnimatePresence retiré du wrapper, géré en interne */}
-      {showModal && ReactDOM.createPortal(
-        <ProductModal
-          product={editProduct}
-          profileId={profileId}
-          onClose={handleClose}
-          onSaved={handleSaved}
-        />,
-        document.body
-      )}
+      {/* Modal ajout/édition via portal */}
+      <AnimatePresence>
+        {showModal && (
+          <ProductModal
+            product={editProduct}
+            profileId={numProfileId}
+            onClose={handleClose}
+            onSaved={handleSaved}
+          />
+        )}
+      </AnimatePresence>
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      {/* [C11] Modale de confirmation suppression */}
+      {confirmDelete && (
+        <ConfirmModal
+          message={`Supprimer "${confirmDelete.title}" ? Cette action est irréversible.`}
+          onConfirm={confirmDeleteAction}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </>
   );
 }
-

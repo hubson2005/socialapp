@@ -38,7 +38,7 @@ import BoostPanel from "@/components/dashboard/BoostPanel";
 import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
 import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
-import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
+import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels";
 import FormsPanel from "@/components/forms/FormsPanel";
 import NotificationBell from './NotificationBell';
 
@@ -73,22 +73,22 @@ function useWindowWidth() {
 }
 
 const PLAN_LIMITS = {
-  basic: { maxLinks:3, maxProfiles:1, hasStats:false, maxMarketplace:4, maxDocs:1, maxForms:1, hasEvent:false, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic', badge:false, label:'BASIC', color:'#6366f1', emoji:'⚡', price:'10 000 FCFA' },
-  pro: { maxLinks:8, maxProfiles:1, hasStats:true, maxMarketplace:10, maxDocs:3, maxForms:5, hasEvent:true, hasRealtime:true, hasCRM:false, hasAutomations:false, hasIntegrations:'partial', hasAdvancedAnalytics:false, qrType:'premium', colorCustom:'advanced', badge:true, label:'PRO', color:'#ff8c00', emoji:'🚀', price:'15 000 FCFA' },
-  business: { maxLinks:17, maxProfiles:1, hasStats:true, maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true, hasRealtime:true, hasCRM:true, hasAutomations:true, hasIntegrations:true, hasAdvancedAnalytics:true, qrType:'dynamic', colorCustom:'complete', badge:true, label:'BUSINESS', color:'#f7c948', emoji:'💼', price:'25 000 FCFA' },
-  événement: { maxLinks:3, maxProfiles:1, hasStats:false, maxMarketplace:0, maxDocs:0, hasEvent:true, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic', badge:false, label:'ÉVÉNEMENT', color:'#22c55e', emoji:'🎉', price:'' },
+  basic:      { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:4,        maxDocs:1,  maxForms:1,        hasEvent:false, hasRealtime:false, hasCRM:false,  hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'BASIC',      color:'#6366f1', emoji:'⚡',  price:'10 000 FCFA' },
+  pro:        { maxLinks:8,  maxProfiles:1, hasStats:true,  maxMarketplace:10,       maxDocs:3,  maxForms:5,        hasEvent:true,  hasRealtime:true,  hasCRM:false,  hasAutomations:false, hasIntegrations:'partial',  hasAdvancedAnalytics:false, qrType:'premium',  colorCustom:'advanced', badge:true,  label:'PRO',        color:'#ff8c00', emoji:'🚀',  price:'15 000 FCFA' },
+  business:   { maxLinks:17, maxProfiles:1, hasStats:true,  maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true,  hasRealtime:true,  hasCRM:true,   hasAutomations:true,  hasIntegrations:true,       hasAdvancedAnalytics:true,  qrType:'dynamic',  colorCustom:'complete', badge:true,  label:'BUSINESS',   color:'#f7c948', emoji:'💼',  price:'25 000 FCFA' },
+  événement:  { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:0,        maxDocs:0,  hasEvent:true,     hasRealtime:false, hasCRM:false,   hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'ÉVÉNEMENT',  color:'#22c55e', emoji:'🎉',  price:'' },
 };
 
-const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov|avi|mkv|quicktime)$/i.test(url || '');
-const parseColors = (themeColor) => {
+const isVideoUrl   = (url) => /\.(mp4|webm|ogg|mov|avi|mkv|quicktime)$/i.test(url || '');
+const parseColors  = (themeColor) => {
   if (themeColor && themeColor.includes('|')) { const [bg1, bg2] = themeColor.split('|'); return { bg1, bg2 }; }
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
 const MAX_SIZE_KB = 2000;
 
 const db = {
-  get: async (userId) => { const { data, error } = await supabase.from('link_profiles').select('*').eq('user_id', userId).order('created_at', { ascending: true }); if (error) throw error; return data || []; },
-  create: async (data) => { const { data: created, error } = await supabase.from('link_profiles').insert([data]).select().maybeSingle(); if (error) throw error; return created; },
+  get:    async (userId) => { const { data, error } = await supabase.from('link_profiles').select('*').eq('user_id', userId).order('created_at', { ascending: true }); if (error) throw error; return data || []; },
+  create: async (data)   => { const { data: created, error } = await supabase.from('link_profiles').insert([data]).select().maybeSingle(); if (error) throw error; return created; },
   update: async (id, data) => { const { data: updated, error } = await supabase.from('link_profiles').update(data).eq('id', id).select().maybeSingle(); if (error) throw error; return updated; },
 };
 
@@ -257,32 +257,30 @@ export default function UserDashboard() {
   const isMobile = windowWidth < 768;
   const { t } = useTranslation();
 
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection]   = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showWaveModal, setShowWaveModal] = useState(false);
-  const [showPlanModal, setShowPlanModal] = useState(false);
-  const [uploadingBg, setUploadingBg] = useState(false);
-  const [localProfile, setLocalProfile] = useState(null);
+  const [showAddDialog, setShowAddDialog]   = useState(false);
+  const [showPreview, setShowPreview]       = useState(false);
+  const [showWaveModal, setShowWaveModal]   = useState(false);
+  const [showPlanModal, setShowPlanModal]   = useState(false);
+  const [uploadingBg, setUploadingBg]       = useState(false);
+  const [localProfile, setLocalProfile]     = useState(null);
   const [activeProfileId, setActiveProfileId] = useState(null);
-  const [hasChanges, setHasChanges] = useState(false);
+  const [hasChanges, setHasChanges]         = useState(false);
 
-  // ✅ Source de vérité : la colonne `plan` de link_profiles. C'est elle que
-  // modifie le Dashboard admin (activation manuelle) et, plus tard, tout
-  // système de paiement automatisé. user_metadata.plan ne sert que de repli
-  // tant que le profil n'existe pas encore (ex: juste après l'inscription,
-  // avant la création du premier profil dans link_profiles).
   const rawPlan     = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
   const limits      = PLAN_LIMITS[rawPlan] || PLAN_LIMITS.basic;
   const isActivated = localProfile?.is_activated === true;
-  // FIX: isAdmin défini ici pour tous les panels qui en ont besoin
   const isAdmin     = user?.user_metadata?.role === 'admin' || false;
 
   const handleOpenUpgrade = () => setShowPlanModal(true);
   const handlePlanSelect  = (planSlug) => { setShowPlanModal(false); navigate(`/login?plan=${encodeURIComponent(planSlug)}`); };
 
-  const { data: profiles = [], isLoading } = useQuery({ queryKey: ['userProfiles', user?.id], queryFn: () => db.get(user.id), enabled: !!user?.id });
+  const { data: profiles = [], isLoading } = useQuery({
+    queryKey: ['userProfiles', user?.id],
+    queryFn:  () => db.get(user.id),
+    enabled:  !!user?.id,
+  });
 
   useEffect(() => { setSidebarCollapsed(isMobile); }, [isMobile]);
 
@@ -293,10 +291,7 @@ export default function UserDashboard() {
     setActiveProfileId(prev => prev || target.id);
   }, [profiles, activeProfileId]);
 
-  // ✅ Synchronisation en temps réel : si l'admin change le plan (ou active
-  // le compte) depuis le Dashboard admin, ce profil le reflète instantanément
-  // ici, sans rechargement de page. On ne touche qu'aux champs plan/is_activated
-  // pour ne jamais écraser des modifications locales non sauvegardées (hasChanges).
+  // Sync temps-réel plan / is_activated depuis l'admin
   useEffect(() => {
     if (!localProfile?.id) return;
     const profileId = localProfile.id;
@@ -320,22 +315,28 @@ export default function UserDashboard() {
     return () => supabase.removeChannel(channel);
   }, [localProfile?.id, user?.id, queryClient]);
 
-  // FIX background: fond appliqué sur html ET calculé pour le root div
-  useEffect(() => {
-    if (!localProfile) return;
-    const html = document.documentElement;
-    if (localProfile.bg_image_url) {
-      Object.assign(html.style, { backgroundImage:`url(${localProfile.bg_image_url})`, backgroundSize:'cover', backgroundPosition:'center', backgroundRepeat:'no-repeat', backgroundAttachment:'fixed' });
-    } else {
-      const { bg1, bg2 } = parseColors(localProfile.theme_color);
-      html.style.backgroundImage = 'none';
-      html.style.background = `linear-gradient(160deg,${bg1},${bg2})`;
-    }
-    return () => { ['backgroundImage','backgroundSize','backgroundPosition','backgroundRepeat','backgroundAttachment','background'].forEach(k => { html.style[k] = ''; }); };
-  }, [localProfile]);
+  // FIX — fond du dashboard fixe : le thème ne s'applique PAS ici,
+  // uniquement sur le profil public (PublicProfile.jsx).
+  // L'ancien useEffect qui modifiait document.documentElement est supprimé.
 
-  const createMutation = useMutation({ mutationFn: data => db.create(data), onSuccess: created => { queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] }); setLocalProfile(created); setActiveProfileId(created.id); setHasChanges(false); toast.success('Profil créé !'); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => db.update(id, data), onSuccess: updated => { setLocalProfile(updated); setHasChanges(false); queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] }); toast.success('Modifications sauvegardées !'); }, onError: e => toast.error('Erreur : ' + e.message) });
+  const createMutation = useMutation({
+    mutationFn: data => db.create(data),
+    onSuccess: created => {
+      queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
+      setLocalProfile(created); setActiveProfileId(created.id); setHasChanges(false);
+      toast.success('Profil créé !');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => db.update(id, data),
+    onSuccess: updated => {
+      setLocalProfile(updated); setHasChanges(false);
+      queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
+      toast.success('Modifications sauvegardées !');
+    },
+    onError: e => toast.error('Erreur : ' + e.message),
+  });
 
   const handleCreateProfile = () => {
     if (profiles.length >= limits.maxProfiles) { toast.error(`Limite atteinte — offre ${limits.label} : ${limits.maxProfiles} profil(s) max`); return; }
@@ -343,14 +344,29 @@ export default function UserDashboard() {
     createMutation.mutate({ user_id: user.id, display_name: 'Mon Profil ' + (profiles.length + 1), bio: '', links: [], theme_color: '#6366f1', expiry_date: expiry.toISOString().split('T')[0], is_verified: false, is_event: false, is_activated: false, plan: rawPlan });
   };
 
-  const updateLocal = useCallback((updates) => { setLocalProfile(prev => ({ ...prev, ...updates })); setHasChanges(true); }, []);
+  const updateLocal = useCallback((updates) => {
+    setLocalProfile(prev => ({ ...prev, ...updates }));
+    setHasChanges(true);
+  }, []);
 
   const handleSave = () => {
     if (!localProfile || updateMutation.isPending || !hasChanges) return;
-    const sanitized = localProfile.username ? localProfile.username.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'') : null;
+    const sanitized = localProfile.username
+      ? localProfile.username.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
+      : null;
     const rawMedias = localProfile.event_images || (localProfile.event_image_url ? [localProfile.event_image_url] : []);
     const eventImagesArray = rawMedias.map(m => typeof m === 'string' ? m : m?.url).filter(Boolean);
-    updateMutation.mutate({ id: localProfile.id, data: { display_name: localProfile.display_name, bio: localProfile.bio, links: localProfile.links, theme_color: localProfile.theme_color, expiry_date: localProfile.expiry_date, ...(isActivated && sanitized ? { username: sanitized } : {}), is_verified: localProfile.is_verified||false, is_event: localProfile.is_event||false, event_name: localProfile.event_name||null, event_date: localProfile.event_date||null, event_location: localProfile.event_location||null, event_color1: localProfile.event_color1||null, event_color2: localProfile.event_color2||null, event_booking_url: localProfile.event_booking_url||null, event_description: localProfile.event_description||null, event_images: eventImagesArray, event_image_url: eventImagesArray[0]||null, bg_image_url: localProfile.bg_image_url||null } });
+    updateMutation.mutate({ id: localProfile.id, data: {
+      display_name: localProfile.display_name, bio: localProfile.bio, links: localProfile.links,
+      theme_color: localProfile.theme_color, expiry_date: localProfile.expiry_date,
+      ...(isActivated && sanitized ? { username: sanitized } : {}),
+      is_verified: localProfile.is_verified||false, is_event: localProfile.is_event||false,
+      event_name: localProfile.event_name||null, event_date: localProfile.event_date||null,
+      event_location: localProfile.event_location||null, event_color1: localProfile.event_color1||null,
+      event_color2: localProfile.event_color2||null, event_booking_url: localProfile.event_booking_url||null,
+      event_description: localProfile.event_description||null, event_images: eventImagesArray,
+      event_image_url: eventImagesArray[0]||null, bg_image_url: localProfile.bg_image_url||null,
+    }});
   };
 
   const handleBgUpload = async (e) => {
@@ -359,16 +375,26 @@ export default function UserDashboard() {
     setUploadingBg(true);
     try {
       const name = 'bg-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
-      const { error } = await supabase.storage.from('avatars').upload(name, file, { upsert: true }); if (error) throw error;
+      const { error } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
+      if (error) throw error;
       const { data } = supabase.storage.from('avatars').getPublicUrl(name);
-      updateLocal({ bg_image_url: data.publicUrl }); toast.success('Image de fond appliquée !');
+      updateLocal({ bg_image_url: data.publicUrl });
+      toast.success('Image de fond appliquée !');
     } catch (err) { toast.error('Erreur : ' + err.message); }
     finally { setUploadingBg(false); e.target.value = ''; }
   };
 
-  const handleSignOut = async () => { if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Se déconnecter ?')) return; await signOut(); };
+  // FIX logout — déplacé en bas du panel Paramètres (renderSection case 'settings')
+  const handleSignOut = async () => {
+    if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Se déconnecter ?')) return;
+    await signOut();
+  };
 
-  if (isLoading) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#040210' }}><Loader2 className="w-6 h-6 animate-spin" style={{ color:'#6366f1' }} /></div>;
+  if (isLoading) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0c0d1a' }}>
+      <Loader2 className="w-6 h-6 animate-spin" style={{ color:'#6366f1' }} />
+    </div>
+  );
 
   if (!profiles.length && !createMutation.isPending) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#0f0a1e,#2d1b69)', padding:'24px' }}>
@@ -376,7 +402,9 @@ export default function UserDashboard() {
         <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width:'80px', height:'80px', borderRadius:'24px', objectFit:'cover', margin:'0 auto 24px', display:'block' }} />
         <h1 style={{ color:'white', fontSize:'24px', fontWeight:800, margin:'0 0 8px' }}>Bienvenue !</h1>
         <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'14px', margin:'0 0 24px' }}>{limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits</p>
-        <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2" disabled={createMutation.isPending}>{createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Créer mon profil</Button>
+        <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2" disabled={createMutation.isPending}>
+          {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Créer mon profil
+        </Button>
       </motion.div>
     </div>
   );
@@ -386,60 +414,113 @@ export default function UserDashboard() {
   const currentNav       = USER_NAV.find(n => n.id === activeSection);
   const currentPlanOrder = PLAN_ORDER[rawPlan] ?? 0;
 
-  const isCurrentSectionLocked = () => { const nav = USER_NAV.find(n => n.id === activeSection); if (!nav || !nav.locked) return false; return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99); };
+  const isCurrentSectionLocked = () => {
+    const nav = USER_NAV.find(n => n.id === activeSection);
+    if (!nav || !nav.locked) return false;
+    return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99);
+  };
 
   const renderSection = () => {
-    if (isCurrentSectionLocked()) { const nav = USER_NAV.find(n => n.id === activeSection); return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={handleOpenUpgrade} />; }
+    if (isCurrentSectionLocked()) {
+      const nav = USER_NAV.find(n => n.id === activeSection);
+      return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={handleOpenUpgrade} />;
+    }
     switch (activeSection) {
       case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={rawPlan} />;
       case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={handleOpenUpgrade} />;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
       case 'marketplace':     return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
       case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={rawPlan} /></div>;
-      case 'forms': return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={handleOpenUpgrade} /></div>;
+      case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={handleOpenUpgrade} /></div>;
       case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
       case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
       case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
+      case 'whatsapp-crm':    return limits.hasCRM      ? <WhatsappCRMPanel profileId={localProfile.id} /> : null;
       case 'automations':     return <AutomationsPanel     profileId={localProfile.id} />;
       case 'meta':            return <MetaIntegrationPanel profile={localProfile} isAdmin={isAdmin} />;
       case 'integrations':    return <IntegrationsPanel    profileId={localProfile.id} isAdmin={isAdmin} />;
       case 'boost':           return <BoostPanel           profile={localProfile}      isAdmin={isAdmin} />;
       case 'boost-analytics': return <BoostAnalyticsPanel  profile={localProfile} />;
-      case 'promotions': return ( <PromotionsDashboard profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} /> );
-      case 'settings':        return <SettingsPanel />; default: return null;
+      case 'promotions':      return <PromotionsDashboard  profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} />;
+
+      // FIX — logout déplacé ici, en bas du panel Paramètres
+      case 'settings': return (
+        <div style={{ display:'flex', flexDirection:'column' }}>
+          <SettingsPanel />
+          <div style={{
+            marginTop: '32px', paddingTop: '24px',
+            borderTop: '1px solid rgba(255,255,255,0.07)',
+            maxWidth: '480px',
+          }}>
+            <p style={{ color:'white', fontSize:'14px', fontWeight:700, margin:'0 0 4px' }}>Déconnexion</p>
+            <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'12px', margin:'0 0 14px' }}>{user?.email}</p>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              style={{
+                display:'flex', alignItems:'center', gap:'8px',
+                padding:'10px 18px',
+                background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.25)',
+                borderRadius:'10px', color:'#f87171', fontSize:'13px', fontWeight:600,
+                cursor:'pointer', fontFamily:'inherit',
+              }}
+            >
+              <LogOut size={14} /> Se déconnecter
+            </button>
+          </div>
+        </div>
+      );
+
+      default: return null;
     }
   };
 
-  // FIX background blanc: fond appliqué directement sur le root div (double sécurité)
-  const getRootBg = () => {
-    if (!localProfile) return { background: 'linear-gradient(160deg,#0f0a1e,#2d1b69)' };
-    if (localProfile.bg_image_url) return { backgroundImage:`url(${localProfile.bg_image_url})`, backgroundSize:'cover', backgroundPosition:'center', backgroundRepeat:'no-repeat' };
-    const { bg1, bg2 } = parseColors(localProfile.theme_color);
-    return { background: `linear-gradient(160deg,${bg1},${bg2})` };
-  };
+  // FIX — fond dashboard fixe : #0c0d1a indépendant du thème profil
+  const DASHBOARD_BG = { background: '#0c0d1a' };
 
   return (
-    <div style={{ ...getRootBg(), height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
+    <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
 
       <div style={{ position:'relative', zIndex:10, flexShrink:0, width:isMobile?0:undefined }}>
-        <UserSidebar activeSection={activeSection} onNavigate={setActiveSection} profile={localProfile} plan={rawPlan} limits={limits} collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)} isMobile={isMobile} onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onUpgrade={handleOpenUpgrade} />
+        <UserSidebar
+          activeSection={activeSection} onNavigate={setActiveSection}
+          profile={localProfile} plan={rawPlan} limits={limits}
+          collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)}
+          isMobile={isMobile}
+          onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
+          bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
+          onUpgrade={handleOpenUpgrade}
+        />
       </div>
 
       <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
 
-        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(4,2,16,0.7)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+        {/* Topbar — logout retiré */}
+        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(12,13,26,0.85)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
             <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Dashboard'}</h2>
-            <AnimatePresence>{hasChanges && <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }} style={{ background:'rgba(251,191,36,0.15)', border:'1px solid rgba(251,191,36,0.4)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600, flexShrink:0 }}>● {t('unsaved')}</motion.span>}</AnimatePresence>
+            <AnimatePresence>
+              {hasChanges && (
+                <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
+                  style={{ background:'rgba(251,191,36,0.15)', border:'1px solid rgba(251,191,36,0.4)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600, flexShrink:0 }}>
+                  ● {t('unsaved')}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
             <NotificationBell />
-            <button onClick={handleSave} disabled={!hasChanges||updateMutation.isPending} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.07)', border:'1px solid '+(hasChanges?'transparent':'rgba(255,255,255,0.12)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
-              {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}{!isMobile && t('save')}
+            <button
+              onClick={handleSave}
+              disabled={!hasChanges || updateMutation.isPending}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.07)', border:'1px solid '+(hasChanges?'transparent':'rgba(255,255,255,0.12)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
+            >
+              {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+              {!isMobile && t('save')}
             </button>
-            <button onClick={handleSignOut} title={user?.email} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', cursor:'pointer' }}><LogOut size={14} color="rgba(255,255,255,0.5)" /></button>
+            {/* Logout retiré du topbar — voir case 'settings' dans renderSection */}
           </div>
         </div>
 
@@ -454,7 +535,14 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {isMobile && <MobileNav activeSection={activeSection} onNavigate={setActiveSection} profile={localProfile} plan={rawPlan} limits={limits} onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} />}
+      {isMobile && (
+        <MobileNav
+          activeSection={activeSection} onNavigate={setActiveSection}
+          profile={localProfile} plan={rawPlan} limits={limits}
+          onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
+          bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
+        />
+      )}
 
       {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)} />}
       <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} />}</AnimatePresence>
@@ -470,3 +558,4 @@ export default function UserDashboard() {
     </div>
   );
 }
+

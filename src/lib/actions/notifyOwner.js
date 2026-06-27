@@ -7,7 +7,7 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-import { supabase } from "../../supabase";
+import { supabase } from '../../supabase';
 
 /**
  * @param {Object} params
@@ -18,7 +18,7 @@ import { supabase } from "../../supabase";
  * @returns {Object|null}
  */
 export async function notifyOwnerAction({ config, profileId, automation, context }) {
-  const title   = config.notifTitle || `Automatisation : ${automation.name}`;
+  const title   = config.notifTitle || config.title || `Automatisation : ${automation.name}`;
   const message =
     config.message ||
     `Déclencheur activé : ${automation.name}` +

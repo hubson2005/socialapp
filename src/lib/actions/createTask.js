@@ -12,7 +12,8 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-import { supabase } from "../../supabase";
+import { supabase } from '../../supabase';
+
 /**
  * @param {Object} params
  * @param {Object} params.config    - { taskTitle, taskDescription }
@@ -34,7 +35,8 @@ export async function createTaskAction({ config, context }) {
   }
 
   const description =
-    config.taskTitle ||
+    config.taskTitle     ||   // clé moteur courante
+    config.task          ||   // clé legacy (ancienne UI)
     config.taskDescription ||
     'Tâche créée automatiquement';
 

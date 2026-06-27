@@ -16,6 +16,7 @@
  *  [C12] bg_image_url sanitisé via CSS.escape + encodeURI avant injection
  *  [A1]  triggerWhatsappClick() appelé dans handleLinkClick quand platform === 'whatsapp'
  *  [A2]  triggerQrScan() appelé dans le useEffect QR scan (après l'insert profile_stats)
+ *  [A3]  triggerMarketplaceBuy() appelé dans ProductDetailModal sur "Commander sur WhatsApp"
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,6 +27,7 @@ import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
 // [A1][A2] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick } from '../lib/triggers/whatsapp';
 import { triggerQrScan }        from '../lib/triggers/qr';
+import { triggerMarketplaceBuy } from '../lib/triggers/marketplace';
 
 // ─── Constantes ───────────────────────────────────────────────
 // [C11] Numéro support centralisé — modifier ici uniquement
@@ -217,7 +219,7 @@ function RippleButton({ onClick, style, children, platformColor }) {
   );
 }
 
-function ProductDetailModal({ product, whatsappNumber, onClose }) {
+function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
     : 0;
@@ -269,7 +271,20 @@ function ProductDetailModal({ product, whatsappNumber, onClose }) {
               </div>
             )}
             {product.is_available !== false && waNumber && (
-              <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noopener noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', padding:'15px', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', marginBottom:'12px' }}>
+              <a
+                href={`https://wa.me/${waNumber}?text=${waMsg}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  // [A3] Déclencher les automatisations marketplace (fire-and-forget)
+                  if (profileId) triggerMarketplaceBuy(profileId, {
+                    productId:    product.id,
+                    productTitle: product.title,
+                    price:        product.price,
+                  });
+                }}
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', padding:'15px', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', marginBottom:'12px' }}
+              >
                 <WhatsAppIcon size={20} color="white" /> Commander sur WhatsApp
               </a>
             )}
@@ -745,6 +760,7 @@ export default function PublicProfile() {
         <ProductDetailModal
           product={selectedProduct}
           whatsappNumber={profile.phone || ''}
+          profileId={profile.id}
           onClose={() => setSelectedProduct(null)}
         />
       )}

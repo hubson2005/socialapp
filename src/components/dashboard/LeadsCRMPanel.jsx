@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
+// [A4] Moteur d'automatisation — déclencheur nouveau lead
+import { triggerNewLead } from '../../lib/triggers/newLead';
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
@@ -497,14 +499,29 @@ export default function LeadsCRMPanel({ profileId }) {
     setLoading(false);
   };
 
+  // ── [A4] Ajout d'un lead avec déclencheur automatisation ─────────
   const addLead = async () => {
     if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
     setAdding(true);
     const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
     if (exists) { toast.error('Ce numéro existe déjà'); setAdding(false); return; }
-    const { data, error } = await supabase.from('leads').insert([{ ...newLead, profile_id: profileId, score: 0 }]).select().maybeSingle();
+    const { data, error } = await supabase
+      .from('leads')
+      .insert([{ ...newLead, profile_id: profileId, score: 0 }])
+      .select()
+      .maybeSingle();
     if (error) { toast.error(error.message); setAdding(false); return; }
     await supabase.from('lead_activities').insert([{ lead_id: data.id, type: 'created', description: 'Lead créé' }]);
+
+    // [A4] Déclencher les automatisations new_lead (fire-and-forget — ne bloque pas l'UI)
+    triggerNewLead(profileId, {
+      leadId: data.id,    // évite qu'une action create_lead crée un doublon
+      name:   data.name,
+      email:  data.email,
+      phone:  data.phone,
+      source: data.source,
+    });
+
     setLeads(p => [data, ...p]);
     setNewLead({ ...EMPTY_LEAD });
     setShowAdd(false);

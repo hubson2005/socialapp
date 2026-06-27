@@ -295,10 +295,6 @@ export default function SettingsPanel() {
   }, []);
 
   // Synchronise silencieusement l'abonnement push si la permission est déjà accordée
-  useEffect(() => {
-    if (!userId) return;
-    ensurePushSubscription();
-  }, [userId]);
 
   const persist = useCallback(async (patch) => {
     const next = { ...settings, ...patch };

@@ -7,7 +7,7 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-import { supabase } from "../../supabase";
+import { supabase } from '../../supabase';
 
 /**
  * @param {Object} params
@@ -17,7 +17,7 @@ import { supabase } from "../../supabase";
  */
 export async function addScoreAction({ config, context }) {
   const leadId    = context.leadId || context.create_lead_id || context.lastEntityId;
-  const increment = Number(config.score) || 0;
+  const increment = Number(config.score ?? config.amount) || 0; // config.amount = clé legacy
 
   if (!leadId) {
     console.warn('[Action:addScore] Aucun lead_id disponible.');

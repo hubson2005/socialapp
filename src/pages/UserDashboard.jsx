@@ -474,9 +474,7 @@ export default function UserDashboard() {
       default: return null;
     }
   };
-
-  // FIX — fond dashboard fixe : #0c0d1a indépendant du thème profil
-  const DASHBOARD_BG = { background: '#0c0d1a' };
+const DASHBOARD_BG = { background: '#0c0d1a' };
 
   return (
     <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
@@ -495,7 +493,7 @@ export default function UserDashboard() {
 
       <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
 
-        {/* Topbar — logout retiré */}
+        {/* Topbar */}
         <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(12,13,26,0.85)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
@@ -520,20 +518,18 @@ export default function UserDashboard() {
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               {!isMobile && t('save')}
             </button>
-            {/* Logout retiré du topbar — voir case 'settings' dans renderSection */}
           </div>
         </div>
 
         <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':'24px', paddingBottom:isMobile?'100px':'24px' }}>
-          <PanelErrorBoundary key={activeSection}>
-            <AnimatePresence mode="wait">
-              <motion.div key={activeSection} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }} transition={{ duration:0.18 }}>
-                {renderSection()}
-              </motion.div>
-            </AnimatePresence>
+          <PanelErrorBoundary>
+            <div key={activeSection} style={{ animation:'fadeIn 0.18s ease' }}>
+              {renderSection()}
+            </div>
           </PanelErrorBoundary>
         </div>
-      </div>
+
+      </div>{/* ← ferme le div flex colonne */}
 
       {isMobile && (
         <MobileNav
@@ -549,13 +545,14 @@ export default function UserDashboard() {
       <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
 
       <style>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.3}}
         *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.1) transparent}
         *::-webkit-scrollbar{width:5px;height:5px}
         *::-webkit-scrollbar-track{background:transparent}
         *::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:10px}
       `}</style>
+
     </div>
   );
 }
-

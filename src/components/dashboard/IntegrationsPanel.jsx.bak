@@ -280,10 +280,16 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
   const [copied, setCopied] = useState(false);
   const [showSecret, setShowSecret] = useState({});
 
+  useEffect(() => {
+    console.log('[IntegrationCard]', integration.id, 'expanded=', expanded);
+  }, [expanded]);
+
   const isConnected = !!config?.connected;
   const webhookUrl = config?.webhook_url || generateWebhookUrl('preview', integration.id);
   const { LogoComponent } = integration;
-  const hasContent = integration.hasWebhook || integration.fields.length > 0;
+
+  // ✅ FIX PRINCIPAL : un seul handler toggle, pas de duplication
+  const handleToggle = () => setExpanded(v => !v);
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -299,18 +305,29 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
       await onSave(integration.id, { fields, connected: true });
       setExpanded(false);
       toast.success(`${integration.name} connecté !`);
-    } catch { } finally { setSaving(false); }
+    } catch {
+      // erreur déjà gérée dans onSave
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDisconnect = async () => {
+  // ✅ FIX : stopPropagation pour que le X ne toggle pas la carte
+  const handleDisconnect = async (e) => {
+    e.stopPropagation();
     if (!window.confirm(`Déconnecter ${integration.name} ?`)) return;
     try {
       await onDisconnect(integration.id);
       setFields({});
       setExpanded(false);
       toast.success(`${integration.name} déconnecté`);
-    } catch { }
+    } catch {
+      // erreur déjà gérée dans onDisconnect
+    }
   };
+
+  // ✅ FIX : hasContent = true si webhook OU au moins 1 champ
+  const hasContent = integration.hasWebhook || integration.fields.length > 0;
 
   return (
     <div style={{
@@ -321,67 +338,88 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
       transition: 'border-color 0.2s',
       minWidth: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0 }}>
-
-        {/* Zone logo+texte — SEULE source de toggle */}
-        <div
-          onClick={() => hasContent && setExpanded(v => !v)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            flex: 1, minWidth: 0,
-            cursor: hasContent ? 'pointer' : 'default',
-            userSelect: 'none',
-          }}
-        >
-          <div style={{
-            width: '42px', height: '42px', borderRadius: '12px',
-            background: integration.bg,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-            border: `1px solid ${integration.color}33`,
-            pointerEvents: 'none',
-          }}>
-            <LogoComponent />
-          </div>
-          <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-              <span style={{ color: 'white', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {integration.name}
-              </span>
-              {isConnected && (
-                <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', letterSpacing: '0.05em', flexShrink: 0 }}>
-                  ✓ CONNECTÉ
-                </span>
-              )}
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {integration.desc}
-            </p>
-          </div>
+      {/* ── Header ── */}
+      {/* ✅ FIX : tout le header est cliquable via onClick sur le conteneur principal */}
+      <div
+        onClick={handleToggle}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '14px',
+          minWidth: 0, cursor: hasContent ? 'pointer' : 'default',
+          userSelect: 'none',
+        }}
+      >
+        {/* Logo */}
+        <div style={{
+          width: '42px', height: '42px', borderRadius: '12px',
+          background: integration.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+          border: `1px solid ${integration.color}33`,
+        }}>
+          <LogoComponent />
         </div>
 
-        {/* Boutons — frères du div cliquable, pas enfants */}
-        {isConnected && (
-          <button
-            onClick={handleDisconnect}
-            style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
-          >
-            <X size={11} />
-          </button>
-        )}
-        {hasContent && (
-          <button
-            onClick={() => setExpanded(v => !v)}
-            style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
-          >
-            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
-        )}
+        {/* Texte */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <span style={{ color: 'white', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {integration.name}
+            </span>
+            {isConnected && (
+              <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', letterSpacing: '0.05em', flexShrink: 0 }}>
+                ✓ CONNECTÉ
+              </span>
+            )}
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {integration.desc}
+          </p>
+        </div>
+
+        {/* Boutons droite — ✅ stopPropagation pour ne pas déclencher handleToggle */}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}
+          onClick={e => e.stopPropagation()}
+        >
+          {isConnected && (
+            <button
+              onClick={handleDisconnect}
+              title="Déconnecter"
+              style={{
+                width: '26px', height: '26px', borderRadius: '7px',
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={11} />
+            </button>
+          )}
+          {hasContent && (
+            <button
+              onClick={handleToggle}
+              style={{
+                width: '26px', height: '26px', borderRadius: '7px',
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* ── Contenu déployé ── */}
       {expanded && hasContent && (
-        <div style={{ padding: '12px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{
+          padding: '12px 14px 14px',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex', flexDirection: 'column', gap: '10px',
+        }}>
 
+          {/* Webhook URL */}
           {integration.hasWebhook && (
             <div>
               <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
@@ -391,13 +429,17 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
                 <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
                   {webhookUrl}
                 </span>
-                <button onClick={() => handleCopy(webhookUrl)} style={{ width: '24px', height: '24px', borderRadius: '6px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <button
+                  onClick={() => handleCopy(webhookUrl)}
+                  style={{ width: '24px', height: '24px', borderRadius: '6px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
                   {copied ? <Check size={10} color="#22c55e" /> : <Copy size={10} color="rgba(255,255,255,0.5)" />}
                 </button>
               </div>
             </div>
           )}
 
+          {/* Champs */}
           {integration.fields.map(f => (
             <div key={f.key}>
               <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
@@ -409,12 +451,19 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
                   value={fields[f.key] || ''}
                   onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
-                  style={{ width: '100%', boxSizing: 'border-box', padding: f.type === 'password' ? '8px 36px 8px 12px' : '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none', fontFamily: f.type === 'password' ? 'inherit' : 'monospace' }}
+                  onClick={e => e.stopPropagation()} // ✅ évite fermeture au clic dans le champ
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: f.type === 'password' ? '8px 36px 8px 12px' : '8px 12px',
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none',
+                    fontFamily: f.type === 'password' ? 'inherit' : 'monospace',
+                  }}
                 />
                 {f.type === 'password' && (
                   <button
                     type="button"
-                    onClick={() => setShowSecret(prev => ({ ...prev, [f.key]: !prev[f.key] }))}
+                    onClick={e => { e.stopPropagation(); setShowSecret(prev => ({ ...prev, [f.key]: !prev[f.key] })); }}
                     style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex' }}
                   >
                     {showSecret[f.key] ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -424,11 +473,19 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
             </div>
           ))}
 
+          {/* Actions */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
             <button
-              onClick={handleSave}
+              onClick={e => { e.stopPropagation(); handleSave(); }}
               disabled={saving}
-              style={{ flex: 1, padding: '9px', background: `linear-gradient(135deg, ${integration.color}, ${integration.color}aa)`, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: saving ? 0.7 : 1 }}
+              style={{
+                flex: 1, padding: '9px',
+                background: `linear-gradient(135deg, ${integration.color}, ${integration.color}aa)`,
+                border: 'none', borderRadius: '10px', color: 'white',
+                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                opacity: saving ? 0.7 : 1,
+              }}
             >
               {saving ? <Loader2 size={11} /> : <Check size={11} />}
               {isConnected ? 'Mettre à jour' : 'Connecter'}
@@ -437,9 +494,15 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
               href={integration.docsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ width: '34px', height: '34px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '34px', height: '34px',
+                background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textDecoration: 'none', color: 'rgba(255,255,255,0.5)', flexShrink: 0,
+              }}
             >
-                <ExternalLink size={12} />
+              <ExternalLink size={12} />
             </a>
           </div>
         </div>

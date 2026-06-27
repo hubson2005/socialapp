@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useWhatsappCRM, BOOST_NOTIF_TEMPLATES } from '../hooks/useWhatsappCRM'
-import { CampaignAIGenerator } from '@/components/dashboard/AIPanels' 
+// ✅ FIX: import CampaignAIGenerator avec fallback si inexistant
+let CampaignAIGenerator
+try {
+  CampaignAIGenerator = require('@/components/dashboard/AIPanels').CampaignAIGenerator
+} catch {
+  CampaignAIGenerator = null
+}
 
 // ── TEMPLATES ────────────────────────────────────────────────────
 const TEMPLATES = [
@@ -106,7 +112,6 @@ const Spinner = () => (
 // ── BoostNotifsTab ────────────────────────────────────────────────
 function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected, flash }) {
   const [sending,  setSending]  = useState(false)
-  // ✅ FIX Bug : valeur initiale alignée avec la première option du select
   const [testType, setTestType] = useState('boost_activated')
   const [preview,  setPreview]  = useState('')
 
@@ -264,15 +269,20 @@ function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
         </div>
         <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
           <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
-          <button style={S.btn()} onClick={handleAddContact}>Ajouter</button>
+          {/* ✅ FIX: disabled réel + feedback visuel cohérent */}
+          <button
+            style={{...S.btn(), opacity:(!newC.name||!newC.phone)?0.4:1, pointerEvents:(!newC.name||!newC.phone)?'none':'auto'}}
+            disabled={!newC.name||!newC.phone}
+            onClick={handleAddContact}
+          >Ajouter</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ✅ FIX Bug latent : findIndex par id au lieu de indexOf (évite -1 après re-fetch)
 function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, setSelectedTpl, connected, sending, closeModal, handleSendMsg }) {
+  // ✅ FIX: findIndex par id (robuste après re-fetch)
   const avatarIndex = contacts.findIndex(c => c.id === msgTarget?.id)
   const avatarGrad  = AVAT[avatarIndex >= 0 ? avatarIndex % 5 : 0]
 
@@ -286,7 +296,6 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
           Envoyer via WhatsApp
         </div>
         <div style={{background:'rgba(255,255,255,0.04)',borderRadius:14,padding:'12px 14px',marginBottom:18,display:'flex',alignItems:'center',gap:12,border:`1px solid rgba(255,255,255,0.08)`}}>
-          {/* ✅ avatarGrad calculé via findIndex, plus jamais AVAT[-1%5] = AVAT[0] par défaut */}
           <div style={S.avat(avatarGrad,44)}>{(msgTarget?.name||'?').slice(0,2).toUpperCase()}</div>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{msgTarget?.name}</div>
@@ -321,7 +330,11 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
         )}
         <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
           <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
-          <button style={S.btn('green',sending)} onClick={handleSendMsg} disabled={sending||!msgText.trim()}>
+          <button
+            style={{...S.btn('green',sending), opacity:(sending||!msgText.trim())?0.5:1, pointerEvents:(sending||!msgText.trim())?'none':'auto'}}
+            disabled={sending||!msgText.trim()}
+            onClick={handleSendMsg}
+          >
             {sending?<><Spinner/> Envoi…</>:<><WaIcon size={13} color={C.green}/> Envoyer</>}
           </button>
         </div>
@@ -330,46 +343,85 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
   )
 }
 
+// ── ModalCampaign ────────────────────────────────────────────────
+// ✅ FIX PRINCIPAL : bouton "Lancer" corrigé + disabled réel + selectAll helper
 function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, closeModal, handleLaunchCampaign }) {
+  // ✅ FIX: validation étape 1 — on passe à l'étape 2 seulement si nom + message remplis
+  const canGoNext = newCam.name.trim() !== '' && newCam.message.trim() !== ''
+  // ✅ FIX: validation étape 2 — au moins 1 destinataire
+  const canLaunch = newCam.recipients.length > 0
+
+  // ✅ FIX: sélectionner / désélectionner tous
+  const allSelected = contacts.length > 0 && newCam.recipients.length === contacts.length
+  const toggleAll = () => {
+    setNewCam(p => ({
+      ...p,
+      recipients: allSelected ? [] : contacts.map(c => c.id)
+    }))
+  }
+
   return (
     <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
       <div style={S.modal}>
         <div style={S.mT}>📢 Nouvelle campagne — Étape {camStep}/2</div>
 
         {camStep===1 && <>
-          <CampaignAIGenerator
-            onApply={(msg) => setNewCam(p => ({ ...p, message: msg }))}
-          />
+          {/* ✅ FIX: CampaignAIGenerator rendu uniquement si importé avec succès */}
+          {CampaignAIGenerator && (
+            <CampaignAIGenerator
+              onApply={(msg) => setNewCam(p => ({ ...p, message: msg }))}
+            />
+          )}
           <div style={S.fg}>
             <label style={S.lbl}>Nom de la campagne</label>
             <input style={S.inp} placeholder="Ex : Promo été 2026" value={newCam.name} onChange={e=>setNewCam(p=>({...p,name:e.target.value}))}/>
           </div>
           <div style={S.fg}>
             <label style={S.lbl}>Message</label>
-            <select style={{...S.sel,marginBottom:8}} onChange={e=>setNewCam(p=>({...p,message:e.target.value}))}>
+            <select style={{...S.sel,marginBottom:8}} onChange={e=>{if(e.target.value)setNewCam(p=>({...p,message:e.target.value}))}}>
               <option value="">— Template manuel —</option>
               {TEMPLATES.map(t=><option key={t.id} value={t.text}>{t.name}</option>)}
             </select>
-            <textarea style={S.ta} placeholder="Ou écrivez votre message..." value={newCam.message} onChange={e=>setNewCam(p=>({...p,message:e.target.value}))}/>
+            <textarea style={S.ta} placeholder="Ou écrivez votre message..." value={newCam.message} onChange={e=>setNewCam(p=>({...p,message:e.target.value}))} maxLength={MAX_MSG}/>
             <div style={{display:'flex',justifyContent:'flex-end',marginTop:4}}>
               <span style={{fontSize:11,color:C.textMute}}>{newCam.message.length}/{MAX_MSG}</span>
             </div>
           </div>
           <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
             <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
-            <button style={{...S.btn(),opacity:(!newCam.name||!newCam.message)?0.4:1}} onClick={()=>setCamStep(2)}>Suivant →</button>
+            {/* ✅ FIX: disabled + pointerEvents pour bloquer vraiment le clic */}
+            <button
+              style={{...S.btn(), opacity:canGoNext?1:0.4, pointerEvents:canGoNext?'auto':'none'}}
+              disabled={!canGoNext}
+              onClick={()=>setCamStep(2)}
+            >Suivant →</button>
           </div>
         </>}
 
         {camStep===2 && <>
-          <div style={{fontSize:12,color:C.textMute,marginBottom:10}}>Sélectionnez les destinataires :</div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+            <div style={{fontSize:12,color:C.textMute}}>Sélectionnez les destinataires :</div>
+            {/* ✅ FIX: bouton Tout sélectionner / Tout désélectionner */}
+            {contacts.length > 0 && (
+              <button style={{...S.btn('sm'),fontSize:11,padding:'4px 10px'}} onClick={toggleAll}>
+                {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
+            )}
+          </div>
           <div style={{maxHeight:220,overflow:'auto',display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
-            {contacts.length===0 && <div style={{textAlign:'center',color:C.textMute,padding:16,fontSize:12}}>Aucun contact disponible</div>}
+            {contacts.length===0 && (
+              <div style={{textAlign:'center',color:C.textMute,padding:24,fontSize:13,background:C.bg,borderRadius:9,border:`1px solid ${C.border}`}}>
+                Aucun contact disponible. <br/>
+                <span style={{fontSize:11,marginTop:4,display:'block'}}>Ajoutez des contacts dans l'onglet Contacts d'abord.</span>
+              </div>
+            )}
             {contacts.map((c,i) => {
               const checked = newCam.recipients.includes(c.id)
               return (
-                <div key={c.id} onClick={()=>setNewCam(p=>({...p,recipients:checked?p.recipients.filter(x=>x!==c.id):[...p.recipients,c.id]}))}
-                  style={{display:'flex',alignItems:'center',gap:9,padding:'9px 12px',borderRadius:8,cursor:'pointer',background:checked?C.purpleDim:C.bg,border:`1px solid ${checked?C.purple:C.border}`,transition:'all .15s'}}>
+                <div key={c.id}
+                  onClick={()=>setNewCam(p=>({...p,recipients:checked?p.recipients.filter(x=>x!==c.id):[...p.recipients,c.id]}))}
+                  style={{display:'flex',alignItems:'center',gap:9,padding:'9px 12px',borderRadius:8,cursor:'pointer',background:checked?C.purpleDim:C.bg,border:`1px solid ${checked?C.purple:C.border}`,transition:'all .15s'}}
+                >
                   <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${checked?C.purple:C.textMute}`,background:checked?C.purple:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
                     {checked&&<span style={{fontSize:9,color:'#fff',fontWeight:900}}>✓</span>}
                   </div>
@@ -383,10 +435,23 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
               )
             })}
           </div>
-          <div style={{fontSize:12,color:C.textMute,marginBottom:12}}>{newCam.recipients.length} contact(s) sélectionné(s)</div>
+
+          {/* ✅ FIX: message d'info si 0 contact sélectionné */}
+          <div style={{fontSize:12,marginBottom:12,color:canLaunch?C.purpleL:C.textMute,fontWeight:canLaunch?600:400}}>
+            {canLaunch
+              ? `✓ ${newCam.recipients.length} contact(s) sélectionné(s)`
+              : '⚠️ Sélectionnez au moins un contact pour lancer la campagne'
+            }
+          </div>
+
           <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
             <button style={S.btn('ghost')} onClick={()=>setCamStep(1)}>← Retour</button>
-            <button style={{...S.btn(),opacity:newCam.recipients.length===0?0.4:1}} onClick={handleLaunchCampaign}>🚀 Lancer</button>
+            {/* ✅ FIX CRITIQUE: disabled réel + pointerEvents:'none' quand pas de destinataires */}
+            <button
+              style={{...S.btn(), opacity:canLaunch?1:0.4, pointerEvents:canLaunch?'auto':'none'}}
+              disabled={!canLaunch}
+              onClick={handleLaunchCampaign}
+            >🚀 Lancer</button>
           </div>
         </>}
       </div>
@@ -414,15 +479,18 @@ function ModalNotif({ newN, setNewN, closeModal, handleAddNotif }) {
         </div>
         <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
           <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
-          <button style={S.btn()} onClick={handleAddNotif}>Créer</button>
+          <button
+            style={{...S.btn(), opacity:!newN.name?0.4:1, pointerEvents:!newN.name?'none':'auto'}}
+            disabled={!newN.name}
+            onClick={handleAddNotif}
+          >Créer</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── MODAL SÉLECTION CONTACT (nouveau) ────────────────────────────
-// ✅ FIX UX : remplace la présélection aveugle de contacts[0]
+// ── MODAL SÉLECTION CONTACT ───────────────────────────────────────
 function ModalPickContact({ contacts, onSelect, closeModal }) {
   return (
     <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
@@ -482,8 +550,13 @@ export default function WhatsAppCRM({ profile }) {
   }
 
   const closeModal = () => {
-    setModal(null); setMsgTarget(null); setMsgText(''); setSelectedTpl(null)
-    setCamStep(1); setNewCam({ name:'', message:'', recipients:[] })
+    setModal(null)
+    setMsgTarget(null)
+    setMsgText('')
+    setSelectedTpl(null)
+    setCamStep(1)
+    // ✅ FIX: reset complet du state campagne à la fermeture
+    setNewCam({ name:'', message:'', recipients:[] })
   }
 
   const handleAddContact = async () => {
@@ -509,7 +582,10 @@ export default function WhatsAppCRM({ profile }) {
   }
 
   const handleLaunchCampaign = async () => {
-    if (!newCam.name||!newCam.message||newCam.recipients.length===0) return
+    // ✅ FIX: guard explicite avec feedback utilisateur
+    if (!newCam.name.trim()) { flash('Donnez un nom à la campagne','error'); return }
+    if (!newCam.message.trim()) { flash('Écrivez un message pour la campagne','error'); return }
+    if (newCam.recipients.length===0) { flash('Sélectionnez au moins un destinataire','error'); return }
     try {
       await createCampaign({ name:newCam.name, message:newCam.message, recipientIds:newCam.recipients })
       flash(`Campagne "${newCam.name}" lancée ✓`)
@@ -533,11 +609,22 @@ export default function WhatsAppCRM({ profile }) {
     catch(e) { flash(e.message,'error') }
   }
 
-  // ✅ FIX UX : ouvre d'abord un picker pour choisir le contact destinataire
+  // ✅ FIX: reset camStep à l'ouverture du modal campagne
+  const handleOpenCampaign = () => {
+    setNewCam({ name:'', message:'', recipients:[] })
+    setCamStep(1)
+    setModal('campaign')
+  }
+
   const handleQuickAction = (m) => {
     if (m==='msg') {
       if (contacts.length===0) { flash("Ajoutez d'abord un contact",'error'); return }
-      setModal('pick_contact') // affiche le picker avant le modal message
+      setModal('pick_contact')
+      return
+    }
+    if (m==='campaign') {
+      // ✅ FIX: utilise handleOpenCampaign pour reset propre
+      handleOpenCampaign()
       return
     }
     setModal(m)
@@ -666,7 +753,8 @@ export default function WhatsAppCRM({ profile }) {
         {tab==='campaigns' && <>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
             <div style={{fontSize:13,color:C.textMute}}>{campaigns.length} campagnes</div>
-            <button style={S.btn()} onClick={()=>{setModal('campaign');setCamStep(1)}}>📢 Nouvelle campagne</button>
+            {/* ✅ FIX: utilise handleOpenCampaign pour reset propre */}
+            <button style={S.btn()} onClick={handleOpenCampaign}>📢 Nouvelle campagne</button>
           </div>
           <div style={S.card}>
             {campaigns.length===0
@@ -772,8 +860,6 @@ export default function WhatsAppCRM({ profile }) {
       {modal==='msg'          && msgTarget && <ModalSendMsg contacts={contacts} msgTarget={msgTarget} msgText={msgText} setMsgText={setMsgText} selectedTpl={selectedTpl} setSelectedTpl={setSelectedTpl} connected={connected} sending={sending} closeModal={closeModal} handleSendMsg={handleSendMsg}/>}
       {modal==='campaign'     && <ModalCampaign contacts={contacts} newCam={newCam} setNewCam={setNewCam} camStep={camStep} setCamStep={setCamStep} closeModal={closeModal} handleLaunchCampaign={handleLaunchCampaign}/>}
       {modal==='notif'        && <ModalNotif newN={newN} setNewN={setNewN} closeModal={closeModal} handleAddNotif={handleAddNotif}/>}
-
-      {/* ✅ FIX UX : picker de contact avant l'ouverture du modal message */}
       {modal==='pick_contact' && (
         <ModalPickContact
           contacts={contacts}

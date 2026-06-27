@@ -472,9 +472,10 @@ export default function UserDashboard() {
       );
 
       default: return null;
-    }
+ }
   };
-const DASHBOARD_BG = { background: '#0c0d1a' };
+
+  const DASHBOARD_BG = { background: '#0c0d1a' };
 
   return (
     <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
@@ -524,7 +525,7 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
         <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':'24px', paddingBottom:isMobile?'100px':'24px' }}>
           <PanelErrorBoundary>
             <div style={{ animation:'fadeIn 0.18s ease' }}>
-              {renderSection()}
+             {renderSection()}
             </div>
           </PanelErrorBoundary>
         </div>

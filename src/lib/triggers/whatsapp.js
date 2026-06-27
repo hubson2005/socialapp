@@ -25,7 +25,7 @@ export async function triggerWhatsappClick(profileId, context = {}) {
     trigger:   'whatsapp_click',
     profileId,
     context: {
-      source: 'whatsapp_click',
+      source: 'automatisation',
       ...context,
     },
   });

@@ -30,7 +30,7 @@ export async function triggerMarketplaceBuy(profileId, context = {}) {
     trigger:   'marketplace_buy',
     profileId,
     context: {
-      source: 'marketplace_buy',
+      source: 'automatisation',
       notes:  context.productTitle ? `Intérêt pour : ${context.productTitle}` : undefined,
       ...context,
     },

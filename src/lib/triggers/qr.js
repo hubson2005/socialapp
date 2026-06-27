@@ -28,7 +28,7 @@ export async function triggerQrScan(profileId, context = {}) {
     trigger:   'qr_scan',
     profileId,
     context: {
-      source: 'qr_scan',
+      source: 'automatisation',
       ...context,
     },
   });

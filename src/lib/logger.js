@@ -14,7 +14,7 @@ import { supabase } from "../supabase";
  * @param {number}      params.profileId      - bigint (link_profiles.id)
  * @param {string}      params.automationName
  * @param {string}      params.triggerLabel   - Libellé du déclencheur
- * @param {'ok'|'error'} params.status
+ * @param {'ok'|'err'} params.status
  * @param {string|null} params.errorMessage
  * @param {string|null} params.entityId       - ID de l'entité créée (lead, etc.)
  */

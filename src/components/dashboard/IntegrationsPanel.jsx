@@ -664,5 +664,6 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
   );
 }
 
+);
 
 export default IntegrationsPanel;

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Copy, Check, X, Share2, Palette, Upload, Trash2 } from 'lucide-react';
+import { Download, Copy, Check, X, Share2, Palette, Upload, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../supabase';
 
 const BASE_URL = 'https://www.socialapp.work';
@@ -86,7 +86,7 @@ function isLight(hex) {
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
-export default function QRCodeDisplay({ profileId, username, userLogo, isActive }) {
+export default function QRCodeDisplay({ profileId, username, userLogo, isActive, onNavigate }) {
   const containerRef    = useRef(null);
   const qrInstanceRef   = useRef(null);
   const scriptLoadedRef = useRef(false);
@@ -103,11 +103,62 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
   const [stats,           setStats]           = useState({ scans: 0, downloads: 0, shares: 0 });
   const [saving,          setSaving]          = useState(false);
 
-  const profileUrl = username
-    ? `${BASE_URL}/${username}`
-    : `${BASE_URL}/profil/${profileId}`;
+  // ── GUARD : username manquant → affiche un message clair ─────────────────
+  if (!username) {
+    return (
+      <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
+        <div style={{
+          background:'rgba(255,255,255,0.05)',
+          border:'1px solid rgba(255,193,7,0.3)',
+          borderRadius:'20px',
+          padding:'24px 18px',
+          display:'flex',
+          flexDirection:'column',
+          alignItems:'center',
+          gap:'14px',
+          textAlign:'center',
+        }}>
+          <div style={{
+            width:'48px', height:'48px', borderRadius:'14px',
+            background:'rgba(255,193,7,0.12)',
+            border:'1px solid rgba(255,193,7,0.3)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <AlertTriangle size={22} color="#fbbf24" />
+          </div>
+          <div>
+            <p style={{ color:'white', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
+              Nom d'utilisateur requis
+            </p>
+            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', margin:0, lineHeight:1.6 }}>
+              Définissez un nom d'utilisateur pour générer votre QR code et partager votre profil public.
+            </p>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('profile')}
+              style={{
+                padding:'10px 20px',
+                borderRadius:'12px',
+                background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                border:'none',
+                color:'white',
+                fontSize:'13px',
+                fontWeight:700,
+                cursor:'pointer',
+              }}
+            >
+              Configurer mon profil
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-  const LS_KEY = `qr_config_${profileId}`;
+  const profileUrl = `${BASE_URL}/${username}`;
+  const LS_KEY     = `qr_config_${profileId}`;
 
   const upd = (key, val) => setCustomization(c => ({ ...c, [key]: val }));
 
@@ -116,11 +167,12 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
     if (!profileId) return;
     (async () => {
       try {
+        // FIX: .maybeSingle() au lieu de .single() → évite l'erreur 406
         const { data } = await supabase
           .from('link_profiles')
           .select('qr_config')
           .eq('id', profileId)
-          .single();
+          .maybeSingle();
         if (data?.qr_config) {
           const merged = { ...DEFAULT_CUSTOMIZATION, logo: userLogo || null, ...data.qr_config };
           setCustomization(merged);
@@ -141,7 +193,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
     setSaving(true);
     try {
       // On ne sauvegarde pas le logo en base (potentiellement très lourd en base64)
-      // On le garde uniquement dans le state local
       const { logo, ...configToSave } = customization;
       await supabase
         .from('link_profiles')
@@ -230,7 +281,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
     qrInstanceRef.current = null;
 
     const gradient = buildGradient();
-    const accentColor = gradient ? customization.gradientColor1 : customization.dotColor;
+    const accentColor  = gradient ? customization.gradientColor1 : customization.dotColor;
     const accentColor2 = gradient ? customization.gradientColor2 : customization.dotColor;
 
     const qr = new window.QRCodeStyling({
@@ -239,7 +290,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
       type:   'canvas',
       data:   `${profileUrl}?source=qr`,
       dotsOptions: {
-        type:  customization.dotStyle,
+        type: customization.dotStyle,
         ...(gradient ? { gradient } : { color: customization.dotColor }),
       },
       cornersSquareOptions: { type: customization.cornerSquareStyle, color: accentColor  },
@@ -349,9 +400,9 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
   const active = isActive !== false;
 
   return (
-    // FIX: overflow:hidden on root prevents any child from blowing out the page width
     <div style={{ width:'100%', minWidth:0, boxSizing:'border-box', overflow:'hidden' }}>
-      {/* ── Modale mobile (portail → échappe tout overflow/transform parent) ── */}
+
+      {/* ── Modale mobile ── */}
       {showMobileModal && qrDataUrl && createPortal(
         <div
           style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(10px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px' }}
@@ -383,7 +434,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
         document.body
       )}
 
-      {/* ── Modale personnalisation (portail → échappe tout overflow/transform parent) ── */}
+      {/* ── Modale personnalisation ── */}
       {showCustomizer && createPortal(
         <div
           style={{ position:'fixed', inset:0, zIndex:9998, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'16px' }}
@@ -393,7 +444,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
             style={{ background:'#0f0f1a', borderRadius:'20px', width:'100%', maxWidth:'440px', maxHeight:'90vh', display:'flex', flexDirection:'column', border:'1px solid rgba(255,255,255,0.1)', boxShadow:'0 24px 80px rgba(0,0,0,0.7)' }}
             onClick={e => e.stopPropagation()}
           >
-            {/* pas de handle — modale centrée */}
             <div style={{ height:'8px' }} />
 
             {/* Header modale */}
@@ -598,25 +648,23 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
       {/* ── Carte principale ──────────────────────────────────────────────── */}
       <div style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px', padding:'18px', position:'relative', minWidth:0, overflow:'hidden', width:'100%', boxSizing:'border-box' }}>
 
-        {/* En-tête — FIX: titre tronqué pour laisser de la place au badge */}
+        {/* En-tête */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', marginBottom:'16px', minWidth:0 }}>
           <h3 style={{
             color:'white', fontSize:'14px', fontWeight:700, margin:0,
-            // FIX: empêche le titre de pousser le badge hors du cadre
             overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
             flex:'1 1 0', minWidth:0,
           }}>Mon QR Code</h3>
-          {/* FIX: flexShrink:0 garantit que le badge n'est jamais rogné */}
           <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0, background:active?'rgba(34,197,94,0.12)':'rgba(239,68,68,0.12)', border:`1px solid ${active?'rgba(34,197,94,0.35)':'rgba(239,68,68,0.35)'}`, borderRadius:'100px', padding:'4px 10px' }}>
             <span style={{ width:'7px', height:'7px', borderRadius:'50%', background:active?'#22c55e':'#ef4444', display:'inline-block', boxShadow:active?'0 0 6px rgba(34,197,94,0.7)':'0 0 6px rgba(239,68,68,0.7)', animation:active?'qr-pulse 2s infinite':'none', flexShrink:0 }} />
             <span style={{ color:active?'#22c55e':'#f87171', fontSize:'11px', fontWeight:700, whiteSpace:'nowrap' }}>{active?'Actif':'Inactif'}</span>
           </div>
         </div>
 
-        {/* Corps : QR + boutons — FIX: largeur totale contrainte, boutons ne débordent plus */}
+        {/* Corps : QR + boutons */}
         <div style={{ display:'flex', gap:'12px', alignItems:'flex-start', minWidth:0, width:'100%', boxSizing:'border-box' }}>
 
-          {/* QR Code + cadre — FIX: taille fixe légèrement réduite (110→108) pour donner de l'air aux boutons */}
+          {/* QR Code + cadre */}
           <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center' }}>
             <div style={{
               background: 'white',
@@ -641,7 +689,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
                 style={{ width:'100px', height:'100px', display:qrLoaded?'flex':'none', alignItems:'center', justifyContent:'center', overflow:'hidden' }}
               />
             </div>
-            {/* Étiquette du cadre Badge */}
             {customization.frame === 'badge' && (
               <div style={{ background:customization.dotColor, borderRadius:'0 0 8px 8px', padding:'3px 12px', marginTop:'-2px' }}>
                 <span style={{ color:isLight(customization.dotColor)?'#000':'#fff', fontSize:'9px', fontWeight:800, letterSpacing:'0.1em', textTransform:'uppercase' }}>Scannez-moi</span>
@@ -649,7 +696,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
             )}
           </div>
 
-          {/* Boutons action — FIX: flex:1 + minWidth:0 + overflow:hidden pour que les sous-textes restent dans le cadre */}
+          {/* Boutons action */}
           <div style={{ flex:'1 1 0', minWidth:0, display:'flex', flexDirection:'column', gap:'8px', overflow:'hidden' }}>
             <ActionButton icon={<Download size={14}/>} label="Télécharger" sub="PNG HD" onClick={handleDownload} disabled={downloading||!qrLoaded} />
             <ActionButton
@@ -666,12 +713,9 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
               sub="5 options disponibles"
               onClick={() => setShowCustomizer(v => !v)}
               orange
-
             />
           </div>
         </div>
-
-        {/* panneau inline supprimé — remplacé par une modale portale */}
 
         {/* Statistiques */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px', marginTop:'16px', borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:'14px' }}>
@@ -684,7 +728,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive 
       <style>{`
         @keyframes qr-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        /* FIX: cache la scrollbar des onglets sans bloquer le scroll tactile */
         div::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
@@ -784,7 +827,6 @@ function ActionButton({ icon, label, sub, onClick, disabled, accent, orange, rig
         display:'flex', alignItems:'center', gap:'8px',
         padding:'9px 10px', borderRadius:'12px', background:bg, border,
         cursor:disabled?'default':'pointer', opacity:disabled?0.5:1,
-        // FIX: width:100% + minWidth:0 + overflow:hidden = boutons restent dans le cadre
         width:'100%', minWidth:0, maxWidth:'100%',
         textAlign:'left', transition:'background 0.15s, transform 0.1s',
         transform:hovered&&!disabled?'translateX(2px)':'translateX(0)',
@@ -792,7 +834,6 @@ function ActionButton({ icon, label, sub, onClick, disabled, accent, orange, rig
       }}
     >
       <div style={{ color:orange?'#fb923c':accent?'#22c55e':'rgba(255,255,255,0.6)', flexShrink:0 }}>{icon}</div>
-      {/* FIX: minWidth:0 sur ce div permet au texte de se tronquer correctement */}
       <div style={{ minWidth:0, flex:'1 1 0', overflow:'hidden' }}>
         <div style={{ color:orange?'#fb923c':accent?'#22c55e':'white', fontSize:'12px', fontWeight:700, lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{label}</div>
         {sub && <div style={{ color:'rgba(255,255,255,0.3)', fontSize:'9px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:'1px' }}>{sub}</div>}

@@ -274,7 +274,7 @@ function generateWebhookUrl(profileId, integrationId) {
 
 // ─── Carte intégration ────────────────────────────────────────────────────────
 function IntegrationCard({ integration, config, onSave, onDisconnect }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false); console.log('[IntegrationCard] render', integration.id, expanded);
   const [fields, setFields] = useState(config?.fields || {});
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -321,7 +321,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
       transition: 'border-color 0.2s',
       minWidth: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0 }}>
+      <div onClick={() => hasContent && setExpanded(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0, cursor: hasContent ? 'pointer' : 'default' }}>
 
         {/* Zone logo+texte — SEULE source de toggle */}
         <div

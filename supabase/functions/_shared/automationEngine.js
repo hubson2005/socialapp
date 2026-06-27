@@ -115,7 +115,7 @@ async function _executeAutomation({ automation, trigger, profileId, context }) {
       .eq('id', automation.id);
 
   } catch (err) {
-    status       = 'error';
+    status = 'err';
     errorMessage = err?.message || 'Erreur inconnue';
     console.error(`[AutomationEngine] Erreur dans "${automation.name}" :`, err);
   }

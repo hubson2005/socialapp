@@ -371,7 +371,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
         )}
         {hasContent && (
           <button
-            onClick={() => setExpanded(v => !v)}
+            onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
             style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}

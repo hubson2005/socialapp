@@ -321,11 +321,11 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
       transition: 'border-color 0.2s',
       minWidth: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0 }}>
+      <div onClick={() => hasContent && setExpanded(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0, cursor: hasContent ? 'pointer' : 'default' }}>
 
         {/* Zone logo+texte — SEULE source de toggle */}
         <div
-          onClick={() => hasContent && setExpanded(v => !v)}
+          
           style={{
             display: 'flex', alignItems: 'center', gap: '12px',
             flex: 1, minWidth: 0,

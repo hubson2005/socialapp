@@ -449,7 +449,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
 }
 
 // ─── Panel principal ───────────────────────────────────────────────────────────
-export default function IntegrationsPanel({ profileId }) {
+const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
   const [configs, setConfigs] = useState({});
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('Tous');
@@ -664,3 +664,5 @@ export default function IntegrationsPanel({ profileId }) {
   );
 }
 
+
+export default IntegrationsPanel;

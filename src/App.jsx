@@ -65,7 +65,9 @@ function PublicApp() {
       <Route path="/"                  element={<Home />} />
 
       {/* Routes légales — chemins longs (liens du footer) */}
-      <Route path="/privacy-policy"    element={<PrivacyPolicy />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+<Route path="/privacy-policy.html" element={<Navigate to="/privacy-policy" replace />} />
+<Route path="/politique-de-confidentialite" element={<Navigate to="/privacy-policy" replace />} />
       <Route path="/terms-of-service"  element={<TermsOfService />} />
 
       {/* Alias courts — redirigent vers les routes canoniques */}

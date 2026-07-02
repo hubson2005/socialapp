@@ -691,9 +691,9 @@ export default function Home() {
           <div className="sa-footer-legal" style={{ borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <p style={{ color: 'rgba(255,255,255,.5)', fontSize: '12px' }}>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire 🇨🇮</p>
             <div className="sa-footer-legal-links" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <a href="/privacy-policy.html" className="sa-footer-link">Politique de confidentialité</a>
+              <a href="/privacy-policy" className="sa-footer-link">Politique de confidentialité</a>
               <span className="sa-footer-dot" style={{ color: 'rgba(255,255,255,.15)', fontSize: '12px' }}>·</span>
-              <a href="/terms-of-service.html" className="sa-footer-link">Conditions d'utilisation</a>
+              <a href="/terms-of-service" className="sa-footer-link">Conditions d'utilisation</a>
             </div>
           </div>
         </footer>

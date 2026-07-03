@@ -4,9 +4,8 @@
 User-agent: *
 
 Allow: /
-Allow: /login
 
 Disallow: /dashboard
 Disallow: /admin
 
-Sitemap: https://www.socialapp.work/sitemap.xml
+Sitemap: https://www.socialapp.work/sitemap-index.xml

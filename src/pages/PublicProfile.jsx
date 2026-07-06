@@ -24,10 +24,11 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
-// [A1][A2] Moteur d'automatisation — déclencheurs
-import { triggerWhatsappClick } from '../lib/triggers/whatsapp';
-import { triggerQrScan }        from '../lib/triggers/qr';
-import { triggerMarketplaceBuy } from '../lib/triggers/marketplace';
+// [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
+import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
+import { triggerQrScan }          from '../lib/triggers/qr';
+import { triggerMarketplaceBuy }  from '../lib/triggers/marketplace';
+import { triggerMarketplaceClick } from '../lib/triggers/marketplaceClick'; // [A6]
 
 // ─── Constantes ───────────────────────────────────────────────
 // [C11] Numéro support centralisé — modifier ici uniquement
@@ -670,7 +671,16 @@ export default function PublicProfile() {
               <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{available.length} article{available.length > 1 ? 's' : ''}</span>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
-              {sortedProducts.map(p => <PublicProductCard key={p.id} product={p} onOpen={setSelectedProduct} />)}
+              {sortedProducts.map(p => (
+                <PublicProductCard
+                  key={p.id}
+                  product={p}
+                  onOpen={(product) => {
+                    setSelectedProduct(product);
+                    if (profile?.id) triggerMarketplaceClick(profile.id, { productId: product.id, productTitle: product.title, price: product.price });
+                  }}
+                />
+              ))}
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'10px', justifyContent:'center' }}>
               <Tag size={10} color="rgba(255,255,255,0.25)" />

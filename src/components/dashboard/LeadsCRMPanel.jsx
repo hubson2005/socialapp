@@ -9,8 +9,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
-// [A4] Moteur d'automatisation — déclencheur nouveau lead
-import { triggerNewLead } from '../../lib/triggers/newLead';
+// [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
+import { triggerNewLead }                    from '../../lib/triggers/newLead';
+import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus';     // [A7]
+import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
+import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
+import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
@@ -197,13 +201,14 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
   );
 }
 
-function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
+function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(() => ({ ...lead, score: lead?.score ?? 50 }));
   const [note, setNote] = useState('');
   const [newTag, setNewTag] = useState('');
-  const [activities, setActivities] = useState([]);
-  const [loadingAct, setLoadingAct] = useState(true);
+  const [activities, setActivities]   = useState([]);
+  const [loadingAct, setLoadingAct]   = useState(true);
+  const [doneTasks, setDoneTasks]      = useState(new Set()); // [A10] IDs des tâches marquées faites
 
   useEffect(() => { loadActivities(); }, [lead.id]);
 
@@ -212,6 +217,23 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
     const { data } = await supabase.from('lead_activities').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
     setActivities(data || []);
     setLoadingAct(false);
+  };
+
+  // [A10] Marquer une tâche comme terminée
+  const markTaskDone = async (activity) => {
+    if (doneTasks.has(activity.id)) return;
+    setDoneTasks(prev => new Set([...prev, activity.id]));
+    await supabase.from('lead_activities').insert([{
+      lead_id:     lead.id,
+      type:        'task_done',
+      description: `✅ Terminée : ${activity.description}`,
+    }]);
+    loadActivities();
+    if (profileId) triggerTaskCompleted(profileId, {
+      leadId:          lead.id,
+      leadName:        lead.name,
+      taskDescription: activity.description,
+    });
   };
 
   const saveEdit = async () => {
@@ -226,6 +248,16 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
     setEditing(false);
     toast.success('Lead mis à jour');
     loadActivities();
+
+    // [A9] Déclencher lead_score_reached si un seuil est franchi
+    if (profileId && form.score !== (lead.score ?? 0)) {
+      triggerLeadScoreReachedIfThreshold(profileId, {
+        leadId:   lead.id,
+        leadName: lead.name,
+        oldScore: lead.score ?? 0,
+        newScore: form.score,
+      });
+    }
   };
 
   const addNote = async () => {
@@ -245,6 +277,14 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
     onUpdate({ ...lead, status: newStatus });
     setForm(f => ({ ...f, status: newStatus }));
     loadActivities();
+
+    // [A7] Déclencher lead_status_changed
+    if (profileId) triggerLeadStatusChanged(profileId, {
+      leadId:    lead.id,
+      leadName:  lead.name,
+      oldStatus: lead.status,
+      newStatus,
+    });
   };
 
   const addTag = async () => {
@@ -257,6 +297,13 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
     if (error) { toast.error(error.message); return; }
     onUpdate({ ...lead, tags: updatedTags });
     setNewTag('');
+
+    // [A8] Déclencher lead_tagged
+    if (profileId) triggerLeadTagged(profileId, {
+      leadId:   lead.id,
+      leadName: lead.name,
+      tag,
+    });
   };
 
   const removeTag = async (tag) => {
@@ -379,7 +426,21 @@ function LeadModal({ lead, onClose, onUpdate, onDelete, onContact }) {
                 <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || '📌'}</span>
                   <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{a.description}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.75)', fontSize: 13, flex: 1 }}>{a.description}</p>
+                      {/* [A10] Bouton "Fait" uniquement sur les tâches non terminées */}
+                      {a.type === 'task' && !doneTasks.has(a.id) && (
+                        <button
+                          onClick={() => markTaskDone(a)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          ✓ Fait
+                        </button>
+                      )}
+                      {a.type === 'task' && doneTasks.has(a.id) && (
+                        <span style={{ fontSize: 11, color: '#22c55e', opacity: 0.6 }}>✓ Terminée</span>
+                      )}
+                    </div>
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
                       {new Date(a.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
@@ -546,6 +607,14 @@ export default function LeadsCRMPanel({ profileId }) {
     if (error) { toast.error(error.message); setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: lead.status } : l)); return; }
     await supabase.from('lead_activities').insert([{ lead_id: leadId, type: 'status', description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus} (glissé-déposé)` }]);
     toast.success(`${lead.name} → ${STATUSES.find(s => s.id === newStatus)?.label}`);
+
+    // [A7] Déclencher lead_status_changed (pipeline drag-and-drop)
+    triggerLeadStatusChanged(profileId, {
+      leadId:    leadId,
+      leadName:  lead.name,
+      oldStatus: lead.status,
+      newStatus,
+    });
   };
 
   const toggleSelect = (id) => {
@@ -798,7 +867,7 @@ export default function LeadsCRMPanel({ profileId }) {
 
       <AnimatePresence>
         {selectedLead && (
-          <LeadModal lead={selectedLead} onClose={() => setSelectedLead(null)}
+          <LeadModal lead={selectedLead} profileId={profileId} onClose={() => setSelectedLead(null)}
             onUpdate={updated => { updateLeadLocal(updated); setSelectedLead(updated); }}
             onDelete={deleteLead} />
         )}

@@ -14,24 +14,43 @@
 
 // ─── Déclencheurs ─────────────────────────────────────────────
 export const TRIGGERS = {
-  WHATSAPP_CLICK:   'whatsapp_click',
-  QR_SCAN:          'qr_scan',
-  FORM_SUBMIT:      'form_submit',
-  NEW_LEAD:         'new_lead',
-  PAYMENT_RECEIVED: 'payment_received',
-  CALENDLY_BOOKED:  'calendly_booked',
-  MARKETPLACE_BUY:  'marketplace_buy',
+  // ── Existants ──────────────────────────────────────────────────
+  WHATSAPP_CLICK:       'whatsapp_click',
+  QR_SCAN:              'qr_scan',
+  FORM_SUBMIT:          'form_submit',
+  NEW_LEAD:             'new_lead',
+  PAYMENT_RECEIVED:     'payment_received',
+  CALENDLY_BOOKED:      'calendly_booked',
+  MARKETPLACE_BUY:      'marketplace_buy',
+  // ── Nouveaux (CRM client-side) ─────────────────────────────────
+  LEAD_STATUS_CHANGED:  'lead_status_changed',
+  LEAD_TAGGED:          'lead_tagged',
+  LEAD_SCORE_REACHED:   'lead_score_reached',
+  MARKETPLACE_CLICK:    'marketplace_click',
+  TASK_COMPLETED:       'task_completed',
+  // ── Planifiés (pg_cron) ────────────────────────────────────────
+  LEAD_INACTIF:         'lead_inactif',
+  DAILY_TRIGGER:        'daily_trigger',
+  WEEKLY_TRIGGER:       'weekly_trigger',
 };
 
 /** Libellés affichés dans l'UI (lecture seule — ne pas stocker en DB) */
 export const TRIGGER_LABELS = {
-  [TRIGGERS.WHATSAPP_CLICK]:   '📱 Clic WhatsApp',
-  [TRIGGERS.QR_SCAN]:          '📷 Scan QR code',
-  [TRIGGERS.FORM_SUBMIT]:      '📝 Formulaire rempli',
-  [TRIGGERS.NEW_LEAD]:         '👤 Nouveau contact',
-  [TRIGGERS.PAYMENT_RECEIVED]: '💰 Paiement reçu',
-  [TRIGGERS.CALENDLY_BOOKED]:  '📅 RDV Calendly',
-  [TRIGGERS.MARKETPLACE_BUY]:  '🛍️ Achat Marketplace',
+  [TRIGGERS.WHATSAPP_CLICK]:      '📱 Clic WhatsApp',
+  [TRIGGERS.QR_SCAN]:             '📷 Scan QR code',
+  [TRIGGERS.FORM_SUBMIT]:         '📝 Formulaire rempli',
+  [TRIGGERS.NEW_LEAD]:            '👤 Nouveau contact',
+  [TRIGGERS.PAYMENT_RECEIVED]:    '💰 Paiement reçu',
+  [TRIGGERS.CALENDLY_BOOKED]:     '📅 RDV Calendly',
+  [TRIGGERS.MARKETPLACE_BUY]:     '🛍️ Achat Marketplace',
+  [TRIGGERS.LEAD_STATUS_CHANGED]: '🔄 Statut lead changé',
+  [TRIGGERS.LEAD_TAGGED]:         '🏷️ Tag ajouté au lead',
+  [TRIGGERS.LEAD_SCORE_REACHED]:  '🏆 Score seuil atteint',
+  [TRIGGERS.MARKETPLACE_CLICK]:   '👁️ Vue produit Marketplace',
+  [TRIGGERS.TASK_COMPLETED]:      '✅ Tâche terminée',
+  [TRIGGERS.LEAD_INACTIF]:        '😴 Lead inactif',
+  [TRIGGERS.DAILY_TRIGGER]:       '📅 Chaque jour',
+  [TRIGGERS.WEEKLY_TRIGGER]:      '📆 Chaque semaine',
 };
 
 /** Options pour le <select> déclencheur dans l'AutomationsPanel */
@@ -94,5 +113,15 @@ export const ACTION_CONFIG_FIELDS = {
   [ACTIONS.NOTIFY_OWNER]: [
     { key: 'notifTitle', label: 'Titre notification',  type: 'text',     placeholder: 'Nouveau visiteur' },
     { key: 'message',    label: 'Message notification', type: 'textarea', placeholder: 'Un visiteur a cliqué sur WhatsApp.' },
+  ],
+};
+
+/**
+ * Config spécifique aux déclencheurs planifiés.
+ * Affiché dans le modal quand le trigger sélectionné est un trigger pg_cron.
+ */
+export const TRIGGER_CONFIG_FIELDS = {
+  [TRIGGERS.LEAD_INACTIF]: [
+    { key: 'inactivity_days', label: 'Jours d\'inactivité avant déclenchement', type: 'number', placeholder: '3' },
   ],
 };

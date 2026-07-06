@@ -14,6 +14,8 @@
  *  [C9]  Number(profileId) normalisé une seule fois en haut de MarketplacePanel
  *  [C10] console.error doublon dans queryFn supprimé (React Query gère déjà l'erreur)
  *  [C11] window.confirm remplacé par une modale de confirmation inline
+ *  [R1]  RESPONSIVE : adaptation tablette / iOS / Android (voir bloc CSS injecté,
+ *        grille adaptative, cibles tactiles, safe-area, overlay image tap-friendly)
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -34,14 +36,58 @@ const KEYFRAME_ID       = 'mp-spin-keyframe';
 const formatPrice = (price) =>
   price ? Number(price).toLocaleString('fr-FR') + ' F' : '';
 
-// ─── Hook : injection unique du keyframe ──────────────────────
+// ─── Hook : injection unique du CSS global (keyframe + responsive) ──
 // [C3] Remplace les deux <style> inline dupliqués
+// [R1] Étendu pour porter les règles responsive (grille, safe-area, overlay tactile)
 function useSpinKeyframe() {
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_ID)) {
       const s = document.createElement('style');
       s.id = KEYFRAME_ID;
-      s.textContent = '@keyframes mp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+      s.textContent = `
+@keyframes mp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════════════════════
+   [R1] RESPONSIVE — Tablette (iPad) / iOS / Android
+   ══════════════════════════════════════════════════════════ */
+
+/* Grille produits adaptative : 2 col (phone) → 3 (tablette portrait)
+   → 4 (tablette landscape) → 5 (grands écrans) */
+.mp-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+@media (min-width:480px){ .mp-grid{ grid-template-columns:repeat(3,1fr); } }
+@media (min-width:760px){ .mp-grid{ grid-template-columns:repeat(4,1fr); gap:14px; } }
+@media (min-width:1100px){ .mp-grid{ grid-template-columns:repeat(5,1fr); } }
+
+/* Overlay "Changer / Supprimer" de la photo produit :
+   au survol sur souris/trackpad, tactile toujours visible (pas de hover sur iOS/Android) */
+.mp-img-overlay{ opacity:0; transition:opacity .2s; }
+@media (hover:hover) and (pointer:fine){
+  .mp-img-wrap:hover .mp-img-overlay{ opacity:1; }
+}
+@media (hover:none), (pointer:coarse){
+  .mp-img-overlay{
+    opacity:1;
+    background:linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,0) 60%) !important;
+    align-items:flex-end !important;
+    padding-bottom:10px;
+  }
+}
+
+/* Zone de dépôt photo (état vide) : le survol décoratif reste desktop-only */
+.mp-upload-label{ transition:all .2s; }
+@media (hover:hover) and (pointer:fine){
+  .mp-upload-label:hover{ background:rgba(255,107,53,0.06); border-color:rgba(255,107,53,0.35); }
+}
+
+/* Cibles tactiles + suppression du halo de tap Android/iOS */
+button, a, input, select, textarea, label{ -webkit-tap-highlight-color:transparent; }
+.mp-icon-btn, button{ touch-action:manipulation; }
+
+/* Respect des préférences de mouvement réduit */
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+}
+`;
       document.head.appendChild(s);
     }
   }, []);
@@ -53,7 +99,14 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
   return createPortal(
     <div
       onClick={onCancel}
-      style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'calc(16px + env(safe-area-inset-left, 0px))',
+        paddingRight: 'calc(16px + env(safe-area-inset-right, 0px))',
+      }}
     >
       <div
         onClick={e => e.stopPropagation()}
@@ -68,13 +121,13 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={onCancel}
-            style={{ flex: 1, padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 1, padding: '12px', minHeight: '44px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
           >
             Annuler
           </button>
           <button
             onClick={onConfirm}
-            style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#ef4444,#b91c1c)', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+            style={{ flex: 1, padding: '12px', minHeight: '44px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#ef4444,#b91c1c)', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
           >
             Supprimer
           </button>
@@ -172,7 +225,14 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
 
   return createPortal( // [C5] createPortal nommé
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'calc(16px + env(safe-area-inset-left, 0px))',
+        paddingRight: 'calc(16px + env(safe-area-inset-right, 0px))',
+      }}
       onClick={onClose}
     >
       <motion.div
@@ -193,39 +253,37 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
               <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', margin: 0 }}>Marketplace SocialApp</p>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Fermer" style={{ background: 'rgba(255,255,255,0.07)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '32px', height: '32px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <X size={15} />
+          <button onClick={onClose} aria-label="Fermer" className="mp-icon-btn" style={{ background: 'rgba(255,255,255,0.07)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '38px', height: '38px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <X size={16} />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ overflowY: 'auto', padding: '18px 22px 22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '18px 22px 22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
           {/* Image */}
           <div>
             <label style={{ display: 'block', color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Photo du produit</label>
             {form.image_url ? (
-              <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', aspectRatio: '4/3' }}>
+              <div className="mp-img-wrap" style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', aspectRatio: '4/3' }}>
                 <img src={form.image_url} alt="produit" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 <div
-                  style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', opacity: 0, transition: 'opacity 0.2s' }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+                  className="mp-img-overlay"
+                  style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                 >
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>
+                  <label className="mp-icon-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', padding: '10px 14px', minHeight: '40px', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>
                     <ImagePlus size={13} /> Changer
                     <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploading} />
                   </label>
-                  <button onClick={() => set('image_url', '')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239,68,68,0.3)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', color: '#f87171', fontSize: '12px', fontWeight: 600 }}>
+                  <button className="mp-icon-btn" onClick={() => set('image_url', '')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239,68,68,0.3)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: '10px', padding: '10px 14px', minHeight: '40px', cursor: 'pointer', color: '#f87171', fontSize: '12px', fontWeight: 600 }}>
                     <Trash2 size={13} /> Supprimer
                   </button>
                 </div>
               </div>
             ) : (
               <label
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '14px', padding: '28px 16px', cursor: uploading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', aspectRatio: '4/3' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,53,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,107,53,0.35)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                className="mp-upload-label"
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '14px', padding: '28px 16px', cursor: uploading ? 'not-allowed' : 'pointer', aspectRatio: '4/3' }}
               >
                 {uploading
                   ? <Loader2 size={24} color="rgba(255,107,53,0.8)" style={{ animation: 'mp-spin 1s linear infinite' }} />
@@ -246,7 +304,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
               onChange={e => set('title', e.target.value)}
               placeholder="Ex: Robe longue élégante rose"
               maxLength={120}
-              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }}
+              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '12px 14px', minHeight: '44px', color: 'white', fontSize: '16px', outline: 'none' }}
               onFocus={e => { e.target.style.border = '1px solid rgba(255,107,53,0.5)'; e.target.style.background = 'rgba(255,107,53,0.06)'; }}
               onBlur={e => { e.target.style.border = '1px solid rgba(255,255,255,0.12)'; e.target.style.background = 'rgba(255,255,255,0.06)'; }}
             />
@@ -261,7 +319,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
                 value={form.price}
                 onChange={e => set('price', e.target.value)}
                 placeholder="7 000"
-                style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '12px 14px', minHeight: '44px', color: 'white', fontSize: '16px', outline: 'none' }}
                 onFocus={e => { e.target.style.border = '1px solid rgba(255,107,53,0.5)'; }}
                 onBlur={e => { e.target.style.border = '1px solid rgba(255,255,255,0.12)'; }}
               />
@@ -278,7 +336,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
                 value={form.original_price}
                 onChange={e => set('original_price', e.target.value)}
                 placeholder="10 000"
-                style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 14px', color: 'rgba(255,255,255,0.5)', fontSize: '14px', outline: 'none' }}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '12px 14px', minHeight: '44px', color: 'rgba(255,255,255,0.5)', fontSize: '16px', outline: 'none' }}
                 onFocus={e => { e.target.style.border = '1px solid rgba(255,107,53,0.5)'; }}
                 onBlur={e => { e.target.style.border = '1px solid rgba(255,255,255,0.12)'; }}
               />
@@ -294,7 +352,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
               placeholder="Décrivez votre produit..."
               rows={2}
               maxLength={500}
-              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 14px', color: 'white', fontSize: '13px', outline: 'none', resize: 'none' }}
+              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '12px 14px', color: 'white', fontSize: '16px', outline: 'none', resize: 'none' }}
               onFocus={e => { e.target.style.border = '1px solid rgba(255,107,53,0.5)'; }}
               onBlur={e => { e.target.style.border = '1px solid rgba(255,255,255,0.12)'; }}
             />
@@ -310,9 +368,10 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
               onClick={() => set('is_available', !form.is_available)}
               aria-pressed={form.is_available}
               aria-label="Basculer la disponibilité"
-              style={{ width: '44px', height: '24px', borderRadius: '100px', background: form.is_available ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
+              className="mp-icon-btn"
+              style={{ width: '48px', height: '28px', borderRadius: '100px', background: form.is_available ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}
             >
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: form.is_available ? '23px' : '3px', transition: 'left 0.3s' }} />
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '4px', left: form.is_available ? '24px' : '4px', transition: 'left 0.3s' }} />
             </button>
           </div>
 
@@ -320,7 +379,8 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
           <button
             onClick={handleSave}
             disabled={saving || uploading}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '13px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontSize: '14px', fontWeight: 700, cursor: (saving || uploading) ? 'not-allowed' : 'pointer', opacity: (saving || uploading) ? 0.7 : 1 }}
+            className="mp-icon-btn"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', minHeight: '48px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: 'white', fontSize: '14px', fontWeight: 700, cursor: (saving || uploading) ? 'not-allowed' : 'pointer', opacity: (saving || uploading) ? 0.7 : 1 }}
           >
             {saving
               ? <Loader2 size={16} style={{ animation: 'mp-spin 1s linear infinite' }} />
@@ -370,30 +430,33 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
           </div>
         )}
 
-        {/* Bouton favoris */}
+        {/* Bouton favoris — cible tactile agrandie (38px) */}
         <button
           onClick={e => { e.stopPropagation(); onToggleFav(product.id); }}
           aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-          style={{ position: 'absolute', top: '10px', right: '10px', width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+          className="mp-icon-btn"
+          style={{ position: 'absolute', top: '8px', right: '8px', width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.92)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
         >
           <Heart size={16} fill={isFav ? '#ef4444' : 'none'} color={isFav ? '#ef4444' : '#999'} />
         </button>
 
-        {/* Actions admin */}
-        <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '5px' }}>
+        {/* Actions admin — cibles tactiles agrandies (34px) */}
+        <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '6px' }}>
           <button
             onClick={e => { e.stopPropagation(); onEdit(product); }}
             aria-label="Modifier le produit"
-            style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
+            className="mp-icon-btn"
+            style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(255,255,255,0.92)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
           >
-            <Pencil size={12} color="#555" />
+            <Pencil size={13} color="#555" />
           </button>
           <button
             onClick={e => { e.stopPropagation(); onDelete(product); }}
             aria-label="Supprimer le produit"
-            style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(239,68,68,0.9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
+            className="mp-icon-btn"
+            style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(239,68,68,0.92)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
           >
-            <Trash2 size={12} color="white" />
+            <Trash2 size={13} color="white" />
           </button>
         </div>
       </div>
@@ -419,7 +482,7 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
 
 // ─── Panel principal Marketplace ──────────────────────────────
 export default function MarketplacePanel({ profileId }) {
-  useSpinKeyframe(); // [C3] keyframe injectée une seule fois
+  useSpinKeyframe(); // [C3] keyframe + CSS responsive injectés une seule fois
 
   const queryClient = useQueryClient();
   // [C9] Normalisation de profileId une seule fois
@@ -514,7 +577,7 @@ export default function MarketplacePanel({ profileId }) {
       <div style={{ background: 'rgba(15,10,30,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '22px', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <ShoppingBag size={16} color="white" />
@@ -530,7 +593,8 @@ export default function MarketplacePanel({ profileId }) {
             onClick={handleAdd}
             disabled={atLimit}
             aria-label="Ajouter un produit"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: atLimit ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', border: atLimit ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: '10px', color: atLimit ? 'rgba(255,255,255,0.3)' : 'white', fontSize: '12px', fontWeight: 700, cursor: atLimit ? 'not-allowed' : 'pointer' }}
+            className="mp-icon-btn"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', minHeight: '38px', background: atLimit ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', border: atLimit ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: '10px', color: atLimit ? 'rgba(255,255,255,0.3)' : 'white', fontSize: '12px', fontWeight: 700, cursor: atLimit ? 'not-allowed' : 'pointer' }}
           >
             <Plus size={13} /> Ajouter
           </button>
@@ -564,14 +628,15 @@ export default function MarketplacePanel({ profileId }) {
               </p>
               <button
                 onClick={handleAdd}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 18px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '12px', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                className="mp-icon-btn"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '11px 20px', minHeight: '44px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '12px', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
                 <Plus size={14} /> Ajouter un produit
               </button>
             </div>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="mp-grid">
                 <AnimatePresence>
                   {currentProducts.map(p => (
                     <ProductCard
@@ -588,11 +653,12 @@ export default function MarketplacePanel({ profileId }) {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
                   <button
                     onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
-                    style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', background: currentPage === 1 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
+                    className="mp-icon-btn"
+                    style={{ padding: '10px 16px', minHeight: '40px', borderRadius: '10px', border: 'none', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', background: currentPage === 1 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
                   >
                     Précédent
                   </button>
@@ -602,7 +668,8 @@ export default function MarketplacePanel({ profileId }) {
                   <button
                     onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', background: currentPage === totalPages ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
+                    className="mp-icon-btn"
+                    style={{ padding: '10px 16px', minHeight: '40px', borderRadius: '10px', border: 'none', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', background: currentPage === totalPages ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
                   >
                     Suivant
                   </button>

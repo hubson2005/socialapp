@@ -62,12 +62,25 @@ class PanelErrorBoundary extends React.Component {
   }
 }
 
+// Seuils de breakpoint : mobile < 768, tablette 768–1024, desktop > 1024.
+// (iPad portrait ≈ 768–834, iPad landscape ≈ 1024–1194, la plupart des
+// tablettes Android tombent dans la même plage.)
+const MOBILE_BREAKPOINT = 768;
+const TABLET_BREAKPOINT = 1024;
+
 function useWindowWidth() {
   const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   useEffect(() => {
+    // orientationchange est nécessaire en plus de resize : sur iOS/Android,
+    // certains navigateurs ne déclenchent pas resize de façon fiable lors
+    // d'une rotation d'écran sur tablette.
     const h = () => setWidth(window.innerWidth);
     window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
+    window.addEventListener('orientationchange', h);
+    return () => {
+      window.removeEventListener('resize', h);
+      window.removeEventListener('orientationchange', h);
+    };
   }, []);
   return width;
 }
@@ -128,7 +141,14 @@ function PlanModal({ onClose, onSelect }) {
         </div>
         <p style={{ textAlign:'center', color:'rgba(255,255,255,.2)', fontSize:'11px', marginTop:'20px' }}>💬 Besoin d'aide ? WhatsApp <strong style={{ color:'rgba(255,255,255,.45)' }}>+225 05 76 03 12 12</strong></p>
       </motion.div>
-      <style>{`@media(max-width:640px){.plan-modal-grid{grid-template-columns:1fr!important}}.plan-modal-card:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(0,0,0,.5)}.plan-modal-btn:hover{opacity:.88}`}</style>
+      <style>{`
+        @media(max-width:1024px){.plan-modal-grid{grid-template-columns:repeat(2,1fr)!important}}
+        @media(max-width:640px){.plan-modal-grid{grid-template-columns:1fr!important}}
+        .plan-modal-card:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(0,0,0,.5)}
+        .plan-modal-btn:hover{opacity:.88}
+        /* Cibles tactiles ≥44px sur mobile/tablette (iOS/Android) */
+        @media(pointer:coarse){.plan-modal-btn{min-height:44px}}
+      `}</style>
     </motion.div>
   );
 }
@@ -254,7 +274,9 @@ export default function UserDashboard() {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const windowWidth = useWindowWidth();
-  const isMobile = windowWidth < 768;
+  const isMobile  = windowWidth < MOBILE_BREAKPOINT;
+  const isTablet  = windowWidth >= MOBILE_BREAKPOINT && windowWidth < TABLET_BREAKPOINT;
+  const isDesktop = windowWidth >= TABLET_BREAKPOINT;
   const { t } = useTranslation();
 
   const [activeSection, setActiveSection]   = useState('overview');
@@ -282,7 +304,10 @@ export default function UserDashboard() {
     enabled:  !!user?.id,
   });
 
-  useEffect(() => { setSidebarCollapsed(isMobile); }, [isMobile]);
+  // Sur mobile la sidebar est masquée (MobileNav prend le relais).
+  // Sur tablette on démarre repliée (icônes seules) pour laisser de la
+  // place au contenu en portrait ; sur desktop elle démarre dépliée.
+  useEffect(() => { setSidebarCollapsed(isMobile || isTablet); }, [isMobile, isTablet]);
 
   useEffect(() => {
     if (!profiles.length) return;
@@ -479,22 +504,35 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
   return (
     <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
 
-      <div style={{ position:'relative', zIndex:10, flexShrink:0, width:isMobile?0:undefined }}>
-        <UserSidebar
-          activeSection={activeSection} onNavigate={setActiveSection}
-          profile={localProfile} plan={rawPlan} limits={limits}
-          collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)}
-          isMobile={isMobile}
-          onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
-          bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
-          onUpgrade={handleOpenUpgrade}
-        />
-      </div>
+      {/* FIX — la sidebar n'est montée que sur tablette/desktop.
+          Avant, elle restait toujours montée avec une largeur de 0px sur
+          mobile pendant que MobileNav était affiché en même temps : deux
+          navigations actives en parallèle (doublon), ce qui pouvait
+          déclencher deux fois les mêmes handlers (upload de fond, etc.)
+          et laisser un élément de largeur 0 mais toujours interactif/
+          présent dans le DOM sur iOS/Android. */}
+      {!isMobile && (
+        <div style={{ position:'relative', zIndex:10, flexShrink:0 }}>
+          <UserSidebar
+            activeSection={activeSection} onNavigate={setActiveSection}
+            profile={localProfile} plan={rawPlan} limits={limits}
+            collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)}
+            isMobile={isMobile}
+            isTablet={isTablet}
+            onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
+            bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
+            onUpgrade={handleOpenUpgrade}
+          />
+        </div>
+      )}
 
       <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
 
-        {/* Topbar */}
-        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(12,13,26,0.85)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+        {/* Topbar — le paddingTop additionnel via env(safe-area-inset-top)
+            évite que le contenu passe sous l'encoche/la barre de statut sur
+            iOS (nécessite <meta name="viewport" content="viewport-fit=cover">
+            dans index.html pour être pris en compte). */}
+        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(12,13,26,0.85)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'calc(10px + env(safe-area-inset-top)) 14px 10px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
             <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Dashboard'}</h2>
@@ -521,7 +559,9 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
           </div>
         </div>
 
-        <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':'24px', paddingBottom:isMobile?'100px':'24px' }}>
+        {/* paddingBottom additionnel = hauteur de la MobileNav + zone
+            d'accueil du geste iOS (home indicator) / navigation Android. */}
+        <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':(isTablet?'20px':'24px'), paddingBottom:isMobile?'calc(100px + env(safe-area-inset-bottom))':'24px' }}>
           <PanelErrorBoundary>
             <div style={{ animation:'fadeIn 0.18s ease' }}>
               {renderSection()}
@@ -551,8 +591,33 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
         *::-webkit-scrollbar{width:5px;height:5px}
         *::-webkit-scrollbar-track{background:transparent}
         *::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:10px}
+
+        /* FIX iOS/Android — cibles tactiles ≥44x44px (Apple HIG / Material)
+           sur les petits boutons icône (fermer, flèches de carrousel, etc.)
+           qui ne mesuraient que 26–32px. On agrandit la zone cliquable via
+           un pseudo-élément plutôt que la taille visuelle, pour ne pas
+           casser le design sur desktop. */
+        @media (pointer: coarse) {
+          button { touch-action: manipulation; }
+          button[style*="border-radius:50%"] { position: relative; }
+          button[style*="border-radius:50%"]::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: max(44px, 100%);
+            height: max(44px, 100%);
+            transform: translate(-50%, -50%);
+          }
+        }
+
+        /* Empêche le zoom involontaire iOS Safari sur les champs de
+           formulaire dont la taille de police est < 16px. */
+        @media (pointer: coarse) {
+          input, select, textarea { font-size: max(16px, 1em); }
+        }
       `}</style>
 
     </div>
   );
 }
+

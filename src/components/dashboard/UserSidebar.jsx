@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3, Search, X,
@@ -42,6 +42,25 @@ export const USER_GROUPS = [
 export const PLAN_ORDER = { basic: 0, événement: 0, pro: 1, business: 2 };
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
+// FIX — doublon supprimé : le rendu de l'avatar (photo ou initiale) était
+// copié-collé identique dans le bloc "profil replié" et "profil déplié".
+// Extrait ici une bonne fois pour toutes.
+function AvatarBubble({ profile, limits, size = 32, radius = 9 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: radius,
+      background: `linear-gradient(135deg,${limits.color},${limits.color}99)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0, overflow: 'hidden',
+    }}>
+      {profile.avatar_url
+        ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : (profile.display_name?.[0]?.toUpperCase() || '?')
+      }
+    </div>
+  );
+}
+
 // ─── UserSidebar ──────────────────────────────────────────────────────────────
 export default function UserSidebar({
   activeSection,
@@ -52,6 +71,7 @@ export default function UserSidebar({
   collapsed,
   onToggle,
   isMobile,
+  isTablet = false,
   onBgUpload,
   onBgRemove,
   bgImageUrl,
@@ -60,6 +80,23 @@ export default function UserSidebar({
   const [search, setSearch] = useState('');
   const currentOrder = PLAN_ORDER[plan] ?? 0;
   const isMaxPlan = currentOrder >= MAX_PLAN_ORDER;
+
+  // Cible tactile agrandie sur mobile et tablette (écrans tactiles) : les
+  // petits boutons icône (toggle, effacer recherche, retirer le fond)
+  // passent de 28px à une taille conforme aux recommandations Apple/Material.
+  const touchDevice = isMobile || isTablet;
+  const utilityBtnSize = touchDevice ? 40 : 28;
+
+  // FIX iOS/Android — quand le tiroir mobile est ouvert, on bloque le
+  // scroll du body pour éviter l'effet de "double scroll" / bounce
+  // élastique qui laisse apparaître le contenu du dashboard derrière.
+  useEffect(() => {
+    if (!isMobile) return;
+    if (collapsed) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, [isMobile, collapsed]);
 
   // Liste de base : on retire systématiquement les items masqués (en test côté admin)
   const visibleNav = USER_NAV.filter(n => !n.hidden);
@@ -79,7 +116,7 @@ export default function UserSidebar({
     if (isMobile) onToggle();
   };
 
-  const desktopWidth = collapsed ? 64 : 220;
+  const desktopWidth = collapsed ? (isTablet ? 72 : 64) : (isTablet ? 240 : 220);
   const { t } = useTranslation();
 
   const sidebarStyle = isMobile
@@ -90,6 +127,11 @@ export default function UserSidebar({
         transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
         zIndex: 20,
+        // Évite que le logo/la recherche passent sous l'encoche iOS et que
+        // le pied de tiroir passe sous le home indicator.
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        boxSizing: 'border-box',
       }
     : {
         position: 'sticky', top: 0,
@@ -152,8 +194,9 @@ export default function UserSidebar({
           </div>
           <button
             onClick={onToggle}
+            aria-label={collapsed ? 'Déplier le menu' : 'Replier le menu'}
             style={{
-              width: '28px', height: '28px', borderRadius: '8px',
+              width: utilityBtnSize, height: utilityBtnSize, borderRadius: '8px',
               background: 'rgba(255,255,255,0.07)',
               border: '1px solid rgba(255,255,255,0.1)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -176,17 +219,7 @@ export default function UserSidebar({
                 padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
               }}
             >
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '9px',
-                background: `linear-gradient(135deg,${limits.color},${limits.color}99)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0, overflow: 'hidden',
-              }}>
-                {profile.avatar_url
-                  ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : (profile.display_name?.[0]?.toUpperCase() || '?')
-                }
-              </div>
+              <AvatarBubble profile={profile} limits={limits} size={32} radius={9} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ color: 'white', fontSize: '12px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile.display_name || 'Mon profil'}
@@ -203,19 +236,8 @@ export default function UserSidebar({
         {/* ── Avatar collapsed ── */}
         {collapsed && !isMobile && profile && (
           <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-            <div
-              onClick={() => handleNav('overview', false)}
-              style={{
-                width: '34px', height: '34px', borderRadius: '9px',
-                background: `linear-gradient(135deg,${limits.color},${limits.color}99)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '13px', fontWeight: 700, color: 'white', overflow: 'hidden', cursor: 'pointer',
-              }}
-            >
-              {profile.avatar_url
-                ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : (profile.display_name?.[0]?.toUpperCase() || '?')
-              }
+            <div onClick={() => handleNav('overview', false)} style={{ cursor: 'pointer' }}>
+              <AvatarBubble profile={profile} limits={limits} size={34} radius={9} />
             </div>
           </div>
         )}
@@ -233,12 +255,17 @@ export default function UserSidebar({
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Rechercher…"
-                style={{ background: 'none', border: 'none', outline: 'none', color: 'white', fontSize: '12px', flex: 1, minWidth: 0 }}
+                style={{ background: 'none', border: 'none', outline: 'none', color: 'white', fontSize: touchDevice ? '16px' : '12px', flex: 1, minWidth: 0 }}
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex', padding: 0 }}
+                  aria-label="Effacer la recherche"
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                    width: touchDevice ? 32 : 16, height: touchDevice ? 32 : 16,
+                  }}
                 >
                   <X size={11} />
                 </button>
@@ -252,6 +279,8 @@ export default function UserSidebar({
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
           padding: '8px',
           minHeight: 0,
         }}>
@@ -404,8 +433,9 @@ export default function UserSidebar({
               {bgImageUrl && (
                 <button
                   onClick={onBgRemove}
+                  aria-label="Retirer l'image de fond"
                   style={{
-                    width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: utilityBtnSize, height: utilityBtnSize, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
                     borderRadius: '8px', cursor: 'pointer', flexShrink: 0,
                   }}
@@ -445,3 +475,4 @@ export default function UserSidebar({
     </>
   );
 }
+

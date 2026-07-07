@@ -1,11 +1,10 @@
-# SocialApp — robots.txt
-# https://www.socialapp.work
-
 User-agent: *
 
 Allow: /
 
-Disallow: /dashboard
-Disallow: /admin
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /reset-password
+Disallow: /delete-account
 
-Sitemap: https://www.socialapp.work/sitemap-index.xml
+Sitemap: https://www.socialapp.work/sitemap.xml

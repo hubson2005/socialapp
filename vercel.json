@@ -1,36 +1,80 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+
   "rewrites": [
     {
       "source": "/webhooks/:profileId/:integrationId",
       "destination": "https://gxguirtpunmiiuxpxlap.supabase.co/functions/v1/webhooks/:profileId/:integrationId"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap.xml"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
+
   "headers": [
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Pragma",        "value": "no-cache" },
-        { "key": "Expires",       "value": "0" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control",           "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Pragma",                  "value": "no-cache" },
-        { "key": "Expires",                 "value": "0" },
-        { "key": "X-Content-Type-Options",  "value": "nosniff" },
-        { "key": "X-Frame-Options",         "value": "DENY" },
-        { "key": "X-XSS-Protection",        "value": "1; mode=block" },
-        { "key": "Referrer-Policy",         "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     }
   ],
+
   "redirects": [
-    { "source": "/home", "destination": "/", "permanent": true }
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
+    }
   ]
 }

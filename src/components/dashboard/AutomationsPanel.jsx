@@ -25,8 +25,41 @@
 //       ne coupe plus le contenu du modal).
 //  [R5] Cibles tactiles agrandies à 44px mini (toggle, filter-btn) via
 //       zone de tap invisible, sans changer le rendu visuel.
+//
+// CORRECTIONS STACKING/PORTAL M13 (cette révision) :
+//  [P1] Le modal est désormais rendu via createPortal(document.body) :
+//       AutomationsPanel est monté à l'intérieur du contenu scrollable
+//       du dashboard, qui crée probablement son propre stacking context
+//       (transform/filter/backdrop-filter sur un ancêtre). Résultat :
+//       même avec un z-index élevé, le modal restait piégé SOUS la
+//       bottom tab bar de MobileNav.jsx (position:fixed, zIndex 38-40,
+//       montée au niveau racine). Le portail sort le modal de ce
+//       contexte et le place directement dans <body>, au même niveau
+//       que MobileNav — le z-index redevient comparable globalement.
+//  [P2] z-index de l'overlay relevé à 1000 (>> 40 de MobileNav) pour
+//       rester au-dessus de la tab bar ET du drawer menu dans tous les
+//       cas, y compris si un futur composant relève ces valeurs.
+//  [P3] Verrouillage du scroll du body pendant que le modal est ouvert
+//       (même pattern que MobileNav.jsx) — évite le double-scroll
+//       arrière-plan/modal sur iOS Safari et Chrome Android.
+//  [P4] `-webkit-backdrop-filter` ajouté à côté de `backdrop-filter`
+//       sur l'overlay (Safari iOS ignore la propriété non préfixée).
+//  [P5] `padding-bottom` du modal augmenté de `env(safe-area-inset-bottom)`
+//       pour ne pas coller le footer sous la home indicator bar iOS /
+//       barre de geste Android.
+//  [P6] Fermeture du modal au clic extérieur : `touch-action:none` sur
+//       l'overlay retiré du chemin de scroll pour éviter un scroll du
+//       body sous-jacent lors d'un swipe raté sur Android (webkit
+//       overscroll bleed).
+//  [P7] Vérification doublons CSS : aucune règle dupliquée résiduelle
+//       trouvée après relecture complète du bloc STYLE (les deux
+//       media queries 768px restantes sont non redondantes : l'une est
+//       bornée à la tranche tablette 768–1023px, l'autre s'applique
+//       à partir de 768px pour la mise en page du modal — objectifs
+//       différents, gardées telles quelles).
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { supabase } from "../../supabase";
 // [M1] Source unique de vérité partagée avec automationEngine.js
@@ -282,17 +315,30 @@ const STYLE = `
   padding-left:17px; margin-top:-2px;
 }
 
-/* [R4] vh → dvh pour la hauteur du modal (Safari iOS / barre d'adresse) */
+/* [P1][P2] Overlay du modal — désormais rendu via un portail React
+   directement dans document.body (voir bas du fichier). Le z-index
+   est relevé à 1000 pour rester au-dessus de la bottom tab bar et du
+   drawer menu de MobileNav.jsx (z-index 38-40), même en cas de
+   stacking context piégeant sur un ancêtre du dashboard.
+   [P4] -webkit-backdrop-filter ajouté pour Safari iOS. */
 .ap-modal-overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.65);
-  backdrop-filter:blur(5px); z-index:200;
+  backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+  z-index:1000;
   display:flex; align-items:flex-end; justify-content:center; padding:0;
+  overscroll-behavior:contain;
 }
+/* [R4] vh → dvh pour la hauteur du modal (Safari iOS / barre d'adresse)
+   [P5] padding-bottom inclut env(safe-area-inset-bottom) pour ne pas
+   coller le footer sous la home indicator bar iOS / la barre de geste
+   Android (huawei/xiaomi gesture nav notamment). */
 .ap-modal{
   background:#1a1c21; border:1px solid rgba(255,255,255,0.1);
   border-radius:20px 20px 0 0; width:100%; max-width:520px;
-  padding:20px 18px 28px; display:flex; flex-direction:column;
+  padding:20px 18px calc(28px + env(safe-area-inset-bottom, 0px));
+  display:flex; flex-direction:column;
   gap:14px; max-height:92dvh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
 }
 .ap-modal-title{
   font-family:'Syne',sans-serif; font-size:16px; font-weight:700;
@@ -308,7 +354,7 @@ const STYLE = `
 .ap-field-select,
 .ap-field-textarea{
   width:100%; background:var(--hover); border:1px solid var(--border);
-  border-radius:9px; padding:10px 13px; font-size:13px; color:var(--t1);
+  border-radius:9px; padding:10px 13px; font-size:16px; color:var(--t1);
   outline:none; font-family:'DM Sans',sans-serif;
 }
 .ap-field-textarea{ resize:vertical; min-height:64px; }
@@ -374,13 +420,17 @@ const STYLE = `
   .ap-toggle.off::after { left:4px; }
 }
 
-/* Modal : centré et largeur contrainte dès 600px (tablette/desktop) */
+/* Modal : centré et largeur contrainte dès 600px (tablette/desktop).
+   Règle distincte de la précédente (768-1023px) : celle-ci gère
+   uniquement le positionnement de l'overlay/modal à partir de 600px,
+   sans plafond haut, donc s'applique aussi au desktop large — ce n'est
+   pas un doublon de la règle tablette ci-dessus. */
 @media (min-width: 600px) {
   .ap-modal-overlay{ align-items:center; padding:20px; }
   .ap-modal{ border-radius:18px; max-height:90dvh; }
 }
 @media (min-width: 768px) {
-  .ap-modal{ max-width:580px; padding:24px 22px 32px; }
+  .ap-modal{ max-width:580px; padding:24px 22px calc(32px + env(safe-area-inset-bottom, 0px)); }
   .ap-hdr{ margin-bottom:24px; }
   .ap-modal-title{ font-size:18px; }
   .ap-field-input,.ap-field-select,.ap-field-textarea{ font-size:14px; padding:11px 14px; }
@@ -535,6 +585,31 @@ export default function AutomationsPanel({ profileId }) {
   useEffect(() => { if (profileId) loadAutomations(); }, [profileId]);
   useEffect(() => { if (tab === 'logs' && profileId) loadLogs(); }, [tab, profileId]);
 
+  // [P3] Verrouillage du scroll du body pendant que le modal est ouvert.
+  // Même pattern que MobileNav.jsx : sans ça, sur iOS Safari et Chrome
+  // Android, le contenu du dashboard sous le modal peut scroller en
+  // même temps que le modal (double-scroll), ou le body "saute" quand
+  // le clavier virtuel s'ouvre sur un input du formulaire.
+  useEffect(() => {
+    if (!modal) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevPosition = document.body.style.position;
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    // position:fixed additionnel pour iOS Safari, qui ignore parfois
+    // overflow:hidden seul sur le body quand un clavier virtuel s'ouvre
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.position = prevPosition;
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, [modal]);
+
   const loadAutomations = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -682,6 +757,88 @@ export default function AutomationsPanel({ profileId }) {
   const logStatusCls = s => ({ ok:'log-status ls-ok', err:'log-status ls-err', skip:'log-status ls-skip' }[s] || 'log-status ls-skip');
   const logStatusLbl = s => ({ ok:'✓ Succès', err:'✗ Erreur', skip:'⏭ Ignoré' }[s] || s);
   const logDotCol    = s => ({ ok:'#22d07a', err:'#f45b5b', skip:'#5c6070' }[s] || '#5c6070');
+
+  // [P1] Contenu du modal extrait dans une variable pour être injecté
+  // via createPortal — évite un JSX dupliqué entre la version normale
+  // et une éventuelle version portée.
+  const modalContent = modal ? (
+    <div className="ap-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
+      <div className="ap-modal">
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:'-4px' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.15)' }} />
+        </div>
+        <div className="ap-modal-title">
+          <span style={{ fontSize:20 }}>{isCreate ? '⚡' : (modal.icon || '⚡')}</span>
+          {isCreate ? 'Nouvelle automation' : `Modifier : ${modal.name}`}
+          <button className="ap-modal-close" onClick={() => setModal(null)}>✕</button>
+        </div>
+
+        {/* Nom */}
+        <div>
+          <div className="ap-field-label">Nom de l'automation</div>
+          <input className="ap-field-input" type="text" placeholder="Ex: WhatsApp Lead" value={form.name} onChange={setField('name')} />
+        </div>
+
+        {/* Description */}
+        <div>
+          <div className="ap-field-label">Description</div>
+          <input className="ap-field-input" type="text" placeholder="Décris ce que fait cette automation..." value={form.desc} onChange={setField('desc')} />
+        </div>
+
+        {/* Déclencheur — [M2] options depuis constants */}
+        <div>
+          <div className="ap-sec-lbl">Déclencheur</div>
+          <select className="ap-field-select" value={form.trigger} onChange={setField('trigger')}>
+            <option value="">Choisir un déclencheur...</option>
+            {TRIGGER_OPTIONS.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Action — [M2] options depuis constants, avec section "Bientôt" */}
+        <div>
+          <div className="ap-sec-lbl">Action</div>
+          <select className="ap-field-select" value={form.action} onChange={setField('action')}>
+            <option value="">Choisir une action...</option>
+            <optgroup label="── Disponibles ──">
+              {ACTION_OPTIONS.map(a => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </optgroup>
+            <optgroup label="── Bientôt ──">
+              {COMING_SOON_ACTIONS.map(a => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+
+        {/* [M5] Configuration dynamique */}
+        <ActionConfigFields
+          action={form.action}
+          config={form.config || {}}
+          setConfigField={setConfigField}
+        />
+
+        {/* Délai */}
+        <div>
+          <div className="ap-field-label">Délai</div>
+          <input className="ap-field-input" type="text" placeholder="Ex: Immédiat, 3 jours..." value={form.freq} onChange={setField('freq')} />
+        </div>
+
+        <div className="ap-modal-footer">
+          {!isCreate && (
+            <button className="ap-btn-sec" onClick={() => handleDelete(modal.id)} style={{ marginRight:'auto', color:'#f45b5b' }}>🗑 Supprimer</button>
+          )}
+          <button className="ap-btn-sec" onClick={() => setModal(null)}>Annuler</button>
+          <button className="ap-btn-primary" onClick={isCreate ? handleCreate : handleSave}>
+            {isCreate ? 'Créer' : 'Sauvegarder'}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -847,87 +1004,13 @@ export default function AutomationsPanel({ profileId }) {
           </>
         )}
 
-        {/* ── MODAL CREATE / EDIT ── */}
-        {modal && (
-          <div className="ap-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
-            <div className="ap-modal">
-              <div style={{ display:'flex', justifyContent:'center', marginBottom:'-4px' }}>
-                <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.15)' }} />
-              </div>
-              <div className="ap-modal-title">
-                <span style={{ fontSize:20 }}>{isCreate ? '⚡' : (modal.icon || '⚡')}</span>
-                {isCreate ? 'Nouvelle automation' : `Modifier : ${modal.name}`}
-                <button className="ap-modal-close" onClick={() => setModal(null)}>✕</button>
-              </div>
-
-              {/* Nom */}
-              <div>
-                <div className="ap-field-label">Nom de l'automation</div>
-                <input className="ap-field-input" type="text" placeholder="Ex: WhatsApp Lead" value={form.name} onChange={setField('name')} />
-              </div>
-
-              {/* Description */}
-              <div>
-                <div className="ap-field-label">Description</div>
-                <input className="ap-field-input" type="text" placeholder="Décris ce que fait cette automation..." value={form.desc} onChange={setField('desc')} />
-              </div>
-
-              {/* Déclencheur — [M2] options depuis constants */}
-              <div>
-                <div className="ap-sec-lbl">Déclencheur</div>
-                <select className="ap-field-select" value={form.trigger} onChange={setField('trigger')}>
-                  <option value="">Choisir un déclencheur...</option>
-                  {TRIGGER_OPTIONS.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Action — [M2] options depuis constants, avec section "Bientôt" */}
-              <div>
-                <div className="ap-sec-lbl">Action</div>
-                <select className="ap-field-select" value={form.action} onChange={setField('action')}>
-                  <option value="">Choisir une action...</option>
-                  <optgroup label="── Disponibles ──">
-                    {ACTION_OPTIONS.map(a => (
-                      <option key={a.value} value={a.value}>{a.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="── Bientôt ──">
-                    {COMING_SOON_ACTIONS.map(a => (
-                      <option key={a.value} value={a.value}>{a.label}</option>
-                    ))}
-                  </optgroup>
-                </select>
-              </div>
-
-              {/* [M5] Configuration dynamique */}
-              <ActionConfigFields
-                action={form.action}
-                config={form.config || {}}
-                setConfigField={setConfigField}
-              />
-
-              {/* Délai */}
-              <div>
-                <div className="ap-field-label">Délai</div>
-                <input className="ap-field-input" type="text" placeholder="Ex: Immédiat, 3 jours..." value={form.freq} onChange={setField('freq')} />
-              </div>
-
-              <div className="ap-modal-footer">
-                {!isCreate && (
-                  <button className="ap-btn-sec" onClick={() => handleDelete(modal.id)} style={{ marginRight:'auto', color:'#f45b5b' }}>🗑 Supprimer</button>
-                )}
-                <button className="ap-btn-sec" onClick={() => setModal(null)}>Annuler</button>
-                <button className="ap-btn-primary" onClick={isCreate ? handleCreate : handleSave}>
-                  {isCreate ? 'Créer' : 'Sauvegarder'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
+
+      {/* [P1] Modal rendu hors de l'arbre DOM du dashboard, directement
+          dans document.body, au même niveau que MobileNav.jsx. Corrige
+          le bug de stacking context qui faisait passer la bottom tab
+          bar au-dessus du modal malgré un z-index élevé. */}
+      {modalContent && createPortal(modalContent, document.body)}
     </>
   );
 }

@@ -1,7 +1,7 @@
 /**
  * PublicProfile.jsx — Page profil publique SocialApp
  *
- * CORRECTIONS APPLIQUÉES :
+ * CORRECTIONS APPLIQUÉES (revisions précédentes) :
  *  [C1]  useEffect QR scan isolé, dépendance réduite à profile?.id uniquement
  *  [C2]  Promise.all([fetchCountry()]) → await fetchCountry() direct
  *  [C3]  Tous les console.log/error de debug supprimés (fuite d'infos en prod)
@@ -17,9 +17,60 @@
  *  [A1]  triggerWhatsappClick() appelé dans handleLinkClick quand platform === 'whatsapp'
  *  [A2]  triggerQrScan() appelé dans le useEffect QR scan (après l'insert profile_stats)
  *  [A3]  triggerMarketplaceBuy() appelé dans ProductDetailModal sur "Commander sur WhatsApp"
+ *
+ * CORRECTIONS ADAPTATION MOBILE/TABLETTE/iOS/ANDROID (cette révision) :
+ *  [F1]  Verrouillage du scroll dupliqué entre ImageLightbox et ProductDetailModal
+ *        → mutualisé dans un hook unique useBodyScrollLock() avec compteur global
+ *        et pattern iOS-safe (position:fixed + restauration du scrollY). Supprime
+ *        le doublon de code ET évite un scroll-bleed si les deux modales venaient
+ *        un jour à coexister.
+ *  [F2]  100vh / 92vh / 90vh → 100dvh / 92dvh / 90dvh (fond de page + les deux
+ *        modales) pour éviter que la barre d'adresse Safari iOS ne rogne le
+ *        contenu à l'ouverture/fermeture.
+ *  [F3]  -webkit-backdrop-filter ajouté à côté de chaque backdropFilter inline
+ *        (Safari < 18 ignore la propriété non préfixée).
+ *  [F4]  Boutons de fermeture des modales agrandis à 44×44px (cible tactile
+ *        minimale) ; touchAction:'manipulation' sur les éléments interactifs
+ *        pour supprimer le délai de tap ~300ms et le double-tap-zoom sur
+ *        Android/iOS ; -webkit-tap-highlight-color:transparent ajouté
+ *        globalement pour retirer le flash gris au tap sur Chrome Android.
+ *  [F5]  ProductDetailModal et ImageLightbox rendues via createPortal(document.body)
+ *        — protection préventive contre un bug de stacking context si cette page
+ *        est un jour englobée dans un layout avec ancêtre transformé/filtré
+ *        (même classe de bug déjà rencontrée et corrigée sur AutomationsPanel).
+ *  [F6]  Nettoyage garanti des listeners globaux du swipe carrousel (touchmove/
+ *        touchend sur document) même si le composant est démonté en plein geste
+ *        (évite fuite mémoire / callback sur composant démonté lors d'une
+ *        navigation rapide).
+ *  [F7]  RippleButton : les setTimeout de nettoyage des ripples sont suivis et
+ *        annulés au démontage (évite un setState après démontage si l'utilisateur
+ *        navigue juste après un tap).
+ *  [F8]  trackView() sorti du Promise.all bloquant : produits/documents s'affichent
+ *        dès que leur propre requête répond, sans attendre la requête analytics.
+ *  [F9]  Dépendances de l'effet fond d'écran resserrées à
+ *        [profile?.bg_image_url, profile?.theme_color] (au lieu de l'objet
+ *        profile entier) — évite de recréer inutilement le <style> de fond (et
+ *        donc un micro-flash) à chaque mise à jour non liée au fond.
+ *  [F10] Adaptation tablette : les sections (liens, boutique, documents,
+ *        événement) partagent une classe .pp-content-col dont la largeur max
+ *        passe de 384px à 480px à partir de 768px ; la grille boutique passe de
+ *        2 à 3 colonnes à partir de 768px via .pp-shop-grid.
+ *  [F11] Zones de sécurité iOS/Android : env(safe-area-inset-*) ajouté sur le
+ *        padding du conteneur principal et sur le padding bas de la feuille
+ *        produit, pour ne pas passer sous l'encoche / la barre de gestes.
+ *  [F12] touchAction:'pan-y' ajouté au conteneur du carrousel d'événement pour
+ *        laisser le scroll vertical natif tout en gérant le swipe horizontal
+ *        manuellement.
+ *  [F13] @media (prefers-reduced-motion: reduce) ajouté : coupe les animations
+ *        (shimmer, pulse, ripple, fade/slide/zoom) pour les utilisateurs ayant
+ *        activé la réduction des animations dans les réglages système iOS/Android.
+ *  [F14] Vérification doublons : aucune règle CSS dupliquée résiduelle après
+ *        cette relecture ; le seul doublon réel trouvé était la logique de
+ *        verrouillage de scroll (voir [F1]), désormais mutualisée.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download } from 'lucide-react';
@@ -36,6 +87,48 @@ const SUPPORT_WHATSAPP = '2250576031212';
 
 const KEYFRAME_SKELETON_ID  = 'pp-keyframes-skeleton';
 const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
+
+// ─── [F1] Verrouillage du scroll body — mutualisé ──────────────
+// Remplace les deux implémentations dupliquées (ImageLightbox et
+// ProductDetailModal faisaient chacune leur propre
+// document.body.style.overflow='hidden'). Un compteur global permet
+// aux deux modales de coexister sans se marcher dessus (si l'une se
+// ferme pendant que l'autre est encore ouverte, le scroll ne se
+// débloque que lorsque le compteur retombe à zéro). Le pattern
+// position:fixed + restauration du scrollY est nécessaire car iOS
+// Safari ignore parfois overflow:hidden seul sur le body, notamment
+// quand un clavier virtuel est impliqué ailleurs sur la page.
+let __ppScrollLockCount = 0;
+let __ppScrollY = 0;
+
+function lockBodyScroll() {
+  if (__ppScrollLockCount === 0) {
+    __ppScrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${__ppScrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+  }
+  __ppScrollLockCount++;
+}
+
+function unlockBodyScroll() {
+  __ppScrollLockCount = Math.max(0, __ppScrollLockCount - 1);
+  if (__ppScrollLockCount === 0) {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+    window.scrollTo(0, __ppScrollY);
+  }
+}
+
+function useBodyScrollLock() {
+  useEffect(() => {
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, []);
+}
 
 // ─── Tracking ─────────────────────────────────────────────────
 
@@ -147,13 +240,17 @@ function ProfileSkeleton() {
           animation: pp-shimmer 1.4s infinite linear;
           border-radius: 12px;
         }
+        /* [F13] Réduction des animations si demandé au niveau système */
+        @media (prefers-reduced-motion: reduce) {
+          .pp-sk { animation: none; }
+        }
       `;
       document.head.appendChild(s);
     }
   }, []);
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0f0a1e', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px' }}>
+    <div style={{ minHeight:'100dvh', background:'#0f0a1e', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px' }}>
       <div className="pp-sk" style={{ width:118, height:118, borderRadius:28, marginBottom:16 }} />
       <div className="pp-sk" style={{ width:180, height:22, marginBottom:10 }} />
       <div className="pp-sk" style={{ width:240, height:14, marginBottom:6 }} />
@@ -184,34 +281,53 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
   </svg>
 );
 
+// [F1] Body-scroll lock mutualisé · [F2] 90vh → 90dvh · [F3] webkit prefix
+// [F4] Bouton de fermeture agrandi à 44×44 + touchAction manipulation
 function ImageLightbox({ src, onClose }) {
+  useBodyScrollLock();
+
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
     const h = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', h);
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', h); };
+    return () => window.removeEventListener('keydown', h);
   }, [onClose]);
 
   return (
-    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(0,0,0,0.92)', backdropFilter:'blur(16px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', animation:'pp-fadeInOverlay 0.2s ease' }}>
-      <button onClick={onClose} aria-label="Fermer" style={{ position:'absolute', top:'16px', right:'16px', width:'40px', height:'40px', borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'white', zIndex:2 }}>
+    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:9500, background:'rgba(0,0,0,0.92)', backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', animation:'pp-fadeInOverlay 0.2s ease' }}>
+      <button
+        onClick={onClose}
+        aria-label="Fermer"
+        style={{ position:'absolute', top:'16px', right:'16px', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'white', zIndex:2, touchAction:'manipulation' }}
+      >
         <X size={18} />
       </button>
-      <img src={src} alt="aperçu" onClick={e => e.stopPropagation()} style={{ maxWidth:'100%', maxHeight:'90vh', borderRadius:'16px', objectFit:'contain', boxShadow:'0 24px 80px rgba(0,0,0,0.8)', animation:'pp-zoomIn 0.25s cubic-bezier(0.34,1.56,0.64,1)' }} />
+      <img src={src} alt="aperçu" onClick={e => e.stopPropagation()} style={{ maxWidth:'100%', maxHeight:'90dvh', borderRadius:'16px', objectFit:'contain', boxShadow:'0 24px 80px rgba(0,0,0,0.8)', animation:'pp-zoomIn 0.25s cubic-bezier(0.34,1.56,0.64,1)' }} />
     </div>
   );
 }
 
+// [F7] Timeouts de ripple suivis et annulés au démontage
 function RippleButton({ onClick, style, children, platformColor }) {
   const [ripples, setRipples] = useState([]);
+  const timeouts = useRef([]);
+
+  useEffect(() => {
+    return () => { timeouts.current.forEach(clearTimeout); timeouts.current = []; };
+  }, []);
+
   const handlePointerDown = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const id = Date.now();
     setRipples(p => [...p, { x: e.clientX - rect.left, y: e.clientY - rect.top, id }]);
-    setTimeout(() => setRipples(p => p.filter(r => r.id !== id)), 600);
+    const t = setTimeout(() => setRipples(p => p.filter(r => r.id !== id)), 600);
+    timeouts.current.push(t);
   };
   return (
-    <button onClick={onClick} onPointerDown={handlePointerDown} style={{ ...style, position:'relative', overflow:'hidden', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}>
+    <button
+      onClick={onClick}
+      onPointerDown={handlePointerDown}
+      style={{ ...style, position:'relative', overflow:'hidden', touchAction:'manipulation', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}
+    >
       {ripples.map(r => (
         <span key={r.id} style={{ position:'absolute', left:r.x, top:r.y, width:'8px', height:'8px', borderRadius:'50%', background:'rgba(255,255,255,0.45)', transform:'translate(-50%,-50%) scale(0)', animation:'pp-ripple 0.6s ease-out forwards', pointerEvents:'none' }} />
       ))}
@@ -220,6 +336,8 @@ function RippleButton({ onClick, style, children, platformColor }) {
   );
 }
 
+// [F1] Body-scroll lock mutualisé · [F2] 92vh → 92dvh · [F3] webkit prefix
+// [F4] Bouton de fermeture agrandi à 44×44 · [F11] safe-area-inset-bottom
 function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -227,21 +345,22 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   const waNumber = (whatsappNumber || '').replace(/\D/g, '');
   const waMsg = encodeURIComponent(`Bonjour ! Je suis intéressé(e) par votre article : *${product.title}* à ${formatPrice(product.price)}. Est-il encore disponible ?`);
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
+  useBodyScrollLock();
 
   return (
-    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:'#0f0a1e', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'#0f0a1e', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92dvh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
         <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}>
           <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.15)' }} />
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', padding:'8px 16px 0' }}>
-          <button onClick={onClose} aria-label="Fermer" style={{ width:'32px', height:'32px', borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.6)', fontSize:'18px' }}>×</button>
+          <button
+            onClick={onClose}
+            aria-label="Fermer"
+            style={{ width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.6)', fontSize:'18px', touchAction:'manipulation' }}
+          >×</button>
         </div>
-        <div style={{ overflowY:'auto', padding:'0 0 32px' }}>
+        <div style={{ overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain', padding:'0 0 calc(32px + env(safe-area-inset-bottom, 0px))' }}>
           <div style={{ margin:'10px 16px 0', borderRadius:'18px', overflow:'hidden', aspectRatio:'4/3', background:'rgba(255,255,255,0.05)', position:'relative' }}>
             {product.image_url
               ? <LazyImg src={product.image_url} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
@@ -284,7 +403,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
                     price:        product.price,
                   });
                 }}
-                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', padding:'15px', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', marginBottom:'12px' }}
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', padding:'15px', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', marginBottom:'12px', touchAction:'manipulation' }}
               >
                 <WhatsAppIcon size={20} color="white" /> Commander sur WhatsApp
               </a>
@@ -309,7 +428,7 @@ function PublicProductCard({ product, onOpen }) {
   return (
     <div
       onClick={() => onOpen(product)}
-      style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s' }}
+      style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s', touchAction:'manipulation' }}
       onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
       onTouchEnd={e => e.currentTarget.style.transform   = 'scale(1)'}
     >
@@ -358,12 +477,15 @@ export default function PublicProfile() {
   }, []);
 
   // [C7] Keyframes principales injectées une seule fois
+  // [F10] .pp-content-col / .pp-shop-grid : adaptation tablette (>=768px)
+  // [F13] prefers-reduced-motion : coupe les animations décoratives
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_MAIN_ID)) {
       const s = document.createElement('style');
       s.id = KEYFRAME_MAIN_ID;
       s.textContent = `
         html,body { min-height:100%;margin:0;padding:0;background:transparent; }
+        a,button { -webkit-tap-highlight-color:transparent; }
         @keyframes pp-pulse       { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes pp-ripple      { 0%{transform:translate(-50%,-50%) scale(0);opacity:1} 100%{transform:translate(-50%,-50%) scale(28);opacity:0} }
         @keyframes pp-fadeSlideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
@@ -371,6 +493,20 @@ export default function PublicProfile() {
         @keyframes pp-slideUp     { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
         @keyframes pp-zoomIn      { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
         .pp-link-btn              { animation:pp-fadeSlideUp 0.4s ease both; }
+
+        /* [F10] Colonne de contenu partagée (liens, boutique, docs, événement) */
+        .pp-content-col { width:100%; max-width:384px; }
+        .pp-shop-grid   { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        @media (min-width:768px) {
+          .pp-content-col { max-width:480px; }
+          .pp-shop-grid   { grid-template-columns:repeat(3,1fr); gap:12px; }
+        }
+
+        /* [F13] Réduction des animations si demandé au niveau système */
+        @media (prefers-reduced-motion: reduce) {
+          .pp-link-btn { animation:none; }
+          *, *::before, *::after { animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+        }
       `;
       document.head.appendChild(s);
     }
@@ -396,9 +532,11 @@ export default function PublicProfile() {
       setProfile(data);
       setLoading(false);
 
-      // Tracking + données secondaires en parallèle
+      // [F8] Analytics fire-and-forget, ne bloque plus l'affichage des
+      // produits/documents : trackView() n'est plus dans le Promise.all.
+      trackView(data.id);
+
       Promise.all([
-        trackView(data.id),
         supabase
           .from('marketplace_products')
           .select('id,title,price,original_price,description,image_url,is_available')
@@ -410,7 +548,7 @@ export default function PublicProfile() {
           .eq('profile_id', data.id)
           .eq('is_visible', true)
           .order('created_at', { ascending: false }),
-      ]).then(([, prod, docs]) => {
+      ]).then(([prod, docs]) => {
         if (!isMounted.current) return; // [C8]
         setProducts(prod?.data || []);
         setDocuments(docs?.data || []);
@@ -454,6 +592,9 @@ export default function PublicProfile() {
   }, [images.length, isAutoPlay]);
 
   // [C4] Setter fonctionnel pour éviter la closure stale sur currentIndex
+  // [F6] Nettoyage garanti des listeners globaux même si démontage en cours de geste
+  const swipeCleanupRef = useRef(null);
+
   const handleTouchStart = useCallback((e) => {
     const sx = e.touches[0].clientX, sy = e.touches[0].clientY;
     const onMove = (me) => {
@@ -465,13 +606,26 @@ export default function PublicProfile() {
         });
         setIsAutoPlay(false);
         me.preventDefault();
-        document.removeEventListener('touchmove', onMove);
+        cleanup();
       }
     };
-    const onEnd = () => document.removeEventListener('touchmove', onMove);
+    const onEnd = () => cleanup();
+    function cleanup() {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      if (swipeCleanupRef.current === cleanup) swipeCleanupRef.current = null;
+    }
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd, { once: true });
+    swipeCleanupRef.current = cleanup;
   }, [images.length]); // [C4] currentIndex retiré des deps — setter fonctionnel utilisé
+
+  // [F6] Si le composant se démonte pendant un geste en cours, on retire
+  // les listeners globaux laissés en place (évite fuite mémoire et tout
+  // callback tardif après démontage lors d'une navigation rapide).
+  useEffect(() => {
+    return () => { if (swipeCleanupRef.current) swipeCleanupRef.current(); };
+  }, []);
 
   // ── Countdown ────────────────────────────────────────────────
   useEffect(() => {
@@ -481,7 +635,10 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [profile?.is_event, profile?.event_date]);
 
-  // ── [C5] Background style — injection unifiée, sans flash ───
+  // ── [C5][F9] Background style — injection unifiée, sans flash ───
+  // [F2] 100vh → 100dvh pour éviter le rognage par la barre d'adresse iOS
+  // [F9] Dépendances resserrées : ne se recrée plus sur un changement de
+  // profil non lié au fond (évite un micro-flash inutile).
   useEffect(() => {
     if (!profile) return;
 
@@ -519,7 +676,7 @@ export default function PublicProfile() {
       document.documentElement.style.background = '';
       document.body.style.background = '';
     };
-  }, [profile]);
+  }, [profile?.bg_image_url, profile?.theme_color]); // [F9]
 
   // ── Download helper ──────────────────────────────────────────
   const handleDownload = (url) => {
@@ -558,7 +715,7 @@ export default function PublicProfile() {
 
   if (loading)  return <ProfileSkeleton />;
   if (notFound) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white' }}>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white' }}>
       <p>Profil introuvable.</p>
     </div>
   );
@@ -580,11 +737,21 @@ export default function PublicProfile() {
       <div id="__bg_layer__" />
       <div id="__bg_overlay__" />
 
-      <div style={{ position:'relative', zIndex:1, minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px' }}>
+      {/* [F11] Zones de sécurité iOS/Android sur le padding vertical/horizontal
+          du conteneur principal — évite de passer sous l'encoche ou la barre
+          de gestes en haut/bas, et sous l'encoche latérale en paysage. */}
+      <div style={{
+        position:'relative', zIndex:1, minHeight:'100dvh',
+        display:'flex', flexDirection:'column', alignItems:'center',
+        paddingTop:    'max(40px, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(40px, env(safe-area-inset-bottom, 0px))',
+        paddingLeft:   'max(16px, env(safe-area-inset-left, 0px))',
+        paddingRight:  'max(16px, env(safe-area-inset-right, 0px))',
+      }}>
 
         {/* Avatar */}
         <div style={{ position:'relative', marginBottom:'16px' }}>
-          <div style={{ padding:'3px', borderRadius:'28px', background:'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', backdropFilter:'blur(10px)', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }}>
+          <div style={{ padding:'3px', borderRadius:'28px', background:'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }}>
             {profile.avatar_url
               ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'112px', height:'112px', borderRadius:'24px', objectFit:'cover', display:'block' }} />
               : <div style={{ width:'112px', height:'112px', borderRadius:'24px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
@@ -605,15 +772,17 @@ export default function PublicProfile() {
 
         {/* Événement */}
         {hasEventContent && (
-          <div style={{ width:'100%', maxWidth:'360px', marginBottom:'20px' }}>
+          <div className="pp-content-col" style={{ marginBottom:'20px' }}>
             {images.length > 0 && (
-              <div style={{ position:'relative', borderRadius:'20px', overflow:'hidden', marginBottom:'12px', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }} onTouchStart={handleTouchStart}>
+              // [F12] touchAction:'pan-y' — laisse le scroll vertical natif,
+              // le swipe horizontal reste géré manuellement par handleTouchStart
+              <div style={{ position:'relative', borderRadius:'20px', overflow:'hidden', marginBottom:'12px', boxShadow:'0 8px 32px rgba(0,0,0,0.3)', touchAction:'pan-y' }} onTouchStart={handleTouchStart}>
                 <img src={images[currentIndex]} alt="event" style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }} onClick={() => setLightboxSrc(images[currentIndex])} />
                 <div style={{ position:'absolute', bottom:'14px', right:'12px', display:'flex', gap:'6px', zIndex:10 }}>
-                  <button onClick={e => { e.stopPropagation(); setLightboxSrc(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.9)', color:'white', padding:'5px 10px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', backdropFilter:'blur(8px)' }}>
+                  <button onClick={e => { e.stopPropagation(); setLightboxSrc(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.9)', color:'white', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', touchAction:'manipulation', minHeight:'36px' }}>
                     <ZoomIn size={12} /> Afficher
                   </button>
-                  <button onClick={e => { e.stopPropagation(); handleDownload(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(255,255,255,0.92)', color:'#000', padding:'5px 10px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer' }}>
+                  <button onClick={e => { e.stopPropagation(); handleDownload(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(255,255,255,0.92)', color:'#000', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', touchAction:'manipulation', minHeight:'36px' }}>
                     <Download size={12} /> Télécharger
                   </button>
                 </div>
@@ -655,7 +824,7 @@ export default function PublicProfile() {
               </div>
             )}
             {profile.event_booking_url && (
-              <a href={profile.event_booking_url} target="_blank" rel="noopener noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:`linear-gradient(135deg,${ec1},${ec2})`, borderRadius:'14px', padding:'14px 20px', color:'white', fontSize:'15px', fontWeight:'700', textDecoration:'none', width:'100%', boxShadow:'0 4px 20px rgba(0,0,0,0.2)' }}>
+              <a href={profile.event_booking_url} target="_blank" rel="noopener noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:`linear-gradient(135deg,${ec1},${ec2})`, borderRadius:'14px', padding:'14px 20px', color:'white', fontSize:'15px', fontWeight:'700', textDecoration:'none', width:'100%', boxShadow:'0 4px 20px rgba(0,0,0,0.2)', touchAction:'manipulation' }}>
                 🎟️ Réserver ma place
               </a>
             )}
@@ -664,13 +833,13 @@ export default function PublicProfile() {
 
         {/* Boutique */}
         {sortedProducts.length > 0 && (
-          <div style={{ width:'100%', maxWidth:'384px', marginTop:'8px', marginBottom:'20px' }}>
+          <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px' }}>
               <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><ShoppingBag size={14} color="white" /></div>
               <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>Boutique</h2>
               <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{available.length} article{available.length > 1 ? 's' : ''}</span>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+            <div className="pp-shop-grid">
               {sortedProducts.map(p => (
                 <PublicProductCard
                   key={p.id}
@@ -691,7 +860,7 @@ export default function PublicProfile() {
 
         {/* Documents */}
         {documents.length > 0 && (
-          <div style={{ width:'100%', maxWidth:'384px', marginTop:'8px', marginBottom:'20px' }}>
+          <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
               <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ef4444,#b91c1c)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={14} color="white" /></div>
               <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>Documents</h2>
@@ -700,7 +869,7 @@ export default function PublicProfile() {
             <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
               {documents.map(doc => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s' }}
+                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
                 >
@@ -721,7 +890,7 @@ export default function PublicProfile() {
         )}
 
         {/* Liens */}
-        <div style={{ width:'100%', maxWidth:'384px', display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
+        <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = (link.platform || '').toLowerCase();
             const platform = PLATFORMS[key] || {
@@ -741,7 +910,7 @@ export default function PublicProfile() {
                 <RippleButton
                   onClick={() => handleLinkClick(link)}
                   platformColor={platform.color || '#6366f1'}
-                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.15)', backdropFilter:'blur(8px)', cursor:'pointer', textAlign:'left', boxShadow:'0 2px 12px rgba(0,0,0,0.15)', transition:'background 0.15s,transform 0.1s' }}
+                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.15)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', cursor:'pointer', textAlign:'left', boxShadow:'0 2px 12px rgba(0,0,0,0.15)', transition:'background 0.15s,transform 0.1s' }}
                 >
                   <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
@@ -759,22 +928,29 @@ export default function PublicProfile() {
           href={`https://wa.me/${SUPPORT_WHATSAPP}`}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.15)', border:'1px solid rgba(37,211,102,0.3)', borderRadius:'12px', padding:'10px 20px', color:'#25D366', fontSize:'13px', fontWeight:'500', textDecoration:'none' }}
+          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.15)', border:'1px solid rgba(37,211,102,0.3)', borderRadius:'12px', padding:'10px 20px', color:'#25D366', fontSize:'13px', fontWeight:'500', textDecoration:'none', touchAction:'manipulation' }}
         >
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>
         <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'12px', textAlign:'center', marginTop:'20px' }}>Tous droits réservés par Socialapp.</p>
       </div>
 
-      {selectedProduct && (
+      {/* [F5] Modales portées dans document.body — protection préventive
+          contre un futur bug de stacking context si cette page est un
+          jour englobée dans un layout avec un ancêtre transformé/filtré. */}
+      {selectedProduct && createPortal(
         <ProductDetailModal
           product={selectedProduct}
           whatsappNumber={profile.phone || ''}
           profileId={profile.id}
           onClose={() => setSelectedProduct(null)}
-        />
+        />,
+        document.body
       )}
-      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      {lightboxSrc && createPortal(
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />,
+        document.body
+      )}
     </>
   );
 }

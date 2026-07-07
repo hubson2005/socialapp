@@ -4,75 +4,78 @@ import {
   ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { supabase } from '../../supabase';
-import { useTranslation } from 'react-i18next';
+
+// [FIX] useTranslation importé mais jamais utilisé → supprimé
 
 const PLATFORMS = {
-  youtube: {
-    label: 'YouTube',
-    icon: '📺',
-    color: '#FF0000',
-  },
-  tiktok: {
-    label: 'TikTok',
-    icon: '🎵',
-    color: '#000000',
-  },
-  instagram: {
-    label: 'Instagram',
-    icon: '📸',
-    color: '#E1306C',
-  },
-  facebook: {
-    label: 'Facebook',
-    icon: '📘',
-    color: '#1877F2',
-  },
-  linkedin: {
-    label: 'LinkedIn',
-    icon: '💼',
-    color: '#0A66C2',
-  },
-  whatsapp: {
-    label: 'WhatsApp',
-    icon: '💬',
-    color: '#25D366',
-  },
-  telegram: {
-    label: 'Telegram',
-    icon: '✈️',
-    color: '#229ED9',
-  },
-  snapchat: {
-    label: 'Snapchat',
-    icon: '👻',
-    color: '#FFFC00',
-  },
-  pinterest: {
-    label: 'Pinterest',
-    icon: '📌',
-    color: '#E60023',
-  },
-  twitter: {
-    label: 'X',
-    icon: '𝕏',
-    color: '#ffffff',
-  },
+  youtube:   { label: 'YouTube',   icon: '📺', color: '#FF0000' },
+  tiktok:    { label: 'TikTok',    icon: '🎵', color: '#69C9D0' },
+  instagram: { label: 'Instagram', icon: '📸', color: '#E1306C' },
+  facebook:  { label: 'Facebook',  icon: '📘', color: '#1877F2' },
+  linkedin:  { label: 'LinkedIn',  icon: '💼', color: '#0A66C2' },
+  whatsapp:  { label: 'WhatsApp',  icon: '💬', color: '#25D366' },
+  telegram:  { label: 'Telegram',  icon: '✈️', color: '#229ED9' },
+  snapchat:  { label: 'Snapchat',  icon: '👻', color: '#FFFC00' },
+  pinterest: { label: 'Pinterest', icon: '📌', color: '#E60023' },
+  twitter:   { label: 'X',         icon: '𝕏',  color: '#ffffff' },
 };
 
-// ─── Mini Stat ────────────────────────────────────────────────────────────────
+// ─── Hook : largeur de la fenêtre ─────────────────────────────
+function useWindowWidth() {
+  const [w, setW] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return w;
+}
+
+// ─── Mini Stat ────────────────────────────────────────────────
 function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: 500 }}>{label}</span>
-        <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: '14px',
+      padding: '12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      // [FIX] minWidth:0 évite le débordement en flexbox/grid sur Android
+      minWidth: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+        <span style={{
+          color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 500,
+          // [FIX] empêche le label de déborder sur petits écrans
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {label}
+        </span>
+        <div style={{
+          width: '26px', height: '26px', borderRadius: '7px',
+          background: color + '20',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
           <Icon size={12} color={color} />
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-        <span style={{ color: 'white', fontSize: '22px', fontWeight: 800, lineHeight: 1 }}>{value}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+        <span style={{ color: 'white', fontSize: '20px', fontWeight: 800, lineHeight: 1 }}>
+          {value}
+        </span>
         {trend != null && (
-          <span style={{ fontSize: '11px', color: trendUp ? '#22c55e' : '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
+          <span style={{
+            fontSize: '11px',
+            color: trendUp ? '#22c55e' : '#ef4444',
+            fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: '2px',
+            flexShrink: 0,
+          }}>
             {trendUp ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
             {Math.abs(trend)}%
           </span>
@@ -82,7 +85,7 @@ function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
   );
 }
 
-// ─── Analytics Panel ──────────────────────────────────────────────────────────
+// ─── AnalyticsPanel ───────────────────────────────────────────
 export default function AnalyticsPanel({ profileId }) {
   const [period, setPeriod]   = useState('7d');
   const [stats, setStats]     = useState(null);
@@ -90,6 +93,12 @@ export default function AnalyticsPanel({ profileId }) {
   const [geoData, setGeoData] = useState([]);
   const [topLinks, setTopLinks] = useState([]);
   const [daily, setDaily]     = useState([]);
+
+  const windowWidth = useWindowWidth();
+  // [FIX] breakpoints : mobile < 480, tablette 480-767, desktop ≥ 768
+  const isMobile  = windowWidth < 480;
+  const isTablet  = windowWidth >= 480 && windowWidth < 768;
+  const isDesktop = windowWidth >= 768;
 
   useEffect(() => {
     if (!profileId) return;
@@ -113,16 +122,17 @@ export default function AnalyticsPanel({ profileId }) {
         .gte('created_at', new Date(from.getTime() - days * 86400000).toISOString())
         .lt('created_at', from.toISOString());
 
-      const views  = (viewsData || []).filter(r => !r.platform);
-      const clicks = (viewsData || []).filter(r =>  r.platform);
+      const views     = (viewsData || []).filter(r => !r.platform);
+      const clicks    = (viewsData || []).filter(r =>  r.platform);
       const prevCount = prevData?.length || 0;
-      const trend = prevCount > 0
+      const trend     = prevCount > 0
         ? Math.round(((views.length - prevCount) / prevCount) * 100)
         : null;
 
       setStats({
         views:   views.length,
         clicks:  clicks.length,
+        // [FIX] évite la division par zéro si views.length === 0
         ctr:     views.length > 0 ? Math.round((clicks.length / views.length) * 100) : 0,
         trend,
         trendUp: trend !== null ? trend >= 0 : true,
@@ -145,9 +155,9 @@ export default function AnalyticsPanel({ profileId }) {
         Object.entries(clickMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
       );
 
-      // ── Daily bars (last 7 days always) ──
+      // ── Daily bars (7 derniers jours) ──
       const buckets = {};
-      const DAY_LABELS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+      const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
       for (let i = 6; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
         const key = d.toISOString().split('T')[0];
@@ -173,28 +183,63 @@ export default function AnalyticsPanel({ profileId }) {
     } catch { return '🌐'; }
   };
 
-  const maxGeo  = geoData[0]?.[1]?.count  || 1;
-  const maxLink = topLinks[0]?.[1]         || 1;
+  const maxGeo    = geoData[0]?.[1]?.count || 1;
+  const maxLink   = topLinks[0]?.[1]        || 1;
   const maxViews  = Math.max(...daily.map(d => d.views),  1);
   const maxClicks = Math.max(...daily.map(d => d.clicks), 1);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: '16px',
+      // [FIX] scroll natif iOS dans le panel
+      WebkitOverflowScrolling: 'touch',
+      overscrollBehavior: 'contain',
+      // [FIX] empêche le débordement horizontal sur Android
+      minWidth: 0, width: '100%',
+    }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-        <div>
-          <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: 0 }}>Analytics</h2>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '10px',
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: 0 }}>
+            Analytics
+          </h2>
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '4px 0 0' }}>
             Performance de votre profil
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px', padding: '3px' }}>
-          {['7d','30d','90d'].map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              style={{ padding: '5px 10px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, transition: 'all 0.15s',
+
+        {/* Boutons de période — [FIX] touchAction + tap highlight supprimé */}
+        <div style={{
+          display: 'flex', gap: '4px',
+          background: 'rgba(255,255,255,0.06)',
+          borderRadius: '10px', padding: '3px',
+          flexShrink: 0,
+        }}>
+          {['7d', '30d', '90d'].map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              style={{
+                padding: '6px 12px',
+                // [FIX] zone de tap min 36px pour iOS/Android
+                minHeight: '36px',
+                borderRadius: '8px', border: 'none', cursor: 'pointer',
+                fontSize: '11px', fontWeight: 600,
+                transition: 'all 0.15s',
                 background: period === p ? 'rgba(99,102,241,0.3)' : 'transparent',
-                color:      period === p ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>
+                color:      period === p ? '#a78bfa' : 'rgba(255,255,255,0.4)',
+                // [FIX] supprime le délai 300ms sur Android/iOS + flash gris
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
               {p}
             </button>
           ))}
@@ -208,177 +253,230 @@ export default function AnalyticsPanel({ profileId }) {
       ) : (
         <>
           {/* ── KPI Cards ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '10px' }}>
-            <MiniStat label="Vues totales"  value={stats?.views   || 0}           icon={Eye}              color="#6366f1" trend={stats?.trend} trendUp={stats?.trendUp} />
-            <MiniStat label="Clics totaux"  value={stats?.clicks  || 0}           icon={MousePointerClick} color="#f59e0b" />
-            <MiniStat label="Taux de clic"  value={(stats?.ctr    || 0) + '%'}    icon={TrendingUp}        color="#22c55e" />
-            <MiniStat label="Pays atteints" value={geoData.length}                icon={Globe}             color="#0ea5e9" />
+          {/* [FIX] Sur mobile < 480px : 2 colonnes mais avec fontSize réduit
+               Sur tablette/desktop : 4 colonnes */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isDesktop
+              ? 'repeat(4, 1fr)'
+              : isTablet
+                ? 'repeat(4, 1fr)'
+                : 'repeat(2, 1fr)',
+            gap: isMobile ? '8px' : '10px',
+          }}>
+            <MiniStat label="Vues"      value={stats?.views   || 0}        icon={Eye}               color="#6366f1" trend={stats?.trend} trendUp={stats?.trendUp} />
+            <MiniStat label="Clics"     value={stats?.clicks  || 0}        icon={MousePointerClick}  color="#f59e0b" />
+            <MiniStat label="CTR"       value={(stats?.ctr    || 0) + '%'} icon={TrendingUp}         color="#22c55e" />
+            <MiniStat label="Pays"      value={geoData.length}             icon={Globe}              color="#0ea5e9" />
           </div>
 
           {/* ── Bar chart ── */}
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Activité — 7 derniers jours</span>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#e5683b', display: 'inline-block' }} /> Vues
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#22c55e', display: 'inline-block' }} /> Clics
-                </span>
+          <div style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '18px',
+            padding: isMobile ? '12px' : '16px',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '14px',
+              flexWrap: 'wrap', gap: '8px',
+            }}>
+              <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>
+                Activité — 7 derniers jours
+              </span>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {[
+                  { color: '#e5683b', label: 'Vues' },
+                  { color: '#22c55e', label: 'Clics' },
+                ].map(({ color, label }) => (
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: color, display: 'inline-block', flexShrink: 0 }} />
+                    {label}
+                  </span>
+                ))}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '80px' }}>
+
+            {/* [FIX] Hauteur adaptative : 64px mobile, 80px tablette/desktop */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-end',
+              // [FIX] gap adaptatif — sur petits écrans les 7 colonnes ne doivent pas déborder
+              gap: isMobile ? '3px' : '6px',
+              height: isMobile ? '64px' : '80px',
+              // [FIX] overflow caché pour éviter tout débordement horizontal
+              overflow: 'hidden',
+            }}>
               {daily.map(d => (
-                <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%' }}>
-                  <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
+                <div key={d.day} style={{
+                  flex: 1,
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', gap: '3px',
+                  height: '100%',
+                  // [FIX] minWidth:0 indispensable dans un flex pour éviter le débordement
+                  minWidth: 0,
+                }}>
+                  <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', gap: '1px' }}>
                     {/* Vues */}
-                    <div style={{ flex: 1, height: `${Math.round((d.views / maxViews) * 100)}%`, minHeight: '3px', background: '#e5683b', borderRadius: '3px 3px 0 0', transition: 'height 0.5s ease' }} />
+                    <div style={{
+                      flex: 1,
+                      height: `${Math.round((d.views / maxViews) * 100)}%`,
+                      minHeight: '3px',
+                      background: '#e5683b',
+                      borderRadius: '3px 3px 0 0',
+                      transition: 'height 0.5s ease',
+                    }} />
                     {/* Clics */}
-                    <div style={{ flex: 1, height: `${Math.round((d.clicks / maxClicks) * 100)}%`, minHeight: '3px', background: '#22c55e', borderRadius: '3px 3px 0 0', transition: 'height 0.5s ease' }} />
+                    <div style={{
+                      flex: 1,
+                      height: `${Math.round((d.clicks / maxClicks) * 100)}%`,
+                      minHeight: '3px',
+                      background: '#22c55e',
+                      borderRadius: '3px 3px 0 0',
+                      transition: 'height 0.5s ease',
+                    }} />
                   </div>
-                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '9px' }}>{d.day}</span>
+                  <span style={{
+                    color: 'rgba(255,255,255,0.3)',
+                    // [FIX] fontSize réduit sur mobile pour ne pas couper les labels
+                    fontSize: isMobile ? '8px' : '9px',
+                    lineHeight: 1,
+                    userSelect: 'none',
+                  }}>
+                    {d.day}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* ── Bottom row : Top pays + Top liens ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {/* [FIX] Sur mobile, les deux blocs passent en colonne (plus de grid 1fr 1fr)
+               → évite le texte écrasé et les barres illisibles sur iPhone */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: '12px',
+          }}>
 
             {/* Top pays */}
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '18px',
+              padding: isMobile ? '12px' : '16px',
+              // [FIX] minWidth:0 pour éviter le débordement dans la grid
+              minWidth: 0,
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <Globe size={14} color="#a78bfa" />
                 <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Top pays</span>
               </div>
-              {geoData.length === 0
-                ? <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>Pas encore de données</p>
-                : geoData.map(([country, { count, code }]) => (
-                  <div key={country} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '15px', width: '20px', flexShrink: 0 }}>{flagEmoji(code)}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 500 }}>{country}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{count}</span>
-                      </div>
-                      <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }}>
-                        <div style={{ width: Math.round((count / maxGeo) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#a78bfa,#6366f1)', borderRadius: '2px' }} />
-                      </div>
+              {geoData.length === 0 ? (
+                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>
+                  Pas encore de données
+                </p>
+              ) : geoData.map(([country, { count, code }]) => (
+                <div key={country} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', minWidth: 0 }}>
+                  <span style={{ fontSize: '15px', width: '20px', flexShrink: 0 }}>
+                    {flagEmoji(code)}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', gap: '4px' }}>
+                      <span style={{
+                        color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 500,
+                        // [FIX] tronque les noms longs (ex: "Côte d'Ivoire") sur mobile
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {country}
+                      </span>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', flexShrink: 0 }}>
+                        {count}
+                      </span>
+                    </div>
+                    <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }}>
+                      <div style={{
+                        width: Math.round((count / maxGeo) * 100) + '%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg,#a78bfa,#6366f1)',
+                        borderRadius: '2px',
+                        transition: 'width 0.5s ease',
+                      }} />
                     </div>
                   </div>
-                ))
-              }
+                </div>
+              ))}
             </div>
 
-            {/*   */}
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '16px' }}>
+            {/* Top liens */}
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '18px',
+              padding: isMobile ? '12px' : '16px',
+              minWidth: 0,
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <MousePointerClick size={14} color="#f59e0b" />
                 <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Top liens</span>
               </div>
               {topLinks.length === 0 ? (
-  <p
-    style={{
-      color: 'rgba(255,255,255,0.25)',
-      fontSize: '12px',
-      textAlign: 'center',
-      padding: '12px 0',
-      margin: 0,
-    }}
-  >
-    Pas encore de données
-  </p>
-) : (
-  topLinks.map(([platform, count]) => {
-    const social = PLATFORMS[platform?.toLowerCase()] || {
-      label: platform,
-      icon: '🔗',
-      color: '#6366f1',
-    };
-
-    return (
-      <div
-        key={platform}
-        style={{
-          marginBottom: '16px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '6px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                background: social.color + '20',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '13px',
-                flexShrink: 0,
-              }}
-            >
-              {social.icon}
-            </div>
-
-            <span
-              style={{
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
-            >
-              {social.label}
-            </span>
-          </div>
-
-          <span
-            style={{
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: '12px',
-              fontWeight: 700,
-            }}
-          >
-            {count}
-          </span>
-        </div>
-
-        <div
-          style={{
-            height: '4px',
-            background: 'rgba(255,255,255,0.08)',
-            borderRadius: '999px',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              width: `${(count / maxLink) * 100}%`,
-              height: '100%',
-              background: social.color,
-              borderRadius: '999px',
-              transition: 'width .4s ease',
-            }}
-          />
-        </div>
-      </div>
-    );
-  })
-)}
+                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>
+                  Pas encore de données
+                </p>
+              ) : topLinks.map(([platform, count]) => {
+                const social = PLATFORMS[platform?.toLowerCase()] || {
+                  label: platform || 'Lien',
+                  icon: '🔗',
+                  color: '#6366f1',
+                };
+                return (
+                  <div key={platform} style={{ marginBottom: '14px', minWidth: 0 }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '6px',
+                      gap: '6px',
+                    }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        // [FIX] minWidth:0 + overflow pour éviter le débordement du label
+                        minWidth: 0, flex: 1,
+                      }}>
+                        <div style={{
+                          width: '28px', height: '28px', borderRadius: '8px',
+                          background: social.color + '20',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '13px', flexShrink: 0,
+                        }}>
+                          {social.icon}
+                        </div>
+                        <span style={{
+                          color: 'white', fontSize: '12px', fontWeight: 600,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {social.label}
+                        </span>
+                      </div>
+                      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                        {count}
+                      </span>
+                    </div>
+                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${Math.round((count / maxLink) * 100)}%`,
+                        height: '100%',
+                        background: social.color,
+                        borderRadius: '999px',
+                        transition: 'width 0.4s ease',
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </>
@@ -386,4 +484,3 @@ export default function AnalyticsPanel({ profileId }) {
     </div>
   );
 }
-

@@ -124,6 +124,29 @@ export function useWhatsappCRM(profileId) {
     return data
   }
 
+  // ── Update contact ─────────────────────────────────────────────
+  const updateContact = async (id, { name, phone, email, tag }) => {
+    const { data, error } = await supabase
+      .from('whatsapp_contacts')
+      .update({ name, phone, email: email || null, tag })
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+    if (error) throw error
+    setContacts(prev => prev.map(c => (c.id === id ? data : c)))
+    return data
+  }
+
+  // ── Delete contact ─────────────────────────────────────────────
+  const deleteContact = async (id) => {
+    const { error } = await supabase
+      .from('whatsapp_contacts')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+    setContacts(prev => prev.filter(c => c.id !== id))
+  }
+
   // ── Send message (via Make.com webhook) ───────────────────────
   const sendMessage = async ({ to, name, message }) => {
     const wh = webhook || ENV_WEBHOOK
@@ -270,7 +293,7 @@ export function useWhatsappCRM(profileId) {
   return {
     contacts, campaigns, notifs, boostNotifs,
     webhook, connected, loading, error, stats,
-    addContact, sendMessage,
+    addContact, updateContact, deleteContact, sendMessage,
     createCampaign,
     addNotification, toggleNotification,
     saveWebhook,

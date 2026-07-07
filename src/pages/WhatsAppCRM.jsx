@@ -26,6 +26,7 @@ const C = {
   blue:'#3b82f6', blueDim:'rgba(59,130,246,0.12)',
   text:'#ffffff', textSub:'#8b8fa8', textMute:'#4a4e6a',
   amber:'#f59e0b', amberDim:'rgba(245,158,11,0.12)',
+  red:'#ef4444', redDim:'rgba(239,68,68,0.12)',
 }
 const TAG_C  = { Client:[C.purpleDim,C.purpleL], Prospect:[C.blueDim,C.blue], VIP:[C.orangeDim,C.orange] }
 const STA_C  = { actif:[C.greenDim,C.green], attente:[C.orangeDim,C.orange], inactif:['rgba(255,255,255,0.06)',C.textMute] }
@@ -72,13 +73,18 @@ const S = {
   btn:      (v='primary', loading=false) => ({
     display:'inline-flex', alignItems:'center', gap:6,
     padding: v==='sm'?'5px 12px':'9px 16px',
-    borderRadius:9, border:`1px solid ${v==='ghost'?C.border:v==='green'?C.green:v==='primary'?C.purple:'transparent'}`,
+    borderRadius:9, border:`1px solid ${v==='ghost'?C.border:v==='green'?C.green:v==='danger'?C.red:v==='primary'?C.purple:'transparent'}`,
     cursor: loading?'wait':'pointer', fontSize:13, fontWeight:600, transition:'all .15s',
-    background: v==='green'?'rgba(37,211,102,0.15)':v==='primary'?C.purpleDim:v==='ghost'?'transparent':C.purpleDim,
-    color:       v==='green'?C.green:v==='primary'?C.purpleL:v==='ghost'?C.textSub:C.purpleL,
+    background: v==='green'?'rgba(37,211,102,0.15)':v==='danger'?C.redDim:v==='primary'?C.purpleDim:v==='ghost'?'transparent':C.purpleDim,
+    color:       v==='green'?C.green:v==='danger'?C.red:v==='primary'?C.purpleL:v==='ghost'?C.textSub:C.purpleL,
     opacity: loading?0.7:1,
     boxShadow: v==='green'?'0 4px 14px rgba(37,211,102,0.2)':'none',
     fontFamily:'inherit',
+  }),
+  iconBtn:  (color=C.textSub) => ({
+    display:'inline-flex', alignItems:'center', justifyContent:'center',
+    width:28, height:28, borderRadius:7, border:`1px solid ${C.border}`,
+    background:'transparent', cursor:'pointer', color, fontSize:13, transition:'all .15s',
   }),
   overlay:  { position:'fixed', inset:0, background:'rgba(5,5,15,0.88)', backdropFilter:'blur(6px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 },
   modal:    { background:'#181930', border:`1px solid ${C.border}`, borderRadius:18, padding:'26px 28px', width:480, maxWidth:'94vw', boxShadow:'0 24px 64px rgba(0,0,0,0.6)', maxHeight:'90vh', overflowY:'auto' },
@@ -275,6 +281,62 @@ function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
             disabled={!newC.name||!newC.phone}
             onClick={handleAddContact}
           >Ajouter</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── MODAL EDIT CONTACT ────────────────────────────────────────────
+function ModalEditContact({ editC, setEditC, closeModal, handleEditContact, saving }) {
+  if (!editC) return null
+  return (
+    <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
+      <div style={S.modal}>
+        <div style={S.mT}>✏️ Modifier le contact</div>
+        {[['Nom complet *','name','Sophie Martin'],['Téléphone *','phone','+225 07 00 00 00'],['Email','email','contact@mail.ci']].map(([l,k,p]) => (
+          <div key={k} style={S.fg}>
+            <label style={S.lbl}>{l}</label>
+            <input style={S.inp} placeholder={p} value={editC[k]||''} onChange={e=>setEditC(v=>({...v,[k]:e.target.value}))}/>
+          </div>
+        ))}
+        <div style={S.fg}>
+          <label style={S.lbl}>Tag</label>
+          <select style={S.sel} value={editC.tag} onChange={e=>setEditC(v=>({...v,tag:e.target.value}))}>
+            {['Client','Prospect','VIP'].map(t=><option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+          <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
+          <button
+            style={{...S.btn('primary',saving), opacity:(!editC.name||!editC.phone)?0.4:1, pointerEvents:(!editC.name||!editC.phone||saving)?'none':'auto'}}
+            disabled={!editC.name||!editC.phone||saving}
+            onClick={handleEditContact}
+          >{saving ? <><Spinner/> Sauvegarde…</> : 'Enregistrer'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── MODAL CONFIRM DELETE ──────────────────────────────────────────
+function ModalConfirmDelete({ target, closeModal, handleDeleteContact, deleting }) {
+  if (!target) return null
+  return (
+    <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
+      <div style={{...S.modal, width:380}}>
+        <div style={S.mT}>🗑️ Supprimer le contact</div>
+        <div style={{fontSize:13, color:C.textSub, lineHeight:1.6, marginBottom:20}}>
+          Voulez-vous vraiment supprimer <strong style={{color:C.text}}>{target.name}</strong> ({target.phone}) ?
+          Cette action est irréversible.
+        </div>
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+          <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
+          <button
+            style={{...S.btn('danger',deleting), pointerEvents:deleting?'none':'auto'}}
+            disabled={deleting}
+            onClick={handleDeleteContact}
+          >{deleting ? <><Spinner/> Suppression…</> : 'Supprimer'}</button>
         </div>
       </div>
     </div>
@@ -525,7 +587,7 @@ export default function WhatsAppCRM({ profile }) {
   const {
     contacts, campaigns, notifs, boostNotifs,
     webhook, connected, loading, error, stats,
-    addContact, sendMessage, createCampaign,
+    addContact, updateContact, deleteContact, sendMessage, createCampaign,
     addNotification, toggleNotification, saveWebhook,
     sendBoostNotification,
   } = useWhatsappCRM()
@@ -539,7 +601,11 @@ export default function WhatsAppCRM({ profile }) {
   const [camStep,      setCamStep]      = useState(1)
   const [webhookInput, setWebhookInput] = useState('')
   const [sending,      setSending]      = useState(false)
+  const [saving,       setSaving]       = useState(false)
+  const [deleting,     setDeleting]     = useState(false)
   const [newC,   setNewC]   = useState({ name:'', phone:'', email:'', tag:'Client' })
+  const [editC,  setEditC]  = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [newCam, setNewCam] = useState({ name:'', message:'', recipients:[] })
   const [newN,   setNewN]   = useState({ name:'', trigger_type:'Automatique' })
 
@@ -557,6 +623,8 @@ export default function WhatsAppCRM({ profile }) {
     setCamStep(1)
     // ✅ FIX: reset complet du state campagne à la fermeture
     setNewCam({ name:'', message:'', recipients:[] })
+    setEditC(null)
+    setDeleteTarget(null)
   }
 
   const handleAddContact = async () => {
@@ -567,6 +635,38 @@ export default function WhatsAppCRM({ profile }) {
       setModal(null)
       setNewC({name:'',phone:'',email:'',tag:'Client'})
     } catch(e) { flash(e.message,'error') }
+  }
+
+  const handleOpenEdit = (c) => {
+    setEditC({ id:c.id, name:c.name, phone:c.phone, email:c.email||'', tag:c.tag })
+    setModal('edit_contact')
+  }
+
+  const handleEditContact = async () => {
+    if (!editC?.name||!editC?.phone) return
+    setSaving(true)
+    try {
+      await updateContact(editC.id, { name:editC.name, phone:editC.phone, email:editC.email, tag:editC.tag })
+      flash(`Contact "${editC.name}" modifié ✓`)
+      closeModal()
+    } catch(e) { flash(e.message,'error') }
+    finally { setSaving(false) }
+  }
+
+  const handleOpenDelete = (c) => {
+    setDeleteTarget(c)
+    setModal('delete_contact')
+  }
+
+  const handleDeleteContact = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteContact(deleteTarget.id)
+      flash(`Contact "${deleteTarget.name}" supprimé ✓`)
+      closeModal()
+    } catch(e) { flash(e.message,'error') }
+    finally { setDeleting(false) }
   }
 
   const handleSendMsg = async () => {
@@ -737,9 +837,13 @@ export default function WhatsAppCRM({ profile }) {
                         <td style={S.td}><span style={S.badge(...(TAG_C[c.tag]||['#1a1a2e',C.textMute]))}>{c.tag}</span></td>
                         <td style={S.td}><span style={S.badge(...(STA_C[c.status]||['#1a1a2e',C.textMute]))}>{c.status}</span></td>
                         <td style={S.td}>
-                          <button style={{...S.btn('green'),padding:'5px 12px',fontSize:12,gap:5}} onClick={()=>{setMsgTarget(c);setModal('msg')}}>
-                            <WaIcon size={12} color={C.green}/> WA
-                          </button>
+                          <div style={{display:'flex',alignItems:'center',gap:6}}>
+                            <button style={{...S.btn('green'),padding:'5px 12px',fontSize:12,gap:5}} onClick={()=>{setMsgTarget(c);setModal('msg')}}>
+                              <WaIcon size={12} color={C.green}/> WA
+                            </button>
+                            <button style={S.iconBtn(C.purpleL)} title="Modifier" onClick={()=>handleOpenEdit(c)}>✏️</button>
+                            <button style={S.iconBtn(C.red)} title="Supprimer" onClick={()=>handleOpenDelete(c)}>🗑️</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -856,7 +960,9 @@ export default function WhatsAppCRM({ profile }) {
       </div>
 
       {/* ── MODALS ── */}
-      {modal==='contact'      && <ModalAddContact newC={newC} setNewC={setNewC} closeModal={closeModal} handleAddContact={handleAddContact}/>}
+      {modal==='contact'       && <ModalAddContact newC={newC} setNewC={setNewC} closeModal={closeModal} handleAddContact={handleAddContact}/>}
+      {modal==='edit_contact'  && <ModalEditContact editC={editC} setEditC={setEditC} closeModal={closeModal} handleEditContact={handleEditContact} saving={saving}/>}
+      {modal==='delete_contact'&& <ModalConfirmDelete target={deleteTarget} closeModal={closeModal} handleDeleteContact={handleDeleteContact} deleting={deleting}/>}
       {modal==='msg'          && msgTarget && <ModalSendMsg contacts={contacts} msgTarget={msgTarget} msgText={msgText} setMsgText={setMsgText} selectedTpl={selectedTpl} setSelectedTpl={setSelectedTpl} connected={connected} sending={sending} closeModal={closeModal} handleSendMsg={handleSendMsg}/>}
       {modal==='campaign'     && <ModalCampaign contacts={contacts} newCam={newCam} setNewCam={setNewCam} camStep={camStep} setCamStep={setCamStep} closeModal={closeModal} handleLaunchCampaign={handleLaunchCampaign}/>}
       {modal==='notif'        && <ModalNotif newN={newN} setNewN={setNewN} closeModal={closeModal} handleAddNotif={handleAddNotif}/>}

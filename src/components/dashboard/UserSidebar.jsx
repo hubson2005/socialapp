@@ -72,6 +72,9 @@ export default function UserSidebar({
   onToggle,
   isMobile,
   isTablet = false,
+  isAdmin = false, // [FIX] bypass total du verrouillage plan pour les comptes admin
+                    // (table Supabase user_roles.role === 'admin') — à passer
+                    // depuis UserDashboard.jsx.
   onBgUpload,
   onBgRemove,
   bgImageUrl,
@@ -101,7 +104,9 @@ export default function UserSidebar({
   // Liste de base : on retire systématiquement les items masqués (en test côté admin)
   const visibleNav = USER_NAV.filter(n => !n.hidden);
 
+  // [FIX] Un admin voit tout déverrouillé, quel que soit `plan`
   const isNavLocked = (item) => {
+    if (isAdmin) return false;
     if (!item.locked) return false;
     return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
   };
@@ -475,4 +480,3 @@ export default function UserSidebar({
     </>
   );
 }
-

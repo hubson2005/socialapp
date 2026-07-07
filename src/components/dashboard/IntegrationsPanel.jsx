@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
+import { useBreakpoint } from '../../hooks/useBreakpoint'; // [tablet]
 
 // ─── SVG Logos ────────────────────────────────────────────────────────────────
 const ZapierLogo = () => (
@@ -273,18 +274,20 @@ function generateWebhookUrl(profileId, integrationId) {
 }
 
 // ─── Carte intégration ────────────────────────────────────────────────────────
-// ─── Carte intégration — VERSION CORRIGÉE ────────────────────────────────────
-//
-// BUGS CORRIGÉS :
-//  [P1] console.log debug supprimé (fuitait des infos à chaque re-render en prod)
-//  [P2] onClick retiré du DIV wrapper externe — était en double avec le div enfant
-//       → causait un double-toggle (false→true→false = aucun changement visible)
-//  [P3] e.stopPropagation() ajouté sur bouton "Déconnecter"
-//       → sans ça, cliquer Déconnecter déclenchait aussi le toggle du panneau
-//  [P4] e.stopPropagation() ajouté sur bouton Chevron
-//       → sans ça, le clic remontait au div parent et annulait le toggle
-
-function IntegrationCard({ integration, config, onSave, onDisconnect }) {
+// CORRECTIONS :
+//  [P1] console.log debug supprimé
+//  [P2] onClick retiré du DIV wrapper externe — double toggle corrigé
+//  [P3] e.stopPropagation() sur bouton Déconnecter
+//  [P4] e.stopPropagation() sur bouton Chevron
+//  [R1] BUG BLOQUANT corrigé : `isTablet` était utilisé dans ce composant
+//       (bouton copier du webhook) sans jamais être défini ici — il n'existait
+//       que dans le composant parent. C'était un ReferenceError qui plantait
+//       le rendu dès qu'on dépliait une intégration avec webhook (Zapier,
+//       Make, Stripe, etc.) sur TOUS les appareils, pas seulement tablette.
+//       → `isTablet` est maintenant reçu en prop depuis IntegrationsPanel.
+//  [R2] Cibles tactiles agrandies (chevron / déconnexion / copier) pour
+//       rester confortables au doigt sur iOS/Android, pas seulement tablette.
+function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }) {
   const [expanded, setExpanded] = useState(false); // [P1] console.log supprimé
   const [fields, setFields] = useState(config?.fields || {});
   const [saving, setSaving] = useState(false);
@@ -295,6 +298,9 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
   const webhookUrl = config?.webhook_url || generateWebhookUrl('preview', integration.id);
   const { LogoComponent } = integration;
   const hasContent = integration.hasWebhook || integration.fields.length > 0;
+
+  // [R2] taille de bouton tactile cohérente sur tous les appareils (mini 38px, 44px en tablette)
+  const tapBtnSize = isTablet ? '44px' : '38px';
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -332,10 +338,10 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
       transition: 'border-color 0.2s',
       minWidth: 0,
     }}>
-      {/* [P2] onClick retiré du wrapper — il était en double avec le div enfant */}
+      {/* [P2] onClick retiré du wrapper — seul le div logo+texte est cliquable */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0 }}>
 
-        {/* [P2] Seule source du toggle : ce div enfant logo+texte */}
+        {/* [P2] Seule source du toggle */}
         <div
           onClick={() => hasContent && setExpanded(v => !v)}
           style={{
@@ -372,21 +378,19 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
           </div>
         </div>
 
-        {/* Boutons — frères du div logo+texte, pas enfants */}
+        {/* Boutons — frères du div logo+texte */}
         {isConnected && (
           <button
-            // [P3] stopPropagation : empêche le clic de remonter au div logo+texte
-            onClick={e => { e.stopPropagation(); handleDisconnect(); }}
-            style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+            onClick={e => { e.stopPropagation(); handleDisconnect(); }} // [P3]
+            style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             <X size={11} />
           </button>
         )}
         {hasContent && (
           <button
-            // [P4] stopPropagation : empêche le clic de remonter au div logo+texte
-            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
-            style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }} // [P4]
+            style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
@@ -395,7 +399,6 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
 
       {expanded && hasContent && (
         <div style={{ padding: '12px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
           {integration.hasWebhook && (
             <div>
               <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
@@ -405,7 +408,8 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
                 <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
                   {webhookUrl}
                 </span>
-                <button onClick={() => handleCopy(webhookUrl)} style={{ width: '24px', height: '24px', borderRadius: '6px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {/* [R1] utilise désormais `isTablet` reçu en prop (plus de ReferenceError) */}
+                <button onClick={() => handleCopy(webhookUrl)} style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '8px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {copied ? <Check size={10} color="#22c55e" /> : <Copy size={10} color="rgba(255,255,255,0.5)" />}
                 </button>
               </div>
@@ -423,15 +427,15 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
                   value={fields[f.key] || ''}
                   onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
-                  style={{ width: '100%', boxSizing: 'border-box', padding: f.type === 'password' ? '8px 36px 8px 12px' : '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none', fontFamily: f.type === 'password' ? 'inherit' : 'monospace' }}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: f.type === 'password' ? '10px 40px 10px 12px' : '10px 12px', minHeight: '38px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none', fontFamily: f.type === 'password' ? 'inherit' : 'monospace' }}
                 />
                 {f.type === 'password' && (
                   <button
                     type="button"
                     onClick={() => setShowSecret(prev => ({ ...prev, [f.key]: !prev[f.key] }))}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex' }}
+                    style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: '36px', height: '36px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    {showSecret[f.key] ? <EyeOff size={12} /> : <Eye size={12} />}
+                    {showSecret[f.key] ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
                 )}
               </div>
@@ -442,7 +446,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
             <button
               onClick={handleSave}
               disabled={saving}
-              style={{ flex: 1, padding: '9px', background: `linear-gradient(135deg, ${integration.color}, ${integration.color}aa)`, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: saving ? 0.7 : 1 }}
+              style={{ flex: 1, minHeight: '40px', padding: '9px', background: `linear-gradient(135deg, ${integration.color}, ${integration.color}aa)`, border: 'none', borderRadius: '10px', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: saving ? 0.7 : 1 }}
             >
               {saving ? <Loader2 size={11} /> : <Check size={11} />}
               {isConnected ? 'Mettre à jour' : 'Connecter'}
@@ -451,7 +455,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
               href={integration.docsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ width: '34px', height: '34px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}
+              style={{ width: tapBtnSize, height: tapBtnSize, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}
             >
               <ExternalLink size={12} />
             </a>
@@ -464,6 +468,13 @@ function IntegrationCard({ integration, config, onSave, onDisconnect }) {
 
 // ─── Panel principal ───────────────────────────────────────────────────────────
 const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
+  // [R3] BUG BLOQUANT corrigé : `useBreakpoint()` était appelé DEUX fois avec
+  // `isTablet` déclaré deux fois (`const { isTablet } = ...` puis
+  // `const { isMobile, isTablet } = ...`). C'est un SyntaxError
+  // ("Identifier 'isTablet' has already been declared") qui empêchait
+  // le fichier de compiler du tout, sur n'importe quel appareil.
+  // → un seul appel, une seule déclaration.
+  const { isMobile, isTablet } = useBreakpoint();
   const [configs, setConfigs] = useState({});
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('Tous');
@@ -503,9 +514,7 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
       config: data.fields || {},
       updated_at: new Date().toISOString(),
     }, { onConflict: 'profile_id,integration_id' });
-
     if (error) { toast.error('Échec de la connexion : ' + error.message); throw error; }
-
     setConfigs(prev => ({
       ...prev,
       [integrationId]: { ...data, webhook_url: generateWebhookUrl(profileId, integrationId) },
@@ -517,9 +526,7 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
       .update({ is_connected: false, config: {} })
       .eq('profile_id', profileId)
       .eq('integration_id', integrationId);
-
     if (error) { toast.error('Échec de la déconnexion : ' + error.message); throw error; }
-
     setConfigs(prev => { const next = { ...prev }; delete next[integrationId]; return next; });
   }, [profileId]);
 
@@ -530,44 +537,53 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
   });
 
   const connectedCount = Object.values(configs).filter(c => c?.connected).length;
-
   const categoriesWithItems = CATEGORIES_CONFIG
     .filter(c => c.id !== 'Tous')
     .filter(c => filtered.some(i => i.category === c.id));
 
+  // [tablet] grille partagée pour les listes de cartes
+  const cardGridStyle = {
+    display: isTablet ? 'grid' : 'flex',
+    gridTemplateColumns: isTablet ? '1fr 1fr' : undefined,
+    flexDirection: isTablet ? undefined : 'column',
+    gap: '8px',
+    minWidth: 0,
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '720px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: isTablet ? '960px' : '720px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: 0 }}>Intégrations</h2>
+          <h2 style={{ color: 'white', fontSize: isTablet ? '20px' : '18px', fontWeight: 800, margin: 0 }}>Intégrations</h2>
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '4px 0 0' }}>
             {connectedCount} active{connectedCount !== 1 ? 's' : ''} · {INTEGRATIONS.length} disponibles
           </p>
         </div>
-        <button onClick={loadConfigs} style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+        {/* [tablet] touch target 44px */}
+        <button onClick={loadConfigs} style={{ width: isTablet ? '44px' : '38px', height: isTablet ? '44px' : '38px', borderRadius: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
           <RefreshCw size={13} color="rgba(255,255,255,0.5)" />
         </button>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', minWidth: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '10px', minWidth: 0 }}>
         {[
           { label: 'Connectées', value: connectedCount, icon: Check, color: '#22c55e' },
           { label: 'Disponibles', value: INTEGRATIONS.length, icon: Sparkles, color: '#6366f1' },
           { label: 'Automations', value: INTEGRATIONS.filter(i => i.category === 'Automatisation' && configs[i.id]?.connected).length, icon: Zap, color: '#f59e0b' },
         ].map(s => (
-          <div key={s.label} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
+          <div key={s.label} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: isTablet ? '16px' : '14px', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', minWidth: 0, gap: '6px' }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: isTablet ? '11px' : '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.label}
               </span>
-              <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <s.icon size={12} color={s.color} />
+              <div style={{ width: isTablet ? '28px' : '24px', height: isTablet ? '28px' : '24px', borderRadius: '7px', background: s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <s.icon size={isTablet ? 14 : 12} color={s.color} />
               </div>
             </div>
-            <span style={{ color: 'white', fontSize: '24px', fontWeight: 800 }}>{s.value}</span>
+            <span style={{ color: 'white', fontSize: isTablet ? '28px' : '24px', fontWeight: 800 }}>{s.value}</span>
           </div>
         ))}
       </div>
@@ -585,7 +601,7 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
         </div>
         <button
           onClick={() => { navigator.clipboard.writeText(generateWebhookUrl(profileId, 'universal')); toast.success('URL copiée !'); }}
-          style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          style={{ width: isTablet ? '44px' : '38px', height: isTablet ? '44px' : '38px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
         >
           <Copy size={13} color="rgba(255,255,255,0.5)" />
         </button>
@@ -598,10 +614,10 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Rechercher une intégration…"
-          style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 34px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: '12px', outline: 'none' }}
+          style={{ width: '100%', boxSizing: 'border-box', padding: isTablet ? '13px 12px 13px 38px' : '10px 12px 10px 34px', minHeight: isTablet ? undefined : '40px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: isTablet ? '14px' : '13px', outline: 'none' }}
         />
         {search && (
-          <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex' }}>
+          <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: '28px', height: '28px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={13} />
           </button>
         )}
@@ -613,7 +629,11 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
           const count = cat.id === 'Tous' ? INTEGRATIONS.length : INTEGRATIONS.filter(i => i.category === cat.id).length;
           const active = category === cat.id;
           return (
-            <button key={cat.id} onClick={() => setCategory(cat.id)} style={{ padding: '5px 12px', borderRadius: '20px', border: '1px solid', borderColor: active ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.1)', background: active ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)', color: active ? '#a78bfa' : 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: active ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <button
+              key={cat.id}
+              onClick={() => setCategory(cat.id)}
+              style={{ padding: isTablet ? '8px 16px' : '5px 12px', minHeight: isTablet ? '40px' : '38px', borderRadius: '20px', border: '1px solid', borderColor: active ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.1)', background: active ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)', color: active ? '#a78bfa' : 'rgba(255,255,255,0.5)', fontSize: isTablet ? '12px' : '11px', fontWeight: active ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
+            >
               <span>{cat.emoji}</span>
               <span>{cat.label}</span>
               {cat.id !== 'Tous' && <span style={{ opacity: 0.5, marginLeft: '2px' }}>{count}</span>}
@@ -640,9 +660,10 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>Actives</p>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+              {/* [tablet] 2 colonnes */}
+              <div style={cardGridStyle}>
                 {INTEGRATIONS.filter(i => configs[i.id]?.connected).map(integration => (
-                  <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} />
+                  <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} isTablet={isTablet} />
                 ))}
               </div>
             </div>
@@ -654,21 +675,23 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{cat.label}</p>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+              {/* [tablet] 2 colonnes par catégorie */}
+              <div style={cardGridStyle}>
                 {filtered.filter(i => i.category === cat.id && !configs[i.id]?.connected).map(integration => (
-                  <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} />
+                  <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} isTablet={isTablet} />
                 ))}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+        /* [tablet] 2 colonnes vue filtrée */
+        <div style={cardGridStyle}>
           {filtered.filter(i => configs[i.id]?.connected).map(integration => (
-            <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} />
+            <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} isTablet={isTablet} />
           ))}
           {filtered.filter(i => !configs[i.id]?.connected).map(integration => (
-            <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} />
+            <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} isTablet={isTablet} />
           ))}
         </div>
       )}
@@ -676,8 +699,6 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
-}
-
-);
+});
 
 export default IntegrationsPanel;

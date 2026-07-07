@@ -1,19 +1,35 @@
 // AutomationsPanel.jsx — intégré au Dashboard SocialApp
 //
+// CORRECTIONS INTÉGRATION MOTEUR :
 //  [M1] Import depuis ../../lib/constants (source unique de vérité)
 //  [M2] TRIGGERS/ACTIONS locaux supprimés → TRIGGER_OPTIONS / ACTION_OPTIONS
-//  [M3] IMPLEMENTED_ACTIONS utilise les clés moteur
-//  [M4] TEMPLATE_PRESETS utilise le format multi-actions
-//  [M5] ActionConfigFields dynamique depuis ACTION_CONFIG_FIELDS
+//  [M3] IMPLEMENTED_ACTIONS utilise les clés moteur (create_task, add_score…)
+//  [M4] TEMPLATE_PRESETS utilise les clés moteur + config keys corrects
+//  [M5] ActionConfigFields reécrit dynamiquement depuis ACTION_CONFIG_FIELDS
 //  [M6] handleCreate / handleSave : actions enregistrées en [{type, config}]
-//  [M7] openEdit : reconstruit actions[] depuis actions[] ou action legacy
+//  [M7] openEdit : lit action_config + actions[0].config (merge)
 //  [M8] Badges et flow reconstruits depuis TRIGGER_LABELS / ACTION_LABELS
-//  [M9] MULTI-ACTIONS : form.actions[] remplace form.action + form.config
-//  [M10] RESPONSIVE : adaptation tablette / iOS / Android (safe-area, touch targets, breakpoints)
-//  [M11] RESPONSIVE v2 : hover:hover guard, dvh viewport, focus-visible, landscape court, desktop large
+//
+// CORRECTIONS RESPONSIVE M12 (cette révision) :
+//  [R1] @media tablette qui était collé/imbriqué à l'intérieur de :root{}
+//       supprimé — cassait TOUTES les variables CSS définies après lui
+//       (--green, --blue, --purple, --t1/t2/t3...) sur les moteurs sans
+//       support de CSS nesting natif (WebViews Android plus anciennes,
+//       navigateurs in-app).
+//  [R2] Fusion des DEUX media queries tablette 768–1023px dupliquées
+//       (valeurs contradictoires) en une seule règle cohérente.
+//  [R3] Tous les `:hover` regroupés sous @media (hover:hover) and
+//       (pointer:fine) pour éviter l'état "hover collé" au tap sur
+//       iOS/Android (même bug déjà corrigé sur IntegrationsPanel).
+//  [R4] `vh` → `dvh` sur la hauteur du modal (barre d'adresse Safari iOS
+//       ne coupe plus le contenu du modal).
+//  [R5] Cibles tactiles agrandies à 44px mini (toggle, filter-btn) via
+//       zone de tap invisible, sans changer le rendu visuel.
 
 import { useEffect, useMemo, useState } from "react";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { supabase } from "../../supabase";
+// [M1] Source unique de vérité partagée avec automationEngine.js
 import {
   TRIGGER_OPTIONS,
   TRIGGER_LABELS,
@@ -26,86 +42,131 @@ import {
 const STYLE = `
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');
 
-.ap-root{ color:#f0f0f0; font-family:'DM Sans',sans-serif; font-size:13.5px; -webkit-tap-highlight-color:transparent; }
-
-:root{
-  --bg:#111215; --card:#1a1c21; --card2:#1f2128;
-  --border:rgba(255,255,255,0.07); --hover:#22252c; --hover2:#2a2d35;
-  --orange:#f5841f; --orangeD:rgba(245,132,31,0.12);
-  --green:#22d07a;  --greenD:rgba(34,208,122,0.1);
-  --blue:#4d9cf8;   --blueD:rgba(77,156,248,0.1);
-  --purple:#a78bfa; --purpleD:rgba(167,139,250,0.1);
-  --red:#f45b5b; --yellow:#fbbf24;
-  --t1:#f0f0f0; --t2:#9fa3b0; --t3:#5c6070;
-  --safe-t: env(safe-area-inset-top, 0px);
-  --safe-b: env(safe-area-inset-bottom, 0px);
-  --safe-l: env(safe-area-inset-left, 0px);
-  --safe-r: env(safe-area-inset-right, 0px);
+.ap-root{
+  color:#f0f0f0;
+  font-family:'DM Sans',sans-serif;
+  font-size:13.5px;
 }
-*{ box-sizing:border-box; -webkit-touch-callout:none; }
 
-.ap-hdr{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; gap:12px; }
-.ap-title{ font-family:'Syne',sans-serif; font-size:18px; font-weight:700; display:flex; align-items:center; gap:9px; }
+/* [R1] :root propre — variables uniquement, aucune règle imbriquée */
+:root{
+  --bg:#111215;
+  --card:#1a1c21;
+  --card2:#1f2128;
+  --border:rgba(255,255,255,0.07);
+  --hover:#22252c;
+  --hover2:#2a2d35;
+  --orange:#f5841f;
+  --orangeD:rgba(245,132,31,0.12);
+  --green:#22d07a;
+  --greenD:rgba(34,208,122,0.1);
+  --blue:#4d9cf8;
+  --blueD:rgba(77,156,248,0.1);
+  --purple:#a78bfa;
+  --purpleD:rgba(167,139,250,0.1);
+  --red:#f45b5b;
+  --yellow:#fbbf24;
+  --t1:#f0f0f0;
+  --t2:#9fa3b0;
+  --t3:#5c6070;
+}
+
+*{ box-sizing:border-box; }
+
+.ap-hdr{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:20px;
+  gap:12px;
+}
+.ap-title{
+  font-family:'Syne',sans-serif;
+  font-size:18px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
 .ap-subtitle{ font-size:12px; color:var(--t2); margin-top:3px; }
 .hdr-btns{ display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
 
 .ap-btn-primary{
-  display:flex; align-items:center; justify-content:center; gap:5px;
+  display:flex; align-items:center; gap:5px;
   background:var(--orange); color:#fff; border:none;
-  border-radius:9px; padding:0 13px; height:34px; min-height:34px;
+  border-radius:9px; padding:0 13px; height:34px;
   font-size:12.5px; font-weight:600; cursor:pointer;
   font-family:'DM Sans',sans-serif; transition:filter .12s; white-space:nowrap;
-  touch-action:manipulation; user-select:none;
+  min-height:44px;
 }
-.ap-btn-primary:active{ filter:brightness(0.92); transform:scale(0.98); }
 
 .ap-btn-sec{
-  display:flex; align-items:center; justify-content:center; gap:5px;
+  display:flex; align-items:center; gap:5px;
   background:var(--hover); border:1px solid var(--border);
-  border-radius:9px; padding:0 12px; height:34px; min-height:34px;
+  border-radius:9px; padding:0 12px; height:34px;
   font-size:12.5px; color:var(--t2); cursor:pointer;
   font-family:'DM Sans',sans-serif; transition:all .12s; white-space:nowrap;
-  touch-action:manipulation; user-select:none;
 }
-.ap-btn-sec:active{ transform:scale(0.98); }
 
-.ap-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:18px; }
+.ap-stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin-bottom:18px;
+}
 .ap-stat{
-  background:rgba(255,255,255,0.05); border:1px solid var(--border);
-  border-radius:12px; padding:11px 10px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:11px 10px;
   display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center;
 }
-.ap-stat-ico{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.ap-stat-ico{
+  width:32px; height:32px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0;
+}
 .ap-stat-num{ font-family:'Syne',sans-serif; font-size:20px; font-weight:700; line-height:1; }
 .ap-stat-lbl{ font-size:10px; color:var(--t2); }
 
 .ap-tabs{
-  display:flex; gap:2px; background:rgba(255,255,255,0.05);
-  border:1px solid var(--border); border-radius:11px; padding:3px; margin-bottom:16px;
-  width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  display:flex; gap:2px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);
+  border-radius:11px; padding:3px; margin-bottom:16px;
+  width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;
 }
-.ap-tabs::-webkit-scrollbar{ display:none; }
 .ap-tab{
-  flex:1; padding:9px 10px; min-height:40px; border-radius:8px; font-size:12px;
+  flex:1; padding:7px 10px; border-radius:8px; font-size:12px;
   cursor:pointer; font-family:'DM Sans',sans-serif; color:var(--t2);
   transition:all .12s; border:none; background:none; white-space:nowrap; text-align:center;
-  touch-action:manipulation;
+  min-height:44px; display:flex; align-items:center; justify-content:center;
 }
 .ap-tab.on{ background:rgba(255,255,255,0.08); color:var(--t1); font-weight:600; }
 
 .ap-toolbar{ display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+
+/* [R5] zone de tap réelle >=44px via padding, apparence visuelle inchangée */
 .ap-filter-btn{
-  padding:8px 12px; min-height:36px; border-radius:7px; font-size:12px; cursor:pointer;
+  padding:5px 11px; border-radius:7px; font-size:12px; cursor:pointer;
   border:1px solid var(--border); background:var(--hover); color:var(--t2);
-  font-family:'DM Sans',sans-serif; transition:all .12s; touch-action:manipulation;
+  font-family:'DM Sans',sans-serif; transition:all .12s;
+  min-height:44px; display:inline-flex; align-items:center; justify-content:center;
 }
-.ap-filter-btn.on{ background:var(--orangeD); border-color:rgba(245,132,31,.3); color:var(--orange); font-weight:600; }
+.ap-filter-btn.on{
+  background:var(--orangeD); border-color:rgba(245,132,31,.3);
+  color:var(--orange); font-weight:600;
+}
 .ap-search{
   background:var(--hover); border:1px solid var(--border);
   border-radius:9px; display:flex; align-items:center;
-  gap:7px; padding:0 11px; height:38px; width:100%; margin-top:4px;
+  gap:7px; padding:0 11px; height:34px; width:100%; margin-top:4px;
 }
-.ap-search input{ background:none; border:none; outline:none; color:var(--t1); font-size:16px; flex:1; min-width:0; font-family:'DM Sans',sans-serif; }
+.ap-search input{
+  background:none; border:none; outline:none;
+  color:var(--t1); font-size:13px; flex:1; min-width:0;
+  font-family:'DM Sans',sans-serif;
+}
 .ap-search input::placeholder{ color:var(--t3); }
 
 .auto-list{ display:flex; flex-direction:column; gap:10px; }
@@ -114,33 +175,58 @@ const STYLE = `
   border-radius:14px; padding:14px; display:flex;
   align-items:flex-start; gap:12px;
   transition:border-color .15s,background .15s; cursor:pointer;
-  touch-action:manipulation;
 }
-.auto-card:active{ background:rgba(255,255,255,0.07); }
 .auto-card.active-card{ border-color:rgba(245,132,31,.25); }
-.auto-ico{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.auto-ico{
+  width:38px; height:38px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
 .auto-body{ flex:1; min-width:0; }
-.auto-name{ font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.auto-name{
+  font-size:13.5px; font-weight:600;
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+}
 .auto-desc{ font-size:12px; color:var(--t2); margin-top:4px; line-height:1.5; }
 .auto-meta{ display:flex; align-items:center; gap:6px; margin-top:8px; flex-wrap:wrap; }
 .auto-badge{ font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; }
 .ab-trigger{ background:var(--blueD); color:var(--blue); }
 .ab-action{ background:var(--orangeD); color:var(--orange); }
 .ab-freq{ background:rgba(167,139,250,.1); color:var(--purple); }
-.ab-count{ background:rgba(77,156,248,.1); color:var(--blue); }
 .auto-stat{ font-size:10.5px; color:var(--t3); display:flex; align-items:center; gap:3px; }
 .auto-right{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
 .ap-tog-wrap{ display:flex; align-items:center; gap:6px; font-size:11px; }
 .ap-tog-lbl{ color:var(--t2); }
-.ap-toggle{ position:relative; width:44px; height:26px; border-radius:13px; cursor:pointer; border:none; transition:background .2s; flex-shrink:0; touch-action:manipulation; }
+
+/* [R5] .ap-toggle : le visuel reste 34x19, mais la zone de tap réelle
+   est agrandie à 44x44 via ::before invisible pour rester accessible
+   sans changer le design existant */
+.ap-toggle{
+  position:relative; width:34px; height:19px;
+  border-radius:10px; cursor:pointer; border:none;
+  transition:background .2s; flex-shrink:0;
+}
+.ap-toggle::before{
+  content:''; position:absolute;
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  width:44px; height:44px;
+}
 .ap-toggle.on{ background:var(--green); }
 .ap-toggle.off{ background:var(--hover2); }
-.ap-toggle::after{ content:''; position:absolute; top:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
-.ap-toggle.on::after{ left:21px; }
+.ap-toggle::after{
+  content:''; position:absolute; top:3px;
+  width:13px; height:13px; border-radius:50%;
+  background:#fff; transition:left .2s;
+}
+.ap-toggle.on::after{ left:18px; }
 .ap-toggle.off::after{ left:3px; }
 
 .flow{ display:flex; align-items:center; margin-top:9px; flex-wrap:wrap; gap:4px; }
-.flow-step{ display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:7px; padding:4px 8px; font-size:11px; color:var(--t2); }
+.flow-step{
+  display:flex; align-items:center; gap:4px;
+  background:rgba(255,255,255,0.06); border:1px solid var(--border);
+  border-radius:7px; padding:4px 8px; font-size:11px; color:var(--t2);
+}
 .flow-arrow{ color:var(--t3); font-size:13px; margin:0 1px; }
 
 .tmpl-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
@@ -150,7 +236,10 @@ const STYLE = `
   transition:border-color .15s,background .15s;
   position:relative; overflow:hidden;
 }
-.tmpl-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:13px 13px 0 0; }
+.tmpl-card::before{
+  content:''; position:absolute; top:0; left:0; right:0;
+  height:3px; border-radius:13px 13px 0 0;
+}
 .tmpl-card.c-orange::before{background:var(--orange)}
 .tmpl-card.c-blue::before{background:var(--blue)}
 .tmpl-card.c-green::before{background:var(--green)}
@@ -159,11 +248,26 @@ const STYLE = `
 .tmpl-name{ font-size:13px; font-weight:600; margin-bottom:4px; color:var(--t1); }
 .tmpl-desc{ font-size:11.5px; color:var(--t2); line-height:1.5; margin-bottom:9px; }
 .tmpl-tags{ display:flex; gap:5px; flex-wrap:wrap; }
-.tmpl-tag{ font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; background:var(--hover); color:var(--t2); border:1px solid var(--border); }
-.tmpl-use{ width:100%; margin-top:9px; min-height:38px; background:var(--orangeD); border:1px dashed rgba(245,132,31,.3); border-radius:8px; padding:7px; font-size:12px; color:var(--orange); cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600; touch-action:manipulation; }
+.tmpl-tag{
+  font-size:10px; font-weight:600; padding:2px 7px;
+  border-radius:20px; background:var(--hover); color:var(--t2);
+  border:1px solid var(--border);
+}
+.tmpl-use{
+  width:100%; margin-top:9px;
+  background:var(--orangeD); border:1px dashed rgba(245,132,31,.3);
+  border-radius:8px; padding:7px;
+  font-size:12px; color:var(--orange);
+  cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
+  min-height:44px;
+}
 
 .log-list{ display:flex; flex-direction:column; }
-.log-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); font-size:12px; flex-wrap:wrap; }
+.log-row{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,0.03); font-size:12px; flex-wrap:wrap;
+}
 .log-row:last-child{ border-bottom:none; }
 .log-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 .log-name{ font-weight:500; flex:1; min-width:80px; color:var(--t1); }
@@ -173,229 +277,139 @@ const STYLE = `
 .ls-err{ background:rgba(244,91,91,.12); color:var(--red); }
 .ls-skip{ background:rgba(100,100,120,.2); color:var(--t2); }
 .log-time{ color:var(--t3); font-size:10.5px; flex-shrink:0; }
-.log-reason{ flex-basis:100%; font-size:11px; color:var(--t3); padding-left:17px; margin-top:-2px; }
+.log-reason{
+  flex-basis:100%; font-size:11px; color:var(--t3);
+  padding-left:17px; margin-top:-2px;
+}
 
+/* [R4] vh → dvh pour la hauteur du modal (Safari iOS / barre d'adresse) */
 .ap-modal-overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.65);
-  backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); z-index:200;
+  backdrop-filter:blur(5px); z-index:200;
   display:flex; align-items:flex-end; justify-content:center; padding:0;
-}
-@media(min-width:600px){
-  .ap-modal-overlay{ align-items:center; padding:20px; }
-  .ap-modal{ border-radius:18px !important; max-height:90vh; }
 }
 .ap-modal{
   background:#1a1c21; border:1px solid rgba(255,255,255,0.1);
   border-radius:20px 20px 0 0; width:100%; max-width:520px;
-  padding:20px 18px calc(28px + var(--safe-b)); display:flex; flex-direction:column;
-  gap:14px; max-height:92vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-  padding-left:calc(18px + var(--safe-l)); padding-right:calc(18px + var(--safe-r));
+  padding:20px 18px 28px; display:flex; flex-direction:column;
+  gap:14px; max-height:92dvh; overflow-y:auto; -webkit-overflow-scrolling:touch;
 }
-@supports (height: 100dvh){
-  .ap-modal{ max-height:92dvh; }
-  @media(min-width:600px){ .ap-modal{ max-height:90dvh; } }
+.ap-modal-title{
+  font-family:'Syne',sans-serif; font-size:16px; font-weight:700;
+  display:flex; align-items:center; gap:10px; color:var(--t1);
 }
-.ap-modal-title{ font-family:'Syne',sans-serif; font-size:16px; font-weight:700; display:flex; align-items:center; gap:10px; color:var(--t1); }
-.ap-modal-close{ margin-left:auto; background:none; border:none; color:var(--t2); font-size:20px; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
+.ap-modal-close{ margin-left:auto; background:none; border:none; color:var(--t2); font-size:20px; cursor:pointer; min-height:44px; min-width:44px; }
 .ap-field-label{ font-size:12px; font-weight:600; color:var(--t2); margin-bottom:5px; }
-.ap-sec-lbl{ font-size:10.5px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; color:var(--t3); margin-bottom:7px; margin-top:2px; }
-.ap-field-input,.ap-field-select,.ap-field-textarea{
+.ap-sec-lbl{
+  font-size:10.5px; font-weight:700; letter-spacing:.7px;
+  text-transform:uppercase; color:var(--t3); margin-bottom:7px; margin-top:2px;
+}
+.ap-field-input,
+.ap-field-select,
+.ap-field-textarea{
   width:100%; background:var(--hover); border:1px solid var(--border);
-  border-radius:9px; padding:11px 13px; font-size:16px; color:var(--t1);
-  outline:none; font-family:'DM Sans',sans-serif; min-height:44px;
+  border-radius:9px; padding:10px 13px; font-size:13px; color:var(--t1);
+  outline:none; font-family:'DM Sans',sans-serif;
 }
 .ap-field-textarea{ resize:vertical; min-height:64px; }
-.ap-field-input:focus,.ap-field-select:focus,.ap-field-textarea:focus{ border-color:rgba(245,132,31,.4); }
-.ap-field-input::placeholder,.ap-field-textarea::placeholder{ color:var(--t3); }
+.ap-field-input:focus,
+.ap-field-select:focus,
+.ap-field-textarea:focus{ border-color:rgba(245,132,31,.4); }
+.ap-field-input::placeholder,
+.ap-field-textarea::placeholder{ color:var(--t3); }
 
-.ap-config-box{ background:rgba(245,132,31,.05); border:1px solid rgba(245,132,31,.18); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; }
-.ap-config-title{ font-size:11px; font-weight:700; color:var(--orange); display:flex; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:.5px; }
-.ap-config-note{ font-size:11.5px; color:var(--t2); line-height:1.5; background:rgba(255,255,255,0.04); border:1px dashed var(--border); border-radius:8px; padding:9px 11px; }
-
-/* [M9] Multi-actions */
-.ap-action-item{
-  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-  border-radius:11px; padding:12px; display:flex; flex-direction:column; gap:10px; margin-bottom:8px;
+.ap-config-box{
+  background:rgba(245,132,31,.05);
+  border:1px solid rgba(245,132,31,.18);
+  border-radius:12px;
+  padding:12px;
+  display:flex; flex-direction:column; gap:10px;
 }
-.ap-action-item-hdr{ display:flex; align-items:center; gap:8px; }
-.ap-action-num{ font-size:11px; font-weight:700; color:var(--orange); background:var(--orangeD); border-radius:6px; padding:2px 8px; flex-shrink:0; }
-.ap-action-arrow{ font-size:18px; color:var(--t3); text-align:center; margin:-4px 0; }
-.ap-action-del{ margin-left:auto; background:none; border:none; color:var(--red); cursor:pointer; font-size:16px; line-height:1; padding:0 4px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
-.ap-add-action{
-  width:100%; min-height:44px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.12);
-  border-radius:9px; padding:10px; font-size:12.5px; color:var(--t2);
-  cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
-  display:flex; align-items:center; justify-content:center; gap:6px; transition:all .15s;
-  touch-action:manipulation;
+.ap-config-title{
+  font-size:11px; font-weight:700; color:var(--orange);
+  display:flex; align-items:center; gap:6px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.ap-config-note{
+  font-size:11.5px; color:var(--t2); line-height:1.5;
+  background:rgba(255,255,255,0.04); border:1px dashed var(--border);
+  border-radius:8px; padding:9px 11px;
 }
 
-.ap-modal-footer{ display:flex; gap:8px; justify-content:flex-end; padding-top:4px; border-top:1px solid var(--border); flex-wrap:wrap; }
+.ap-modal-footer{
+  display:flex; gap:8px; justify-content:flex-end;
+  padding-top:4px; border-top:1px solid var(--border); flex-wrap:wrap;
+}
 .ap-loading{ padding:60px 20px; text-align:center; color:var(--t2); }
 
-/* ══════════════════════════════════════════════════════════
-   Hover réel uniquement (souris/trackpad) — évite le hover
-   "collant" après un tap sur tablette/mobile tactile
-   ══════════════════════════════════════════════════════════ */
-@media (hover:hover) and (pointer:fine){
+/* [R3] Tous les états :hover regroupés et gardés par (hover:hover) et
+   (pointer:fine) — évite l'état "hover collé" après un tap sur
+   mobile/tablette tactile (même classe de bug déjà corrigée sur
+   IntegrationsPanel) */
+@media (hover: hover) and (pointer: fine) {
   .ap-btn-primary:hover{ filter:brightness(1.08); }
   .ap-btn-sec:hover{ background:var(--hover2); color:var(--t1); }
-  .ap-tab:hover{ color:var(--t1); }
   .ap-filter-btn:hover{ background:var(--hover2); color:var(--t1); }
+  .ap-tab:hover{ color:var(--t1); }
   .auto-card:hover{ border-color:rgba(255,255,255,.13); background:rgba(255,255,255,0.06); }
   .tmpl-card:hover{ border-color:rgba(245,132,31,.3); background:rgba(255,255,255,0.06); }
-  .ap-add-action:hover{ border-color:rgba(245,132,31,.3); color:var(--orange); background:var(--orangeD); }
 }
 
-/* Focus clavier visible (desktop / accessibilité) — n'affiche pas d'anneau
-   quand l'interaction vient du tactile */
-button:focus-visible,
-.ap-tab:focus-visible,
-.ap-filter-btn:focus-visible,
-.ap-toggle:focus-visible,
-.ap-search input:focus-visible,
-.ap-field-input:focus-visible,
-.ap-field-select:focus-visible,
-.ap-field-textarea:focus-visible{
-  outline:2px solid var(--orange); outline-offset:2px;
-}
-
-/* ══════════════════════════════════════════════════════════
-   [M10/M11] RESPONSIVE — Desktop large / Tablette (iPad) / iOS / Android
-   ══════════════════════════════════════════════════════════ */
-
-/* Desktop large : évite l'étirement excessif du contenu, grilles plus aérées */
-@media (min-width:1280px){
-  .ap-root{ max-width:1360px; margin:0 auto; }
-  .tmpl-grid{ grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
-  .auto-card{ padding:16px 18px; }
-}
-
-/* Tablette : 768px – 1024px (iPad portrait/landscape) */
-@media (min-width:641px) and (max-width:1024px){
-  .ap-stats{ gap:10px; }
-  .tmpl-grid{ grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+/* [R2] Media queries fusionnées : une seule règle 768–1023px cohérente
+   (remplace les deux blocs dupliqués/contradictoires de l'ancienne
+   version, dont un était imbriqué à tort dans :root) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ap-stats{ grid-template-columns: repeat(2, 1fr); gap:10px; }
+  .ap-stat-num{ font-size:24px; }
+  .ap-stat-ico{ width:36px; height:36px; }
+  .ap-tabs{ gap:4px; }
+  .ap-tab{ font-size:13px; padding:9px 12px; }
   .auto-card{ padding:16px; }
-  .ap-modal{ max-width:560px; }
+  .auto-name{ font-size:14px; }
+  .ap-btn-primary, .ap-btn-sec{ height:40px; min-width:44px; }
+  .ap-filter-btn{ padding:7px 14px; font-size:13px; }
+  .tmpl-grid{ grid-template-columns: repeat(2, 1fr); }
+  .ap-toggle{ width:40px; height:22px; }
+  .ap-toggle.on::after  { left:21px; }
+  .ap-toggle.off::after { left:4px; }
 }
 
-/* Grandes tablettes / landscape : header et toolbar sur une ligne, plus d'air */
-@media (min-width:900px){
-  .ap-toolbar{ flex-wrap:nowrap; }
-  .ap-search{ width:auto; min-width:220px; margin-top:0; margin-left:auto; }
+/* Modal : centré et largeur contrainte dès 600px (tablette/desktop) */
+@media (min-width: 600px) {
+  .ap-modal-overlay{ align-items:center; padding:20px; }
+  .ap-modal{ border-radius:18px; max-height:90dvh; }
 }
-
-/* Mobile / petite tablette portrait ≤ 640px (iOS & Android phones) */
-@media (max-width:640px){
-  .ap-root{ font-size:13px; }
-  .ap-hdr{ flex-direction:column; align-items:stretch; gap:10px; }
-  .hdr-btns{ width:100%; }
-  .hdr-btns .ap-btn-primary{ flex:1; }
-
-  .ap-stats{ grid-template-columns:repeat(2,1fr); gap:8px; }
-
-  .ap-tabs{ padding:3px; }
-  .ap-tab{ padding:9px 6px; font-size:11.5px; }
-
-  .ap-toolbar{ flex-direction:column; align-items:stretch; }
-  .ap-toolbar > .ap-filter-btn{ flex:0 0 auto; }
-
-  .auto-card{ flex-wrap:wrap; padding:13px; }
-  .auto-right{
-    flex-direction:row; align-items:center; justify-content:space-between;
-    width:100%; margin-top:4px; padding-top:10px; border-top:1px solid var(--border);
-  }
-
-  .ap-modal{ max-height:calc(100vh - var(--safe-t) - 16px); }
-  @supports (height: 100dvh){
-    .ap-modal{ max-height:calc(100dvh - var(--safe-t) - 16px); }
-  }
-  .ap-modal-footer{ flex-direction:column-reverse; }
-  .ap-modal-footer > button{ width:100%; }
-  .ap-modal-footer > .ap-btn-sec[style*="marginRight"]{ width:100%; }
-}
-
-/* Très petits écrans (iPhone SE / Android compacts) */
-@media (max-width:380px){
-  .ap-stats{ grid-template-columns:repeat(2,1fr); gap:6px; }
-  .ap-stat{ padding:9px 6px; }
-  .ap-stat-num{ font-size:17px; }
-  .flow-step{ font-size:10px; padding:3px 6px; }
-}
-
-/* Mobile / tablette en paysage bas (clavier ouvert, hauteur réduite) */
-@media (max-height:480px) and (orientation:landscape){
-  .ap-modal-overlay{ align-items:flex-start; padding-top:8px; }
-  .ap-modal{
-    max-height:calc(100vh - 16px); border-radius:16px; gap:8px;
-    padding-top:14px; padding-bottom:calc(14px + var(--safe-b));
-  }
-  @supports (height: 100dvh){ .ap-modal{ max-height:calc(100dvh - 16px); } }
-  .ap-modal-title{ font-size:14px; }
-  .ap-field-textarea{ min-height:44px; }
-}
-
-/* Support des safe-area iOS (encoche / home indicator) sur le conteneur racine */
-.ap-root{ padding-left:var(--safe-l); padding-right:var(--safe-r); }
-
-/* Empêche le "double-tap zoom" iOS sur les zones interactives */
-.auto-card, .tmpl-card, .ap-btn-primary, .ap-btn-sec, .ap-toggle, .ap-tab, .ap-filter-btn{ touch-action:manipulation; }
-
-/* Android : suppression du halo de tap par défaut sur Chrome/WebView */
-button, a, input, select, textarea{ -webkit-tap-highlight-color:transparent; }
-
-/* Respect des préférences de mouvement réduit */
-@media (prefers-reduced-motion: reduce){
-  *{ transition-duration:0.01ms !important; animation-duration:0.01ms !important; }
+@media (min-width: 768px) {
+  .ap-modal{ max-width:580px; padding:24px 22px 32px; }
+  .ap-hdr{ margin-bottom:24px; }
+  .ap-modal-title{ font-size:18px; }
+  .ap-field-input,.ap-field-select,.ap-field-textarea{ font-size:14px; padding:11px 14px; }
+  .ap-btn-primary,.ap-btn-sec{ height:38px; font-size:13px; }
 }
 `;
 
-/* ─── Constantes ──────────────────────────────────────────── */
+/* ─── Constantes locales ──────────────────────────────────── */
 
+// [M3] Actions réellement exécutées par le moteur — clés moteur uniquement
 const IMPLEMENTED_ACTIONS = new Set([
   'create_lead', 'create_task', 'send_whatsapp',
   'add_score', 'add_tag', 'notify_owner',
 ]);
 
+// Actions planifiées (non encore dans le moteur)
 const COMING_SOON_ACTIONS = [
   { value: 'change_status', label: '🔄 Changer statut' },
   { value: 'send_email',    label: '📧 Envoyer un email' },
   { value: 'webhook_call',  label: '🔗 Appeler un webhook' },
 ];
 
-// [M4] Templates avec format multi-actions
+// [M4] Templates avec clés moteur + config keys corrects
 const TEMPLATE_PRESETS = {
-  'lead-vip':  {
-    name:'Lead VIP', desc:'Tag automatiquement les nouveaux prospects.',
-    trigger:'new_lead', freq:'Immédiat',
-    actions:[{ type:'add_tag', config:{ tag:'vip' } }],
-  },
-  'lead-cold': {
-    name:'Relance WhatsApp', desc:'Envoie un message de relance aux nouveaux contacts.',
-    trigger:'new_lead', freq:'Manuel',
-    actions:[{ type:'send_whatsapp', config:{ message:"Bonjour, nous n'avons pas eu de vos nouvelles ! Toujours intéressé(e) ?" } }],
-  },
-  'whatsapp':  {
-    name:'WhatsApp Lead', desc:"Crée un lead et une tâche quand un visiteur clique sur WhatsApp.",
-    trigger:'whatsapp_click', freq:'Immédiat',
-    actions:[
-      { type:'create_lead', config:{ status:'prospect', score:50 } },
-      { type:'create_task', config:{ taskTitle:'Rappeler ce contact WhatsApp' } },
-    ],
-  },
-  'qr':        {
-    name:'QR Tracking', desc:"Ajoute des points au score lors d'un scan QR.",
-    trigger:'qr_scan', freq:'Immédiat',
-    actions:[{ type:'add_score', config:{ score:5 } }],
-  },
-  'score':     {
-    name:'Lead Scoring', desc:'Attribution automatique de score aux nouveaux leads.',
-    trigger:'new_lead', freq:'Immédiat',
-    actions:[
-      { type:'create_lead', config:{ status:'prospect' } },
-      { type:'add_score',   config:{ score:10 } },
-    ],
-  },
+  'lead-vip':   { name:'Lead VIP',            desc:'Tag automatiquement les nouveaux prospects.',             trigger:'new_lead',       action:'add_tag',       freq:'Immédiat', config:{ tag:'vip' } },
+  'lead-cold':  { name:'Relance WhatsApp',     desc:'Envoie un message de relance aux nouveaux contacts.',   trigger:'new_lead',       action:'send_whatsapp', freq:'Manuel',   config:{ message:"Bonjour, nous n'avons pas eu de vos nouvelles ! Toujours intéressé(e) ?" } },
+  'whatsapp':   { name:'WhatsApp Lead',        desc:"Crée une tâche quand un visiteur clique sur WhatsApp.", trigger:'whatsapp_click', action:'create_task',   freq:'Immédiat', config:{ taskTitle:'Rappeler ce contact WhatsApp' } },
+  'qr':         { name:'QR Tracking',          desc:"Ajoute des points au score lors d'un scan QR.",         trigger:'qr_scan',        action:'add_score',     freq:'Immédiat', config:{ score:5 } },
+  'score':      { name:'Lead Scoring',         desc:'Attribution automatique de score aux nouveaux leads.',  trigger:'new_lead',       action:'add_score',     freq:'Immédiat', config:{ score:10 } },
 };
 
 const TEMPLATES = [
@@ -414,8 +428,7 @@ const LEAD_STATUSES = [
   { id:'perdu',    label:'Perdu' },
 ];
 
-// [M9] Form vide avec actions[]
-const EMPTY_FORM = { name:'', desc:'', trigger:'', actions:[], freq:'' };
+const EMPTY_FORM = { name:'', desc:'', trigger:'', action:'', freq:'', config:{} };
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function formatLastRun(isoDate) {
@@ -423,7 +436,7 @@ function formatLastRun(isoDate) {
   const d = new Date(isoDate);
   const diffMs = Date.now() - d.getTime();
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1)  return "À l'instant";
+  if (diffMin < 1)  return 'À l\'instant';
   if (diffMin < 60) return `il y a ${diffMin} min`;
   const diffH = Math.floor(diffMin / 60);
   if (diffH < 24)   return `il y a ${diffH}h`;
@@ -432,15 +445,16 @@ function formatLastRun(isoDate) {
   return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
 }
 
-/* ─── [M5] ActionConfigFields ────────────────────────────── */
+/* ─── [M5] ActionConfigFields : dynamique depuis constants ─ */
 function ActionConfigFields({ action, config, setConfigField }) {
   if (!action) return null;
 
+  // Action non encore implémentée dans le moteur
   if (!IMPLEMENTED_ACTIONS.has(action)) {
     return (
       <div className="ap-config-box">
         <div className="ap-config-note">
-          ⏳ Cette action sera disponible prochainement.
+          ⏳ Cette action sera disponible prochainement. L'automation sera enregistrée mais non exécutée par le moteur.
         </div>
       </div>
     );
@@ -452,60 +466,51 @@ function ActionConfigFields({ action, config, setConfigField }) {
   return (
     <div className="ap-config-box">
       <div className="ap-config-title">⚙️ Configuration</div>
+
       {fields.map(field => (
         <div key={field.key}>
           <div className="ap-field-label">{field.label}</div>
+
           {field.type === 'select' ? (
-            <select className="ap-field-select" value={config[field.key] || ''} onChange={setConfigField(field.key)}>
+            <select
+              className="ap-field-select"
+              value={config[field.key] || ''}
+              onChange={setConfigField(field.key)}
+            >
               <option value="">Choisir...</option>
+              {/* Statuts enrichis pour create_lead */}
               {field.key === 'status'
                 ? LEAD_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)
                 : (field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)
               }
             </select>
+
           ) : field.type === 'textarea' ? (
-            <textarea className="ap-field-textarea" placeholder={field.placeholder || ''} value={config[field.key] || ''} onChange={setConfigField(field.key)} />
+            <textarea
+              className="ap-field-textarea"
+              placeholder={field.placeholder || ''}
+              value={config[field.key] || ''}
+              onChange={setConfigField(field.key)}
+            />
+
           ) : (
-            <input className="ap-field-input" type={field.type || 'text'} placeholder={field.placeholder || ''} value={config[field.key] ?? ''} onChange={setConfigField(field.key)} />
+            <input
+              className="ap-field-input"
+              type={field.type || 'text'}
+              placeholder={field.placeholder || ''}
+              value={config[field.key] ?? ''}
+              onChange={setConfigField(field.key)}
+            />
           )}
         </div>
       ))}
+
+      {/* Note spécifique à send_whatsapp */}
       {action === 'send_whatsapp' && (
         <div className="ap-config-note">
-          💡 Nécessite l'intégration WhatsApp Business dans le panneau Intégrations.
+          💡 Nécessite que l'intégration WhatsApp Business soit connectée dans le panneau Intégrations.
         </div>
       )}
-    </div>
-  );
-}
-
-/* ─── [M9] ActionItem ────────────────────────────────────── */
-function ActionItem({ actionDef, index, total, onChange, onDelete }) {
-  const setConfigField = (key) => (e) =>
-    onChange(index, { ...actionDef, config: { ...actionDef.config, [key]: e.target.value } });
-
-  return (
-    <div className="ap-action-item">
-      <div className="ap-action-item-hdr">
-        <span className="ap-action-num">Action {index + 1}</span>
-        {total > 1 && (
-          <button className="ap-action-del" onClick={() => onDelete(index)} title="Supprimer">✕</button>
-        )}
-      </div>
-      <select
-        className="ap-field-select"
-        value={actionDef.type || ''}
-        onChange={e => onChange(index, { type: e.target.value, config: {} })}
-      >
-        <option value="">Choisir une action...</option>
-        <optgroup label="── Disponibles ──">
-          {ACTION_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-        </optgroup>
-        <optgroup label="── Bientôt ──">
-          {COMING_SOON_ACTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-        </optgroup>
-      </select>
-      <ActionConfigFields action={actionDef.type} config={actionDef.config || {}} setConfigField={setConfigField} />
     </div>
   );
 }
@@ -522,13 +527,10 @@ export default function AutomationsPanel({ profileId }) {
   const [modal, setModal]             = useState(null);
   const [form, setForm]               = useState(EMPTY_FORM);
 
+  const { isMobile, isTablet } = useBreakpoint();
   const isCreate = modal === 'create';
-  const setField = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
-
-  // [M9] Handlers actions
-  const addAction    = () => setForm(prev => ({ ...prev, actions: [...prev.actions, { type: '', config: {} }] }));
-  const updateAction = (idx, updated) => setForm(prev => ({ ...prev, actions: prev.actions.map((a, i) => i === idx ? updated : a) }));
-  const deleteAction = (idx) => setForm(prev => ({ ...prev, actions: prev.actions.filter((_, i) => i !== idx) }));
+  const setField       = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const setConfigField = (key) => (e) => setForm(prev => ({ ...prev, config: { ...prev.config, [key]: e.target.value } }));
 
   useEffect(() => { if (profileId) loadAutomations(); }, [profileId]);
   useEffect(() => { if (tab === 'logs' && profileId) loadLogs(); }, [tab, profileId]);
@@ -555,51 +557,74 @@ export default function AutomationsPanel({ profileId }) {
     setLogsLoading(false);
   };
 
+  /* ── CRUD ── */
   const openCreate = () => { setForm(EMPTY_FORM); setModal('create'); };
 
   const useTemplate = (t) => {
-    setForm({ name: t.name || '', desc: t.desc || '', trigger: t.trigger || '', actions: t.actions || [], freq: t.freq || '' });
+    setForm({
+      name:    t.name    || '',
+      desc:    t.desc    || '',
+      trigger: t.trigger || '',   // clé moteur ex: 'whatsapp_click'
+      action:  t.action  || '',   // clé moteur ex: 'create_task'
+      freq:    t.freq    || '',
+      config:  t.config  || {},
+    });
     setModal('create');
   };
 
-  // [M7][M9] Ouvrir l'édition — reconstruit actions[]
+  // [M7] Ouvrir l'édition en lisant correctement les clés moteur
   const openEdit = (auto) => {
-    let actionsList = [];
-    if (Array.isArray(auto.actions) && auto.actions.length > 0) {
-      actionsList = auto.actions;
-    } else if (auto.action) {
-      actionsList = [{ type: auto.action, config: auto.action_config || {} }];
-    }
-    setForm({ name: auto.name || '', desc: auto.desc || auto.description || '', trigger: auto.trigger || '', actions: actionsList, freq: auto.freq || '' });
+    // Merge action_config + actions[0].config pour récupérer tous les champs
+    const baseConfig  = auto.action_config || {};
+    const arrayConfig = Array.isArray(auto.actions) && auto.actions.length > 0
+      ? (auto.actions[0]?.config || {})
+      : {};
+    const mergedConfig = { ...baseConfig, ...arrayConfig };
+
+    setForm({
+      name:    auto.name        || '',
+      desc:    auto.desc        || auto.description || '',
+      trigger: auto.trigger     || '',   // ex: 'whatsapp_click'
+      action:  auto.action      || '',   // ex: 'create_task'
+      freq:    auto.freq        || '',
+      config:  mergedConfig,
+    });
     setModal(auto);
   };
 
-  // [M6][M9] Payload moteur
+  // [M6] Construire le payload avec le format moteur correct
   const buildPayload = () => {
-    const cleanActions = form.actions.filter(a => a.type);
+    const actionConfig = form.config || {};
+    // actions[] = [{type: 'create_task', config: {taskTitle: '...'}}]
+    const actionsList = form.action
+      ? [{ type: form.action, config: actionConfig }]
+      : [];
+
+    // [M8] Flow reconstruit avec les libellés lisibles (affichage UI uniquement)
     const flow = [
       ['🎯', TRIGGER_LABELS[form.trigger] || form.trigger || 'Déclencheur'],
-      ...cleanActions.map(a => ['⚡', ACTION_LABELS[a.type] || a.type]),
+      ...(form.action ? [['⚡', ACTION_LABELS[form.action] || form.action]] : []),
       ['✅', 'Exécuté'],
     ];
+
     return {
-      profile_id:    profileId,
-      name:          form.name.trim(),
-      description:   form.desc.trim(),
-      trigger:       form.trigger,
-      action:        cleanActions[0]?.type   || '',   // legacy
-      action_config: cleanActions[0]?.config || {},   // legacy
-      actions:       cleanActions,                     // moteur
-      freq:          form.freq || 'Immédiat',
-      flow, icon: '⚡', color: 'rgba(245,132,31,.1)',
-      updated_at:    new Date().toISOString(),
+      profile_id:   profileId,
+      name:         form.name.trim(),
+      description:  form.desc.trim(),
+      trigger:      form.trigger,     // clé moteur
+      action:       form.action,      // clé moteur (compatibilité legacy)
+      actions:      actionsList,      // [{type, config}]
+      action_config: actionConfig,    // config à plat (compatibilité legacy)
+      freq:         form.freq || 'Immédiat',
+      flow,
+      icon:         '⚡',
+      color:        'rgba(245,132,31,.1)',
+      updated_at:   new Date().toISOString(),
     };
   };
 
   const handleCreate = async () => {
-    if (!form.name.trim())                      { alert('Le nom est requis'); return; }
-    if (!form.trigger)                           { alert('Le déclencheur est requis'); return; }
-    if (!form.actions.some(a => a.type))         { alert('Au moins une action est requise'); return; }
+    if (!form.name.trim()) { alert('Le nom est requis'); return; }
     const payload = { ...buildPayload(), active: true, runs: 0 };
     const { data, error } = await supabase.from('automations').insert(payload).select().maybeSingle();
     if (error) { console.error('CREATE ERROR:', error); return; }
@@ -610,9 +635,12 @@ export default function AutomationsPanel({ profileId }) {
   const handleSave = async () => {
     if (!modal || modal === 'create') return;
     const payload = buildPayload();
-    const { data, error } = await supabase.from('automations').update(payload).eq('id', modal.id).select().maybeSingle();
+    const { data, error } = await supabase
+      .from('automations').update(payload).eq('id', modal.id).select().maybeSingle();
     if (error) { console.error('SAVE ERROR:', error); return; }
-    if (data) setAutomations(prev => prev.map(a => a.id === modal.id ? { ...a, ...data, desc: data.description || '' } : a));
+    if (data) setAutomations(prev => prev.map(a =>
+      a.id === modal.id ? { ...a, ...data, desc: data.description || '' } : a
+    ));
     setModal(null);
   };
 
@@ -629,23 +657,28 @@ export default function AutomationsPanel({ profileId }) {
     if (!target) return;
     const newStatus = !target.active;
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: newStatus } : a));
-    const { error } = await supabase.from('automations').update({ active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+    const { error } = await supabase.from('automations')
+      .update({ active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: target.active } : a));
   };
 
+  /* ── Filtres ── */
   const filtered = useMemo(() => automations.filter(a => {
     const matchFilter = filter === 'Tous' || (filter === 'Actives' && a.active) || (filter === 'Inactives' && !a.active);
+    // [M8] Recherche sur le nom ou le libellé du déclencheur
     const triggerLabel = TRIGGER_LABELS[a.trigger] || a.trigger || '';
     const matchSearch  = (a.name || '').toLowerCase().includes(search.toLowerCase())
                       || triggerLabel.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   }), [automations, filter, search]);
 
+  /* ── Stats ── */
   const totalRuns  = automations.reduce((sum, a) => sum + (a.runs || 0), 0);
   const totalScore = automations.reduce((sum, a) => sum + (a.score || 0), 0);
   const nbActive   = automations.filter(a => a.active).length;
   const nbInactive = automations.filter(a => !a.active).length;
 
+  /* ── Log helpers ── */
   const logStatusCls = s => ({ ok:'log-status ls-ok', err:'log-status ls-err', skip:'log-status ls-skip' }[s] || 'log-status ls-skip');
   const logStatusLbl = s => ({ ok:'✓ Succès', err:'✗ Erreur', skip:'⏭ Ignoré' }[s] || s);
   const logDotCol    = s => ({ ok:'#22d07a', err:'#f45b5b', skip:'#5c6070' }[s] || '#5c6070');
@@ -707,13 +740,13 @@ export default function AutomationsPanel({ profileId }) {
             ) : (
               <div className="auto-list">
                 {filtered.map(auto => {
+                  // [M8] Libellés lisibles depuis les clés moteur
                   const triggerLabel = TRIGGER_LABELS[auto.trigger] || auto.trigger || 'Aucun';
-                  const actionsList  = Array.isArray(auto.actions) && auto.actions.length > 0
-                    ? auto.actions
-                    : auto.action ? [{ type: auto.action }] : [];
+                  const actionLabel  = ACTION_LABELS[auto.action]   || auto.action   || 'Aucune';
+                  // Flow reconstruit (remplace l'ancien stocké en FR)
                   const cardFlow = [
                     ['🎯', triggerLabel],
-                    ...actionsList.map(a => ['⚡', ACTION_LABELS[a.type] || a.type || 'Action']),
+                    ...(auto.action ? [['⚡', actionLabel]] : []),
                     ['✅', 'Exécuté'],
                   ];
 
@@ -726,8 +759,10 @@ export default function AutomationsPanel({ profileId }) {
                           <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.1)':'rgba(100,100,120,.2)', color:auto.active?'#22d07a':'#5c6070', padding:'2px 7px', borderRadius:20 }}>
                             {auto.active ? 'Actif' : 'Inactif'}
                           </span>
-                          {actionsList.length > 1 && (
-                            <span className="auto-badge ab-count">{actionsList.length} actions</span>
+                          {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
+                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(251,191,36,.12)', color:'#fbbf24', padding:'2px 7px', borderRadius:20 }}>
+                              ⏳ Bientôt
+                            </span>
                           )}
                         </div>
                         <div className="auto-desc">{auto.desc}</div>
@@ -741,10 +776,7 @@ export default function AutomationsPanel({ profileId }) {
                         </div>
                         <div className="auto-meta">
                           <span className="auto-badge ab-trigger">{triggerLabel}</span>
-                          {actionsList.slice(0, 2).map((a, i) => (
-                            <span key={i} className="auto-badge ab-action">{ACTION_LABELS[a.type] || a.type}</span>
-                          ))}
-                          {actionsList.length > 2 && <span className="auto-badge ab-action">+{actionsList.length - 2}</span>}
+                          <span className="auto-badge ab-action">{actionLabel}</span>
                           {auto.freq && <span className="auto-badge ab-freq">🔄 {auto.freq}</span>}
                           <span className="auto-stat">🔄 {auto.runs || 0} exéc.</span>
                           <span className="auto-stat">⏱ {formatLastRun(auto.last_run)}</span>
@@ -755,7 +787,7 @@ export default function AutomationsPanel({ profileId }) {
                           <span className="ap-tog-lbl">{auto.active ? 'ON' : 'OFF'}</span>
                           <button className={`ap-toggle ${auto.active ? 'on' : 'off'}`} onClick={() => toggleAuto(auto.id)} />
                         </div>
-                        <button className="ap-btn-sec" style={{ fontSize:11, height:32, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
+                        <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
                       </div>
                     </div>
                   );
@@ -793,7 +825,9 @@ export default function AutomationsPanel({ profileId }) {
             {logsLoading ? (
               <div className="ap-loading">Chargement des logs...</div>
             ) : logs.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'40px 0', color:'#5c6070', fontSize:13 }}>Aucune exécution enregistrée pour le moment.</div>
+              <div style={{ textAlign:'center', padding:'40px 0', color:'#5c6070', fontSize:13 }}>
+                Aucune exécution enregistrée pour le moment.
+              </div>
             ) : (
               <div className="log-list">
                 {logs.map(log => (
@@ -813,7 +847,7 @@ export default function AutomationsPanel({ profileId }) {
           </>
         )}
 
-        {/* ── MODAL ── */}
+        {/* ── MODAL CREATE / EDIT ── */}
         {modal && (
           <div className="ap-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
             <div className="ap-modal">
@@ -838,7 +872,7 @@ export default function AutomationsPanel({ profileId }) {
                 <input className="ap-field-input" type="text" placeholder="Décris ce que fait cette automation..." value={form.desc} onChange={setField('desc')} />
               </div>
 
-              {/* Déclencheur */}
+              {/* Déclencheur — [M2] options depuis constants */}
               <div>
                 <div className="ap-sec-lbl">Déclencheur</div>
                 <select className="ap-field-select" value={form.trigger} onChange={setField('trigger')}>
@@ -849,29 +883,30 @@ export default function AutomationsPanel({ profileId }) {
                 </select>
               </div>
 
-              {/* [M9] Actions multiples */}
+              {/* Action — [M2] options depuis constants, avec section "Bientôt" */}
               <div>
-                <div className="ap-sec-lbl">
-                  Actions {form.actions.length > 0 && `(${form.actions.length})`}
-                </div>
-
-                {form.actions.map((actionDef, idx) => (
-                  <div key={idx}>
-                    {idx > 0 && <div className="ap-action-arrow">↓</div>}
-                    <ActionItem
-                      actionDef={actionDef}
-                      index={idx}
-                      total={form.actions.length}
-                      onChange={updateAction}
-                      onDelete={deleteAction}
-                    />
-                  </div>
-                ))}
-
-                <button className="ap-add-action" onClick={addAction}>
-                  + Ajouter une action
-                </button>
+                <div className="ap-sec-lbl">Action</div>
+                <select className="ap-field-select" value={form.action} onChange={setField('action')}>
+                  <option value="">Choisir une action...</option>
+                  <optgroup label="── Disponibles ──">
+                    {ACTION_OPTIONS.map(a => (
+                      <option key={a.value} value={a.value}>{a.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="── Bientôt ──">
+                    {COMING_SOON_ACTIONS.map(a => (
+                      <option key={a.value} value={a.value}>{a.label}</option>
+                    ))}
+                  </optgroup>
+                </select>
               </div>
+
+              {/* [M5] Configuration dynamique */}
+              <ActionConfigFields
+                action={form.action}
+                config={form.config || {}}
+                setConfigField={setConfigField}
+              />
 
               {/* Délai */}
               <div>

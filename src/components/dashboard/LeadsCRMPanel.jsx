@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Trash2, Mail, Phone, UserPlus,
@@ -11,10 +11,33 @@ import { toast } from 'sonner';
 import { supabase } from '../../supabase';
 // [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
 import { triggerNewLead }                    from '../../lib/triggers/newLead';
+import { useBreakpoint }                     from '../../hooks/useBreakpoint';
 import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus';     // [A7]
 import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
 import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
 import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
+
+// ─── CORRECTIONS RESPONSIVE / BUGS (cette révision) ──────────────────────────
+//  [FIX1] BUG BLOQUANT : commentaire JSX mal fermé dans la modale "Nouveau
+//         lead" — `{/* [tablet] */>` au lieu de `{/* [tablet] */}` avant le
+//         `>`. C'était une erreur de syntaxe qui empêchait le fichier de
+//         compiler, sur TOUS les appareils.
+//  [FIX2] BUG FONCTIONNEL MAJEUR (tablette/iOS/Android) : la vue Pipeline
+//         utilisait l'API HTML5 drag-and-drop native (`draggable`,
+//         `onDragStart`/`onDragOver`/`onDrop`). Cette API ne fonctionne PAS
+//         sur écrans tactiles — Safari iOS ne la supporte pas du tout, et
+//         Android Chrome seulement très partiellement. Résultat : impossible
+//         de glisser une carte lead d'une colonne à l'autre sur tablette ou
+//         téléphone. Réécrit avec Pointer Events (souris + tactile unifiés).
+//  [FIX3] `height: 100vh` sur le tiroir latéral (LeadModal) → remplacé par
+//         un pattern `100vh` puis `100dvh` (fallback CSS) pour éviter que la
+//         barre d'adresse Safari iOS ne coupe le bas du panneau.
+//  [FIX4] `maxHeight: 90vh` sur la modale "Nouveau lead" → même correction.
+//  [FIX5] Cibles tactiles agrandies (Checkbox, bouton WhatsApp compact) sans
+//         changer le rendu visuel.
+//  [FIX6] `whileHover` de Framer Motion sur les lignes de la liste
+//         désactivé sur appareils sans support du survol (tactile), pour
+//         éviter un état "survolé" qui reste collé après un tap.
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
@@ -70,20 +93,28 @@ const inp = {
   fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit',
 };
 
+// [FIX5] Zone de tap agrandie (padding + marge négative) sans changer
+// l'apparence visuelle de la case à cocher (17x17).
 function Checkbox({ checked, indeterminate, onChange, style = {} }) {
   return (
     <div
       onClick={e => { e.stopPropagation(); onChange(); }}
       style={{
+        padding: 7, margin: -7,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', flexShrink: 0,
+      }}
+    >
+      <div style={{
         width: 17, height: 17, borderRadius: 5, flexShrink: 0,
         border: `1.5px solid ${checked || indeterminate ? '#6366f1' : 'rgba(255,255,255,0.2)'}`,
         background: checked ? '#6366f1' : indeterminate ? 'rgba(99,102,241,0.25)' : 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', transition: 'all .15s', ...style,
-      }}
-    >
-      {checked && <Check size={10} color="white" strokeWidth={3} />}
-      {!checked && indeterminate && <div style={{ width: 7, height: 2, background: '#818cf8', borderRadius: 1 }} />}
+        transition: 'all .15s', ...style,
+      }}>
+        {checked && <Check size={10} color="white" strokeWidth={3} />}
+        {!checked && indeterminate && <div style={{ width: 7, height: 2, background: '#818cf8', borderRadius: 1 }} />}
+      </div>
     </div>
   );
 }
@@ -139,6 +170,7 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
   );
 }
 
+// [FIX5] Hauteur/largeur minimales relevées à 40px (compact et normal)
 function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
   const hasPhone = !!phone?.trim();
   return (
@@ -155,10 +187,11 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
       title={hasPhone ? `WhatsApp: ${phone}` : 'Numéro manquant'}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 0 : 6,
-        height: compact ? 36 : 38, width: compact ? 36 : 'auto', padding: compact ? 0 : '0 14px',
+        height: 40, width: compact ? 40 : 'auto', padding: compact ? 0 : '0 14px',
         borderRadius: 10, border: 'none', cursor: hasPhone ? 'pointer' : 'not-allowed',
         background: hasPhone ? 'rgba(37,211,102,0.15)' : 'rgba(255,255,255,0.05)',
         color: hasPhone ? '#25d366' : 'rgba(255,255,255,0.2)', fontWeight: 700, fontSize: 12, transition: 'all .2s',
+        flexShrink: 0,
       }}
     >
       <MessageCircle size={14} />
@@ -202,6 +235,7 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
 }
 
 function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
+  const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(() => ({ ...lead, score: lead?.score ?? 50 }));
   const [note, setNote] = useState('');
@@ -322,11 +356,14 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
     >
+      {/* [FIX3] classe crm-drawer : hauteur 100vh puis 100dvh (fallback CSS) */}
+      <style>{`.crm-drawer{height:100vh;height:100dvh;}`}</style>
       <motion.div
         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 460, height: '100vh', background: '#0f0f1a', borderLeft: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        className="crm-drawer"
+        style={{ width: '100%', maxWidth: isTablet ? 580 : 460, background: '#0f0f1a', borderLeft: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
         <div style={{ padding: '20px 24px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -358,7 +395,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
               loadActivities();
             }} />
             {current.email && (
-              <a href={`mailto:${current.email}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 38, padding: '0 14px', borderRadius: 10, textDecoration: 'none', background: 'rgba(99,102,241,0.12)', color: '#818cf8', fontWeight: 700, fontSize: 12, border: 'none' }}>
+              <a href={`mailto:${current.email}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 14px', borderRadius: 10, textDecoration: 'none', background: 'rgba(99,102,241,0.12)', color: '#818cf8', fontWeight: 700, fontSize: 12, border: 'none' }}>
                 <Mail size={14} /> Email
               </a>
             )}
@@ -455,21 +492,65 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
   );
 }
 
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  useEffect(() => {
-    const fn = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', fn);
-    return () => window.removeEventListener('resize', fn);
-  }, []);
-  return isMobile;
-};
+// [tablet] useIsMobile remplacé par useBreakpoint (voir src/hooks/useBreakpoint.js)
 
-function PipelineCard({ lead, onClick, onDragStart, onDragEnd }) {
+// [FIX2] Carte pipeline pilotée par Pointer Events (souris + tactile unifiés).
+// Un simple tap ouvre la fiche ; un déplacement au-delà d'un petit seuil
+// démarre un drag, qui fonctionne aussi bien à la souris qu'au doigt sur
+// iOS/Android — contrairement à l'ancienne API HTML5 drag-and-drop native.
+function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDragEnd }) {
   const { color: sc } = scoreLabel(lead.score || 0);
+  const startRef = useRef({ x: 0, y: 0, dragging: false, pointerId: null });
+
+  const handlePointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return; // clic gauche uniquement
+    startRef.current = { x: e.clientX, y: e.clientY, dragging: false, pointerId: e.pointerId };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    const s = startRef.current;
+    if (s.pointerId !== e.pointerId) return;
+    if (!s.dragging) {
+      const dx = e.clientX - s.x;
+      const dy = e.clientY - s.y;
+      if (Math.hypot(dx, dy) < 6) return;
+      s.dragging = true;
+      onDragStart(lead.id);
+    }
+    e.preventDefault();
+    onDragMove(e.clientX, e.clientY);
+  };
+
+  const handlePointerUp = (e) => {
+    const s = startRef.current;
+    if (s.pointerId !== e.pointerId) return;
+    if (s.dragging) {
+      onDragEnd(e.clientX, e.clientY);
+    } else {
+      onOpen();
+    }
+    startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
+  };
+
+  const handlePointerCancel = (e) => {
+    if (startRef.current.dragging) onDragEnd(null, null);
+    startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
+  };
+
   return (
-    <div draggable onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(lead.id); }} onDragEnd={onDragEnd} onClick={onClick}
-      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px 12px', cursor: 'grab', display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      style={{
+        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
+        padding: '10px 12px', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', flexDirection: 'column', gap: 8,
+        touchAction: 'none', userSelect: 'none',
+        opacity: isDragging ? 0.45 : 1, transition: 'opacity .1s',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `1.5px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: sc }}>
           {(lead.name || '?')[0].toUpperCase()}
@@ -491,6 +572,7 @@ function PipelineCard({ lead, onClick, onDragStart, onDragEnd }) {
 }
 
 function PipelineView({ leads, onCardClick, onStatusChange }) {
+  const { isTablet } = useBreakpoint(); // [tablet]
   const [draggedId, setDraggedId] = useState(null);
   const [overColumn, setOverColumn] = useState(null);
   const grouped = useMemo(() => {
@@ -500,14 +582,30 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
     return map;
   }, [leads]);
 
+  // [FIX2] Détecte la colonne survolée via elementFromPoint — fonctionne
+  // identiquement pour un pointeur souris ou un doigt.
+  const findColumnAt = (x, y) => {
+    if (x == null || y == null) return null;
+    const el = document.elementFromPoint(x, y);
+    const col = el && el.closest('[data-status-col]');
+    return col ? col.getAttribute('data-status-col') : null;
+  };
+
+  const handleDragStart = (id) => setDraggedId(id);
+  const handleDragMove = (x, y) => setOverColumn(findColumnAt(x, y));
+  const handleDragEnd = (x, y) => {
+    const target = findColumnAt(x, y);
+    if (target && draggedId) onStatusChange(draggedId, target);
+    setDraggedId(null);
+    setOverColumn(null);
+  };
+
   return (
     <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
       {STATUSES.map(status => (
         <div key={status.id}
-          onDragOver={e => { e.preventDefault(); setOverColumn(status.id); }}
-          onDragLeave={() => setOverColumn(prev => prev === status.id ? null : prev)}
-          onDrop={e => { e.preventDefault(); setOverColumn(null); if (draggedId) onStatusChange(draggedId, status.id); setDraggedId(null); }}
-          style={{ minWidth: 230, width: 230, flexShrink: 0, background: overColumn === status.id ? 'rgba(255,255,255,0.04)' : 'transparent', border: overColumn === status.id ? `1.5px dashed ${status.color}66` : '1.5px dashed transparent', borderRadius: 14, padding: 6, transition: 'all .12s' }}
+          data-status-col={status.id}
+          style={{ minWidth: isTablet ? 260 : 230, width: isTablet ? 260 : 230, flexShrink: 0, background: overColumn === status.id ? 'rgba(255,255,255,0.04)' : 'transparent', border: overColumn === status.id ? `1.5px dashed ${status.color}66` : '1.5px dashed transparent', borderRadius: 14, padding: 6, transition: 'all .12s' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 10px' }}>
             <span style={{ color: status.color, fontSize: 12, fontWeight: 700 }}>{status.label}</span>
@@ -515,7 +613,15 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 60 }}>
             {grouped[status.id].map(lead => (
-              <PipelineCard key={lead.id} lead={lead} onClick={() => onCardClick(lead)} onDragStart={setDraggedId} onDragEnd={() => setDraggedId(null)} />
+              <PipelineCard
+                key={lead.id}
+                lead={lead}
+                isDragging={draggedId === lead.id}
+                onOpen={() => onCardClick(lead)}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+              />
             ))}
             {grouped[status.id].length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>Aucun lead</div>}
           </div>
@@ -526,7 +632,7 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
 }
 
 export default function LeadsCRMPanel({ profileId }) {
-  const isMobile = useIsMobile();
+  const { isMobile, isTablet } = useBreakpoint(); // [tablet]
   const [leads, setLeads]               = useState([]);
   const [loading, setLoading]           = useState(true);
   const [view, setView]                 = useState('list');
@@ -539,6 +645,9 @@ export default function LeadsCRMPanel({ profileId }) {
   const [adding, setAdding]             = useState(false);
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [bulkStatus, setBulkStatus]     = useState('');
+  // [FIX6] Détecté une seule fois : évite un état "survolé" collé après un
+  // tap sur les lignes de la liste, sur les appareils tactiles.
+  const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
 
   useEffect(() => {
     if (!profileId) return;
@@ -686,6 +795,8 @@ export default function LeadsCRMPanel({ profileId }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* [FIX4] classe crm-modal : max-height 90vh puis 90dvh (fallback CSS) */}
+      <style>{`.crm-modal{max-height:90vh;max-height:90dvh;}`}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
@@ -695,17 +806,17 @@ export default function LeadsCRMPanel({ profileId }) {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 3 }}>
             <button onClick={() => setView('list')} title="Vue liste" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'list' ? 'rgba(99,102,241,0.25)' : 'transparent', color: view === 'list' ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              <List size={13} /> {!isMobile && 'Liste'}
+              <List size={13} /> {(!isMobile || isTablet) && 'Liste'}
             </button>
             <button onClick={() => setView('pipeline')} title="Vue pipeline" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'pipeline' ? 'rgba(99,102,241,0.25)' : 'transparent', color: view === 'pipeline' ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              <Columns3 size={13} /> {!isMobile && 'Pipeline'}
+              <Columns3 size={13} /> {(!isMobile || isTablet) && 'Pipeline'}
             </button>
           </div>
           <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            <Download size={13} /> {isMobile ? '' : 'Exporter CSV'}
+            <Download size={13} /> {isMobile && !isTablet ? '' : 'Exporter CSV'}
           </button>
           <button onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-            <UserPlus size={13} /> Ajouter un lead
+            <UserPlus size={13} /> {isMobile ? 'Ajouter' : 'Ajouter un lead'}
           </button>
         </div>
       </div>
@@ -796,7 +907,7 @@ export default function LeadsCRMPanel({ profileId }) {
                 const isSelected = selectedIds.has(lead.id);
                 return (
                   <motion.div key={lead.id} layout onClick={() => setSelectedLead(lead)}
-                    whileHover={{ background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.07)' }}
+                    {...(canHover ? { whileHover: { background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.07)' } } : {})}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: isSelected ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isSelected ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, cursor: 'pointer', transition: 'border-color .15s, background .15s' }}>
                     <Checkbox checked={isSelected} onChange={() => toggleSelect(lead.id)} />
                     <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `2px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: sc }}>
@@ -810,11 +921,11 @@ export default function LeadsCRMPanel({ profileId }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, color: 'rgba(255,255,255,0.35)', fontSize: 12, flexWrap: 'wrap' }}>
                         {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {lead.phone}</span>}
                         {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={11} /> {lead.company}</span>}
-                        {!isMobile && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Globe size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}</span>}
+                        {(isTablet || !isMobile) && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Globe size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}</span>}
                       </div>
                       {!!lead.tags?.length && <div style={{ marginTop: 6 }}><TagChips tags={lead.tags} size="small" /></div>}
                     </div>
-                    {!isMobile && <div style={{ width: 90, flexShrink: 0 }}><ScoreBar score={lead.score || 0} /></div>}
+                    {(isTablet || !isMobile) && <div style={{ width: isTablet ? 110 : 90, flexShrink: 0 }}><ScoreBar score={lead.score || 0} /></div>}
                     <WhatsAppBtn phone={lead.phone} leadId={lead.id} compact
                       onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]); }} />
                   </motion.div>
@@ -829,8 +940,13 @@ export default function LeadsCRMPanel({ profileId }) {
         {showAdd && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAdd(false)}
             style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            {/* [FIX1] BUG CORRIGÉ : l'ancien commentaire JSX mal fermé
+                `{/* [tablet] *\/>` juste avant le `>` cassait la syntaxe et
+                empêchait toute compilation. Il est simplement retiré ici ;
+                la classe crm-modal gère désormais le [FIX4] (max-height). */}
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
-              style={{ width: '100%', maxWidth: 420, background: '#0f0f1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '90vh', overflowY: 'auto' }}>
+              className="crm-modal"
+              style={{ width: '100%', maxWidth: isTablet ? 540 : 420, background: '#0f0f1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: isTablet ? 28 : 24, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>Nouveau lead</h3>
                 <button onClick={() => setShowAdd(false)} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>

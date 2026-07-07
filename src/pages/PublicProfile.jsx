@@ -80,6 +80,7 @@ import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
 import { triggerQrScan }          from '../lib/triggers/qr';
 import { triggerMarketplaceBuy }  from '../lib/triggers/marketplace';
 import { triggerMarketplaceClick } from '../lib/triggers/marketplaceClick'; // [A6]
+import SEO from "../components/SEO";
 
 // ─── Constantes ───────────────────────────────────────────────
 // [C11] Numéro support centralisé — modifier ici uniquement
@@ -733,7 +734,21 @@ export default function PublicProfile() {
   );
 
   return (
-    <>
+  <>
+    <SEO
+      title={`${profile.display_name} | SocialApp`}
+      description={profile.bio}
+      url={`https://www.socialapp.work/${profile.username}`}
+      image={profile.avatar_url}
+      type="profile"
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "Person",
+        name: profile.display_name,
+        url: `https://www.socialapp.work/${profile.username}`,
+        image: profile.avatar_url,
+      }}
+    />
       <div id="__bg_layer__" />
       <div id="__bg_overlay__" />
 

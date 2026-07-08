@@ -8,7 +8,7 @@ import {
   ShieldCheck, Clock, Users, RefreshCw, Activity, BarChart3, TrendingUp,
   Zap, UserPlus, Globe, Link2, Settings, LayoutDashboard, FileText,
   ShoppingBag, MousePointerClick, ArrowUpRight, ArrowDownRight, Radio,
-  Wifi, CircleDot, Layers, MessageCircle, Crown,
+  Layers, MessageCircle, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,13 +37,18 @@ import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/co
 import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
 import { subscribeToPush, ensurePushSubscription } from '../lib/push';
 
-// ── Imports optionnels (commentez si les fichiers n'existent pas encore) ───────
-let BoostPanel = null;
-let MetaIntegrationPanel = null;
-let BoostAnalyticsPanel = null;
-try { BoostPanel = require("@/components/dashboard/BoostPanel").default; } catch {}
-try { MetaIntegrationPanel = require("@/components/dashboard/MetaIntegrationPanel").default; } catch {}
-try { BoostAnalyticsPanel = require("@/components/dashboard/BoostAnalyticsPanel").default; } catch {}
+// ── Imports optionnels ──────────────────────────────────────────────────────
+// ⚠️ FIX: require() ne fonctionne pas avec Vite (ESM) — il levait une
+// ReferenceError silencieusement attrapée par catch{}, donc ces 3 panneaux
+// restaient TOUJOURS null même si les fichiers existaient. Remplacé par des
+// imports statiques classiques.
+//
+// Si l'un de ces fichiers n'existe pas encore chez toi, commente la ligne
+// d'import correspondante ET remplace la variable par `null` ci-dessous,
+// sinon le build Vite échouera avec "failed to resolve import".
+import BoostPanel from "@/components/dashboard/BoostPanel";
+import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
+import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
@@ -1067,6 +1072,10 @@ export default function Dashboard() {
             {hasChanges && <span style={{ background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.3)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600 }}>{t('unsaved')}</span>}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+            {/* ✅ FIX: bouton Templates ajouté — setShowTemplates n'était jamais appelé nulle part */}
+            <button onClick={()=>setShowTemplates(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
+              <Sparkles size={13}/>{!isMobile && 'Templates'}
+            </button>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal}/>
             <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Eye size={13}/>{!isMobile && t('preview')}

@@ -39,15 +39,7 @@ export const USER_GROUPS = [
   { id: 'admin',     label: 'Compte'    },
 ];
 
-// [FIX-ADMIN] Clé normalisée sans accent — 'événement' n'existait dans aucune
-// autre table de plans du projet (PLAN_LIMITS de UserDashboard.jsx et
-// MobileNav.jsx utilisent toutes les deux 'evenement' sans accent). Garder
-// 'événement' ici aurait fait échouer PLAN_ORDER['evenement'] pour les
-// profils sur l'offre événementielle (retour silencieux sur l'ordre par
-// défaut ?? 0, ce qui reste correct numériquement pour ce cas précis, mais
-// créait une incohérence de clé across-fichiers qui aurait fini par causer
-// un bug ailleurs si un jour l'ordre de ce plan changeait).
-export const PLAN_ORDER = { basic: 0, evenement: 0, pro: 1, business: 2 };
+export const PLAN_ORDER = { basic: 0, événement: 0, pro: 1, business: 2 };
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
 // FIX — doublon supprimé : le rendu de l'avatar (photo ou initiale) était
@@ -80,23 +72,11 @@ export default function UserSidebar({
   onToggle,
   isMobile,
   isTablet = false,
-  isAdmin = false, // [FIX] bypass total du verrouillage plan pour les comptes admin
-                    // (table Supabase user_roles.role === 'admin') — DOIT être
-                    // passé depuis UserDashboard.jsx (voir correctif dans ce
-                    // fichier : <UserSidebar isAdmin={isAdmin} ... />). Sans ce
-                    // passage, cette prop retombe toujours sur son défaut
-                    // `false` et le verrouillage par plan s'applique même aux
-                    // administrateurs — c'est exactement le bug des captures :
-                    // cadenas + badges PRO/BUSINESS visibles alors que le
-                    // compte est admin.
+  isAdmin = false,
   onBgUpload,
   onBgRemove,
   bgImageUrl,
   uploadingBg,
-  onUpgrade, // [FIX] callback d'upgrade — remplace le href="/" en dur du
-             // bouton "Changer d'offre", pour ouvrir la modale de plans
-             // comme le fait déjà MobileNav.jsx (même correctif que [C5]
-             // sur MobileNav, appliqué ici pour cohérence desktop/mobile).
 }) {
   const [search, setSearch] = useState('');
   const currentOrder = PLAN_ORDER[plan] ?? 0;
@@ -122,9 +102,8 @@ export default function UserSidebar({
   // Liste de base : on retire systématiquement les items masqués (en test côté admin)
   const visibleNav = USER_NAV.filter(n => !n.hidden);
 
-  // [FIX] Un admin voit tout déverrouillé, quel que soit `plan`
   const isNavLocked = (item) => {
-    if (isAdmin) return false;
+    if (isAdmin) return false; // FIX — un compte admin n'est jamais restreint par le plan
     if (!item.locked) return false;
     return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
   };
@@ -211,9 +190,6 @@ export default function UserSidebar({
                 </span>
                 <span style={{ color: limits.color, fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   {limits.emoji} {limits.label}
-                  {isAdmin && (
-                    <span style={{ marginLeft: '6px', color: '#a78bfa' }}>· ADMIN</span>
-                  )}
                 </span>
               </div>
             )}
@@ -325,9 +301,6 @@ export default function UserSidebar({
                 }
 
                 {items.map(item => {
-                  // [FIX-ADMIN] isNavLocked bypass déjà correct ici — le bug
-                  // venait uniquement de l'appelant qui ne transmettait pas
-                  // isAdmin. Cette ligne fonctionne dès que la prop arrive.
                   const locked    = isNavLocked(item);
                   const isActive  = activeSection === item.id;
                   const lockColor = item.locked === 'business' ? '#f7c948' : '#ff8c00';
@@ -492,17 +465,10 @@ export default function UserSidebar({
               <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: isMaxPlan ? 0 : '0 0 6px' }}>
                 {limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits
               </p>
-              {/* [FIX] onUpgrade callback au lieu de href="/" — cohérent avec
-                  MobileNav.jsx qui a déjà reçu ce correctif. Rendu uniquement
-                  si le parent fournit bien onUpgrade (garde défensive). */}
-              {!isMaxPlan && onUpgrade && (
-                <button
-                  type="button"
-                  onClick={onUpgrade}
-                  style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#ff8c00', fontSize: '10px', fontWeight: 600, fontFamily: 'inherit' }}
-                >
+              {!isMaxPlan && (
+                <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ff8c00', fontSize: '10px', fontWeight: 600, textDecoration: 'none' }}>
                   <Crown size={10} /> Changer d'offre
-                </button>
+                </a>
               )}
             </div>
           </div>
@@ -511,3 +477,4 @@ export default function UserSidebar({
     </>
   );
 }
+

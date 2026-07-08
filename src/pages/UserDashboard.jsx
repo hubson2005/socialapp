@@ -394,8 +394,14 @@ export default function UserDashboard() {
     }});
   };
 
-  const handleBgUpload = async (e) => {
-    const file = e.target.files?.[0]; if (!file) return;
+  // FIX — UserSidebar transmet l'event brut de l'input (onBgUpload={onBgUpload}
+  // sur un <input onChange>), alors que MobileNav extrait lui-même le File et
+  // appelle onBgUpload(file) (cf. son commentaire [C4]). Les deux composants
+  // utilisaient donc la même prop `onBgUpload` avec des signatures différentes,
+  // ce qui cassait silencieusement l'upload de fond sur mobile. On isole la
+  // logique dans `uploadBgFile(file)` et on adapte l'un des deux appelants.
+  const uploadBgFile = async (file) => {
+    if (!file) return;
     if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
     setUploadingBg(true);
     try {
@@ -406,7 +412,15 @@ export default function UserDashboard() {
       updateLocal({ bg_image_url: data.publicUrl });
       toast.success('Image de fond appliquée !');
     } catch (err) { toast.error('Erreur : ' + err.message); }
-    finally { setUploadingBg(false); e.target.value = ''; }
+    finally { setUploadingBg(false); }
+  };
+
+  // Adaptateur pour UserSidebar, qui branche onBgUpload directement sur
+  // l'onChange d'un <input type="file"> et transmet donc l'event, pas le File.
+  const handleBgUpload = (e) => {
+    const file = e.target.files?.[0];
+    uploadBgFile(file);
+    e.target.value = '';
   };
 
   // FIX logout — déplacé en bas du panel Paramètres (renderSection case 'settings')
@@ -440,6 +454,7 @@ export default function UserDashboard() {
   const currentPlanOrder = PLAN_ORDER[rawPlan] ?? 0;
 
   const isCurrentSectionLocked = () => {
+    if (isAdmin) return false; // FIX — l'admin ne doit jamais être bloqué par le plan
     const nav = USER_NAV.find(n => n.id === activeSection);
     if (!nav || !nav.locked) return false;
     return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99);
@@ -504,21 +519,21 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
   return (
     <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
 
-      {/* FIX — la sidebar n'est montée que sur tablette/desktop.
-          Avant, elle restait toujours montée avec une largeur de 0px sur
-          mobile pendant que MobileNav était affiché en même temps : deux
-          navigations actives en parallèle (doublon), ce qui pouvait
-          déclencher deux fois les mêmes handlers (upload de fond, etc.)
-          et laisser un élément de largeur 0 mais toujours interactif/
-          présent dans le DOM sur iOS/Android. */}
+      {/* CONFIRMÉ par MobileNav.jsx : celui-ci gère son propre tiroir
+          (état interne drawerOpen, onglet "Menu") totalement indépendant
+          du collapsed/onToggle de UserSidebar. Le mode "tiroir mobile" de
+          UserSidebar n'est donc jamais déclenché en pratique — on ne la
+          monte que sur tablette/desktop pour éviter du code et des
+          abonnements (upload de fond, etc.) inutiles sur mobile. */}
       {!isMobile && (
         <div style={{ position:'relative', zIndex:10, flexShrink:0 }}>
           <UserSidebar
             activeSection={activeSection} onNavigate={setActiveSection}
             profile={localProfile} plan={rawPlan} limits={limits}
             collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)}
-            isMobile={isMobile}
+            isMobile={false}
             isTablet={isTablet}
+            isAdmin={isAdmin}
             onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
             bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
             onUpgrade={handleOpenUpgrade}
@@ -575,8 +590,10 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
         <MobileNav
           activeSection={activeSection} onNavigate={setActiveSection}
           profile={localProfile} plan={rawPlan} limits={limits}
-          onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
+          isAdmin={isAdmin}
+          onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}
           bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
+          onUpgrade={handleOpenUpgrade}
         />
       )}
 

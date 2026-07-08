@@ -165,6 +165,7 @@ export default function MobileNav({
   bgImageUrl,
   uploadingBg,
   onUpgrade,    // [C5] () => void — remplace le lien href="/"
+  isAdmin = false,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef  = useRef(null);
@@ -174,6 +175,7 @@ export default function MobileNav({
   const isMaxPlan    = currentOrder >= MAX_PLAN_ORDER;
 
   const isNavLocked = (id) => {
+    if (isAdmin) return false; // FIX — un compte admin n'est jamais restreint par le plan
     const required = NAV_LOCK[id];
     if (!required) return false;
     return currentOrder < (PLAN_ORDER[required] ?? 99);

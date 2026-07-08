@@ -291,9 +291,33 @@ export default function UserDashboard() {
   const [hasChanges, setHasChanges]         = useState(false);
 
   const rawPlan     = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
-  const limits      = PLAN_LIMITS[rawPlan] || PLAN_LIMITS.basic;
   const isActivated = localProfile?.is_activated === true;
-  const isAdmin     = user?.user_metadata?.role === 'admin' || false;
+  // FIX — user_metadata.role vient du JWT émis à la connexion : s'il est
+  // modifié après coup (ex. attribution du rôle admin), le client garde
+  // l'ancienne valeur en cache tant que le token n'est pas rafraîchi. La
+  // vraie source de vérité, protégée par RLS + trigger anti-duplication
+  // (cf. audit sécurité), est la table public.user_roles. On la requête
+  // directement plutôt que de faire confiance à user_metadata.
+  const { data: userRole } = useQuery({
+    queryKey: ['userRole', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+      if (error) throw error;
+      return data?.role || null;
+    },
+    enabled: !!user?.id,
+  });
+  const isAdmin = userRole === 'admin';
+
+  // FIX — jusqu'ici, isAdmin ne débloquait que la navigation (isNavLocked /
+  // isCurrentSectionLocked) mais `limits` restait calculé sur le vrai
+  // `rawPlan` du profil. Résultat : un admin dont le profil est resté en
+  // "basic" pouvait naviguer partout mais restait plafonné à 3 liens,
+  // 4 produits marketplace, 1 document, etc. `effectivePlan` force le
+  // palier "business" pour l'admin, indépendamment de la valeur stockée
+  // en base — plus besoin de retoucher le profil à chaque fois.
+  const effectivePlan = isAdmin ? 'business' : rawPlan;
+  const limits         = PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.basic;
 
   const handleOpenUpgrade = () => setShowPlanModal(true);
   const handlePlanSelect  = (planSlug) => { setShowPlanModal(false); navigate(`/login?plan=${encodeURIComponent(planSlug)}`); };
@@ -451,7 +475,7 @@ export default function UserDashboard() {
   if (!localProfile) return null;
 
   const currentNav       = USER_NAV.find(n => n.id === activeSection);
-  const currentPlanOrder = PLAN_ORDER[rawPlan] ?? 0;
+  const currentPlanOrder = PLAN_ORDER[effectivePlan] ?? 0;
 
   const isCurrentSectionLocked = () => {
     if (isAdmin) return false; // FIX — l'admin ne doit jamais être bloqué par le plan
@@ -466,11 +490,11 @@ export default function UserDashboard() {
       return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={handleOpenUpgrade} />;
     }
     switch (activeSection) {
-      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={rawPlan} />;
+      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} />;
       case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={handleOpenUpgrade} />;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
       case 'marketplace':     return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
-      case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={rawPlan} /></div>;
+      case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} /></div>;
       case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={handleOpenUpgrade} /></div>;
       case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
       case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
@@ -529,7 +553,7 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
         <div style={{ position:'relative', zIndex:10, flexShrink:0 }}>
           <UserSidebar
             activeSection={activeSection} onNavigate={setActiveSection}
-            profile={localProfile} plan={rawPlan} limits={limits}
+            profile={localProfile} plan={effectivePlan} limits={limits}
             collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)}
             isMobile={false}
             isTablet={isTablet}
@@ -589,7 +613,7 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
       {isMobile && (
         <MobileNav
           activeSection={activeSection} onNavigate={setActiveSection}
-          profile={localProfile} plan={rawPlan} limits={limits}
+          profile={localProfile} plan={effectivePlan} limits={limits}
           isAdmin={isAdmin}
           onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}
           bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}

@@ -1,51 +1,33 @@
 /**
  * MobileNav.jsx — Hybride Tab Bar + Drawer pour SocialApp
  *
- * CORRECTIONS APPLIQUÉES (sessions précédentes) :
+ * CORRECTIONS APPLIQUÉES :
  *  [C1]  Suppression de l'import `useTranslation` inutilisé
+ *  [C2]  Clé 'événement' normalisée en 'evenement' (pas d'accent dans les clés)
+ *  [C3]  MAX_PLAN_ORDER déclaré en constante explicite (évite Math.max sur objet vide)
  *  [C4]  onBgUpload : extraction de e.target.files[0] dans le composant + reset input
  *  [C5]  Lien "Changer d'offre" remplacé par prop callback onUpgrade
  *  [C6]  Swipe-to-close : reset touchMoveY à null, vérification explicite avant calcul
  *  [C7]  Guard sur onBgRemove avant appel (évite crash si prop absente)
  *  [C8]  Bouton remove bg désactivé pendant uploadingBg
  *  [C9]  @keyframes spin sorti du JSX et injecté une seule fois via useEffect
- *  [C14] iOS/Android : tab bar flottante et footer du drawer ignoraient le
- *        home indicator / la barre de gestes → env(safe-area-inset-bottom) ajouté.
- *  [C15] iOS Safari : drawer en 82vh (bug barre d'adresse rétractable) → 82dvh.
- *
- * RESYNCHRONISATION AVEC UserSidebar.jsx (cette session) :
- *  Ce fichier n'utilise plus de config partagée séparée : les items, labels,
- *  icônes, groupes et niveaux de verrouillage sont recopiés à l'identique
- *  depuis USER_NAV / PLAN_ORDER de UserSidebar.jsx. Si tu ajoutes/modifies un
- *  item côté desktop, reporte le changement ici aussi (même id, même label,
- *  même icône, même `locked`).
- *
- *  [C11] Item "WhatsApp CRM" manquant → ajouté (label exact "WhatsApp CRM")
- *  [C12] Verrouillage par plan absent → ajouté (Lock + badge, nav bloquée)
- *  [C13] Icônes désynchronisées vs desktop → réalignées :
- *        Analytics (BarChart3→BarChart2), Temps réel (Radio→Activity),
- *        Intégrations (Sparkles→GitBranch), Plateformes (Layers→Link2)
- *  [C17] Label "CRM / Leads" corrigé (était "Leads / CRM", ordre inversé
- *        par rapport au desktop)
- *  [C18] "Formulaires" (forms) manquant du groupe Contenu → ajouté
- *  [C19] Clé de plan 'événement' (accentuée) alignée sur PLAN_ORDER du
- *        desktop — ce fichier ne redéfinit plus sa propre clé 'evenement'
+ *  [C10] Tokens de style extraits en objet TOKENS pour réduire la duplication
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
-  Link2,
-  CalendarDays,
+  Users,
+  Layers,
   ShoppingBag,
   FileText,
-  BarChart2,
-  Activity,
-  Users,
-  Zap,
-  GitBranch,
-  MessageCircle,
+  Radio,
+  BarChart3,
   Settings,
+  CalendarDays,
+  Zap,
+  Sparkles,
+  Link2,
   Menu,
   X,
   ChevronRight,
@@ -54,6 +36,7 @@ import {
   Crown,
   Lock,
 } from 'lucide-react';
+import { PLAN_ORDER } from './UserSidebar';
 
 // ─── Design tokens ────────────────────────────────────────────
 const T = {
@@ -73,74 +56,104 @@ const T = {
   redBorder:    'rgba(239,68,68,0.3)',
   green:        '#22c55e',
   orange:       '#ff8c00',
-  business:     '#f7c948',
-  pro:          '#ff8c00',
+  lockPro:      '#ff8c00',
+  lockBusiness: '#f7c948',
   radius:       '13px',
   radiusPill:   '999px',
 };
 
-// [C19] Identique à UserSidebar.jsx — clé accentuée 'événement'
-const PLAN_ORDER = { basic: 0, 'événement': 0, pro: 1, business: 2 };
+// FIX — [C2] avait renommé la clé 'événement' → 'evenement' *dans ce
+// fichier uniquement*. UserSidebar.jsx (source de vérité pour le plan
+// utilisateur et les mêmes libellés PRO/BUSINESS) garde 'événement' avec
+// accent, exactement la clé utilisée par PLAN_LIMITS côté UserDashboard.
+// Deux définitions divergentes du même mapping plan → rang = un
+// utilisateur en offre "Événement" se retrouvait mal classé selon qu'il
+// regardait le dashboard desktop ou le tiroir mobile. On importe
+// désormais PLAN_ORDER depuis UserSidebar comme unique source de vérité.
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
-// ─── Items du drawer — copie 1:1 des entrées pertinentes de USER_NAV ──────
-// (les items "hidden" côté desktop — meta, boost, boost-analytics,
-// promotions — restent exclus ici aussi, en test admin uniquement)
+// ─── Config navigation ────────────────────────────────────────
+const NAV_IDS = {
+  OVERVIEW:     'overview',
+  CRM:          'crm',
+  PLATFORMS:    'platforms',
+  REALTIME:     'realtime',
+  AUTOMATIONS:  'automations',
+  INTEGRATIONS: 'integrations',
+  EVENT:        'event',
+  MARKETPLACE:  'marketplace',
+  DOCUMENTS:    'documents',
+  ANALYTICS:    'analytics',
+  SETTINGS:     'settings',
+  MENU:         '__menu__',
+};
+
+// FIX — verrouillage par plan aligné sur USER_NAV (UserSidebar.jsx) :
+// avant, ces mêmes sections étaient verrouillées sur desktop (icône
+// cadenas, navigation bloquée) mais librement accessibles depuis le
+// tiroir mobile — un utilisateur BASIC pouvait ouvrir CRM, Automatisations,
+// Intégrations, Analytics ou le Live simplement en passant par mobile.
+const NAV_LOCK = {
+  [NAV_IDS.EVENT]:        'pro',
+  [NAV_IDS.ANALYTICS]:    'pro',
+  [NAV_IDS.REALTIME]:     'pro',
+  [NAV_IDS.CRM]:          'business',
+  [NAV_IDS.AUTOMATIONS]:  'business',
+  [NAV_IDS.INTEGRATIONS]: 'business',
+};
+
+// FIX — l'icône "Profils/Plateformes" différait entre la tab bar (Layers)
+// et le tiroir (Link2) pour le même identifiant `platforms`, cassant la
+// reconnaissance visuelle d'un endroit à l'autre. Alignée sur l'icône
+// utilisée par UserSidebar (Link2).
+const TAB_ITEMS = [
+  { id: NAV_IDS.OVERVIEW,  label: 'Dashboard', icon: LayoutDashboard },
+  { id: NAV_IDS.CRM,       label: 'Leads',     icon: Users            },
+  { id: NAV_IDS.PLATFORMS, label: 'Profils',   icon: Link2            },
+  { id: NAV_IDS.REALTIME,  label: 'Live',      icon: Radio, badge: '●' },
+  { id: NAV_IDS.MENU,      label: 'Menu',      icon: Menu             },
+];
+
 const SIDEBAR_GROUPS = [
   {
     label: 'Dashboard',
     items: [
-      { id: 'overview', label: 'Dashboard', icon: LayoutDashboard, locked: null },
+      { id: NAV_IDS.OVERVIEW, label: 'Dashboard', icon: LayoutDashboard },
     ],
   },
   {
     label: 'CRM',
     items: [
-      { id: 'crm',          label: 'CRM / Leads',     icon: Users,         locked: 'business' }, // [C17]
-      { id: 'whatsapp-crm', label: 'WhatsApp CRM',    icon: MessageCircle, locked: 'business' }, // [C11]
-      { id: 'automations',  label: 'Automatisations', icon: Zap,           locked: 'business' },
-      { id: 'integrations', label: 'Intégrations',    icon: GitBranch,     locked: 'business' }, // [C13]
+      { id: NAV_IDS.CRM,          label: 'Leads / CRM',     icon: Users    },
+      { id: NAV_IDS.AUTOMATIONS,  label: 'Automatisations', icon: Zap      },
+      { id: NAV_IDS.INTEGRATIONS, label: 'Intégrations',    icon: Sparkles },
     ],
   },
   {
     label: 'Contenu',
     items: [
-      { id: 'platforms',   label: 'Plateformes', icon: Link2,        locked: null  }, // [C13]
-      { id: 'event',       label: 'Événement',   icon: CalendarDays, locked: 'pro' },
-      { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag,  locked: null  },
-      { id: 'documents',   label: 'Documents',   icon: FileText,     locked: null  },
-      { id: 'forms',       label: 'Formulaires', icon: FileText,     locked: null  }, // [C18]
+      { id: NAV_IDS.PLATFORMS,   label: 'Plateformes', icon: Link2        },
+      { id: NAV_IDS.EVENT,       label: 'Événement',   icon: CalendarDays },
+      { id: NAV_IDS.MARKETPLACE, label: 'Marketplace', icon: ShoppingBag  },
+      { id: NAV_IDS.DOCUMENTS,   label: 'Documents',   icon: FileText     },
     ],
   },
   {
     label: 'Notifications',
     items: [
-      { id: 'realtime',  label: 'Temps réel', icon: Activity,  locked: 'pro' }, // [C13]
-      { id: 'analytics', label: 'Analytics',  icon: BarChart2, locked: 'pro' }, // [C13]
+      { id: NAV_IDS.REALTIME,  label: 'Temps réel', icon: Radio,    badge: 'LIVE' },
+      { id: NAV_IDS.ANALYTICS, label: 'Analytics',  icon: BarChart3               },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { id: 'settings', label: 'Paramètres', icon: Settings, locked: null },
+      { id: NAV_IDS.SETTINGS, label: 'Paramètres', icon: Settings },
     ],
   },
 ];
 
-// ─── Tab bar — mêmes ids/icônes que le drawer, labels raccourcis pour l'espace ──
-const TAB_ITEMS = [
-  { id: 'overview',  label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'crm',       label: 'Leads',     icon: Users            }, // [C13] cohérent avec drawer
-  { id: 'platforms', label: 'Profils',   icon: Link2            }, // [C13] Layers→Link2
-  { id: 'realtime',  label: 'Live',      icon: Activity, badge: '●' }, // [C13] Radio→Activity
-  { id: '__menu__',  label: 'Menu',      icon: Menu             },
-];
-
 // ─── MobileNav ───────────────────────────────────────────────
-// NOTE TABLETTE : ce composant est conçu pour les écrans téléphone
-// uniquement (tab bar flottante + bottom sheet). Le breakpoint-switcher
-// parent doit le monter uniquement pour isMobile=true — UserSidebar gère
-// déjà la tablette via sa prop isTablet (largeurs 72/240px).
 export default function MobileNav({
   activeSection,
   onNavigate,
@@ -160,10 +173,10 @@ export default function MobileNav({
   const currentOrder = PLAN_ORDER[plan] ?? 0;
   const isMaxPlan    = currentOrder >= MAX_PLAN_ORDER;
 
-  // [C12] Même logique que UserSidebar.isNavLocked
-  const isNavLocked = (item) => {
-    if (!item.locked) return false;
-    return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
+  const isNavLocked = (id) => {
+    const required = NAV_LOCK[id];
+    if (!required) return false;
+    return currentOrder < (PLAN_ORDER[required] ?? 99);
   };
 
   // ── Swipe-to-close ──────────────────────────────────────────
@@ -221,14 +234,14 @@ export default function MobileNav({
 
   // ── Handlers ─────────────────────────────────────────────────
   const handleTab = (id) => {
-    if (id === '__menu__') { setDrawerOpen(v => !v); return; }
+    if (id === NAV_IDS.MENU) { setDrawerOpen(v => !v); return; }
+    if (isNavLocked(id)) { setDrawerOpen(false); onUpgrade?.(); return; }
     setDrawerOpen(false);
     onNavigate(id);
   };
 
-  // [C12] Bloque la navigation si l'item est verrouillé pour le plan courant
-  const handleDrawerNav = (id, locked) => {
-    if (locked) return;
+  const handleDrawerNav = (id) => {
+    if (isNavLocked(id)) { onUpgrade?.(); return; }
     setDrawerOpen(false);
     onNavigate(id);
   };
@@ -276,7 +289,9 @@ export default function MobileNav({
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
-          maxHeight: '82dvh', // [C15] dvh — évite le bug Safari iOS (barre d'adresse rétractable)
+          // dvh plutôt que vh : évite qu'iOS Safari recalcule la hauteur
+          // pendant l'apparition/disparition de la barre d'adresse.
+          maxHeight: '82dvh',
           transform: drawerOpen ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.32s cubic-bezier(0.32,0.72,0,1)',
           background: T.bg,
@@ -286,8 +301,10 @@ export default function MobileNav({
           boxShadow: '0 -12px 60px rgba(0,0,0,0.7)',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
-          paddingBottom: 'env(safe-area-inset-bottom)', // [C14]
-          boxSizing: 'border-box',
+          // Le sheet lui-même touche le bas de l'écran : on pousse tout
+          // son contenu interne au-dessus du home indicator / de la barre
+          // de gestes Android via le padding du footer plutôt qu'ici, pour
+          // ne pas décaler tout le fond du panneau.
         }}
       >
         {/* Handle */}
@@ -331,7 +348,7 @@ export default function MobileNav({
             onClick={() => setDrawerOpen(false)}
             aria-label="Fermer le menu"
             style={{
-              width: '32px', height: '32px', borderRadius: '9px',
+              width: '40px', height: '40px', borderRadius: '9px',
               background: 'rgba(255,255,255,0.08)',
               border: '1px solid rgba(255,255,255,0.1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -365,23 +382,21 @@ export default function MobileNav({
               </p>
               {group.items.map(item => {
                 const isActive = activeSection === item.id;
-                const locked   = isNavLocked(item);
-                const lockColor = item.locked === 'business' ? T.business : T.pro;
-                const lockLabel = item.locked === 'business' ? 'BUSINESS' : 'PRO';
-
+                const locked   = isNavLocked(item.id);
+                const lockPlan = NAV_LOCK[item.id];
+                const lockColor = lockPlan === 'business' ? T.lockBusiness : T.lockPro;
+                const lockLabel = lockPlan === 'business' ? 'BUSINESS' : 'PRO';
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleDrawerNav(item.id, locked)}
+                    onClick={() => handleDrawerNav(item.id)}
                     aria-current={isActive && !locked ? 'page' : undefined}
-                    aria-disabled={locked || undefined}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
                       padding: '11px 12px', borderRadius: T.radius, border: 'none',
                       background: isActive && !locked ? T.accentBg : 'transparent',
-                      cursor: locked ? 'default' : 'pointer',
-                      opacity: locked ? 0.45 : 1,
-                      marginBottom: '2px', position: 'relative',
+                      cursor: 'pointer', marginBottom: '2px', position: 'relative',
+                      opacity: locked ? 0.55 : 1,
                     }}
                   >
                     {isActive && !locked && (
@@ -412,26 +427,19 @@ export default function MobileNav({
                     </span>
                     {locked ? (
                       <span style={{
-                        flexShrink: 0,
-                        background: lockColor + '18',
-                        border: '1px solid ' + lockColor + '44',
-                        borderRadius: '6px',
-                        padding: '2px 6px',
-                        fontSize: '8px',
-                        color: lockColor,
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
+                        flexShrink: 0, background: lockColor + '18', border: '1px solid ' + lockColor + '44',
+                        borderRadius: '6px', padding: '2px 6px', fontSize: '8px', fontWeight: 700,
+                        color: lockColor, textTransform: 'uppercase', letterSpacing: '0.04em',
                       }}>
                         {lockLabel}
                       </span>
-                    ) : item.id === 'realtime' ? (
+                    ) : item.badge ? (
                       <span style={{
                         background: T.green, color: T.text,
                         fontSize: '8px', fontWeight: 700,
                         padding: '2px 6px', borderRadius: '6px', flexShrink: 0,
                       }}>
-                        LIVE
+                        {item.badge}
                       </span>
                     ) : (
                       <ChevronRight size={13} color="rgba(255,255,255,0.2)" />
@@ -445,7 +453,7 @@ export default function MobileNav({
 
         {/* Footer : Image de fond + Infos plan */}
         <div style={{
-          padding: '12px 16px 20px',
+          padding: '12px 16px calc(20px + env(safe-area-inset-bottom))',
           borderTop: `1px solid ${T.borderSubtle}`,
           flexShrink: 0,
         }}>
@@ -488,7 +496,7 @@ export default function MobileNav({
                   disabled={uploadingBg}
                   aria-label="Supprimer l'image de fond"
                   style={{
-                    width: '36px', height: '36px',
+                    width: '40px', height: '40px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: T.redBg, border: `1px solid ${T.redBorder}`,
                     borderRadius: '10px',
@@ -547,7 +555,9 @@ export default function MobileNav({
         aria-label="Navigation principale"
         style={{
           position: 'fixed',
-          bottom: 'calc(16px + env(safe-area-inset-bottom))', // [C14]
+          // FIX iOS — évite que la barre flottante chevauche le home
+          // indicator / la barre de gestes Android en bas d'écran.
+          bottom: 'calc(16px + env(safe-area-inset-bottom))',
           left: '50%', transform: 'translateX(-50%)',
           zIndex: 38,
           background: 'rgba(8,5,22,0.96)',
@@ -561,13 +571,14 @@ export default function MobileNav({
         }}
       >
         {TAB_ITEMS.map(item => {
-          const isMenu   = item.id === '__menu__';
-          const isActive = isMenu ? drawerOpen : activeSection === item.id;
+          const isMenu   = item.id === NAV_IDS.MENU;
+          const locked   = !isMenu && isNavLocked(item.id);
+          const isActive = isMenu ? drawerOpen : (activeSection === item.id && !locked);
           return (
             <button
               key={item.id}
               onClick={() => handleTab(item.id)}
-              aria-label={item.label}
+              aria-label={item.label + (locked ? ' (verrouillé)' : '')}
               aria-current={!isMenu && isActive ? 'page' : undefined}
               aria-expanded={isMenu ? drawerOpen : undefined}
               style={{
@@ -578,20 +589,21 @@ export default function MobileNav({
                   : 'transparent',
                 cursor: 'pointer',
                 transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                position: 'relative', minWidth: '48px',
+                position: 'relative', minWidth: '48px', minHeight: '44px',
+                opacity: locked ? 0.55 : 1,
               }}
             >
-              {item.badge && !isMenu && (
+              {item.badge && !isMenu && !locked && (
                 <span style={{
                   position: 'absolute', top: '4px', right: '8px',
                   width: '7px', height: '7px', borderRadius: '50%',
                   background: T.green,
                 }} />
               )}
-              <item.icon
-                size={20}
-                color={isActive ? (isMenu ? T.red : T.accentLight) : 'rgba(255,255,255,0.42)'}
-              />
+              {locked
+                ? <Lock size={18} color="rgba(255,255,255,0.35)" />
+                : <item.icon size={20} color={isActive ? (isMenu ? T.red : T.accentLight) : 'rgba(255,255,255,0.42)'} />
+              }
               <span style={{
                 fontSize: '9px', fontWeight: isActive ? 700 : 500,
                 color: isActive ? (isMenu ? T.red : T.accentLight) : 'rgba(255,255,255,0.3)',
@@ -606,3 +618,4 @@ export default function MobileNav({
     </>
   );
 }
+

@@ -70,65 +70,50 @@ export default function OverviewPanel({
         <div style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px', overflow:'hidden' }}>
           <ProfileHeader profile={profile} onUpdate={onUpdate}/>
 
-          {/* Username row */}
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'11px 14px', display:'flex', alignItems:'center', gap:'10px' }}>
-            <AtSign size={13} color="rgba(255,255,255,0.4)"/>
-            <span style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', flexShrink:0 }}>@</span>
-            {isActivated ? (
-              <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username"
-                style={{ background:'transparent', border:'none', color:'white', fontSize:'12px', outline:'none', flex:1, minWidth:0 }}/>
-            ) : (
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={onRequestActivation}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onRequestActivation?.(); }}
-                title="Cliquez pour activer votre compte et débloquer le username personnalisé"
-                style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', cursor:'pointer' }}
-                onMouseEnter={e=>{ e.currentTarget.firstChild.style.borderColor='rgba(0,87,255,0.4)'; e.currentTarget.firstChild.style.opacity='0.85'; }}
-                onMouseLeave={e=>{ e.currentTarget.firstChild.style.borderColor='rgba(255,255,255,0.12)'; e.currentTarget.firstChild.style.opacity='0.6'; }}
-              >
-                <div style={{ flex:1, background:'rgba(0,0,0,0.2)', borderRadius:'8px', padding:'5px 10px', border:'1px dashed rgba(255,255,255,0.12)', display:'flex', alignItems:'center', gap:'6px', opacity:0.6, transition:'border-color 0.15s, opacity 0.15s' }}>
-                  <Lock size={11} color="rgba(255,255,255,0.4)"/>
-                  <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', fontStyle:'italic' }}>{profile?.username||'verrouillé'}</span>
-                </div>
-                <span style={{ background:'rgba(0,87,255,0.2)', border:'1px solid rgba(0,87,255,0.4)', borderRadius:'6px', padding:'3px 7px', fontSize:'9px', color:'#60a5fa', fontWeight:700, flexShrink:0 }}>Pro</span>
-              </div>
-            )}
-          </div>
+          {/* Bloc méta compact — username + badge sur une ligne, expiry + statut sur l'autre */}
+          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'12px 14px', display:'flex', flexDirection:'column', gap:'10px' }}>
 
-          {/* Badge row */}
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'11px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            {/* Ligne 1 : username + badge vérifié */}
             <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <BadgeCheck size={13} color="rgba(255,255,255,0.4)"/>
-              <span style={{ color:'rgba(255,255,255,0.6)', fontSize:'12px' }}>Badge vérifié</span>
-              {!limits.badge && (
-                <span style={{ background:'rgba(255,140,0,0.15)', border:'1px solid rgba(255,140,0,0.3)', borderRadius:'5px', padding:'1px 5px', fontSize:'9px', color:'#ff8c00', fontWeight:700 }}>PRO</span>
+              <AtSign size={13} color="rgba(255,255,255,0.35)" style={{ flexShrink:0 }}/>
+              {isActivated ? (
+                <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username"
+                  style={{ background:'transparent', border:'none', color:'white', fontSize:'12px', outline:'none', flex:1, minWidth:0 }}/>
+              ) : (
+                <div
+                  role="button" tabIndex={0}
+                  onClick={onRequestActivation}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onRequestActivation?.(); }}
+                  title="Cliquez pour activer votre compte et débloquer le username personnalisé"
+                  style={{ flex:1, display:'flex', alignItems:'center', gap:'6px', cursor:'pointer', minWidth:0 }}
+                >
+                  <Lock size={11} color="rgba(255,255,255,0.35)" style={{ flexShrink:0 }}/>
+                  <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.35)', fontStyle:'italic', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile?.username||'verrouillé'}</span>
+                </div>
               )}
-            </div>
-            <button onClick={()=>limits.badge&&onUpdate({is_verified:!profile?.is_verified})}
-              style={{ width:'38px', height:'20px', borderRadius:'100px', background:profile?.is_verified?'#22c55e':'rgba(255,255,255,0.1)', border:'none', cursor:limits.badge?'pointer':'not-allowed', position:'relative', transition:'background 0.3s', flexShrink:0, opacity:limits.badge?1:0.4 }}>
-              <div style={{ width:'14px', height:'14px', borderRadius:'50%', background:'white', position:'absolute', top:'3px', left:profile?.is_verified?'21px':'3px', transition:'left 0.3s' }}/>
-            </button>
-          </div>
 
-          {/* Expiry row */}
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'11px 14px', display:'flex', alignItems:'center', gap:'8px' }}>
-            <CalendarClock size={13} color="rgba(255,255,255,0.4)"/>
-            <span style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', flexShrink:0 }}>Exp. :</span>
-            <span style={{ color:'white', fontSize:'12px' }}>
-              {profile?.expiry_date ? new Date(profile.expiry_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}) : '—'}
-            </span>
-          </div>
-
-          {/* Activation status row */}
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'11px 14px', display:'flex', alignItems:'center', gap:'10px' }}>
-            <div style={{ width:'26px', height:'26px', borderRadius:'7px', background:isActivated?'rgba(34,197,94,0.2)':'rgba(0,87,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              {isActivated ? <CheckCircle size={13} color="#22c55e"/> : <Lock size={13} color="#60a5fa"/>}
+              <button onClick={()=>limits.badge&&onUpdate({is_verified:!profile?.is_verified})}
+                title={limits.badge ? 'Badge vérifié' : 'Badge vérifié — PRO requis'}
+                aria-label="Basculer le badge vérifié"
+                style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:limits.badge?'pointer':'not-allowed', padding:0, flexShrink:0, opacity:limits.badge?1:0.4 }}>
+                <BadgeCheck size={13} color={profile?.is_verified ? '#22c55e' : 'rgba(255,255,255,0.35)'}/>
+                <div style={{ width:'30px', height:'17px', borderRadius:'100px', background:profile?.is_verified?'#22c55e':'rgba(255,255,255,0.1)', position:'relative', transition:'background 0.3s' }}>
+                  <div style={{ width:'11px', height:'11px', borderRadius:'50%', background:'white', position:'absolute', top:'3px', left:profile?.is_verified?'16px':'3px', transition:'left 0.3s' }}/>
+                </div>
+              </button>
             </div>
-            <span style={{ color:'rgba(255,255,255,0.6)', fontSize:'12px' }}>
-              {isActivated ? '✅ Compte activé' : "⏳ En attente d'activation"}
-            </span>
+
+            {/* Ligne 2 : expiry + statut d'activation */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px', flexWrap:'wrap' }}>
+              <span style={{ display:'flex', alignItems:'center', gap:'5px', color:'rgba(255,255,255,0.4)', fontSize:'11px' }}>
+                <CalendarClock size={12}/>
+                Exp. {profile?.expiry_date ? new Date(profile.expiry_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
+              </span>
+              <span style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'11px', color:isActivated?'#4ade80':'#60a5fa' }}>
+                {isActivated ? <CheckCircle size={12}/> : <Lock size={12}/>}
+                {isActivated ? 'Compte activé' : "En attente d'activation"}
+              </span>
+            </div>
           </div>
 
           {/* Save row */}

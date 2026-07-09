@@ -501,8 +501,7 @@ export default function UserDashboard() {
       // 640px reste utile en dessous de 1024px (tablette/mobile, lisibilité) ;
       // au-delà (desktop), on laisse MarketplacePanel gérer sa propre largeur
       // via son breakpoint interne (1400px+).
-      case 'marketplace':     return (
-        <div style={isDesktop ? undefined : { maxWidth:'640px' }}>
+      case 'marketplace':     return ( <div style={isDesktop ? undefined : { maxWidth:'640px' }}>
           <MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} />
         </div>
       );

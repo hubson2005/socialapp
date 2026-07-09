@@ -4,6 +4,7 @@ import Login          from "./pages/Login";
 import Dashboard      from "./pages/Dashboard";
 import UserDashboard  from "./pages/UserDashboard";
 import PublicProfile  from "./pages/PublicProfile";
+import PublicForm     from "./pages/PublicForm"; // ← nouveau : page publique /form/:formId
 import Home           from "./pages/Home";
 import PrivacyPolicy  from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -66,8 +67,8 @@ function PublicApp() {
 
       {/* Routes légales — chemins longs (liens du footer) */}
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-<Route path="/privacy-policy.html" element={<Navigate to="/privacy-policy" replace />} />
-<Route path="/politique-de-confidentialite" element={<Navigate to="/privacy-policy" replace />} />
+      <Route path="/privacy-policy.html" element={<Navigate to="/privacy-policy" replace />} />
+      <Route path="/politique-de-confidentialite" element={<Navigate to="/privacy-policy" replace />} />
       <Route path="/terms-of-service"  element={<TermsOfService />} />
 
       {/* Alias courts — redirigent vers les routes canoniques */}
@@ -101,6 +102,12 @@ function PublicApp() {
           </ProtectedRoute>
         }
       />
+
+      {/* ✅ FIX : route publique du formulaire — DOIT être déclarée avant
+          "/:username" et "*" pour que /form/:formId ne soit pas avalée
+          par le catch-all et redirigée vers la home. */}
+      <Route path="/form/:formId" element={<PublicForm />} />
+
       <Route path="/:username" element={<PublicProfile />} />
       <Route path="*"          element={<Navigate to="/" replace />} />
     </Routes>

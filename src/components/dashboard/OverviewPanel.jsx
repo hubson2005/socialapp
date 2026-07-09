@@ -28,13 +28,14 @@ export default function OverviewPanel({
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];
 
+  // Couleurs reprises du dégradé du logo SocialApp (bleu → violet → magenta → orange)
   const quickActions = [
-    { label:'Plateformes',  icon:Link2,         color:'#0ea5e9', section:'platforms',   desc:links.length+' lien(s)',                                                             locked:false },
-    { label:'Événement',    icon:CalendarClock, color:'#f59e0b', section:'event',        desc:limits.hasEvent?(profile?.is_event?'Activé':'Désactivé'):'PRO requis',              locked:!limits.hasEvent },
-    { label:'Analytics',    icon:BarChart2,     color:'#a78bfa', section:'analytics',    desc:limits.hasStats?'Actifs':'PRO requis',                                               locked:!limits.hasStats },
-    { label:'Marketplace',  icon:ShoppingBag,   color:'#22c55e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max',       locked:false },
-    { label:'CRM',          icon:Users,         color:'#ec4899', section:'crm',          desc:limits.hasCRM?'Actif':'BUSINESS requis',                                             locked:!limits.hasCRM },
-    { label:'Documents',    icon:FileText,      color:'#64748b', section:'documents',    desc:limits.maxDocs+' doc(s) max',                                                        locked:false },
+    { label:'Plateformes',  icon:Link2,         color:'#3b4bf0', section:'platforms',   desc:links.length+' lien(s)',                                                             locked:false },
+    { label:'Événement',    icon:CalendarClock, color:'#7b3ff2', section:'event',        desc:limits.hasEvent?(profile?.is_event?'Activé':'Désactivé'):'PRO requis',              locked:!limits.hasEvent },
+    { label:'Analytics',    icon:BarChart2,     color:'#a52ee0', section:'analytics',    desc:limits.hasStats?'Actifs':'PRO requis',                                               locked:!limits.hasStats },
+    { label:'Marketplace',  icon:ShoppingBag,   color:'#d81f9e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max',       locked:false },
+    { label:'CRM',          icon:Users,         color:'#ef2f6b', section:'crm',          desc:limits.hasCRM?'Actif':'BUSINESS requis',                                             locked:!limits.hasCRM },
+    { label:'Documents',    icon:FileText,      color:'#ff8c1a', section:'documents',    desc:limits.maxDocs+' doc(s) max',                                                        locked:false },
   ];
 
   return (

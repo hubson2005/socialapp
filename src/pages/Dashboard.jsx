@@ -1057,6 +1057,10 @@ export default function Dashboard() {
     }
   };
 
+  // Dégradé rose → orange repris de l'icône fournie (même dégradé que le
+  // dashboard user), appliqué ici à la topbar admin.
+  const TOPBAR_GRADIENT = 'linear-gradient(120deg, #ff1f6d 0%, #ff5e3a 55%, #ffab2e 100%)';
+
   return (
     <div style={{ height:'100dvh', minHeight:'100dvh', display:'flex', position:'relative', overflowX:'hidden', background:'#040210' }}>
       <div style={{ position:'relative', zIndex:10, flexShrink:0, width:isMobile?0:undefined }}>
@@ -1064,25 +1068,26 @@ export default function Dashboard() {
       </div>
 
       <div style={{ flex:1, height:'100dvh', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1, overflowX:'hidden', overflowY:'hidden' }}>
-        {/* Top bar */}
-        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:'rgba(4,2,16,0.7)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,0.07)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+        {/* Top bar — dégradé rose/orange repris de l'icône, au lieu du fond
+            sombre translucide d'origine. */}
+        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_GRADIENT, borderBottom:'1px solid rgba(255,255,255,0.15)', boxShadow:'0 4px 20px rgba(255,60,90,0.25)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'28px', height:'28px', borderRadius:'8px', objectFit:'cover', flexShrink:0 }}/>}
             <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0 }}>{currentNav?.label||'Dashboard'}</h2>
-            {hasChanges && <span style={{ background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.3)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600 }}>{t('unsaved')}</span>}
+            {hasChanges && <span style={{ background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.35)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fff', fontWeight:600 }}>{t('unsaved')}</span>}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
             {/* ✅ FIX: bouton Templates ajouté — setShowTemplates n'était jamais appelé nulle part */}
-            <button onClick={()=>setShowTemplates(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
+            <button onClick={()=>setShowTemplates(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', color:'rgba(255,255,255,0.9)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Sparkles size={13}/>{!isMobile && 'Templates'}
             </button>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal}/>
-            <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
+            <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', color:'rgba(255,255,255,0.9)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Eye size={13}/>{!isMobile && t('preview')}
             </button>
             <div ref={notifPanelRef} style={{ position:'relative' }}>
-              <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.07)', border:'1px solid '+(notifGranted?'rgba(34,197,94,0.3)':'rgba(255,255,255,0.12)'), borderRadius:'9px', cursor:'pointer' }}>
-                {notifGranted ? <Bell size={14} color="#22c55e"/> : <BellOff size={14} color="rgba(255,255,255,0.5)"/>}
+              <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(0,0,0,0.25)':'rgba(0,0,0,0.2)', border:'1px solid '+(notifGranted?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.3)'), borderRadius:'9px', cursor:'pointer' }}>
+                {notifGranted ? <Bell size={14} color="#fff"/> : <BellOff size={14} color="rgba(255,255,255,0.7)"/>}
               </button>
               <AnimatePresence>
                 {showNotifPanel && (
@@ -1101,11 +1106,11 @@ export default function Dashboard() {
               </AnimatePresence>
             </div>
             <button onClick={handleSave} disabled={!hasChanges||updateMutation.isPending}
-              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.07)', border:'1px solid '+(hasChanges?'transparent':'rgba(255,255,255,0.12)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'rgba(0,0,0,0.28)':'rgba(255,255,255,0.15)', border:'1px solid '+(hasChanges?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.25)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.6)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin"/> : <Save size={13}/>}{!isMobile && t('save')}
             </button>
-            <button onClick={handleSignOut} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'9px', cursor:'pointer' }} title={user?.email}>
-              <LogOut size={14} color="rgba(255,255,255,0.5)"/>
+            <button onClick={handleSignOut} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', cursor:'pointer' }} title={user?.email}>
+              <LogOut size={14} color="rgba(255,255,255,0.85)"/>
             </button>
           </div>
         </div>

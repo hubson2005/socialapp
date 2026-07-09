@@ -41,6 +41,8 @@ import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels";
 import FormsPanel from "@/components/forms/FormsPanel";
 import NotificationBell from './NotificationBell';
+import WaveModal from "@/components/dashboard/WaveModal";
+import FeatureUpgradeModal from "@/components/dashboard/FeatureUpgradeModal";
 
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
 class PanelErrorBoundary extends React.Component {
@@ -153,21 +155,11 @@ function PlanModal({ onClose, onSelect }) {
   );
 }
 
-function WaveModal({ onClose }) {
-  return (
-    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }} onClick={onClose}>
-      <motion.div initial={{ opacity:0, scale:0.93, y:20 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.93 }} transition={{ type:'spring', stiffness:300, damping:25 }} onClick={e=>e.stopPropagation()} style={{ background:'#0f0a1e', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'24px', padding:'28px 24px', maxWidth:'360px', width:'100%', boxShadow:'0 24px 80px rgba(0,0,0,0.7)', textAlign:'center' }}>
-        <h3 style={{ color:'white', fontSize:'18px', fontWeight:800, marginBottom:'6px' }}>🔓 Débloquer cette fonctionnalité</h3>
-        <div style={{ background:'rgba(0,87,255,0.1)', border:'1px solid rgba(0,87,255,0.3)', borderRadius:'14px', padding:'16px', marginBottom:'14px' }}>
-          <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'12px', marginBottom:'8px' }}>Envoyez votre paiement via <strong style={{ color:'#60a5fa' }}>Wave CI</strong> au numéro :</p>
-          <p style={{ color:'white', fontSize:'26px', fontWeight:800, margin:'0 0 4px' }}>+225 05 76 03 12 12</p>
-        </div>
-        <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', width:'100%', padding:'13px', background:'#25D366', borderRadius:'12px', color:'white', fontSize:'14px', fontWeight:700, textDecoration:'none', marginBottom:'10px' }}>WhatsApp — Envoyer la preuve</a>
-        <button type="button" onClick={onClose} style={{ width:'100%', padding:'11px', background:'transparent', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'12px', color:'rgba(255,255,255,0.5)', fontSize:'13px', cursor:'pointer' }}>Fermer</button>
-      </motion.div>
-    </motion.div>
-  );
-}
+// SUPPRIMÉ — l'ancienne fonction WaveModal locale faisait doublon avec
+// l'import `WaveModal` depuis "@/components/dashboard/WaveModal" en haut
+// de ce fichier (redéclaration = crash). Le composant est maintenant
+// exclusivement celui du fichier séparé, qui reçoit `plan` pour afficher
+// le montant dynamique et gère lui-même le blocage du scroll body.
 
 function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }) {
   const isPro = requiredPlan === 'pro';
@@ -285,6 +277,9 @@ export default function UserDashboard() {
   const [showPreview, setShowPreview]       = useState(false);
   const [showWaveModal, setShowWaveModal]   = useState(false);
   const [showPlanModal, setShowPlanModal]   = useState(false);
+  // Modale d'upgrade ciblée par feature — null quand fermée, sinon
+  // { featureName, requiredPlan } pour afficher le bon libellé/montant.
+  const [featureUpgrade, setFeatureUpgrade] = useState(null);
   const [uploadingBg, setUploadingBg]       = useState(false);
   const [localProfile, setLocalProfile]     = useState(null);
   const [activeProfileId, setActiveProfileId] = useState(null);
@@ -319,7 +314,17 @@ export default function UserDashboard() {
   const effectivePlan = isAdmin ? 'business' : rawPlan;
   const limits         = PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.basic;
 
-  const handleOpenUpgrade = () => setShowPlanModal(true);
+  // Point d'entrée unique pour toute demande d'upgrade dans le dashboard.
+  // - Appelé SANS argument (limite de quota : liens, formulaires, docs…)
+  //   → ouvre le comparatif complet des 3 offres (PlanModal).
+  // - Appelé AVEC (featureName, requiredPlan) (fonctionnalité verrouillée
+  //   par palier de plan : Analytics, Événement, CRM…) → ouvre une modale
+  //   ciblée sur cette feature précise (FeatureUpgradeModal), plus direct
+  //   que de renvoyer l'utilisateur vers le comparatif des 3 offres.
+  const handleOpenUpgrade = (featureName, requiredPlan) => {
+    if (featureName) setFeatureUpgrade({ featureName, requiredPlan: requiredPlan || 'pro' });
+    else setShowPlanModal(true);
+  };
   const handlePlanSelect  = (planSlug) => { setShowPlanModal(false); navigate(`/login?plan=${encodeURIComponent(planSlug)}`); };
 
   const { data: profiles = [], isLoading } = useQuery({
@@ -487,11 +492,14 @@ export default function UserDashboard() {
   const renderSection = () => {
     if (isCurrentSectionLocked()) {
       const nav = USER_NAV.find(n => n.id === activeSection);
-      return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={handleOpenUpgrade} />;
+      // Feature verrouillée par palier de plan → modale d'upgrade ciblée
+      // sur CETTE feature précise (nav.label / nav.locked), plutôt que le
+      // comparatif générique des 3 offres.
+      return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={()=>handleOpenUpgrade(nav.label, nav.locked)} />;
     }
     switch (activeSection) {
       case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} />;
-      case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={handleOpenUpgrade} />;
+      case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
       // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,
       // quelle que soit la largeur d'écran : c'est ce qui empêchait Marketplace
@@ -506,7 +514,7 @@ export default function UserDashboard() {
         </div>
       );
       case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} /></div>;
-      case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={handleOpenUpgrade} /></div>;
+      case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={()=>handleOpenUpgrade()} /></div>;
       case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
       case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
       case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
@@ -571,7 +579,7 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
             isAdmin={isAdmin}
             onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
             bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
-            onUpgrade={handleOpenUpgrade}
+            onUpgrade={()=>handleOpenUpgrade()}
           />
         </div>
       )}
@@ -628,12 +636,27 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
           isAdmin={isAdmin}
           onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}
           bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
-          onUpgrade={handleOpenUpgrade}
+          onUpgrade={()=>handleOpenUpgrade()}
         />
       )}
 
       {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)} />}
-      <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} />}</AnimatePresence>
+
+      {/* Modale d'activation de compte — montant dynamique selon effectivePlan */}
+      <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} plan={effectivePlan} />}</AnimatePresence>
+
+      {/* Modale d'upgrade ciblée sur UNE feature verrouillée (Analytics, Événement, CRM…) */}
+      <AnimatePresence>
+        {featureUpgrade && (
+          <FeatureUpgradeModal
+            onClose={()=>setFeatureUpgrade(null)}
+            featureName={featureUpgrade.featureName}
+            requiredPlan={featureUpgrade.requiredPlan}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Comparatif complet des 3 offres — limites de quota (liens, formulaires…) */}
       <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
 
       <style>{`

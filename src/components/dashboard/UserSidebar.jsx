@@ -319,7 +319,7 @@ export default function UserSidebar({
                         padding: collapsed && !isMobile ? '10px 0' : '9px 10px',
                         borderRadius: '11px',
                         border: 'none',
-                        background: isActive && !locked ? 'rgba(99,102,241,0.18)' : 'transparent',
+                        background: isActive && !locked ? 'rgba(219,39,119,0.18)' : 'transparent',
                         cursor: locked ? 'default' : 'pointer',
                         opacity: locked ? 0.45 : 1,
                         justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
@@ -332,7 +332,7 @@ export default function UserSidebar({
                         <div style={{
                           position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
                           width: '3px', height: '20px',
-                          background: 'linear-gradient(180deg,#6366f1,#8b5cf6)',
+                          background: 'linear-gradient(180deg,#db2777,#f97316)',
                           borderRadius: '0 3px 3px 0',
                         }} />
                       )}
@@ -340,11 +340,11 @@ export default function UserSidebar({
                       <div style={{
                         width: '30px', height: '30px', borderRadius: '9px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        background: isActive && !locked ? 'rgba(99,102,241,0.25)' : 'transparent',
+                        background: isActive && !locked ? 'rgba(219,39,119,0.25)' : 'transparent',
                       }}>
                         {locked
                           ? <Lock size={14} color="rgba(255,255,255,0.3)" />
-                          : <item.icon size={15} color={isActive ? '#a78bfa' : 'rgba(255,255,255,0.45)'} />
+                          : <item.icon size={15} color={isActive ? '#f472b6' : 'rgba(255,255,255,0.45)'} />
                         }
                       </div>
 
@@ -413,16 +413,16 @@ export default function UserSidebar({
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
-                background: bgImageUrl ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)'),
+                background: bgImageUrl ? 'rgba(219,39,119,0.15)' : 'rgba(255,255,255,0.06)',
+                border: '1px solid ' + (bgImageUrl ? 'rgba(219,39,119,0.4)' : 'rgba(255,255,255,0.1)'),
                 borderRadius: '8px', padding: '7px 10px', cursor: 'pointer',
                 position: 'relative',
               }}>
                 {uploadingBg
-                  ? <Loader2 size={12} color="#a78bfa" className="animate-spin" />
-                  : <Image size={12} color={bgImageUrl ? '#a78bfa' : 'rgba(255,255,255,0.4)'} />
+                  ? <Loader2 size={12} color="#f472b6" className="animate-spin" />
+                  : <Image size={12} color={bgImageUrl ? '#f472b6' : 'rgba(255,255,255,0.4)'} />
                 }
-                <span style={{ color: bgImageUrl ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600 }}>
+                <span style={{ color: bgImageUrl ? '#f472b6' : 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600 }}>
                   {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
                 </span>
                 <input

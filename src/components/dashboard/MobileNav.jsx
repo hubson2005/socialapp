@@ -45,6 +45,11 @@
  *      profile={localProfile}
  *      isAdmin={isAdmin}
  *    />
+ *
+ * PALETTE :
+ *  [C12] Accent aligné sur UserSidebar.jsx (magenta → orange, dérivé du logo
+ *        SocialApp) : remplace l'ancien indigo (#6366f1/#a78bfa) qui ne
+ *        correspondait plus à la charte desktop.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -80,10 +85,11 @@ const T = {
   textMuted:    'rgba(255,255,255,0.65)',
   textDim:      'rgba(255,255,255,0.35)',
   textGhost:    'rgba(255,255,255,0.22)',
-  accent:       '#6366f1',
-  accentLight:  '#a78bfa',
-  accentBg:     'rgba(99,102,241,0.16)',
-  accentBgHover:'rgba(99,102,241,0.28)',
+  accent:       '#db2777',
+  accentEnd:    '#f97316',
+  accentLight:  '#f472b6',
+  accentBg:     'rgba(219,39,119,0.16)',
+  accentBgHover:'rgba(219,39,119,0.28)',
   red:          '#f87171',
   redBg:        'rgba(239,68,68,0.1)',
   redBorder:    'rgba(239,68,68,0.3)',
@@ -369,7 +375,7 @@ export default function MobileNav({
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '36px', height: '36px', borderRadius: '10px',
-              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+              background: `linear-gradient(135deg,${T.accent},${T.accentEnd})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '14px', fontWeight: 800, color: T.text,
               overflow: 'hidden', flexShrink: 0,
@@ -450,7 +456,7 @@ export default function MobileNav({
                       <div style={{
                         position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
                         width: '3px', height: '22px',
-                        background: `linear-gradient(180deg,${T.accent},#8b5cf6)`,
+                        background: `linear-gradient(180deg,${T.accent},${T.accentEnd})`,
                         borderRadius: '0 3px 3px 0',
                       }} />
                     )}
@@ -510,8 +516,8 @@ export default function MobileNav({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '8px',
-                background: bgImageUrl ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)'),
+                background: bgImageUrl ? T.accentBg : 'rgba(255,255,255,0.06)',
+                border: '1px solid ' + (bgImageUrl ? 'rgba(219,39,119,0.4)' : 'rgba(255,255,255,0.1)'),
                 borderRadius: '10px', padding: '9px 12px',
                 cursor: uploadingBg ? 'not-allowed' : 'pointer',
                 position: 'relative', opacity: uploadingBg ? 0.7 : 1,
@@ -633,7 +639,7 @@ export default function MobileNav({
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
                 padding: '6px 10px', borderRadius: T.radiusPill, border: 'none',
                 background: isActive
-                  ? (isMenu ? 'rgba(239,68,68,0.18)' : 'rgba(99,102,241,0.22)')
+                  ? (isMenu ? 'rgba(239,68,68,0.18)' : T.accentBgHover)
                   : 'transparent',
                 cursor: 'pointer',
                 transform: isActive ? 'scale(1.05)' : 'scale(1)',

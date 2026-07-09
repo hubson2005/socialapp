@@ -26,8 +26,20 @@ const emptyForm = (profileId) => ({
   status: 'brouillon',
   fields: [],
   bg_color: '#F97316',
-  thank_you_message: 'Merci pour votre réponse !',
+  thank_you_message: 'Merci pour votre réponse !',
   redirect_url: '',
+});
+
+// Normalise un formulaire (venant de la DB ou local) vers la forme exacte de `formData`,
+// pour que la comparaison JSON de dirty-tracking soit stable peu importe la source.
+const toFormData = (form) => ({
+  title:             form.title             || '',
+  description:       form.description       || '',
+  status:            form.status            || 'brouillon',
+  fields:            form.fields            || [],
+  bg_color:          form.bg_color          || '#F97316',
+  thank_you_message: form.thank_you_message || '',
+  redirect_url:      form.redirect_url      || '',
 });
 
 // ─── DB layer (Supabase) ──────────────────────────────────────────────────
@@ -87,12 +99,17 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
   const queryClient = useQueryClient();
   const [selectedForm, setSelectedForm] = useState(null);
   const [formData, setFormData]         = useState(emptyForm(profileId));
+  // Snapshot du dernier état persisté (chargé depuis la DB ou juste sauvegardé).
+  // Sert uniquement à savoir si `formData` a divergé depuis → bouton Sauvegarder actif ou grisé.
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(toFormData(emptyForm(profileId))));
   const [tab, setTab]                   = useState('builder');
   const [focusedField, setFocusedField] = useState(null);
 
   useEffect(() => {
+    const fresh = emptyForm(profileId);
     setSelectedForm(null);
-    setFormData(emptyForm(profileId));
+    setFormData(fresh);
+    setSavedSnapshot(JSON.stringify(toFormData(fresh)));
     setTab('builder');
   }, [profileId]);
 
@@ -108,44 +125,51 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     mutationFn: (data) => db.create(data),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['forms', profileId] });
+      const next = toFormData(created);
       setSelectedForm(created);
-      toast.success('Formulaire créé !');
+      setFormData(next);
+      setSavedSnapshot(JSON.stringify(next));
+      toast.success('Formulaire créé !');
     },
-    onError: (e) => toast.error('Erreur : ' + e.message),
+    onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.update(id, data),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['forms', profileId] });
+      const next = toFormData(updated);
       setSelectedForm(updated);
-      toast.success('Modifications sauvegardées !');
+      setFormData(next);
+      setSavedSnapshot(JSON.stringify(next));
+      toast.success('Modifications sauvegardées !');
     },
-    onError: (e) => toast.error('Erreur : ' + e.message),
+    onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => db.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forms', profileId] });
+      const fresh = emptyForm(profileId);
       setSelectedForm(null);
-      setFormData(emptyForm(profileId));
+      setFormData(fresh);
+      setSavedSnapshot(JSON.stringify(toFormData(fresh)));
       toast.success('Formulaire supprimé');
     },
-    onError: (e) => toast.error('Erreur : ' + e.message),
+    onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
+  // Rien de nouveau à persister par rapport au dernier état sauvegardé/chargé.
+  const isDirty = JSON.stringify(formData) !== savedSnapshot;
+  const pending = updateMutation.isPending || createMutation.isPending;
+  const canSave = isDirty && !pending;
+
   const handleSelect = (form) => {
+    const next = toFormData(form);
     setSelectedForm(form);
-    setFormData({
-      title:             form.title             || '',
-      description:       form.description       || '',
-      status:            form.status            || 'brouillon',
-      fields:            form.fields            || [],
-      bg_color:          form.bg_color          || '#F97316',
-      thank_you_message: form.thank_you_message || '',
-      redirect_url:      form.redirect_url      || '',
-    });
+    setFormData(next);
+    setSavedSnapshot(JSON.stringify(next));
     setTab('builder');
   };
 
@@ -154,8 +178,10 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
       toast.error(`Limite atteinte — ${maxForms} formulaire(s) max pour votre offre`);
       return;
     }
+    const fresh = emptyForm(profileId);
     setSelectedForm(null);
-    setFormData(emptyForm(profileId));
+    setFormData(fresh);
+    setSavedSnapshot(JSON.stringify(toFormData(fresh)));
     setTab('builder');
   };
 
@@ -174,7 +200,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
 
   const handleDelete = () => {
     const name = selectedForm.title?.trim() || 'Sans titre';
-    if (!window.confirm(`Supprimer le formulaire « ${name} » ?\nCette action est irréversible.`)) return;
+    if (!window.confirm(`Supprimer le formulaire « ${name} » ?\nCette action est irréversible.`)) return;
     deleteMutation.mutate(selectedForm.id);
   };
 
@@ -403,20 +429,21 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
               )}
               <button
                 onClick={handleSave}
-                disabled={updateMutation.isPending || createMutation.isPending}
+                disabled={!canSave}
+                title={!isDirty && !pending ? 'Aucune modification à sauvegarder' : ''}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '7px',
                   padding: '8px 16px',
-                  background: ACCENT_GRADIENT,
-                  border: 'none', borderRadius: '10px', color: 'white',
-                  fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
-                  opacity: (updateMutation.isPending || createMutation.isPending) ? 0.7 : 1,
-                  boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 6px 16px -6px rgba(139,92,246,0.5)',
+                  background: canSave ? ACCENT_GRADIENT : 'rgba(255,255,255,0.05)',
+                  border: 'none', borderRadius: '10px',
+                  color: canSave ? 'white' : 'rgba(255,255,255,0.28)',
+                  fontSize: '11.5px', fontWeight: 700,
+                  cursor: canSave ? 'pointer' : 'not-allowed',
+                  boxShadow: canSave ? '0 1px 0 rgba(255,255,255,0.2) inset, 0 6px 16px -6px rgba(139,92,246,0.5)' : 'none',
+                  transition: 'background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
                 }}
               >
-                {(updateMutation.isPending || createMutation.isPending)
-                  ? <Loader2 size={12} className="animate-spin" />
-                  : null}
+                {pending ? <Loader2 size={12} className="animate-spin" /> : (!isDirty && <Check size={12} />)}
                 {selectedForm ? 'Sauvegarder' : 'Créer'}
               </button>
             </div>
@@ -533,7 +560,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                     onFocus={() => setFocusedField('thanks')}
                     onBlur={() => setFocusedField(null)}
                     rows={2}
-                    placeholder="Merci pour votre réponse !"
+                    placeholder="Merci pour votre réponse !"
                     style={{ ...fieldStyle, ...inputFocusStyle('thanks'), resize: 'none' }}
                   />
                 </div>
@@ -561,7 +588,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                     </p>
                     {selectedForm.status !== 'actif' && (
                       <p style={{ color: '#fbbf24', fontSize: '10.5px', margin: '0 0 9px' }}>
-                        ⚠️ Passez le statut à « actif » pour rendre ce lien accessible publiquement.
+                        ⚠️ Passez le statut à « actif » pour rendre ce lien accessible publiquement.
                       </p>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -573,7 +600,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                         {publicUrl(selectedForm.id)}
                       </code>
                       <button
-                        onClick={() => { navigator.clipboard.writeText(publicUrl(selectedForm.id)); toast.success('Lien copié !'); }}
+                        onClick={() => { navigator.clipboard.writeText(publicUrl(selectedForm.id)); toast.success('Lien copié !'); }}
                         title="Copier le lien"
                         style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
                       >

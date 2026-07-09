@@ -255,16 +255,37 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
         }
         @media (max-width: 480px) {
           .fp-panel input, .fp-panel textarea { font-size: 16px !important; }
+          .fp-panel .fp-builder-grid { grid-template-columns: 1fr !important; }
         }
-        @media (max-width: 640px) {
+        /* Onglets scrollables horizontalement (au doigt) plutôt que de déborder ou wrapper —
+           évite que "Sauvegarder"/"Réponses" se fassent couper, à toute largeur d'écran
+           (notamment la zone tablette portrait/paysage où ni le style desktop ni le wrap
+           mobile ne s'appliquaient). */
+        .fp-panel .fp-tabbar-scroll {
+          display: flex;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .fp-panel .fp-tabbar-scroll::-webkit-scrollbar { display: none; }
+        .fp-panel .fp-tabbar-scroll button { flex-shrink: 0; }
+        @media (max-width: 560px) {
           .fp-panel .fp-tabbar { flex-wrap: wrap; }
+          .fp-panel .fp-tabbar-scroll { width: 100%; order: 1; }
           .fp-panel .fp-actions {
             margin-left: 0 !important;
             width: 100%;
+            order: 2;
             justify-content: flex-end;
             border-top: 1px solid rgba(255,255,255,0.07);
             padding-top: 9px !important;
           }
+        }
+        /* Cibles tactiles agrandies sur tout écran tactile (tablette incluse, pas que mobile) */
+        @media (pointer: coarse) {
+          .fp-panel .fp-icon-delete { width: 40px !important; height: 40px !important; }
+          .fp-panel .fp-swatch { width: 30px !important; height: 30px !important; }
+          .fp-panel .fp-refresh { width: 34px !important; height: 34px !important; }
         }
       `}</style>
 
@@ -410,40 +431,42 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 16px',
             background: 'rgba(255,255,255,0.015)',
           }} className="fp-tabbar">
-            {[
-              { key: 'builder',   label: 'Constructeur', icon: FileText  },
-              { key: 'preview',   label: 'Aperçu',       icon: Eye       },
-              { key: 'settings',  label: 'Paramètres',   icon: Settings  },
-              { key: 'responses', label: 'Réponses',     icon: BarChart3 },
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '13px 15px', fontSize: '12.5px', fontWeight: 700,
-                  border: 'none',
-                  borderBottom: '2px solid ' + (tab === key ? '#8b5cf6' : 'transparent'),
-                  background: 'transparent',
-                  color: tab === key ? 'white' : 'rgba(255,255,255,0.38)',
-                  cursor: 'pointer',
-                  transition: 'color 0.15s ease',
-                }}
-              >
-                <Icon size={13} /> {label}
-                {key === 'responses' && submissions.length > 0 && (
-                  <span style={{
-                    background: 'rgba(139,92,246,0.18)', color: '#c4b5fd', borderRadius: '100px',
-                    fontSize: '10px', fontWeight: 700, padding: '1px 6px', lineHeight: 1.5,
-                  }}>
-                    {submissions.length}
-                  </span>
-                )}
-              </button>
-            ))}
+            <div className="fp-tabbar-scroll">
+              {[
+                { key: 'builder',   label: 'Constructeur', icon: FileText  },
+                { key: 'preview',   label: 'Aperçu',       icon: Eye       },
+                { key: 'settings',  label: 'Paramètres',   icon: Settings  },
+                { key: 'responses', label: 'Réponses',     icon: BarChart3 },
+              ].map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '13px 15px', fontSize: '12.5px', fontWeight: 700,
+                    border: 'none', whiteSpace: 'nowrap',
+                    borderBottom: '2px solid ' + (tab === key ? '#8b5cf6' : 'transparent'),
+                    background: 'transparent',
+                    color: tab === key ? 'white' : 'rgba(255,255,255,0.38)',
+                    cursor: 'pointer',
+                    transition: 'color 0.15s ease',
+                  }}
+                >
+                  <Icon size={13} /> {label}
+                  {key === 'responses' && submissions.length > 0 && (
+                    <span style={{
+                      background: 'rgba(139,92,246,0.18)', color: '#c4b5fd', borderRadius: '100px',
+                      fontSize: '10px', fontWeight: 700, padding: '1px 6px', lineHeight: 1.5,
+                    }}>
+                      {submissions.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
 
             {/* Action buttons */}
-            <div className="fp-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 0' }}>
+            <div className="fp-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 0', flexShrink: 0 }}>
               {selectedForm && (
                 <button
                   onClick={handleDelete}
@@ -493,7 +516,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             {/* ── Builder ── */}
             {tab === 'builder' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="fp-builder-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={labelStyle}>Titre du formulaire *</label>
                     <input

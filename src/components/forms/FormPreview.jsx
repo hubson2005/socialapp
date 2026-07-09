@@ -174,6 +174,7 @@ function PreviewField({ field, value, onChange }) {
           <label
             className="fp-file-label"
             style={{
+              position: 'relative',
               display: 'flex', alignItems: 'center', gap: '8px',
               padding: '10px 13px', borderRadius: '10px',
               border: '1px dashed rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.03)',

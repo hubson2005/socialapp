@@ -101,7 +101,7 @@ export default function PublicForm() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060412', padding: '40px 16px' }}>
+    <div style={{ minHeight: '100dvh', background: '#060412', padding: '40px 16px' }}>
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
         <FormPreview form={form} mode="public" onSubmit={handleSubmit} />
       </div>
@@ -138,7 +138,10 @@ function IconBadge({ children, bg }) {
 }
 
 const pageWrap = {
-  minHeight: '100vh', background: '#060412',
+  // 100dvh plutôt que 100vh : évite le saut de mise en page quand la barre
+  // d'adresse Safari iOS se rétracte/réapparaît au scroll (même fix que
+  // dans UserSidebar.jsx pour le tiroir mobile).
+  minHeight: '100dvh', background: '#060412',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   padding: '20px',
 };

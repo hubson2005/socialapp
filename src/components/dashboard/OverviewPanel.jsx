@@ -154,9 +154,9 @@ export default function OverviewPanel({
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr 1fr':'repeat(3,1fr)', gap:'10px' }}>
         {quickActions.map(a => (
           <button key={a.section} onClick={()=>onNavigate(a.section)}
-            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.locked?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)', border:'1px solid '+(a.locked?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.08)'), borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', opacity:a.locked?0.55:1 }}
-            onMouseEnter={e=>{ if(!a.locked){e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.transform='translateY(-2px)';}}}
-            onMouseLeave={e=>{ e.currentTarget.style.background=a.locked?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)';e.currentTarget.style.transform='translateY(0)';}}>
+            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.locked?'rgba(255,255,255,0.02)':a.color+'14', border:'1px solid '+(a.locked?'rgba(255,255,255,0.05)':a.color+'33'), borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', opacity:a.locked?0.55:1 }}
+            onMouseEnter={e=>{ if(!a.locked){e.currentTarget.style.background=a.color+'26';e.currentTarget.style.transform='translateY(-2px)';}}}
+            onMouseLeave={e=>{ e.currentTarget.style.background=a.locked?'rgba(255,255,255,0.02)':a.color+'14';e.currentTarget.style.transform='translateY(0)';}}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:a.color+'22', border:'1px solid '+a.color+'44', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 {a.locked ? <Lock size={15} color="rgba(255,255,255,0.25)"/> : <a.icon size={16} color={a.color}/>}

@@ -31,7 +31,10 @@ export async function triggerFormSubmit(profileId, context = {}) {
     trigger:   'form_submit',
     profileId,
     context: {
-      source: 'form_submit',
+      // NB : 'form_submit' n'était pas dans leads_source_check (qui n'accepte
+      // que manuel/qrcode/socialapp/rsvp/marketplace/formulaire/automatisation/
+      // calendrier) → createLead échouait avec une violation de contrainte.
+      source: 'formulaire',
       visitorName: context.name,
       ...context,
     },

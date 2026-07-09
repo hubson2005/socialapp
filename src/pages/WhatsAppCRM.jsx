@@ -47,6 +47,15 @@ const AVAT = [
   'linear-gradient(135deg,#25D366,#4ade80)',
 ]
 
+// ── DÉGRADÉS "LOGO SOCIALAPP" (bleu → violet/magenta → rose/rouge → orange) ──
+// Repris du logo SocialApp fourni, en version tamisée pour fond de carte sombre.
+const GRAD = {
+  blue:   'linear-gradient(135deg, rgba(43,79,255,0.42) 0%, rgba(12,13,26,0.96) 68%)',
+  purple: 'linear-gradient(135deg, rgba(151,42,247,0.42) 0%, rgba(12,13,26,0.96) 68%)',
+  pink:   'linear-gradient(135deg, rgba(236,17,85,0.42) 0%, rgba(12,13,26,0.96) 68%)',
+  orange: 'linear-gradient(135deg, rgba(255,122,0,0.42) 0%, rgba(12,13,26,0.96) 68%)',
+}
+
 const S = {
   page:     { background:C.bg, minHeight:'100vh', color:C.text, fontFamily:"'Inter','DM Sans',system-ui,sans-serif" },
   header:   { padding:'18px 24px 0', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 },
@@ -60,7 +69,9 @@ const S = {
   g2:       { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 },
   card:     { background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 18px' },
   cardT:    { fontSize:13, fontWeight:600, color:C.text, marginBottom:14, display:'flex', alignItems:'center', gap:7 },
-  statCard: { background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 18px', position:'relative', overflow:'hidden' },
+  // ✅ FIX: statCard accepte maintenant un fond (dégradé coloré) en paramètre.
+  // Sans argument, retombe sur le fond sombre uni C.card (comportement d'origine).
+  statCard: (bg) => ({ background:bg||C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 18px', position:'relative', overflow:'hidden' }),
   statIco:  (bg) => ({ width:36, height:36, borderRadius:9, background:bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, marginBottom:10 }),
   statVal:  { fontSize:28, fontWeight:800, letterSpacing:'-1.5px', color:C.text },
   statLbl:  { fontSize:12, color:C.textMute, marginTop:2 },
@@ -160,13 +171,13 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
     <div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
         {[
-          { lbl:'Envoyées', val:boostNotifs.length,                                bg:C.greenDim,             glow:C.green,   ico:'📤' },
-          { lbl:'Livrées',  val:boostNotifs.filter(n=>n.status==='sent').length,   bg:C.purpleDim,            glow:C.purple,  ico:'✅' },
-          { lbl:'Échecs',   val:boostNotifs.filter(n=>n.status==='failed').length, bg:'rgba(239,68,68,0.12)', glow:'#ef4444', ico:'❌' },
+          { lbl:'Envoyées', val:boostNotifs.length,                                cardBg:GRAD.blue,   glow:C.green,   ico:'📤' },
+          { lbl:'Livrées',  val:boostNotifs.filter(n=>n.status==='sent').length,   cardBg:GRAD.purple, glow:C.purple,  ico:'✅' },
+          { lbl:'Échecs',   val:boostNotifs.filter(n=>n.status==='failed').length, cardBg:GRAD.pink,   glow:'#ef4444', ico:'❌' },
         ].map((s,i) => (
-          <div key={i} style={S.statCard}>
+          <div key={i} style={S.statCard(s.cardBg)}>
             <div style={S.statGlow(s.glow)}/>
-            <div style={S.statIco(s.bg)}>{s.ico}</div>
+            <div style={S.statIco('rgba(255,255,255,0.15)')}>{s.ico}</div>
             <div style={S.statVal}>{s.val}</div>
             <div style={S.statLbl}>{s.lbl}</div>
           </div>
@@ -776,15 +787,20 @@ export default function WhatsAppCRM({ profile }) {
         {/* ── DASHBOARD ── */}
         {tab==='dashboard' && <>
           <div style={S.g4}>
+            {/* ✅ FIX: chaque case a maintenant un fond dégradé repris des couleurs
+                du logo SocialApp (bleu → violet/magenta → rose/rouge → orange),
+                au lieu du fond uni sombre d'origine. */}
             {[
-              { lbl:'Contacts',     ico:'👥', val:stats.totalContacts,      glow:C.purple, bg:C.purpleDim },
-              { lbl:'Actifs',       ico:'✅', val:stats.activeContacts,     glow:C.green,  bg:C.greenDim  },
-              { lbl:'Campagnes',    ico:'📢', val:stats.sentCampaigns,      glow:C.orange, bg:C.orangeDim },
-              { lbl:'Notifs Boost', ico:'🚀', val:stats.boostNotifsSent||0, glow:C.blue,   bg:C.blueDim   },
+              { lbl:'Contacts',     ico:'👥', val:stats.totalContacts,      cardBg:GRAD.blue,   glow:'#3b5bfd' },
+              { lbl:'Actifs',       ico:'✅', val:stats.activeContacts,     cardBg:GRAD.purple, glow:'#a729f0' },
+              { lbl:'Campagnes',    ico:'📢', val:stats.sentCampaigns,      cardBg:GRAD.pink,   glow:'#ec1155' },
+              { lbl:'Notifs Boost', ico:'🚀', val:stats.boostNotifsSent||0, cardBg:GRAD.orange, glow:'#ff8a00' },
             ].map((s,i) => (
-              <div key={i} style={S.statCard}>
-                <div style={S.statGlow(s.glow)}/><div style={S.statIco(s.bg)}>{s.ico}</div>
-                <div style={S.statVal}>{s.val}</div><div style={S.statLbl}>{s.lbl}</div>
+              <div key={i} style={S.statCard(s.cardBg)}>
+                <div style={S.statGlow(s.glow)}/>
+                <div style={S.statIco('rgba(255,255,255,0.15)')}>{s.ico}</div>
+                <div style={S.statVal}>{s.val}</div>
+                <div style={S.statLbl}>{s.lbl}</div>
               </div>
             ))}
           </div>

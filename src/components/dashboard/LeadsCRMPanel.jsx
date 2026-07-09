@@ -38,6 +38,11 @@ import { triggerTaskCompleted }              from '../../lib/triggers/taskComple
 //  [FIX6] `whileHover` de Framer Motion sur les lignes de la liste
 //         désactivé sur appareils sans support du survol (tactile), pour
 //         éviter un état "survolé" qui reste collé après un tap.
+//  [FIX7] Couleur des champs (`inp`) — l'ancien gris plat #2f2f2f détonnait
+//         avec le reste du dashboard (fonds translucides + accent indigo).
+//         Remplacé par un fond sombre teinté indigo, cohérent avec le style
+//         déjà utilisé pour les <select> du panneau (#1a1a2e), + halo au
+//         focus dans la couleur d'accent de l'app.
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
@@ -86,11 +91,16 @@ const tagColor = (tag) => {
   return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
 };
 
+// [FIX7] Fond sombre légèrement teinté indigo (au lieu du gris plat #2f2f2f)
+// + classe "crm-field" pour le halo au focus (voir <style> global plus bas) —
+// cohérent avec l'accent violet/indigo utilisé partout ailleurs dans le
+// dashboard (boutons, badges, select des actions groupées).
 const inp = {
-  width: '100%', background: '#2f2f2f',
-  border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+  width: '100%', background: '#181830',
+  border: '1px solid rgba(129,140,248,0.18)', borderRadius: '12px',
   padding: '11px 13px', color: 'white', outline: 'none',
   fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit',
+  transition: 'border-color .15s, background .15s',
 };
 
 // [FIX5] Zone de tap agrandie (padding + marge négative) sans changer
@@ -223,10 +233,10 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
       <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, width: 80, flexShrink: 0 }}>{label}</span>
       {editing ? (
         type === 'select'
-          ? <select value={valueRaw} onChange={e => onChange(e.target.value)} style={{ ...inp, padding: '7px 10px' }}>
+          ? <select value={valueRaw} onChange={e => onChange(e.target.value)} className="crm-field" style={{ ...inp, padding: '7px 10px' }}>
               {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
             </select>
-          : <input value={value || ''} onChange={e => onChange(e.target.value)} style={{ ...inp, padding: '7px 10px' }} />
+          : <input value={value || ''} onChange={e => onChange(e.target.value)} className="crm-field" style={{ ...inp, padding: '7px 10px' }} />
       ) : (
         <span style={{ color: value ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)', fontSize: 13 }}>{value || '—'}</span>
       )}
@@ -372,7 +382,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             </div>
             <div>
               {editing
-                ? <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ ...inp, padding: '6px 10px', fontSize: 15, fontWeight: 700, width: 180 }} />
+                ? <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="crm-field" style={{ ...inp, padding: '6px 10px', fontSize: 15, fontWeight: 700, width: 180 }} />
                 : <h3 style={{ margin: 0, color: 'white', fontSize: 16, fontWeight: 700 }}>{lead.name}</h3>
               }
               <StatusBadge status={current.status} />
@@ -428,7 +438,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
           <Section title="Tags">
             <TagChips tags={lead.tags || []} onRemove={removeTag} />
             <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
-              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
+              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field" style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
               <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
             </div>
           </Section>
@@ -441,14 +451,14 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             {current.notes && (
               <p style={{ margin: '0 0 8px', color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.6 }}>
                 {editing
-                  ? <textarea value={form.notes} rows={3} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={{ ...inp, resize: 'none' }} />
+                  ? <textarea value={form.notes} rows={3} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="crm-field" style={{ ...inp, resize: 'none' }} />
                   : current.notes
                 }
               </p>
             )}
             {!editing && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
+                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." className="crm-field" style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
                 <button onClick={addNote} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
               </div>
             )}
@@ -795,8 +805,14 @@ export default function LeadsCRMPanel({ profileId }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* [FIX4] classe crm-modal : max-height 90vh puis 90dvh (fallback CSS) */}
-      <style>{`.crm-modal{max-height:90vh;max-height:90dvh;}`}</style>
+      {/* [FIX4] classe crm-modal : max-height 90vh puis 90dvh (fallback CSS)
+          [FIX7] classe crm-field : halo indigo au focus pour tous les champs
+          utilisant le style `inp` (recherche, formulaires, tags, notes...). */}
+      <style>{`
+        .crm-modal{max-height:90vh;max-height:90dvh;}
+        .crm-field:focus{border-color:rgba(129,140,248,0.6)!important;background:#1c1c38!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
+        .crm-field::placeholder{color:rgba(255,255,255,0.28);}
+      `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
@@ -826,7 +842,7 @@ export default function LeadsCRMPanel({ profileId }) {
           <Search size={14} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher un lead (nom, téléphone, email, entreprise, tag)..."
-            style={{ ...inp, paddingLeft: 38 }} />
+            className="crm-field" style={{ ...inp, paddingLeft: 38 }} />
         </div>
 
         {view === 'list' && (
@@ -940,10 +956,6 @@ export default function LeadsCRMPanel({ profileId }) {
         {showAdd && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAdd(false)}
             style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            {/* [FIX1] BUG CORRIGÉ : l'ancien commentaire JSX mal fermé
-                `{/* [tablet] *\/>` juste avant le `>` cassait la syntaxe et
-                empêchait toute compilation. Il est simplement retiré ici ;
-                la classe crm-modal gère désormais le [FIX4] (max-height). */}
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
               className="crm-modal"
               style={{ width: '100%', maxWidth: isTablet ? 540 : 420, background: '#0f0f1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: isTablet ? 28 : 24, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
@@ -959,18 +971,18 @@ export default function LeadsCRMPanel({ profileId }) {
               ].map(f => (
                 <div key={f.key}>
                   <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} style={inp} placeholder={f.ph} />
+                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} className="crm-field" style={inp} placeholder={f.ph} />
                 </div>
               ))}
               <div>
                 <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Source</label>
-                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} style={inp}>
+                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} className="crm-field" style={inp}>
                   {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
-                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} style={{ ...inp, resize: 'none' }} placeholder="Notes additionnelles..." />
+                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field" style={{ ...inp, resize: 'none' }} placeholder="Notes additionnelles..." />
               </div>
               <button onClick={addLead} disabled={adding} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 13, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 12, color: 'white', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer', opacity: adding ? 0.7 : 1, marginTop: 4 }}>
                 {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}

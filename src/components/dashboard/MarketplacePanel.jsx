@@ -16,6 +16,8 @@
  *  [C11] window.confirm remplacé par une modale de confirmation inline
  *  [R1]  RESPONSIVE : adaptation tablette / iOS / Android (voir bloc CSS injecté,
  *        grille adaptative, cibles tactiles, safe-area, overlay image tap-friendly)
+ *  [R2]  DESKTOP UNIQUEMENT : le panel occupe une largeur plus généreuse sur grand écran
+ *        (breakpoint 1400px choisi pour exclure l'iPad Pro 12.9" paysage, ~1366px)
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -39,6 +41,7 @@ const formatPrice = (price) =>
 // ─── Hook : injection unique du CSS global (keyframe + responsive) ──
 // [C3] Remplace les deux <style> inline dupliqués
 // [R1] Étendu pour porter les règles responsive (grille, safe-area, overlay tactile)
+// [R2] Étendu pour la largeur desktop
 function useSpinKeyframe() {
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_ID)) {
@@ -86,6 +89,18 @@ button, a, input, select, textarea, label{ -webkit-tap-highlight-color:transpare
 /* Respect des préférences de mouvement réduit */
 @media (prefers-reduced-motion: reduce){
   *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   [R2] DESKTOP UNIQUEMENT — largeur généreuse au-delà de 1400px.
+   Seuil volontairement au-dessus de l'iPad Pro 12.9" paysage (~1366px)
+   pour ne PAS toucher l'affichage tablette.
+   ══════════════════════════════════════════════════════════ */
+@media (min-width:1400px){
+  .mp-container{ max-width:1600px; margin:0 auto; }
+}
+@media (min-width:1680px){
+  .mp-grid{ grid-template-columns:repeat(6,1fr); gap:16px; }
 }
 `;
       document.head.appendChild(s);
@@ -574,7 +589,8 @@ export default function MarketplacePanel({ profileId }) {
   return (
     <>
       {/* ── Bloc principal ── */}
-      <div style={{ background: 'rgba(15,10,30,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '22px', overflow: 'hidden' }}>
+      {/* [R2] className="mp-container" : largeur généreuse à partir de 1400px (desktop uniquement) */}
+      <div className="mp-container" style={{ background: 'rgba(15,10,30,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '22px', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>

@@ -26,7 +26,7 @@ const emptyForm = (profileId) => ({
   status: 'brouillon',
   fields: [],
   bg_color: '#F97316',
-  thank_you_message: 'Merci pour votre r\u00e9ponse\u00a0!',
+  thank_you_message: 'Merci pour votre réponse !',
   redirect_url: '',
 });
 
@@ -109,9 +109,9 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['forms', profileId] });
       setSelectedForm(created);
-      toast.success('Formulaire cr\u00e9\u00e9\u00a0!');
+      toast.success('Formulaire créé !');
     },
-    onError: (e) => toast.error('Erreur\u00a0: ' + e.message),
+    onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
   const updateMutation = useMutation({
@@ -119,9 +119,9 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['forms', profileId] });
       setSelectedForm(updated);
-      toast.success('Modifications sauvegard\u00e9es\u00a0!');
+      toast.success('Modifications sauvegardées !');
     },
-    onError: (e) => toast.error('Erreur\u00a0: ' + e.message),
+    onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
   const deleteMutation = useMutation({
@@ -130,9 +130,9 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
       queryClient.invalidateQueries({ queryKey: ['forms', profileId] });
       setSelectedForm(null);
       setFormData(emptyForm(profileId));
-      toast.success('Formulaire supprim\u00e9');
+      toast.success('Formulaire supprimé');
     },
-    onError: (e) => toast.error('Erreur\u00a0: ' + e.message),
+    onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
   const handleSelect = (form) => {
@@ -151,7 +151,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
 
   const handleNew = () => {
     if (atLimit) {
-      toast.error(`Limite atteinte \u2014 ${maxForms} formulaire(s) max pour votre offre`);
+      toast.error(`Limite atteinte — ${maxForms} formulaire(s) max pour votre offre`);
       return;
     }
     setSelectedForm(null);
@@ -165,7 +165,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
       updateMutation.mutate({ id: selectedForm.id, data: formData });
     } else {
       if (atLimit) {
-        toast.error(`Limite atteinte \u2014 ${maxForms} formulaire(s) max pour votre offre`);
+        toast.error(`Limite atteinte — ${maxForms} formulaire(s) max pour votre offre`);
         return;
       }
       createMutation.mutate({ ...formData, profile_id: profileId });
@@ -174,7 +174,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
 
   const handleDelete = () => {
     const name = selectedForm.title?.trim() || 'Sans titre';
-    if (!window.confirm(`Supprimer le formulaire \u00ab\u00a0${name}\u00a0\u00bb ?\nCette action est irr\u00e9versible.`)) return;
+    if (!window.confirm(`Supprimer le formulaire « ${name} » ?\nCette action est irréversible.`)) return;
     deleteMutation.mutate(selectedForm.id);
   };
 
@@ -201,6 +201,16 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
         @media (max-width: 480px) {
           .fp-panel input, .fp-panel textarea { font-size: 16px !important; }
         }
+        @media (max-width: 640px) {
+          .fp-panel .fp-tabbar { flex-wrap: wrap; }
+          .fp-panel .fp-actions {
+            margin-left: 0 !important;
+            width: 100%;
+            justify-content: flex-end;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            padding-top: 9px !important;
+          }
+        }
       `}</style>
 
       {/* Header */}
@@ -210,7 +220,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             Formulaires
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.34)', fontSize: '12px', margin: '5px 0 0', fontVariantNumeric: 'tabular-nums' }}>
-            {forms.length} / {maxForms === Infinity ? '\u221e' : maxForms} formulaire(s) utilis\u00e9(s)
+            {forms.length} / {maxForms === Infinity ? '∞' : maxForms} formulaire(s) utilisé(s)
           </p>
         </div>
         <button
@@ -242,11 +252,11 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
         }}>
           <AlertCircle size={14} color="#f87171" style={{ flexShrink: 0 }} />
           <span style={{ color: '#f87171', fontSize: '12px', flex: 1 }}>
-            Limite atteinte \u2014 {maxForms} formulaire(s) max pour votre offre actuelle
+            Limite atteinte — {maxForms} formulaire(s) max pour votre offre actuelle
           </span>
           {onUpgrade && (
             <button onClick={onUpgrade} style={{ background: 'none', border: 'none', color: '#ff8c00', fontSize: '11px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              Upgrader \u2192
+              Upgrader →
             </button>
           )}
         </div>
@@ -272,7 +282,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                 <FileText size={17} color="rgba(167,139,250,0.6)" />
               </div>
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12.5px', fontWeight: 600, margin: 0 }}>Aucun formulaire</p>
-              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', margin: '4px 0 0' }}>Cr\u00e9ez-en un pour commencer</p>
+              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', margin: '4px 0 0' }}>Créez-en un pour commencer</p>
             </div>
           ) : (
             forms.map(form => {
@@ -324,7 +334,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                   </div>
                   {(form.submissions_count > 0) && (
                     <p style={{ color: '#a78bfa', fontSize: '10.5px', fontWeight: 600, margin: '8px 0 0' }}>
-                      {form.submissions_count} r\u00e9ponse(s)
+                      {form.submissions_count} réponse(s)
                     </p>
                   )}
                 </div>
@@ -344,11 +354,11 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             display: 'flex', alignItems: 'center',
             borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 16px',
             background: 'rgba(255,255,255,0.015)',
-          }}>
+          }} className="fp-tabbar">
             {[
               { key: 'builder',  label: 'Constructeur', icon: FileText  },
-              { key: 'preview',  label: 'Aper\u00e7u',  icon: Eye       },
-              { key: 'settings', label: 'Param\u00e8tres', icon: Settings },
+              { key: 'preview',  label: 'Aperçu',  icon: Eye       },
+              { key: 'settings', label: 'Paramètres', icon: Settings },
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -369,7 +379,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             ))}
 
             {/* Action buttons */}
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 0' }}>
+            <div className="fp-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 0' }}>
               {selectedForm && (
                 <button
                   onClick={handleDelete}
@@ -407,7 +417,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                 {(updateMutation.isPending || createMutation.isPending)
                   ? <Loader2 size={12} className="animate-spin" />
                   : null}
-                {selectedForm ? 'Sauvegarder' : 'Cr\u00e9er'}
+                {selectedForm ? 'Sauvegarder' : 'Créer'}
               </button>
             </div>
           </div>
@@ -478,7 +488,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             {tab === 'preview' && (
               <div style={{ maxWidth: '640px', margin: '0 auto' }}>
                 <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '11.5px', marginBottom: '16px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Aper\u00e7u du formulaire
+                  Aperçu du formulaire
                 </p>
                 <FormPreview form={formData} mode="preview" />
               </div>
@@ -523,13 +533,13 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                     onFocus={() => setFocusedField('thanks')}
                     onBlur={() => setFocusedField(null)}
                     rows={2}
-                    placeholder="Merci pour votre r\u00e9ponse\u00a0!"
+                    placeholder="Merci pour votre réponse !"
                     style={{ ...fieldStyle, ...inputFocusStyle('thanks'), resize: 'none' }}
                   />
                 </div>
 
                 <div>
-                  <label style={labelStyle}>URL de redirection apr\u00e8s soumission</label>
+                  <label style={labelStyle}>URL de redirection après soumission</label>
                   <input
                     type="text"
                     value={formData.redirect_url}
@@ -551,7 +561,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                     </p>
                     {selectedForm.status !== 'actif' && (
                       <p style={{ color: '#fbbf24', fontSize: '10.5px', margin: '0 0 9px' }}>
-                        \u26a0\ufe0f Passez le statut \u00e0 \u00ab\u00a0actif\u00a0\u00bb pour rendre ce lien accessible publiquement.
+                        ⚠️ Passez le statut à « actif » pour rendre ce lien accessible publiquement.
                       </p>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -563,7 +573,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                         {publicUrl(selectedForm.id)}
                       </code>
                       <button
-                        onClick={() => { navigator.clipboard.writeText(publicUrl(selectedForm.id)); toast.success('Lien copi\u00e9\u00a0!'); }}
+                        onClick={() => { navigator.clipboard.writeText(publicUrl(selectedForm.id)); toast.success('Lien copié !'); }}
                         title="Copier le lien"
                         style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
                       >

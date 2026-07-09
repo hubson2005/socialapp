@@ -410,7 +410,7 @@ export default function UserSidebar({
           <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
 
             {/* ── Bouton image de fond ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
                 background: bgImageUrl ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
@@ -446,35 +446,9 @@ export default function UserSidebar({
                 </button>
               )}
             </div>
-
-            {/* ── Infos plan ── */}
-            <div style={{
-              background: limits.color + '18',
-              border: '1px solid ' + limits.color + '44',
-              borderRadius: '10px', padding: '8px 10px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '12px' }}>{limits.emoji}</span>
-                <span style={{ color: limits.color, fontSize: '11px', fontWeight: 700 }}>Offre {limits.label}</span>
-                {limits.price && (
-                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '9px', marginLeft: 'auto' }}>
-                    {limits.price}
-                  </span>
-                )}
-              </div>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: isMaxPlan ? 0 : '0 0 6px' }}>
-                {limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits
-              </p>
-              {!isMaxPlan && (
-                <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ff8c00', fontSize: '10px', fontWeight: 600, textDecoration: 'none' }}>
-                  <Crown size={10} /> Changer d'offre
-                </a>
-              )}
-            </div>
           </div>
         )}
       </div>
     </>
   );
 }
-

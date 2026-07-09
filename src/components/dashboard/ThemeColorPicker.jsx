@@ -48,7 +48,7 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
 
       {open && (
         <div className="absolute right-0 top-full mt-2 z-50 bg-card border border-border rounded-2xl p-3 shadow-2xl w-52">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Thème de fond</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Thème de fond - profile public</p>
           <div className="grid grid-cols-4 gap-2 mb-3">
             {PRESETS.map((p) => {
               const [pc1, pc2] = p.value.split('|');

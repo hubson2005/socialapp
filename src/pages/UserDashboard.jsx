@@ -493,7 +493,19 @@ export default function UserDashboard() {
       case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} />;
       case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={handleOpenUpgrade} />;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
-      case 'marketplace':     return <div style={{ maxWidth:'640px' }}><MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} /></div>;
+      // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,
+      // quelle que soit la largeur d'écran : c'est ce qui empêchait Marketplace
+      // de profiter de l'espace disponible sur desktop, même après avoir élargi
+      // .mp-container à l'intérieur de MarketplacePanel.jsx (un enfant ne peut
+      // jamais dépasser la largeur que son parent lui laisse). Le plafond à
+      // 640px reste utile en dessous de 1024px (tablette/mobile, lisibilité) ;
+      // au-delà (desktop), on laisse MarketplacePanel gérer sa propre largeur
+      // via son breakpoint interne (1400px+).
+      case 'marketplace':     return (
+        <div style={isDesktop ? undefined : { maxWidth:'640px' }}>
+          <MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} />
+        </div>
+      );
       case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} /></div>;
       case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={handleOpenUpgrade} /></div>;
       case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
@@ -661,4 +673,3 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
     </div>
   );
 }
-

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Trash2, FileText, Eye, Copy, ExternalLink, Settings,
-  Loader2, AlertCircle, Check,
+  Loader2, AlertCircle, Check, BarChart3, Inbox, RefreshCcw, Clock3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
@@ -42,6 +42,12 @@ const toFormData = (form) => ({
   redirect_url:      form.redirect_url      || '',
 });
 
+const formatDate = (iso) => {
+  try {
+    return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch { return iso; }
+};
+
 // ─── DB layer (Supabase) ──────────────────────────────────────────────────
 const db = {
   list: async (profileId) => {
@@ -68,6 +74,15 @@ const db = {
     const { error } = await supabase.from('forms').delete().eq('id', id);
     if (error) throw error;
     return { id };
+  },
+  listSubmissions: async (formId) => {
+    const { data, error } = await supabase
+      .from('form_submissions')
+      .select('*')
+      .eq('form_id', formId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
   },
 };
 
@@ -117,6 +132,17 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     queryKey: ['forms', profileId],
     queryFn: () => db.list(profileId),
     enabled: !!profileId,
+  });
+
+  const {
+    data: submissions = [],
+    isLoading: submissionsLoading,
+    refetch: refetchSubmissions,
+    isFetching: submissionsFetching,
+  } = useQuery({
+    queryKey: ['form_submissions', selectedForm?.id],
+    queryFn: () => db.listSubmissions(selectedForm.id),
+    enabled: !!selectedForm?.id,
   });
 
   const atLimit = maxForms !== Infinity && forms.length >= maxForms && !selectedForm;
@@ -210,6 +236,8 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     ? { borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.06)' }
     : {};
 
+  const fieldLabelById = (id) => formData.fields.find(f => f.id === id)?.label || id;
+
   return (
     <div className="fp-panel" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Hover effects scoped to (hover: hover) so iOS/Android don't get "stuck" hover states after tap.
@@ -220,6 +248,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           .fp-panel .fp-btn-primary:hover { transform: translateY(-1px); }
           .fp-panel .fp-icon-delete:hover { background: rgba(239,68,68,0.16) !important; }
           .fp-panel .fp-swatch:hover { transform: scale(1.12); }
+          .fp-panel .fp-refresh:hover { border-color: rgba(255,255,255,0.22) !important; }
         }
         @media (max-width: 860px) {
           .fp-panel .fp-grid { grid-template-columns: 1fr !important; }
@@ -382,9 +411,10 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             background: 'rgba(255,255,255,0.015)',
           }} className="fp-tabbar">
             {[
-              { key: 'builder',  label: 'Constructeur', icon: FileText  },
-              { key: 'preview',  label: 'Aperçu',  icon: Eye       },
-              { key: 'settings', label: 'Paramètres', icon: Settings },
+              { key: 'builder',   label: 'Constructeur', icon: FileText  },
+              { key: 'preview',   label: 'Aperçu',       icon: Eye       },
+              { key: 'settings',  label: 'Paramètres',   icon: Settings  },
+              { key: 'responses', label: 'Réponses',     icon: BarChart3 },
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -401,6 +431,14 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                 }}
               >
                 <Icon size={13} /> {label}
+                {key === 'responses' && submissions.length > 0 && (
+                  <span style={{
+                    background: 'rgba(139,92,246,0.18)', color: '#c4b5fd', borderRadius: '100px',
+                    fontSize: '10px', fontWeight: 700, padding: '1px 6px', lineHeight: 1.5,
+                  }}>
+                    {submissions.length}
+                  </span>
+                )}
               </button>
             ))}
 
@@ -621,9 +659,102 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
               </div>
             )}
 
+            {/* ── Réponses ── */}
+            {tab === 'responses' && (
+              <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+                {!selectedForm ? (
+                  <EmptyState
+                    icon={Inbox}
+                    title="Aucun formulaire sélectionné"
+                    subtitle="Choisissez un formulaire dans la liste pour voir ses réponses."
+                  />
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '11.5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+                        {submissions.length} réponse{submissions.length !== 1 ? 's' : ''}
+                      </p>
+                      <button
+                        onClick={() => refetchSubmissions()}
+                        className="fp-refresh"
+                        title="Actualiser"
+                        style={{
+                          width: '27px', height: '27px', borderRadius: '8px',
+                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+                          color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', transition: 'border-color 0.15s ease',
+                        }}
+                      >
+                        <RefreshCcw size={12} className={submissionsFetching ? 'animate-spin' : ''} />
+                      </button>
+                    </div>
+
+                    {submissionsLoading ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
+                        <Loader2 size={18} className="animate-spin" color="rgba(167,139,250,0.7)" />
+                      </div>
+                    ) : submissions.length === 0 ? (
+                      <EmptyState
+                        icon={Inbox}
+                        title="Aucune réponse"
+                        subtitle="Les réponses s'afficheront ici dès qu'une personne remplira ce formulaire."
+                      />
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {submissions.map(sub => (
+                          <div
+                            key={sub.id}
+                            style={{
+                              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                              borderRadius: '14px', padding: '14px 16px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                              <Clock3 size={11} color="rgba(255,255,255,0.3)" />
+                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10.5px', fontVariantNumeric: 'tabular-nums' }}>
+                                {formatDate(sub.created_at)}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                              {Object.entries(sub.data || {}).map(([fieldId, val]) => (
+                                <div key={fieldId}>
+                                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 3px' }}>
+                                    {fieldLabelById(fieldId)}
+                                  </p>
+                                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12.5px', margin: 0, wordBreak: 'break-word' }}>
+                                    {Array.isArray(val) ? val.join(', ') : String(val ?? '—')}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── État vide partagé pour l'onglet Réponses ──────────────────────────────
+function EmptyState({ icon: Icon, title, subtitle }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+      <div style={{
+        width: '42px', height: '42px', borderRadius: '12px', margin: '0 auto 12px',
+        background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={19} color="rgba(167,139,250,0.6)" />
+      </div>
+      <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', fontWeight: 600, margin: 0 }}>{title}</p>
+      {subtitle && <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '11.5px', margin: '4px 0 0' }}>{subtitle}</p>}
     </div>
   );
 }

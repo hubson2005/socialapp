@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, FileX, Clock3 } from 'lucide-react';
 import { supabase } from '../../supabase';
 import FormPreview from "./FormPreview";
 import { triggerFormSubmit } from "../../lib/triggers/form";
+
 export default function PublicForm() {
   const { formId } = useParams();
   const [form, setForm]       = useState(null);
@@ -59,7 +60,10 @@ export default function PublicForm() {
   if (loading) {
     return (
       <div style={pageWrap}>
-        <Loader2 size={22} className="animate-spin" color="#a78bfa" />
+        <StatusCard>
+          <Loader2 size={19} className="animate-spin" color="#a78bfa" />
+          <p style={msgStyle}>Chargement du formulaire…</p>
+        </StatusCard>
       </div>
     );
   }
@@ -67,8 +71,15 @@ export default function PublicForm() {
   if (error === 'not_found') {
     return (
       <div style={pageWrap}>
-        <AlertCircle size={22} color="#f87171" />
-        <p style={msgStyle}>Ce formulaire n'existe pas ou a été supprimé.</p>
+        <StatusCard>
+          <IconBadge color="#f87171" bg="rgba(248,113,113,0.14)">
+            <FileX size={19} color="#f87171" />
+          </IconBadge>
+          <div>
+            <p style={titleStyle}>Formulaire introuvable</p>
+            <p style={msgStyle}>Ce formulaire n'existe pas ou a été supprimé.</p>
+          </div>
+        </StatusCard>
       </div>
     );
   }
@@ -76,8 +87,15 @@ export default function PublicForm() {
   if (error === 'inactive') {
     return (
       <div style={pageWrap}>
-        <AlertCircle size={22} color="#fbbf24" />
-        <p style={msgStyle}>Ce formulaire n'est plus disponible actuellement.</p>
+        <StatusCard>
+          <IconBadge color="#fbbf24" bg="rgba(251,191,36,0.14)">
+            <Clock3 size={19} color="#fbbf24" />
+          </IconBadge>
+          <div>
+            <p style={titleStyle}>Formulaire indisponible</p>
+            <p style={msgStyle}>Ce formulaire n'est plus disponible actuellement.</p>
+          </div>
+        </StatusCard>
       </div>
     );
   }
@@ -91,10 +109,39 @@ export default function PublicForm() {
   );
 }
 
+// ─── Éléments partagés loading/erreur, dans le même langage visuel que FormPreview ──
+function StatusCard({ children }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))',
+      border: '1px solid rgba(255,255,255,0.09)',
+      borderRadius: '18px',
+      boxShadow: '0 12px 28px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.24)',
+      padding: '32px 28px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
+      maxWidth: '360px', textAlign: 'center',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function IconBadge({ children, bg }) {
+  return (
+    <div style={{
+      width: '40px', height: '40px', borderRadius: '50%',
+      background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {children}
+    </div>
+  );
+}
+
 const pageWrap = {
   minHeight: '100vh', background: '#060412',
-  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-  gap: '12px', padding: '20px', textAlign: 'center',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  padding: '20px',
 };
 
-const msgStyle = { color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: 0 };
+const titleStyle = { color: 'white', fontSize: '14px', fontWeight: 700, margin: '0 0 5px' };
+const msgStyle = { color: 'rgba(255,255,255,0.5)', fontSize: '12.5px', margin: 0, lineHeight: 1.5 };

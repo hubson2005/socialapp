@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { supabase } from '../supabase';
-import FormPreview from '../components/forms/FormPreview'; // ⚠ ajuste ce chemin selon l'emplacement réel de FormPreview.jsx
-import { triggerFormSubmit } from '../lib/triggers/form';   // ⚠ ajuste ce chemin selon l'emplacement réel de triggers/form.js
-
+import { supabase } from '../../supabase';
+import FormPreview from "./FormPreview";
+import { triggerFormSubmit } from "../../lib/triggers/form";
 export default function PublicForm() {
   const { formId } = useParams();
   const [form, setForm]       = useState(null);

@@ -4,7 +4,7 @@ import Login          from "./pages/Login";
 import Dashboard      from "./pages/Dashboard";
 import UserDashboard  from "./pages/UserDashboard";
 import PublicProfile  from "./pages/PublicProfile";
-import PublicForm     from "./pages/PublicForm"; // ← nouveau : page publique /form/:formId
+import PublicForm from "./components/forms/PublicForm";
 import Home           from "./pages/Home";
 import PrivacyPolicy  from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";

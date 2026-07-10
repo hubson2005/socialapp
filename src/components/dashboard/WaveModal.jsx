@@ -63,7 +63,7 @@ export default function WaveModal({ onClose, plan }) {
           </p>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
-            <p style={{ color: 'white', fontSize: '20px', fontWeight: 700, margin: 0 }}>{WAVE_NUMBER}</p>
+            <p style={{ color: 'white', fontSize: '26px', fontWeight: 800, margin: 0 }}>{WAVE_NUMBER}</p>
             <button
               type="button" onClick={handleCopy}
               aria-label="Copier le numéro"

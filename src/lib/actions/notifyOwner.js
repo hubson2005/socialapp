@@ -37,22 +37,24 @@ export async function notifyOwnerAction({ config, profileId, automation, context
   }
 
   // Insérer la notification
+  // ⚠️ Les colonnes doivent correspondre EXACTEMENT au schéma réel de la table `notifications` :
+  // id, user_id, title, message, type, is_read, link, created_at
+  // (il n'y a PAS de colonne `profile_id`, et la colonne s'appelle `is_read`, pas `read`)
   const { data, error } = await supabase
     .from('notifications')
     .insert({
-      user_id:    profile.user_id,
-      profile_id: profileId,
-      type:       'automation',
+      user_id: profile.user_id,
+      type:    'info',
       title,
       message,
-      read:       false,
+      is_read: false,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
-    // La table notifications peut ne pas encore exister → log discret uniquement
-    console.warn('[Action:notifyOwner] Impossible d\'insérer la notification :', error.message);
+    // Erreur remontée clairement au lieu d'être avalée silencieusement
+    console.error('[Action:notifyOwner] Échec de l\'insertion de la notification :', error.message);
     return null;
   }
 

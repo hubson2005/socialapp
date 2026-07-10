@@ -70,6 +70,14 @@
  *        Props ajoutées : `userEmail` et `onSignOut`. Le bloc ne s'affiche
  *        que si `onSignOut` est fourni (comportement optionnel, pas de crash
  *        si le parent ne le passe pas encore).
+ *  [C16] Bloc "Infos plan" (offre / prix / liens & produits / "Changer
+ *        d'offre") entièrement supprimé du footer du tiroir, quel que soit
+ *        le plan (BASIC, PRO, BUSINESS) — demande explicite : ce bloc ne
+ *        doit plus s'afficher du tout dans le MobileNav. La prop `limits`
+ *        reste acceptée (pas de breaking change côté parent) mais n'est
+ *        simplement plus utilisée pour ce rendu ; `isMaxPlan`/`onUpgrade`
+ *        ne sont plus consommés ici, seul `currentOrder` (via `plan`) reste
+ *        utile pour le verrouillage de navigation (NAV_LOCK).
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -227,14 +235,14 @@ export default function MobileNav({
   onNavigate,
   profile,
   plan,
-  limits,
+  limits, // [C16] toujours accepté (compat parent) mais plus rendu dans le footer
   onBgUpload,   // (file: File) => void  — [C4] le composant extrait le File lui-même
   onBgRemove,   // () => void            — [C7] appelé uniquement si fourni
   bgImageUrl,
   uploadingBg,
   onUpgrade,    // [C5] () => void — remplace le lien href="/"
   isAdmin = false,
-  // ✅ [C14] NOUVEAU — email du compte + déconnexion, alignés sur UserSidebar.jsx
+  // ✅ [C14] email du compte + déconnexion, alignés sur UserSidebar.jsx
   userEmail,
   onSignOut,
 }) {
@@ -244,7 +252,6 @@ export default function MobileNav({
   const fileInputRef = useRef(null); // [C4] pour reset l'input après sélection
 
   const currentOrder = PLAN_ORDER[plan] ?? 0;
-  const isMaxPlan    = currentOrder >= MAX_PLAN_ORDER;
 
   const isNavLocked = (id) => {
     if (isAdmin) return false; // FIX — un compte admin n'est jamais restreint par le plan
@@ -541,7 +548,7 @@ export default function MobileNav({
           ))}
         </div>
 
-        {/* Footer : Image de fond + Infos plan + Déconnexion */}
+        {/* Footer : Image de fond + Déconnexion (bloc "Infos plan" retiré — [C16]) */}
         <div style={{
           padding: '12px 16px calc(20px + env(safe-area-inset-bottom))',
           borderTop: `1px solid ${T.borderSubtle}`,
@@ -601,45 +608,7 @@ export default function MobileNav({
             </div>
           )}
 
-          {/* Infos plan */}
-          {limits && (
-            <div style={{
-              background: limits.color + '18',
-              border: `1px solid ${limits.color}44`,
-              borderRadius: '12px', padding: '10px 12px',
-              marginBottom: onSignOut ? '10px' : 0,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px' }}>{limits.emoji}</span>
-                <span style={{ color: limits.color, fontSize: '12px', fontWeight: 700 }}>
-                  Offre {limits.label}
-                </span>
-                {limits.price && (
-                  <span style={{ color: T.textDim, fontSize: '10px', marginLeft: 'auto' }}>
-                    {limits.price}
-                  </span>
-                )}
-              </div>
-              <p style={{ color: T.textDim, fontSize: '11px', margin: isMaxPlan ? 0 : '0 0 6px' }}>
-                {limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits
-              </p>
-              {/* [C5] onUpgrade callback au lieu de href="/" */}
-              {!isMaxPlan && onUpgrade && (
-                <button
-                  onClick={onUpgrade}
-                  style={{
-                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '5px',
-                    color: T.orange, fontSize: '11px', fontWeight: 600,
-                  }}
-                >
-                  <Crown size={11} /> Changer d'offre
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* ✅ [C14] NOUVEAU — email du compte + déconnexion, alignés sur
+          {/* ✅ [C14] email du compte + déconnexion, alignés sur
               le bloc équivalent en bas de UserSidebar.jsx (desktop/tablette). */}
           {onSignOut && (
             <div style={{ paddingTop: '10px', borderTop: `1px solid ${T.borderSubtle}` }}>
@@ -736,3 +705,4 @@ export default function MobileNav({
     </>
   );
 }
+

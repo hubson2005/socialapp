@@ -12,57 +12,50 @@
  *  [C8]  Bouton remove bg désactivé pendant uploadingBg
  *  [C9]  @keyframes spin sorti du JSX et injecté une seule fois via useEffect
  *  [C10] Tokens de style extraits en objet TOKENS pour réduire la duplication
+ *  [C11] Fix double-toggle du tiroir via le bouton "Menu" (navRef exclu du
+ *        listener "clic extérieur")
+ *  [C12] Accent aligné sur UserSidebar.jsx (magenta → orange)
+ *  [C13] Fond du tiroir/tab bar aligné sur UserSidebar (dégradé + voile noir)
  *
- * NOUVELLE CORRECTION :
- *  [C11] Bug : le tiroir se refermait puis se rouvrait instantanément quand on
- *        tapait sur le bouton "Menu" de la tab bar flottante pour le fermer.
- *        Cause : le listener "clic extérieur" ne vérifiait que `drawerRef`.
- *        Comme la tab bar flottante (<nav>) est physiquement en dehors du
- *        tiroir, un tap sur "Menu" déclenchait d'abord `mousedown` → le
- *        listener global voyait un clic hors du tiroir → setDrawerOpen(false)
- *        — PUIS `click` se déclenchait juste après → handleTab('__menu__')
- *        → setDrawerOpen(v => !v) repartant de `false` (déjà appliqué) →
- *        repassait à `true`. Le tiroir ne pouvait donc jamais se fermer via
- *        son propre bouton toggle une fois ouvert (seuls le swipe, le bouton
- *        X ou un tap sur le fond fonctionnaient). Fix : ajout de `navRef` sur
- *        la tab bar flottante, incluse dans la vérification "clic extérieur"
- *        pour qu'un tap sur n'importe quel bouton de la tab bar (Menu compris)
- *        ne soit plus jamais traité comme "extérieur au composant".
+ * REFONTE VISUELLE :
+ *  [C14] Nouvelle charte sombre indigo/violet (maquette fournie) :
+ *        - Fond du tiroir et de la tab bar : bleu-nuit quasi opaque au lieu
+ *          du dégradé magenta→orange (l'ancien fond restait spécifique à
+ *          UserSidebar et n'était plus jugé cohérent avec la nouvelle
+ *          identité mobile).
+ *        - En-tête restructuré en colonne (avatar au-dessus du nom, plus
+ *          large) au lieu d'une ligne avatar+nom. LE BLOC DE RENDU DE LA
+ *          PHOTO DE PROFIL (avatar_url ? <img> : initiale) N'A PAS ÉTÉ
+ *          MODIFIÉ — seule sa taille/son emplacement dans le layout changent.
+ *        - Ajout d'un badge d'offre ("Premium+"…) dérivé de la prop `limits`
+ *          existante, et d'une ligne email (prop `profile.email`, optionnelle).
+ *        - Ajout d'une rangée de statistiques (prop `stats`, optionnelle —
+ *          tableau de { icon, value, label, color }), affichée uniquement
+ *          si fournie pour ne rien casser chez les appelants existants.
+ *        - Chaque item de navigation affiche désormais un sous-titre
+ *          descriptif (label + description), comme sur la maquette.
+ *        - "Image de fond" déplacée dans un groupe PERSONNALISATION, sous
+ *          forme d'item de liste avec bouton pilule "Modifier" (au lieu de
+ *          la zone d'upload permanente) — logique d'upload/suppression
+ *          inchangée (toujours [C4]/[C7]/[C8]).
+ *        - Nouveau groupe PARAMÈTRES : "Paramètres du compte" (ancien item
+ *          Settings, renommé) + "Se déconnecter" (nouvelle prop `onLogout`,
+ *          optionnelle, bouton rouge en bas de liste).
+ *        - Tab bar flottante réalignée sur la même palette indigo pour la
+ *          cohérence visuelle drawer/tab bar.
  *
- * RAPPEL IMPORTANT (bug côté composant parent, pas dans ce fichier) :
- *  Le Dashboard ADMIN (Dashboard.jsx) rendait <MobileNav .../> sans jamais
- *  passer la prop `isAdmin`. Comme `isAdmin` vaut `false` par défaut et que
- *  `plan` n'était pas passé non plus (`currentOrder` retombe à 0, le rang le
- *  plus bas), TOUTES les sections listées dans NAV_LOCK (CRM, Automatisations,
- *  Intégrations, Analytics, Live, Événement) se retrouvaient verrouillées sur
- *  mobile pour le compte admin lui-même, alors que sur desktop le Dashboard
- *  admin utilise le composant Sidebar (sans aucune logique de plan) et affiche
- *  donc tout normalement. Fix à appliquer dans Dashboard.jsx :
- *
- *    <MobileNav
- *      activeSection={activeSection}
- *      onNavigate={setActiveSection}
- *      profile={localProfile}
- *      isAdmin={isAdmin}
- *    />
- *
- * PALETTE :
- *  [C12] Accent aligné sur UserSidebar.jsx (magenta → orange, dérivé du logo
- *        SocialApp).
- *  [C13] Fond du tiroir ET de la tab bar flottante alignés sur UserSidebar :
- *        dégradé de marque magenta→orange recouvert d'un voile noir semi-
- *        opaque (scrim) pour garantir la lisibilité du texte, avec des états
- *        actifs en surimpression blanche plutôt qu'en teinte magenta (qui se
- *        fondait dans un fond déjà coloré). Les boutons utilitaires (image de
- *        fond, suppression) reprennent exactement les mêmes couleurs que le
- *        footer de UserSidebar.jsx pour une cohérence totale desktop/mobile.
+ *  [C15] Ajustements demandés après retour :
+ *        - En-tête repassé en ligne (avatar à côté du nom, comme la
+ *          version d'origine) au lieu de la mise en page verticale.
+ *        - Tab bar flottante masquée (fade + léger décalage vers le bas,
+ *          pointer-events désactivés) tant que le tiroir est ouvert, pour
+ *          éviter la superposition visuelle avec le tiroir plein écran.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   Users,
-  Layers,
   ShoppingBag,
   FileText,
   Radio,
@@ -79,33 +72,36 @@ import {
   Loader2,
   Crown,
   Lock,
+  Mail,
+  LogOut,
 } from 'lucide-react';
 import { PLAN_ORDER } from './UserSidebar';
 
 // ─── Design tokens ────────────────────────────────────────────
-// [C13] Même fond que UserSidebar.jsx : dégradé de marque + voile noir.
-const BRAND_BG = 'linear-gradient(180deg, rgba(8,4,14,0.72), rgba(8,4,14,0.72)), linear-gradient(180deg,#db2777,#f97316)';
+// [C14] Fond bleu-nuit quasi opaque (remplace le dégradé magenta→orange).
+const BRAND_BG = 'linear-gradient(180deg, rgba(10,11,26,0.98), rgba(10,11,26,0.98))';
 
 const T = {
   bg:           BRAND_BG,
-  border:       'rgba(255,255,255,0.12)',
-  borderSubtle: 'rgba(255,255,255,0.1)',
+  panel:        '#12142c',
+  border:       'rgba(255,255,255,0.10)',
+  borderSubtle: 'rgba(255,255,255,0.08)',
   text:         'white',
   textMuted:    'rgba(255,255,255,0.7)',
   textDim:      'rgba(255,255,255,0.5)',
-  textGhost:    'rgba(255,255,255,0.4)',
-  accent:       '#db2777',
-  accentEnd:    '#f97316',
-  accentLight:  '#f472b6',
-  imageAccent:  '#f9a8d4',
-  activeBg:     'rgba(255,255,255,0.14)',
-  activeBgSoft: 'rgba(255,255,255,0.16)',
-  activeBar:    'linear-gradient(180deg,#f472b6,#fdba74)',
+  textGhost:    'rgba(255,255,255,0.38)',
+  accent:       '#6366f1',
+  accentEnd:    '#8b5cf6',
+  accentLight:  '#a78bfa',
+  imageAccent:  '#c4b5fd',
+  activeBg:     'rgba(99,102,241,0.16)',
+  activeBgSoft: 'rgba(99,102,241,0.22)',
+  activeBar:    'linear-gradient(180deg,#818cf8,#a78bfa)',
   red:          '#f87171',
-  redBg:        'rgba(239,68,68,0.12)',
-  redBorder:    'rgba(239,68,68,0.35)',
+  redBg:        'rgba(239,68,68,0.10)',
+  redBorder:    'rgba(239,68,68,0.30)',
   green:        '#22c55e',
-  orange:       '#ff8c00',
+  orange:       '#f7b955',
   lockPro:      '#ff8c00',
   lockBusiness: '#f7c948',
   radius:       '13px',
@@ -114,12 +110,8 @@ const T = {
 
 // FIX — [C2] avait renommé la clé 'événement' → 'evenement' *dans ce
 // fichier uniquement*. UserSidebar.jsx (source de vérité pour le plan
-// utilisateur et les mêmes libellés PRO/BUSINESS) garde 'événement' avec
-// accent, exactement la clé utilisée par PLAN_LIMITS côté UserDashboard.
-// Deux définitions divergentes du même mapping plan → rang = un
-// utilisateur en offre "Événement" se retrouvait mal classé selon qu'il
-// regardait le dashboard desktop ou le tiroir mobile. On importe
-// désormais PLAN_ORDER depuis UserSidebar comme unique source de vérité.
+// utilisateur) garde 'événement' avec accent. On importe PLAN_ORDER depuis
+// UserSidebar comme unique source de vérité.
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
 // ─── Config navigation ────────────────────────────────────────
@@ -133,17 +125,13 @@ const NAV_IDS = {
   EVENT:        'event',
   MARKETPLACE:  'marketplace',
   DOCUMENTS:    'documents',
-  FORMS:        'forms',        // ← ajouté
+  FORMS:        'forms',
   ANALYTICS:    'analytics',
   SETTINGS:     'settings',
   MENU:         '__menu__',
 };
 
-// FIX — verrouillage par plan aligné sur USER_NAV (UserSidebar.jsx) :
-// avant, ces mêmes sections étaient verrouillées sur desktop (icône
-// cadenas, navigation bloquée) mais librement accessibles depuis le
-// tiroir mobile — un utilisateur BASIC pouvait ouvrir CRM, Automatisations,
-// Intégrations, Analytics ou le Live simplement en passant par mobile.
+// Verrouillage par plan, aligné sur USER_NAV (UserSidebar.jsx).
 const NAV_LOCK = {
   [NAV_IDS.EVENT]:        'pro',
   [NAV_IDS.ANALYTICS]:    'pro',
@@ -153,10 +141,7 @@ const NAV_LOCK = {
   [NAV_IDS.INTEGRATIONS]: 'business',
 };
 
-// FIX — l'icône "Profils/Plateformes" différait entre la tab bar (Layers)
-// et le tiroir (Link2) pour le même identifiant `platforms`, cassant la
-// reconnaissance visuelle d'un endroit à l'autre. Alignée sur l'icône
-// utilisée par UserSidebar (Link2).
+// Icône "Profils/Plateformes" alignée sur UserSidebar (Link2).
 const TAB_ITEMS = [
   { id: NAV_IDS.OVERVIEW,  label: 'Dashboard', icon: LayoutDashboard },
   { id: NAV_IDS.CRM,       label: 'Leads',     icon: Users            },
@@ -165,42 +150,44 @@ const TAB_ITEMS = [
   { id: NAV_IDS.MENU,      label: 'Menu',      icon: Menu             },
 ];
 
+// [C14] Chaque item porte désormais une `description` (sous-titre affiché
+// dans le tiroir, comme sur la maquette).
 const SIDEBAR_GROUPS = [
   {
-    label: 'Dashboard',
+    label: 'Navigation',
     items: [
-      { id: NAV_IDS.OVERVIEW, label: 'Dashboard', icon: LayoutDashboard },
+      { id: NAV_IDS.OVERVIEW, label: 'Dashboard', icon: LayoutDashboard, description: "Vue d'ensemble de votre activité" },
     ],
   },
   {
-    label: 'CRM',
+    label: 'Gestion commerciale',
     items: [
-      { id: NAV_IDS.CRM,          label: 'Leads / CRM',     icon: Users    },
-      { id: NAV_IDS.AUTOMATIONS,  label: 'Automatisations', icon: Zap      },
-      { id: NAV_IDS.INTEGRATIONS, label: 'Intégrations',    icon: Sparkles },
+      { id: NAV_IDS.CRM,          label: 'Leads / CRM',     icon: Users,    description: 'Gérez vos prospects et clients' },
+      { id: NAV_IDS.AUTOMATIONS,  label: 'Automatisations', icon: Zap,      description: 'Workflows et scénarios' },
+      { id: NAV_IDS.INTEGRATIONS, label: 'Intégrations',    icon: Sparkles, description: 'Connectez vos outils préférés' },
     ],
   },
   {
     label: 'Contenu',
     items: [
-      { id: NAV_IDS.PLATFORMS,   label: 'Plateformes', icon: Link2        },
-      { id: NAV_IDS.EVENT,       label: 'Événement',   icon: CalendarDays },
-      { id: NAV_IDS.MARKETPLACE, label: 'Marketplace', icon: ShoppingBag  },
-      { id: NAV_IDS.DOCUMENTS,   label: 'Documents',   icon: FileText     },
-      { id: NAV_IDS.FORMS,       label: 'Formulaires',  icon: FileText     },
+      { id: NAV_IDS.PLATFORMS,   label: 'Plateformes', icon: Link2,        description: 'Vos réseaux et liens connectés' },
+      { id: NAV_IDS.EVENT,       label: 'Événement',   icon: CalendarDays, description: 'Créez et gérez vos événements' },
+      { id: NAV_IDS.MARKETPLACE, label: 'Marketplace', icon: ShoppingBag,  description: 'Vendez vos produits et services' },
+      { id: NAV_IDS.DOCUMENTS,   label: 'Documents',   icon: FileText,     description: 'Vos fichiers et ressources' },
+      { id: NAV_IDS.FORMS,       label: 'Formulaires', icon: FileText,     description: 'Collectez des informations' },
     ],
   },
   {
     label: 'Notifications',
     items: [
-      { id: NAV_IDS.REALTIME,  label: 'Temps réel', icon: Radio,    badge: 'LIVE' },
-      { id: NAV_IDS.ANALYTICS, label: 'Analytics',  icon: BarChart3               },
+      { id: NAV_IDS.REALTIME,  label: 'Temps réel', icon: Radio,     badge: 'LIVE', description: "Suivez l'activité en direct" },
+      { id: NAV_IDS.ANALYTICS, label: 'Analytics',  icon: BarChart3, description: 'Statistiques et performances' },
     ],
   },
   {
-    label: 'Administration',
+    label: 'Paramètres',
     items: [
-      { id: NAV_IDS.SETTINGS, label: 'Paramètres', icon: Settings },
+      { id: NAV_IDS.SETTINGS, label: 'Paramètres du compte', icon: Settings, description: 'Gérez votre compte et vos préférences' },
     ],
   },
 ];
@@ -212,23 +199,25 @@ export default function MobileNav({
   profile,
   plan,
   limits,
-  onBgUpload,   // (file: File) => void  — [C4] le composant extrait le File lui-même
-  onBgRemove,   // () => void            — [C7] appelé uniquement si fourni
+  stats,        // [C14] optionnel — [{ icon, value, label, color }, ...]
+  onBgUpload,   // (file: File) => void
+  onBgRemove,   // () => void
   bgImageUrl,
   uploadingBg,
-  onUpgrade,    // [C5] () => void — remplace le lien href="/"
+  onUpgrade,
+  onLogout,     // [C14] optionnel — () => void, affiche "Se déconnecter" si fourni
   isAdmin = false,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef  = useRef(null);
-  const navRef     = useRef(null); // [C11] tab bar flottante, exclue du "clic extérieur"
-  const fileInputRef = useRef(null); // [C4] pour reset l'input après sélection
+  const navRef     = useRef(null); // [C11]
+  const fileInputRef = useRef(null); // [C4]
 
   const currentOrder = PLAN_ORDER[plan] ?? 0;
   const isMaxPlan    = currentOrder >= MAX_PLAN_ORDER;
 
   const isNavLocked = (id) => {
-    if (isAdmin) return false; // FIX — un compte admin n'est jamais restreint par le plan
+    if (isAdmin) return false;
     const required = NAV_LOCK[id];
     if (!required) return false;
     return currentOrder < (PLAN_ORDER[required] ?? 99);
@@ -236,17 +225,16 @@ export default function MobileNav({
 
   // ── Swipe-to-close ──────────────────────────────────────────
   const touchStartY = useRef(0);
-  const touchMoveY  = useRef(null); // [C6] null = pas encore de move enregistré
+  const touchMoveY  = useRef(null); // [C6]
 
   const onTouchStart = (e) => {
     touchStartY.current = e.touches[0].clientY;
-    touchMoveY.current  = null; // reset explicite à chaque nouveau touch
+    touchMoveY.current  = null;
   };
   const onTouchMove = (e) => {
     touchMoveY.current = e.touches[0].clientY;
   };
   const onTouchEnd = () => {
-    // [C6] On ferme uniquement si un mouvement réel a été enregistré
     if (touchMoveY.current !== null && touchMoveY.current - touchStartY.current > 120) {
       setDrawerOpen(false);
     }
@@ -255,13 +243,6 @@ export default function MobileNav({
   };
 
   // ── Fermeture au clic extérieur ──────────────────────────────
-  // [C11] On exclut désormais À LA FOIS drawerRef ET navRef (la tab bar
-  // flottante). Sans ça, un tap sur le bouton "Menu" pour refermer le
-  // tiroir déclenchait d'abord ce handler via `mousedown` (le bouton
-  // Menu est hors de drawerRef → fermeture), PUIS le `click` du bouton
-  // lui-même via handleTab rouvrait aussitôt le tiroir (toggle sur un
-  // état déjà passé à false) : le tiroir ne pouvait jamais se fermer par
-  // ce biais. Idem potentiellement pour les autres boutons de la tab bar.
   useEffect(() => {
     if (!drawerOpen) return;
     const handler = (e) => {
@@ -310,22 +291,28 @@ export default function MobileNav({
     onNavigate(id);
   };
 
-  // [C4] Extraction du File depuis l'event + reset de l'input
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file && onBgUpload) {
       onBgUpload(file);
     }
-    // Reset pour permettre de re-sélectionner le même fichier
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // [C7] Guard sur onBgRemove
   const handleBgRemove = () => {
     if (onBgRemove) onBgRemove();
   };
 
+  const handleLogout = () => {
+    if (onLogout) {
+      setDrawerOpen(false);
+      onLogout();
+    }
+  };
+
   // ── Avatar initiale ──────────────────────────────────────────
+  // [C14] LOGIQUE DE RENDU DE LA PHOTO DE PROFIL INCHANGÉE — seuls la
+  // taille et l'emplacement dans le layout ont été adaptés à la maquette.
   const avatarInitial = profile?.display_name?.charAt(0)?.toUpperCase() || '?';
 
   // ─────────────────────────────────────────────────────────────
@@ -336,7 +323,7 @@ export default function MobileNav({
         onClick={() => setDrawerOpen(false)}
         style={{
           position: 'fixed', inset: 0, zIndex: 39,
-          background: 'rgba(0,0,0,0.55)',
+          background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
           opacity: drawerOpen ? 1 : 0,
           pointerEvents: drawerOpen ? 'auto' : 'none',
@@ -353,9 +340,7 @@ export default function MobileNav({
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
-          // dvh plutôt que vh : évite qu'iOS Safari recalcule la hauteur
-          // pendant l'apparition/disparition de la barre d'adresse.
-          maxHeight: '82dvh',
+          maxHeight: '88dvh',
           transform: drawerOpen ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.32s cubic-bezier(0.32,0.72,0,1)',
           background: T.bg,
@@ -365,10 +350,6 @@ export default function MobileNav({
           boxShadow: '0 -12px 60px rgba(0,0,0,0.7)',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
-          // Le sheet lui-même touche le bas de l'écran : on pousse tout
-          // son contenu interne au-dessus du home indicator / de la barre
-          // de gestes Android via le padding du footer plutôt qu'ici, pour
-          // ne pas décaler tout le fond du panneau.
         }}
       >
         {/* Handle */}
@@ -376,44 +357,20 @@ export default function MobileNav({
           <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)' }} />
         </div>
 
-        {/* Header */}
+        {/* Header — [C14] mise en page verticale, logique avatar inchangée */}
         <div style={{
-          padding: '10px 20px 14px',
+          padding: '4px 20px 16px',
           borderBottom: `1px solid ${T.borderSubtle}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           flexShrink: 0,
+          position: 'relative',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '10px',
-              background: `linear-gradient(135deg,${T.accent},${T.accentEnd})`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px', fontWeight: 800, color: T.text,
-              overflow: 'hidden', flexShrink: 0,
-            }}>
-              {profile?.avatar_url
-                ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : avatarInitial
-              }
-            </div>
-            <div>
-              <p style={{ color: T.text, fontSize: '13px', fontWeight: 700, margin: 0, lineHeight: 1 }}>
-                {profile?.display_name || 'Mon profil'}
-              </p>
-              {profile?.username && (
-                <p style={{ color: T.textDim, fontSize: '10px', margin: '3px 0 0' }}>
-                  @{profile.username}
-                </p>
-              )}
-            </div>
-          </div>
-
           <button
             onClick={() => setDrawerOpen(false)}
             aria-label="Fermer le menu"
             style={{
+              position: 'absolute', top: '4px', right: '20px',
               width: '40px', height: '40px', borderRadius: '9px',
-              background: 'rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.08)',
               border: '1px solid rgba(255,255,255,0.14)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
@@ -421,7 +378,78 @@ export default function MobileNav({
           >
             <X size={15} color="rgba(255,255,255,0.7)" />
           </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              background: `linear-gradient(135deg,${T.accent},${T.accentEnd})`,
+              boxShadow: `0 0 0 5px rgba(99,102,241,0.10)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '22px', fontWeight: 800, color: T.text,
+              overflow: 'hidden', flexShrink: 0,
+            }}>
+              {profile?.avatar_url
+                ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : avatarInitial
+              }
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <p style={{ color: T.text, fontSize: '18px', fontWeight: 800, margin: 0, lineHeight: 1.2 }}>
+                {profile?.display_name || 'Mon profil'}
+              </p>
+              {profile?.username && (
+                <p style={{ color: T.textDim, fontSize: '13px', margin: '2px 0 0' }}>
+                  @{profile.username}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {limits && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '5px',
+              marginTop: '10px', padding: '4px 10px',
+              borderRadius: T.radiusPill,
+              background: (limits.color || T.orange) + '22',
+              border: `1px solid ${(limits.color || T.orange)}55`,
+            }}>
+              <Crown size={11} color={limits.color || T.orange} />
+              <span style={{ color: limits.color || T.orange, fontSize: '11px', fontWeight: 700 }}>
+                {limits.label}{!isMaxPlan ? '+' : ''}
+              </span>
+            </div>
+          )}
+
+          {profile?.email && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
+              <Mail size={13} color={T.textGhost} />
+              <span style={{ color: T.textDim, fontSize: '12.5px' }}>{profile.email}</span>
+            </div>
+          )}
         </div>
+
+        {/* Stats — [C14] optionnel, n'apparaît que si `stats` est fourni */}
+        {stats && stats.length > 0 && (
+          <div style={{
+            margin: '14px 20px 2px',
+            padding: '16px 6px',
+            borderRadius: '16px',
+            border: `1px solid ${T.borderSubtle}`,
+            background: 'rgba(255,255,255,0.03)',
+            display: 'grid',
+            gridTemplateColumns: `repeat(${stats.length}, 1fr)`,
+            flexShrink: 0,
+          }}>
+            {stats.map((s, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                {s.icon && <s.icon size={18} color={s.color || T.accentLight} />}
+                <span style={{ color: T.text, fontSize: '17px', fontWeight: 800, lineHeight: 1 }}>{s.value}</span>
+                <span style={{ color: T.textDim, fontSize: '10px' }}>{s.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Scrollable list */}
         <div
@@ -429,7 +457,7 @@ export default function MobileNav({
           style={{
             flex: 1,
             overflowY: 'auto',
-            minHeight: 0, // FIX flexbox : oblige le footer à rester visible
+            minHeight: 0,
             padding: '8px 12px 8px',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
@@ -466,29 +494,36 @@ export default function MobileNav({
                     {isActive && !locked && (
                       <div style={{
                         position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                        width: '3px', height: '22px',
+                        width: '3px', height: '30px',
                         background: T.activeBar,
                         borderRadius: '0 3px 3px 0',
                       }} />
                     )}
                     <div style={{
-                      width: '34px', height: '34px', borderRadius: '10px',
-                      background: isActive && !locked ? T.activeBgSoft : 'rgba(255,255,255,0.07)',
+                      width: '38px', height: '38px', borderRadius: '10px',
+                      background: isActive && !locked ? T.activeBgSoft : 'rgba(255,255,255,0.06)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
                     }}>
                       {locked
                         ? <Lock size={15} color="rgba(255,255,255,0.4)" />
-                        : <item.icon size={16} color={isActive ? 'white' : 'rgba(255,255,255,0.6)'} />
+                        : <item.icon size={17} color={isActive ? 'white' : 'rgba(255,255,255,0.6)'} />
                       }
                     </div>
-                    <span style={{
-                      color: isActive && !locked ? T.text : T.textMuted,
-                      fontSize: '13.5px', fontWeight: isActive && !locked ? 700 : 500,
-                      flex: 1, textAlign: 'left',
-                    }}>
-                      {item.label}
-                    </span>
+                    <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                      <p style={{
+                        color: isActive && !locked ? T.text : T.textMuted,
+                        fontSize: '14px', fontWeight: isActive && !locked ? 700 : 600,
+                        margin: 0, lineHeight: 1.25,
+                      }}>
+                        {item.label}
+                      </p>
+                      {item.description && (
+                        <p style={{ color: T.textDim, fontSize: '11.5px', margin: '2px 0 0', lineHeight: 1.25 }}>
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
                     {locked ? (
                       <span style={{
                         flexShrink: 0, background: lockColor + '20', border: '1px solid ' + lockColor + '55',
@@ -513,105 +548,124 @@ export default function MobileNav({
               })}
             </div>
           ))}
-        </div>
 
-        {/* Footer : Image de fond + Infos plan */}
-        <div style={{
-          padding: '12px 16px calc(20px + env(safe-area-inset-bottom))',
-          borderTop: `1px solid ${T.borderSubtle}`,
-          flexShrink: 0,
-        }}>
-
-          {/* Bouton image de fond — [C4] onChange extrait le File, [C7] remove guardé */}
+          {/* Personnalisation — Image de fond, en item de liste avec bouton "Modifier" */}
           {onBgUpload && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <label style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: '8px',
-                background: bgImageUrl ? 'rgba(244,114,182,0.16)' : 'rgba(255,255,255,0.07)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(244,114,182,0.4)' : 'rgba(255,255,255,0.1)'),
-                borderRadius: '10px', padding: '9px 12px',
-                cursor: uploadingBg ? 'not-allowed' : 'pointer',
-                position: 'relative', opacity: uploadingBg ? 0.7 : 1,
+            <div style={{ marginBottom: '4px' }}>
+              <p style={{
+                color: T.textGhost, fontSize: '9px', fontWeight: 700,
+                letterSpacing: '0.12em', textTransform: 'uppercase',
+                padding: '10px 10px 4px', margin: 0,
               }}>
-                {uploadingBg
-                  ? <Loader2 size={14} color={T.imageAccent} style={{ animation: 'mobile-nav-spin 1s linear infinite' }} />
-                  : <Image size={14} color={bgImageUrl ? T.imageAccent : 'rgba(255,255,255,0.45)'} />
-                }
-                <span style={{
-                  color: bgImageUrl ? T.imageAccent : 'rgba(255,255,255,0.45)',
-                  fontSize: '12px', fontWeight: 600,
+                Personnalisation
+              </p>
+              <div style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
+                padding: '11px 12px', borderRadius: T.radius,
+              }}>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.06)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
                 }}>
-                  {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
-                </span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'inherit', width: '100%', height: '100%' }}
-                  onChange={handleFileChange}
-                  disabled={uploadingBg}
-                />
-              </label>
+                  {uploadingBg
+                    ? <Loader2 size={16} color={T.imageAccent} style={{ animation: 'mobile-nav-spin 1s linear infinite' }} />
+                    : <Image size={17} color={T.imageAccent} />
+                  }
+                </div>
+                <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                  <p style={{ color: T.textMuted, fontSize: '14px', fontWeight: 600, margin: 0 }}>Image de fond</p>
+                  <p style={{ color: T.textDim, fontSize: '11.5px', margin: '2px 0 0' }}>
+                    Personnalisez l'apparence de votre espace
+                  </p>
+                </div>
 
-              {/* [C7] Guard onBgRemove · [C8] disabled pendant upload */}
-              {bgImageUrl && (
-                <button
-                  onClick={handleBgRemove}
-                  disabled={uploadingBg}
-                  aria-label="Supprimer l'image de fond"
-                  style={{
-                    width: '40px', height: '40px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: T.redBg, border: `1px solid ${T.redBorder}`,
-                    borderRadius: '10px',
-                    cursor: uploadingBg ? 'not-allowed' : 'pointer',
-                    opacity: uploadingBg ? 0.5 : 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  <X size={13} color={T.red} />
-                </button>
-              )}
+                {bgImageUrl && (
+                  <button
+                    onClick={handleBgRemove}
+                    disabled={uploadingBg}
+                    aria-label="Supprimer l'image de fond"
+                    style={{
+                      width: '30px', height: '30px', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: T.redBg, border: `1px solid ${T.redBorder}`,
+                      borderRadius: '9px',
+                      cursor: uploadingBg ? 'not-allowed' : 'pointer',
+                      opacity: uploadingBg ? 0.5 : 1,
+                    }}
+                  >
+                    <X size={12} color={T.red} />
+                  </button>
+                )}
+
+                <label style={{
+                  flexShrink: 0, position: 'relative',
+                  display: 'flex', alignItems: 'center',
+                  padding: '7px 14px', borderRadius: T.radiusPill,
+                  background: T.activeBg, border: `1px solid rgba(99,102,241,0.35)`,
+                  cursor: uploadingBg ? 'not-allowed' : 'pointer',
+                  opacity: uploadingBg ? 0.7 : 1,
+                }}>
+                  <span style={{ color: T.accentLight, fontSize: '11.5px', fontWeight: 700 }}>
+                    {bgImageUrl ? 'Modifier' : 'Ajouter'}
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'inherit', width: '100%', height: '100%' }}
+                    onChange={handleFileChange}
+                    disabled={uploadingBg}
+                  />
+                </label>
+              </div>
             </div>
           )}
 
-          {/* Infos plan */}
-          {limits && (
-            <div style={{
-              background: limits.color + '18',
-              border: `1px solid ${limits.color}44`,
-              borderRadius: '12px', padding: '10px 12px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px' }}>{limits.emoji}</span>
-                <span style={{ color: limits.color, fontSize: '12px', fontWeight: 700 }}>
-                  Offre {limits.label}
-                </span>
-                {limits.price && (
-                  <span style={{ color: T.textDim, fontSize: '10px', marginLeft: 'auto' }}>
-                    {limits.price}
-                  </span>
-                )}
-              </div>
-              <p style={{ color: T.textDim, fontSize: '11px', margin: isMaxPlan ? 0 : '0 0 6px' }}>
+          {/* Se déconnecter — [C14] optionnel, n'apparaît que si onLogout est fourni */}
+          {onLogout && (
+            <button
+              onClick={handleLogout}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '12px 14px', borderRadius: T.radius,
+                background: T.redBg, border: `1px solid ${T.redBorder}`,
+                cursor: 'pointer', margin: '10px 0 4px',
+              }}
+            >
+              <LogOut size={15} color={T.red} />
+              <span style={{ color: T.red, fontSize: '13.5px', fontWeight: 700 }}>Se déconnecter</span>
+            </button>
+          )}
+        </div>
+
+        {/* Footer : infos plan restantes (liens/produits) */}
+        {limits && (
+          <div style={{
+            padding: '10px 20px calc(16px + env(safe-area-inset-bottom))',
+            borderTop: `1px solid ${T.borderSubtle}`,
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p style={{ color: T.textDim, fontSize: '11px', margin: 0 }}>
                 {limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits
               </p>
-              {/* [C5] onUpgrade callback au lieu de href="/" */}
               {!isMaxPlan && onUpgrade && (
                 <button
                   onClick={onUpgrade}
                   style={{
                     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: '5px',
-                    color: T.orange, fontSize: '11px', fontWeight: 600,
+                    color: T.orange, fontSize: '11px', fontWeight: 700,
                   }}
                 >
                   <Crown size={11} /> Changer d'offre
                 </button>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Floating Tab Bar */}
@@ -620,13 +674,17 @@ export default function MobileNav({
         aria-label="Navigation principale"
         style={{
           position: 'fixed',
-          // FIX iOS — évite que la barre flottante chevauche le home
-          // indicator / la barre de gestes Android en bas d'écran.
           bottom: 'calc(16px + env(safe-area-inset-bottom))',
-          left: '50%', transform: 'translateX(-50%)',
+          left: '50%',
+          // [C15] Tab bar masquée (translate + fade) quand le tiroir est
+          // ouvert, pour ne pas se superposer visuellement au tiroir.
+          transform: drawerOpen ? 'translateX(-50%) translateY(24px)' : 'translateX(-50%) translateY(0)',
+          opacity: drawerOpen ? 0 : 1,
+          pointerEvents: drawerOpen ? 'none' : 'auto',
+          transition: 'transform 0.25s ease, opacity 0.25s ease',
           zIndex: 38,
           background: T.bg,
-          border: '1px solid rgba(255,255,255,0.16)',
+          border: '1px solid rgba(255,255,255,0.14)',
           borderRadius: T.radiusPill,
           padding: '8px 10px',
           display: 'flex', alignItems: 'center', gap: '4px',

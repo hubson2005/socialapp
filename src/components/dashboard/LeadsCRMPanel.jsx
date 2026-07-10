@@ -6,6 +6,7 @@ import {
   MessageCircle, Building2, Tag as TagIcon,
   Pencil, Check,
   Globe, List, Columns3,
+  GripVertical, Flame, Snowflake, CheckCircle2, Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
@@ -43,13 +44,22 @@ import { triggerTaskCompleted }              from '../../lib/triggers/taskComple
 //         Remplacé par un fond sombre teinté indigo, cohérent avec le style
 //         déjà utilisé pour les <select> du panneau (#1a1a2e), + halo au
 //         focus dans la couleur d'accent de l'app.
+//  [FIX8] Refonte visuelle de la vue Pipeline : les colonnes vides étaient
+//         invisibles (aucun fond, juste "Aucun lead" flottant), donnant
+//         l'impression d'un board cassé/inachevé dès qu'une colonne était
+//         beaucoup plus remplie que les autres. Toutes les colonnes ont
+//         désormais un fond visible en permanence, un point de couleur +
+//         badge de comptage dans le header, une icône dédiée par statut
+//         dans l'état vide, et un scroll interne (au lieu de laisser une
+//         colonne pleine pousser la page en hauteur pendant que les autres
+//         restent vides à côté).
 
 const STATUSES = [
-  { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
-  { id: 'chaud',    label: '🔥 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
-  { id: 'client',   label: '✅ Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)'  },
-  { id: 'froid',    label: '❄️ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)'  },
-  { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
+  { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: UserPlus    },
+  { id: 'chaud',    label: '🔥 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)', icon: Flame       },
+  { id: 'client',   label: '✅ Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)',  icon: CheckCircle2 },
+  { id: 'froid',    label: '❄️ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',  icon: Snowflake   },
+  { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.15)', icon: Ban        },
 ];
 
 const SOURCES = [
@@ -508,6 +518,8 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 // Un simple tap ouvre la fiche ; un déplacement au-delà d'un petit seuil
 // démarre un drag, qui fonctionne aussi bien à la souris qu'au doigt sur
 // iOS/Android — contrairement à l'ancienne API HTML5 drag-and-drop native.
+// [FIX8] Poignée de drag visible (icône grip) — signale que la carte est
+// déplaçable au lieu de le laisser deviner par un curseur "grab" seul.
 function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDragEnd }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   const startRef = useRef({ x: 0, y: 0, dragging: false, pointerId: null });
@@ -555,10 +567,10 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       style={{
-        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
-        padding: '10px 12px', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', flexDirection: 'column', gap: 8,
+        background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10,
+        padding: '10px 11px', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', flexDirection: 'column', gap: 8,
         touchAction: 'none', userSelect: 'none',
-        opacity: isDragging ? 0.45 : 1, transition: 'opacity .1s',
+        opacity: isDragging ? 0.45 : 1, transition: 'opacity .1s, border-color .15s',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -566,6 +578,7 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
           {(lead.name || '?')[0].toUpperCase()}
         </div>
         <span style={{ color: 'white', fontSize: 12.5, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</span>
+        <GripVertical size={13} color="rgba(255,255,255,0.22)" style={{ flexShrink: 0 }} />
       </div>
       {(lead.phone || lead.company) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -581,6 +594,11 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
   );
 }
 
+// [FIX8] Colonnes toujours visibles (fond permanent, pas seulement au survol
+// de drag), point de couleur + badge de comptage dans le header, icône
+// dédiée par statut dans l'état vide, et scroll interne par colonne (plutôt
+// que de laisser une colonne pleine étirer toute la page verticalement
+// pendant que les colonnes vides restent minuscules à côté).
 function PipelineView({ leads, onCardClick, onStatusChange }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [draggedId, setDraggedId] = useState(null);
@@ -610,33 +628,53 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
     setOverColumn(null);
   };
 
+  const columnWidth = isTablet ? 260 : 230;
+
   return (
     <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
-      {STATUSES.map(status => (
-        <div key={status.id}
-          data-status-col={status.id}
-          style={{ minWidth: isTablet ? 260 : 230, width: isTablet ? 260 : 230, flexShrink: 0, background: overColumn === status.id ? 'rgba(255,255,255,0.04)' : 'transparent', border: overColumn === status.id ? `1.5px dashed ${status.color}66` : '1.5px dashed transparent', borderRadius: 14, padding: 6, transition: 'all .12s' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 10px' }}>
-            <span style={{ color: status.color, fontSize: 12, fontWeight: 700 }}>{status.label}</span>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 600, background: 'rgba(255,255,255,0.06)', borderRadius: 99, padding: '1px 7px' }}>{grouped[status.id].length}</span>
+      {STATUSES.map(status => {
+        const count = grouped[status.id].length;
+        const isOver = overColumn === status.id;
+        const StatusIcon = status.icon;
+        return (
+          <div key={status.id}
+            data-status-col={status.id}
+            style={{
+              minWidth: columnWidth, width: columnWidth, flexShrink: 0,
+              background: isOver ? `${status.color}14` : 'rgba(255,255,255,0.025)',
+              border: `1px solid ${isOver ? status.color + '66' : 'rgba(255,255,255,0.07)'}`,
+              borderRadius: 14, padding: 8, transition: 'background .12s, border-color .12s',
+              display: 'flex', flexDirection: 'column',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px 10px', flexShrink: 0 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.color, flexShrink: 0 }} />
+              <span style={{ color: status.color, fontSize: 12, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{status.label}</span>
+              <span style={{ color: count > 0 ? status.color : 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 700, background: count > 0 ? `${status.color}22` : 'rgba(255,255,255,0.06)', borderRadius: 99, padding: '1px 7px', flexShrink: 0 }}>{count}</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', maxHeight: 480, minHeight: 60, paddingRight: 2 }}>
+              {grouped[status.id].map(lead => (
+                <PipelineCard
+                  key={lead.id}
+                  lead={lead}
+                  isDragging={draggedId === lead.id}
+                  onOpen={() => onCardClick(lead)}
+                  onDragStart={handleDragStart}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                />
+              ))}
+              {count === 0 && (
+                <div style={{ textAlign: 'center', padding: '26px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <StatusIcon size={19} color="rgba(255,255,255,0.15)" />
+                  <span style={{ color: 'rgba(255,255,255,0.22)', fontSize: 11 }}>Aucun lead ici</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 60 }}>
-            {grouped[status.id].map(lead => (
-              <PipelineCard
-                key={lead.id}
-                lead={lead}
-                isDragging={draggedId === lead.id}
-                onOpen={() => onCardClick(lead)}
-                onDragStart={handleDragStart}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
-              />
-            ))}
-            {grouped[status.id].length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>Aucun lead</div>}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

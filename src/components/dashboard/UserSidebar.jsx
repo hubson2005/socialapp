@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Lock, Crown, BarChart3, Search, X,
+  ChevronLeft, ChevronRight, Lock, Crown, BarChart3, X,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
   Image, Loader2, LogOut,
@@ -84,13 +84,12 @@ export default function UserSidebar({
   userEmail,
   onSignOut,
 }) {
-  const [search, setSearch] = useState('');
   const currentOrder = PLAN_ORDER[plan] ?? 0;
   const isMaxPlan = currentOrder >= MAX_PLAN_ORDER;
 
   // Cible tactile agrandie sur mobile et tablette (écrans tactiles) : les
-  // petits boutons icône (toggle, effacer recherche, retirer le fond)
-  // passent de 28px à une taille conforme aux recommandations Apple/Material.
+  // petits boutons icône (toggle, retirer le fond) passent de 28px à une
+  // taille conforme aux recommandations Apple/Material.
   const touchDevice = isMobile || isTablet;
   const utilityBtnSize = touchDevice ? 40 : 28;
 
@@ -114,10 +113,6 @@ export default function UserSidebar({
     return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
   };
 
-  const filtered = visibleNav.filter(
-    n => !search || n.label.toLowerCase().includes(search.toLowerCase())
-  );
-
   const handleNav = (id, locked) => {
     if (locked) return;
     onNavigate(id);
@@ -135,8 +130,8 @@ export default function UserSidebar({
         transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
         zIndex: 20,
-        // Évite que le logo/la recherche passent sous l'encoche iOS et que
-        // le pied de tiroir passe sous le home indicator.
+        // Évite que le logo passe sous l'encoche iOS et que le pied de
+        // tiroir passe sous le home indicator.
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
         boxSizing: 'border-box',
@@ -254,38 +249,6 @@ export default function UserSidebar({
           </div>
         )}
 
-        {/* ── Search ── */}
-        {(!collapsed || isMobile) && (
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: 'rgba(15,23,42,0.55)', borderRadius: '9px',
-              padding: '7px 10px', border: '1px solid rgba(148,163,184,0.18)',
-            }}>
-              <Search size={12} color="rgba(255,255,255,0.45)" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher…"
-                style={{ background: 'none', border: 'none', outline: 'none', color: 'white', fontSize: touchDevice ? '16px' : '12px', flex: 1, minWidth: 0 }}
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  aria-label="Effacer la recherche"
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-                    width: touchDevice ? 32 : 16, height: touchDevice ? 32 : 16,
-                  }}
-                >
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ── Navigation ── */}
         <div style={{
           flex: 1,
@@ -298,7 +261,7 @@ export default function UserSidebar({
         }}>
           {USER_GROUPS.map(group => {
             // visibleNav exclut déjà les items "hidden" (en test sur le Dashboard admin)
-            const items = (search ? filtered : visibleNav).filter(n => n.group === group.id);
+            const items = visibleNav.filter(n => n.group === group.id);
             if (!items.length) return null;
 
             return (

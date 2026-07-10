@@ -72,9 +72,17 @@ const S = {
   // ✅ FIX: statCard accepte maintenant un fond (dégradé coloré) en paramètre.
   // Sans argument, retombe sur le fond sombre uni C.card (comportement d'origine).
   statCard: (bg) => ({ background:bg||C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 18px', position:'relative', overflow:'hidden' }),
-  statIco:  (bg) => ({ width:36, height:36, borderRadius:9, background:bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, marginBottom:10 }),
-  statVal:  { fontSize:28, fontWeight:800, letterSpacing:'-1.5px', color:C.text },
-  statLbl:  { fontSize:12, color:C.textMute, marginTop:2 },
+  // ✅ FIX LISIBILITÉ : le chip d'icône était presque invisible sur les fonds
+  // dégradés (rgba(255,255,255,0.15) sans bordure se fond dans le dégradé).
+  // Fond plus opaque + bordure + icône plus grande pour qu'il se détache
+  // clairement, quelle que soit la couleur du dégradé derrière.
+  statIco:  () => ({ width:36, height:36, borderRadius:9, background:'rgba(255,255,255,0.24)', border:'1px solid rgba(255,255,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:19, marginBottom:10, boxShadow:'0 1px 3px rgba(0,0,0,0.25)' }),
+  statVal:  { fontSize:28, fontWeight:800, letterSpacing:'-1.5px', color:C.text, textShadow:'0 1px 4px rgba(0,0,0,0.35)' },
+  // ✅ FIX LISIBILITÉ : C.textMute (#4a4e6a) est un gris-violet sombre pensé
+  // pour un fond sombre uni — sur les dégradés colorés du haut de dashboard,
+  // le contraste tombe sous les seuils lisibles. Blanc semi-transparent à
+  // la place, qui reste lisible peu importe la teinte du dégradé derrière.
+  statLbl:  { fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:2, fontWeight:500 },
   statGlow: (c) => ({ position:'absolute', top:-20, right:-20, width:80, height:80, borderRadius:'50%', background:c, filter:'blur(30px)', opacity:0.25, pointerEvents:'none' }),
   tbl:      { width:'100%', borderCollapse:'collapse' },
   th:       { textAlign:'left', fontSize:10, color:C.textMute, fontWeight:700, paddingBottom:9, borderBottom:`1px solid ${C.border}`, textTransform:'uppercase', letterSpacing:'0.8px' },
@@ -177,7 +185,7 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
         ].map((s,i) => (
           <div key={i} style={S.statCard(s.cardBg)}>
             <div style={S.statGlow(s.glow)}/>
-            <div style={S.statIco('rgba(255,255,255,0.15)')}>{s.ico}</div>
+            <div style={S.statIco()}>{s.ico}</div>
             <div style={S.statVal}>{s.val}</div>
             <div style={S.statLbl}>{s.lbl}</div>
           </div>
@@ -798,7 +806,7 @@ export default function WhatsAppCRM({ profile }) {
             ].map((s,i) => (
               <div key={i} style={S.statCard(s.cardBg)}>
                 <div style={S.statGlow(s.glow)}/>
-                <div style={S.statIco('rgba(255,255,255,0.15)')}>{s.ico}</div>
+                <div style={S.statIco()}>{s.ico}</div>
                 <div style={S.statVal}>{s.val}</div>
                 <div style={S.statLbl}>{s.lbl}</div>
               </div>

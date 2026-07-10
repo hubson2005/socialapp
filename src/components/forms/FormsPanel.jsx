@@ -257,11 +257,17 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           .fp-panel input, .fp-panel textarea { font-size: 16px !important; }
           .fp-panel .fp-builder-grid { grid-template-columns: 1fr !important; }
         }
-        /* Onglets scrollables horizontalement (au doigt) plutôt que de déborder ou wrapper —
-           évite que "Sauvegarder"/"Réponses" se fassent couper, à toute largeur d'écran
-           (notamment la zone tablette portrait/paysage où ni le style desktop ni le wrap
-           mobile ne s'appliquaient). */
-        .fp-panel .fp-tabbar { overflow: hidden; }
+        /* [FIX] Barre d'onglets vs actions (Supprimer/Sauvegarder) — l'ancienne
+           version ne détachait les actions sur leur propre ligne qu'en dessous de
+           560px de VIEWPORT. Or ce panneau est rendu à l'intérieur d'un dashboard
+           avec sidebar : sa largeur RÉELLE (le conteneur) peut être bien plus
+           étroite que 560px de fenêtre sur desktop/tablette (sidebar dépliée +
+           padding), ce qui faisait chevaucher "Réponses" et les boutons d'action
+           (cf. capture). On détache désormais TOUJOURS les actions sur une
+           deuxième ligne — plus de dépendance à la largeur de la fenêtre, donc
+           correct quel que soit l'appareil (desktop étroit, tablette portrait/
+           paysage, iOS, Android) sans jamais recouvrir un onglet. */
+        .fp-panel .fp-tabbar { overflow: hidden; flex-wrap: wrap; }
         .fp-panel .fp-tabbar-scroll {
           display: flex;
           overflow-x: auto;
@@ -270,20 +276,18 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           min-width: 0; /* essentiel : sans ça un enfant flex refuse de rétrécir sous la
                             largeur de son contenu, et c'est toute la ligne qui déborde
                             au lieu que cette zone scrolle toute seule */
+          width: 100%;
+          order: 1;
         }
         .fp-panel .fp-tabbar-scroll::-webkit-scrollbar { display: none; }
         .fp-panel .fp-tabbar-scroll button { flex-shrink: 0; }
-        @media (max-width: 560px) {
-          .fp-panel .fp-tabbar { flex-wrap: wrap; }
-          .fp-panel .fp-tabbar-scroll { width: 100%; order: 1; }
-          .fp-panel .fp-actions {
-            margin-left: 0 !important;
-            width: 100%;
-            order: 2;
-            justify-content: flex-end;
-            border-top: 1px solid rgba(255,255,255,0.07);
-            padding-top: 9px !important;
-          }
+        .fp-panel .fp-actions {
+          margin-left: 0 !important;
+          width: 100%;
+          order: 2;
+          justify-content: flex-end;
+          border-top: 1px solid rgba(255,255,255,0.07);
+          padding-top: 9px !important;
         }
         /* Cibles tactiles agrandies sur tout écran tactile (tablette incluse, pas que mobile) */
         @media (pointer: coarse) {
@@ -469,7 +473,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
               ))}
             </div>
 
-            {/* Action buttons */}
+            {/* Action buttons — toujours sur leur propre ligne (voir .fp-actions dans le <style>) */}
             <div className="fp-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 0', flexShrink: 0 }}>
               {selectedForm && (
                 <button

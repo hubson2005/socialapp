@@ -91,6 +91,11 @@ export default function AnalyticsPanel({ profileId }) {
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [geoData, setGeoData] = useState([]);
+  // [FIX-PAYS] Nombre total de pays distincts (non tronqué), découplé du
+  // Top 5 affiché dans le widget. `geoData` reste limité à 5 entrées pour
+  // garder le widget compact ; `totalCountries` reflète le vrai total pour
+  // la carte KPI "Pays" en haut de page.
+  const [totalCountries, setTotalCountries] = useState(0);
   const [topLinks, setTopLinks] = useState([]);
   const [daily, setDaily]     = useState([]);
 
@@ -144,9 +149,11 @@ export default function AnalyticsPanel({ profileId }) {
         const k = r.country_name || r.country || 'Inconnu';
         geoMap[k] = { count: (geoMap[k]?.count || 0) + 1, code: r.country };
       });
-      setGeoData(
-        Object.entries(geoMap).sort((a, b) => b[1].count - a[1].count).slice(0, 5)
-      );
+      const geoEntries = Object.entries(geoMap).sort((a, b) => b[1].count - a[1].count);
+      // [FIX-PAYS] Total réel = tous les pays distincts rencontrés dans la
+      // période, pas seulement les 5 affichés dans le widget ci-dessous.
+      setTotalCountries(geoEntries.length);
+      setGeoData(geoEntries.slice(0, 5));
 
       // ── Top links ──
       const clickMap = {};
@@ -267,7 +274,10 @@ export default function AnalyticsPanel({ profileId }) {
             <MiniStat label="Vues"      value={stats?.views   || 0}        icon={Eye}               color="#6366f1" trend={stats?.trend} trendUp={stats?.trendUp} />
             <MiniStat label="Clics"     value={stats?.clicks  || 0}        icon={MousePointerClick}  color="#f59e0b" />
             <MiniStat label="CTR"       value={(stats?.ctr    || 0) + '%'} icon={TrendingUp}         color="#22c55e" />
-            <MiniStat label="Pays"      value={geoData.length}             icon={Globe}              color="#0ea5e9" />
+            {/* [FIX-PAYS] Utilise le total réel de pays distincts, pas
+                geoData.length qui était plafonné à 5 par le .slice() du
+                widget "Top pays" ci-dessous. */}
+            <MiniStat label="Pays"      value={totalCountries}             icon={Globe}              color="#0ea5e9" />
           </div>
 
           {/* ── Bar chart ── */}
@@ -373,6 +383,14 @@ export default function AnalyticsPanel({ profileId }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <Globe size={14} color="#a78bfa" />
                 <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Top pays</span>
+                {/* [FIX-PAYS] Indique explicitement qu'il s'agit d'un Top 5
+                    quand il y a plus de pays que ceux affichés, pour éviter
+                    toute confusion avec le total (visible dans la carte KPI). */}
+                {totalCountries > geoData.length && (
+                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: 500, marginLeft: 'auto' }}>
+                    Top {geoData.length} / {totalCountries}
+                  </span>
+                )}
               </div>
               {geoData.length === 0 ? (
                 <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>

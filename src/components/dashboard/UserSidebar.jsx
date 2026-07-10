@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3, Search, X,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
-  Image, Loader2,
+  Image, Loader2, LogOut,
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
@@ -77,6 +77,12 @@ export default function UserSidebar({
   onBgRemove,
   bgImageUrl,
   uploadingBg,
+  // ✅ NOUVEAU — déconnexion déplacée depuis le panel Paramètres vers le
+  // bas de la sidebar. `userEmail` affiche l'email du compte connecté,
+  // `onSignOut` déclenche la déconnexion (avec la même confirmation
+  // "modifications non sauvegardées" gérée côté UserDashboard).
+  userEmail,
+  onSignOut,
 }) {
   const [search, setSearch] = useState('');
   const currentOrder = PLAN_ORDER[plan] ?? 0;
@@ -159,11 +165,14 @@ export default function UserSidebar({
         />
       )}
 
+      {/* Fond bleu nuit foncé (remplace l'ancien dégradé magenta→orange +
+          voile noir). Dégradé vertical très sombre, cohérent avec la
+          topbar "bleu nuit" du dashboard. */}
       <div style={{
         ...sidebarStyle,
-        background: 'rgba(6,4,18,0.97)',
+        background: 'linear-gradient(180deg, #060a1a 0%, #0d1730 60%, #142140 100%)',
         backdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
+        borderRight: '1px solid rgba(255,255,255,0.1)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -174,7 +183,7 @@ export default function UserSidebar({
         <div style={{
           padding: collapsed && !isMobile ? '18px 0' : '16px',
           display: 'flex', alignItems: 'center', gap: '10px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
           justifyContent: collapsed && !isMobile ? 'center' : 'space-between',
           flexShrink: 0,
         }}>
@@ -199,26 +208,27 @@ export default function UserSidebar({
             aria-label={collapsed ? 'Déplier le menu' : 'Replier le menu'}
             style={{
               width: utilityBtnSize, height: utilityBtnSize, borderRadius: '8px',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.09)',
+              border: '1px solid rgba(255,255,255,0.14)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
             {collapsed && !isMobile
-              ? <ChevronRight size={13} color="rgba(255,255,255,0.6)" />
-              : <ChevronLeft  size={13} color="rgba(255,255,255,0.6)" />
+              ? <ChevronRight size={13} color="rgba(255,255,255,0.7)" />
+              : <ChevronLeft  size={13} color="rgba(255,255,255,0.7)" />
             }
           </button>
         </div>
 
         {/* ── Profile mini (expanded) ── */}
         {(!collapsed || isMobile) && profile && (
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
             <div
               onClick={() => handleNav('overview', false)}
               style={{
-                background: '#0f1730', border: '1px solid rgba(59,79,240,0.25)', borderRadius: '12px',
+                background: 'rgba(15,23,42,0.55)', borderRadius: '12px',
                 padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                border: '1px solid rgba(148,163,184,0.18)',
               }}
             >
               <AvatarBubble profile={profile} limits={limits} size={32} radius={9} />
@@ -227,17 +237,17 @@ export default function UserSidebar({
                   {profile.display_name || 'Mon profil'}
                 </p>
                 {profile.username && (
-                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', margin: 0 }}>@{profile.username}</p>
+                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '10px', margin: 0 }}>@{profile.username}</p>
                 )}
               </div>
-              <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              <ChevronRight size={13} color="rgba(255,255,255,0.4)" />
             </div>
           </div>
         )}
 
         {/* ── Avatar collapsed ── */}
         {collapsed && !isMobile && profile && (
-          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
             <div onClick={() => handleNav('overview', false)} style={{ cursor: 'pointer' }}>
               <AvatarBubble profile={profile} limits={limits} size={34} radius={9} />
             </div>
@@ -246,13 +256,13 @@ export default function UserSidebar({
 
         {/* ── Search ── */}
         {(!collapsed || isMobile) && (
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              background: '#0f1730', borderRadius: '9px',
-              padding: '7px 10px', border: '1px solid rgba(59,79,240,0.25)',
+              background: 'rgba(15,23,42,0.55)', borderRadius: '9px',
+              padding: '7px 10px', border: '1px solid rgba(148,163,184,0.18)',
             }}>
-              <Search size={12} color="rgba(255,255,255,0.3)" />
+              <Search size={12} color="rgba(255,255,255,0.45)" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -264,7 +274,7 @@ export default function UserSidebar({
                   onClick={() => setSearch('')}
                   aria-label="Effacer la recherche"
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                     width: touchDevice ? 32 : 16, height: touchDevice ? 32 : 16,
                   }}
@@ -294,8 +304,8 @@ export default function UserSidebar({
             return (
               <div key={group.id} style={{ marginBottom: '4px' }}>
                 {collapsed && !isMobile
-                  ? <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '6px 4px 8px' }} />
-                  : <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '8px 10px 4px', margin: 0 }}>
+                  ? <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 4px 8px' }} />
+                  : <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '8px 10px 4px', margin: 0 }}>
                       {t(`group_${group.id}`, group.label)}
                     </p>
                 }
@@ -319,9 +329,9 @@ export default function UserSidebar({
                         padding: collapsed && !isMobile ? '10px 0' : '9px 10px',
                         borderRadius: '11px',
                         border: 'none',
-                        background: isActive && !locked ? 'rgba(99,102,241,0.18)' : 'transparent',
+                        background: isActive && !locked ? 'rgba(255,255,255,0.14)' : 'transparent',
                         cursor: locked ? 'default' : 'pointer',
-                        opacity: locked ? 0.45 : 1,
+                        opacity: locked ? 0.5 : 1,
                         justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
                         position: 'relative',
                         marginBottom: '2px',
@@ -332,7 +342,7 @@ export default function UserSidebar({
                         <div style={{
                           position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
                           width: '3px', height: '20px',
-                          background: 'linear-gradient(180deg,#6366f1,#8b5cf6)',
+                          background: 'linear-gradient(180deg,#f472b6,#fdba74)',
                           borderRadius: '0 3px 3px 0',
                         }} />
                       )}
@@ -340,18 +350,18 @@ export default function UserSidebar({
                       <div style={{
                         width: '30px', height: '30px', borderRadius: '9px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        background: isActive && !locked ? 'rgba(99,102,241,0.25)' : 'transparent',
+                        background: isActive && !locked ? 'rgba(255,255,255,0.16)' : 'transparent',
                       }}>
                         {locked
-                          ? <Lock size={14} color="rgba(255,255,255,0.3)" />
-                          : <item.icon size={15} color={isActive ? '#a78bfa' : 'rgba(255,255,255,0.45)'} />
+                          ? <Lock size={14} color="rgba(255,255,255,0.4)" />
+                          : <item.icon size={15} color={isActive ? 'white' : 'rgba(255,255,255,0.6)'} />
                         }
                       </div>
 
                       {(!collapsed || isMobile) && (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
                           <span style={{
-                            color: isActive && !locked ? 'white' : 'rgba(255,255,255,0.55)',
+                            color: isActive && !locked ? 'white' : 'rgba(255,255,255,0.7)',
                             fontSize: '12.5px',
                             fontWeight: isActive && !locked ? 700 : 500,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -361,8 +371,8 @@ export default function UserSidebar({
                           {locked && (
                             <span style={{
                               flexShrink: 0,
-                              background: lockColor + '18',
-                              border: '1px solid ' + lockColor + '44',
+                              background: lockColor + '20',
+                              border: '1px solid ' + lockColor + '55',
                               borderRadius: '5px',
                               padding: '1px 5px',
                               fontSize: '8px',
@@ -405,24 +415,24 @@ export default function UserSidebar({
           })}
         </div>
 
-        {/* ── Footer ── */}
+        {/* ── Footer (déplié) : image de fond + email + déconnexion ── */}
         {(!collapsed || isMobile) && (
-          <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
 
             {/* ── Bouton image de fond ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
-                background: bgImageUrl ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)'),
+                background: bgImageUrl ? 'rgba(244,114,182,0.16)' : 'rgba(255,255,255,0.07)',
+                border: '1px solid ' + (bgImageUrl ? 'rgba(244,114,182,0.4)' : 'rgba(255,255,255,0.1)'),
                 borderRadius: '8px', padding: '7px 10px', cursor: 'pointer',
                 position: 'relative',
               }}>
                 {uploadingBg
-                  ? <Loader2 size={12} color="#a78bfa" className="animate-spin" />
-                  : <Image size={12} color={bgImageUrl ? '#a78bfa' : 'rgba(255,255,255,0.4)'} />
+                  ? <Loader2 size={12} color="#f9a8d4" className="animate-spin" />
+                  : <Image size={12} color={bgImageUrl ? '#f9a8d4' : 'rgba(255,255,255,0.45)'} />
                 }
-                <span style={{ color: bgImageUrl ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600 }}>
+                <span style={{ color: bgImageUrl ? '#f9a8d4' : 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600 }}>
                   {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
                 </span>
                 <input
@@ -438,7 +448,7 @@ export default function UserSidebar({
                   aria-label="Retirer l'image de fond"
                   style={{
                     width: utilityBtnSize, height: utilityBtnSize, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
                     borderRadius: '8px', cursor: 'pointer', flexShrink: 0,
                   }}
                 >
@@ -446,6 +456,51 @@ export default function UserSidebar({
                 </button>
               )}
             </div>
+
+            {/* ✅ NOUVEAU — email du compte + bouton de déconnexion, déplacés
+                depuis le panel Paramètres vers le bas de la sidebar. */}
+            {onSignOut && (
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                {userEmail && (
+                  <p style={{
+                    color: 'rgba(255,255,255,0.45)', fontSize: '10px', margin: '0 0 8px',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {userEmail}
+                  </p>
+                )}
+                <button
+                  onClick={onSignOut}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: touchDevice ? '10px' : '8px',
+                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '9px', color: '#f87171', fontSize: '11px', fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <LogOut size={13} /> Se déconnecter
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Footer (replié, desktop/tablette) : icône déconnexion seule ── */}
+        {collapsed && !isMobile && onSignOut && (
+          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+            <button
+              onClick={onSignOut}
+              aria-label="Se déconnecter"
+              title={userEmail ? `Se déconnecter (${userEmail})` : 'Se déconnecter'}
+              style={{
+                width: utilityBtnSize, height: utilityBtnSize, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                borderRadius: '8px', cursor: 'pointer',
+              }}
+            >
+              <LogOut size={14} color="#f87171" />
+            </button>
           </div>
         )}
       </div>

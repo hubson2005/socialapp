@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3, Search, X,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
-  Image, Loader2,
+  Image, Loader2, LogOut,
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
@@ -77,6 +77,12 @@ export default function UserSidebar({
   onBgRemove,
   bgImageUrl,
   uploadingBg,
+  // ✅ NOUVEAU — déconnexion déplacée depuis le panel Paramètres vers le
+  // bas de la sidebar. `userEmail` affiche l'email du compte connecté,
+  // `onSignOut` déclenche la déconnexion (avec la même confirmation
+  // "modifications non sauvegardées" gérée côté UserDashboard).
+  userEmail,
+  onSignOut,
 }) {
   const [search, setSearch] = useState('');
   const currentOrder = PLAN_ORDER[plan] ?? 0;
@@ -225,9 +231,9 @@ export default function UserSidebar({
             <div
               onClick={() => handleNav('overview', false)}
               style={{
-                background: 'rgba(255,255,255,0.08)', borderRadius: '12px',
+                background: 'rgba(15,23,42,0.55)', borderRadius: '12px',
                 padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                border: '1px solid rgba(255,255,255,0.08)',
+                border: '1px solid rgba(148,163,184,0.18)',
               }}
             >
               <AvatarBubble profile={profile} limits={limits} size={32} radius={9} />
@@ -258,8 +264,8 @@ export default function UserSidebar({
           <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              background: 'rgba(255,255,255,0.08)', borderRadius: '9px',
-              padding: '7px 10px', border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(15,23,42,0.55)', borderRadius: '9px',
+              padding: '7px 10px', border: '1px solid rgba(148,163,184,0.18)',
             }}>
               <Search size={12} color="rgba(255,255,255,0.45)" />
               <input
@@ -414,7 +420,7 @@ export default function UserSidebar({
           })}
         </div>
 
-        {/* ── Footer ── */}
+        {/* ── Footer (déplié) : image de fond + email + déconnexion ── */}
         {(!collapsed || isMobile) && (
           <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
 
@@ -455,6 +461,51 @@ export default function UserSidebar({
                 </button>
               )}
             </div>
+
+            {/* ✅ NOUVEAU — email du compte + bouton de déconnexion, déplacés
+                depuis le panel Paramètres vers le bas de la sidebar. */}
+            {onSignOut && (
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                {userEmail && (
+                  <p style={{
+                    color: 'rgba(255,255,255,0.45)', fontSize: '10px', margin: '0 0 8px',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {userEmail}
+                  </p>
+                )}
+                <button
+                  onClick={onSignOut}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: touchDevice ? '10px' : '8px',
+                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '9px', color: '#f87171', fontSize: '11px', fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <LogOut size={13} /> Se déconnecter
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Footer (replié, desktop/tablette) : icône déconnexion seule ── */}
+        {collapsed && !isMobile && onSignOut && (
+          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+            <button
+              onClick={onSignOut}
+              aria-label="Se déconnecter"
+              title={userEmail ? `Se déconnecter (${userEmail})` : 'Se déconnecter'}
+              style={{
+                width: utilityBtnSize, height: utilityBtnSize, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                borderRadius: '8px', cursor: 'pointer',
+              }}
+            >
+              <LogOut size={14} color="#f87171" />
+            </button>
           </div>
         )}
       </div>

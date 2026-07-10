@@ -261,11 +261,15 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
            évite que "Sauvegarder"/"Réponses" se fassent couper, à toute largeur d'écran
            (notamment la zone tablette portrait/paysage où ni le style desktop ni le wrap
            mobile ne s'appliquaient). */
+        .fp-panel .fp-tabbar { overflow: hidden; }
         .fp-panel .fp-tabbar-scroll {
           display: flex;
           overflow-x: auto;
           scrollbar-width: none;
           -webkit-overflow-scrolling: touch;
+          min-width: 0; /* essentiel : sans ça un enfant flex refuse de rétrécir sous la
+                            largeur de son contenu, et c'est toute la ligne qui déborde
+                            au lieu que cette zone scrolle toute seule */
         }
         .fp-panel .fp-tabbar-scroll::-webkit-scrollbar { display: none; }
         .fp-panel .fp-tabbar-scroll button { flex-shrink: 0; }

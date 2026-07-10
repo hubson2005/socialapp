@@ -526,42 +526,20 @@ export default function UserDashboard() {
       case 'boost-analytics': return <BoostAnalyticsPanel  profile={localProfile} />;
       case 'promotions':      return <PromotionsDashboard  profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} />;
 
-      // FIX — logout déplacé ici, en bas du panel Paramètres
-      case 'settings': return (
-        <div style={{ display:'flex', flexDirection:'column' }}>
-          <SettingsPanel />
-          <div style={{
-            marginTop: '32px', paddingTop: '24px',
-            borderTop: '1px solid rgba(255,255,255,0.07)',
-            maxWidth: '480px',
-          }}>
-            <p style={{ color:'white', fontSize:'14px', fontWeight:700, margin:'0 0 4px' }}>Déconnexion</p>
-            <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'12px', margin:'0 0 14px' }}>{user?.email}</p>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              style={{
-                display:'flex', alignItems:'center', gap:'8px',
-                padding:'10px 18px',
-                background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.25)',
-                borderRadius:'10px', color:'#f87171', fontSize:'13px', fontWeight:600,
-                cursor:'pointer', fontFamily:'inherit',
-              }}
-            >
-              <LogOut size={14} /> Se déconnecter
-            </button>
-          </div>
-        </div>
-      );
+      // FIX — le bloc déconnexion (email + bouton) a été déplacé en bas de
+      // la sidebar (UserSidebar.jsx / MobileNav) pour rester accessible
+      // partout, pas seulement depuis Paramètres.
+      case 'settings': return <SettingsPanel />;
 
       default: return null;
     }
   };
 const DASHBOARD_BG = { background: '#0c0d1a' };
 
-  // Dégradé rose → orange repris de l'icône fournie, appliqué à la
-  // topbar du dashboard (au-dessus du sidebar/contenu, fond sombre inchangé).
-  const TOPBAR_GRADIENT = 'linear-gradient(120deg, #ff1f6d 0%, #ff5e3a 55%, #ffab2e 100%)';
+  // Bleu nuit — remplace le précédent dégradé rose/orange. Dégradé subtil
+  // profond → un peu plus clair pour donner du relief à la topbar tout en
+  // restant "bleu nuit" (pas de rupture de teinte comme avant).
+  const TOPBAR_GRADIENT = 'linear-gradient(120deg, #060a1a 0%, #0e1a3a 55%, #16254f 100%)';
 
   return (
     <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
@@ -584,26 +562,26 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
             onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
             bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
             onUpgrade={()=>handleOpenUpgrade()}
+            userEmail={user?.email} onSignOut={handleSignOut}
           />
         </div>
       )}
 
       <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
 
-        {/* Topbar — dégradé rose/orange (repris de l'icône), au lieu du fond
-            sombre translucide d'origine. Le paddingTop additionnel via
-            env(safe-area-inset-top) évite que le contenu passe sous
-            l'encoche/la barre de statut sur iOS (nécessite
-            <meta name="viewport" content="viewport-fit=cover"> dans
-            index.html pour être pris en compte). */}
-        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_GRADIENT, borderBottom:'1px solid rgba(255,255,255,0.15)', boxShadow:'0 4px 20px rgba(255,60,90,0.25)', padding:isMobile?'calc(10px + env(safe-area-inset-top)) 14px 10px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+        {/* Topbar — bleu nuit (au lieu du précédent dégradé rose/orange).
+            Le paddingTop additionnel via env(safe-area-inset-top) évite que
+            le contenu passe sous l'encoche/la barre de statut sur iOS
+            (nécessite <meta name="viewport" content="viewport-fit=cover">
+            dans index.html pour être pris en compte). */}
+        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_GRADIENT, borderBottom:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 20px rgba(0,10,40,0.45)', padding:isMobile?'calc(10px + env(safe-area-inset-top)) 14px 10px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
             <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Dashboard'}</h2>
             <AnimatePresence>
               {hasChanges && (
                 <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
-                  style={{ background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.35)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fff', fontWeight:600, flexShrink:0 }}>
+                  style={{ background:'rgba(251,191,36,0.15)', border:'1px solid rgba(251,191,36,0.4)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fbbf24', fontWeight:600, flexShrink:0 }}>
                   ● {t('unsaved')}
                 </motion.span>
               )}
@@ -615,7 +593,7 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
             <button
               onClick={handleSave}
               disabled={!hasChanges || updateMutation.isPending}
-              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'rgba(0,0,0,0.28)':'rgba(255,255,255,0.15)', border:'1px solid '+(hasChanges?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.25)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.6)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.07)', border:'1px solid '+(hasChanges?'transparent':'rgba(255,255,255,0.12)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
             >
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               {!isMobile && t('save')}

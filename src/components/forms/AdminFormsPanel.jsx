@@ -276,11 +276,13 @@ export default function AdminFormsPanel({ profileId }) {
           .afp-panel input, .afp-panel textarea { font-size: 16px !important; }
           .afp-builder-grid { grid-template-columns: 1fr !important; }
         }
+        .afp-tabbar { overflow: hidden; }
         .afp-tabbar-scroll {
           display: flex;
           overflow-x: auto;
           scrollbar-width: none;
           -webkit-overflow-scrolling: touch;
+          min-width: 0;
         }
         .afp-tabbar-scroll::-webkit-scrollbar { display: none; }
         .afp-tabbar-scroll button { flex-shrink: 0; }

@@ -48,8 +48,14 @@
  *
  * PALETTE :
  *  [C12] Accent aligné sur UserSidebar.jsx (magenta → orange, dérivé du logo
- *        SocialApp) : remplace l'ancien indigo (#6366f1/#a78bfa) qui ne
- *        correspondait plus à la charte desktop.
+ *        SocialApp).
+ *  [C13] Fond du tiroir ET de la tab bar flottante alignés sur UserSidebar :
+ *        dégradé de marque magenta→orange recouvert d'un voile noir semi-
+ *        opaque (scrim) pour garantir la lisibilité du texte, avec des états
+ *        actifs en surimpression blanche plutôt qu'en teinte magenta (qui se
+ *        fondait dans un fond déjà coloré). Les boutons utilitaires (image de
+ *        fond, suppression) reprennent exactement les mêmes couleurs que le
+ *        footer de UserSidebar.jsx pour une cohérence totale desktop/mobile.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -77,22 +83,27 @@ import {
 import { PLAN_ORDER } from './UserSidebar';
 
 // ─── Design tokens ────────────────────────────────────────────
+// [C13] Même fond que UserSidebar.jsx : dégradé de marque + voile noir.
+const BRAND_BG = 'linear-gradient(180deg, rgba(8,4,14,0.72), rgba(8,4,14,0.72)), linear-gradient(180deg,#db2777,#f97316)';
+
 const T = {
-  bg:           'rgba(8,5,22,0.98)',
-  border:       'rgba(255,255,255,0.09)',
-  borderSubtle: 'rgba(255,255,255,0.07)',
+  bg:           BRAND_BG,
+  border:       'rgba(255,255,255,0.12)',
+  borderSubtle: 'rgba(255,255,255,0.1)',
   text:         'white',
-  textMuted:    'rgba(255,255,255,0.65)',
-  textDim:      'rgba(255,255,255,0.35)',
-  textGhost:    'rgba(255,255,255,0.22)',
+  textMuted:    'rgba(255,255,255,0.7)',
+  textDim:      'rgba(255,255,255,0.5)',
+  textGhost:    'rgba(255,255,255,0.4)',
   accent:       '#db2777',
   accentEnd:    '#f97316',
   accentLight:  '#f472b6',
-  accentBg:     'rgba(219,39,119,0.16)',
-  accentBgHover:'rgba(219,39,119,0.28)',
+  imageAccent:  '#f9a8d4',
+  activeBg:     'rgba(255,255,255,0.14)',
+  activeBgSoft: 'rgba(255,255,255,0.16)',
+  activeBar:    'linear-gradient(180deg,#f472b6,#fdba74)',
   red:          '#f87171',
-  redBg:        'rgba(239,68,68,0.1)',
-  redBorder:    'rgba(239,68,68,0.3)',
+  redBg:        'rgba(239,68,68,0.12)',
+  redBorder:    'rgba(239,68,68,0.35)',
   green:        '#22c55e',
   orange:       '#ff8c00',
   lockPro:      '#ff8c00',
@@ -362,7 +373,7 @@ export default function MobileNav({
       >
         {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
-          <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.18)' }} />
+          <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)' }} />
         </div>
 
         {/* Header */}
@@ -402,13 +413,13 @@ export default function MobileNav({
             aria-label="Fermer le menu"
             style={{
               width: '40px', height: '40px', borderRadius: '9px',
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.14)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
           >
-            <X size={15} color="rgba(255,255,255,0.6)" />
+            <X size={15} color="rgba(255,255,255,0.7)" />
           </button>
         </div>
 
@@ -447,7 +458,7 @@ export default function MobileNav({
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
                       padding: '11px 12px', borderRadius: T.radius, border: 'none',
-                      background: isActive && !locked ? T.accentBg : 'transparent',
+                      background: isActive && !locked ? T.activeBg : 'transparent',
                       cursor: 'pointer', marginBottom: '2px', position: 'relative',
                       opacity: locked ? 0.55 : 1,
                     }}
@@ -456,19 +467,19 @@ export default function MobileNav({
                       <div style={{
                         position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
                         width: '3px', height: '22px',
-                        background: `linear-gradient(180deg,${T.accent},${T.accentEnd})`,
+                        background: T.activeBar,
                         borderRadius: '0 3px 3px 0',
                       }} />
                     )}
                     <div style={{
                       width: '34px', height: '34px', borderRadius: '10px',
-                      background: isActive && !locked ? T.accentBgHover : 'rgba(255,255,255,0.07)',
+                      background: isActive && !locked ? T.activeBgSoft : 'rgba(255,255,255,0.07)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
                     }}>
                       {locked
-                        ? <Lock size={15} color="rgba(255,255,255,0.35)" />
-                        : <item.icon size={16} color={isActive ? T.accentLight : 'rgba(255,255,255,0.5)'} />
+                        ? <Lock size={15} color="rgba(255,255,255,0.4)" />
+                        : <item.icon size={16} color={isActive ? 'white' : 'rgba(255,255,255,0.6)'} />
                       }
                     </div>
                     <span style={{
@@ -480,7 +491,7 @@ export default function MobileNav({
                     </span>
                     {locked ? (
                       <span style={{
-                        flexShrink: 0, background: lockColor + '18', border: '1px solid ' + lockColor + '44',
+                        flexShrink: 0, background: lockColor + '20', border: '1px solid ' + lockColor + '55',
                         borderRadius: '6px', padding: '2px 6px', fontSize: '8px', fontWeight: 700,
                         color: lockColor, textTransform: 'uppercase', letterSpacing: '0.04em',
                       }}>
@@ -495,7 +506,7 @@ export default function MobileNav({
                         {item.badge}
                       </span>
                     ) : (
-                      <ChevronRight size={13} color="rgba(255,255,255,0.2)" />
+                      <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
                     )}
                   </button>
                 );
@@ -516,18 +527,18 @@ export default function MobileNav({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '8px',
-                background: bgImageUrl ? T.accentBg : 'rgba(255,255,255,0.06)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(219,39,119,0.4)' : 'rgba(255,255,255,0.1)'),
+                background: bgImageUrl ? 'rgba(244,114,182,0.16)' : 'rgba(255,255,255,0.07)',
+                border: '1px solid ' + (bgImageUrl ? 'rgba(244,114,182,0.4)' : 'rgba(255,255,255,0.1)'),
                 borderRadius: '10px', padding: '9px 12px',
                 cursor: uploadingBg ? 'not-allowed' : 'pointer',
                 position: 'relative', opacity: uploadingBg ? 0.7 : 1,
               }}>
                 {uploadingBg
-                  ? <Loader2 size={14} color={T.accentLight} style={{ animation: 'mobile-nav-spin 1s linear infinite' }} />
-                  : <Image size={14} color={bgImageUrl ? T.accentLight : 'rgba(255,255,255,0.4)'} />
+                  ? <Loader2 size={14} color={T.imageAccent} style={{ animation: 'mobile-nav-spin 1s linear infinite' }} />
+                  : <Image size={14} color={bgImageUrl ? T.imageAccent : 'rgba(255,255,255,0.45)'} />
                 }
                 <span style={{
-                  color: bgImageUrl ? T.accentLight : 'rgba(255,255,255,0.4)',
+                  color: bgImageUrl ? T.imageAccent : 'rgba(255,255,255,0.45)',
                   fontSize: '12px', fontWeight: 600,
                 }}>
                   {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
@@ -614,8 +625,8 @@ export default function MobileNav({
           bottom: 'calc(16px + env(safe-area-inset-bottom))',
           left: '50%', transform: 'translateX(-50%)',
           zIndex: 38,
-          background: 'rgba(8,5,22,0.96)',
-          border: '1px solid rgba(255,255,255,0.12)',
+          background: T.bg,
+          border: '1px solid rgba(255,255,255,0.16)',
           borderRadius: T.radiusPill,
           padding: '8px 10px',
           display: 'flex', alignItems: 'center', gap: '4px',
@@ -639,7 +650,7 @@ export default function MobileNav({
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
                 padding: '6px 10px', borderRadius: T.radiusPill, border: 'none',
                 background: isActive
-                  ? (isMenu ? 'rgba(239,68,68,0.18)' : T.accentBgHover)
+                  ? (isMenu ? 'rgba(239,68,68,0.2)' : T.activeBgSoft)
                   : 'transparent',
                 cursor: 'pointer',
                 transform: isActive ? 'scale(1.05)' : 'scale(1)',
@@ -655,12 +666,12 @@ export default function MobileNav({
                 }} />
               )}
               {locked
-                ? <Lock size={18} color="rgba(255,255,255,0.35)" />
-                : <item.icon size={20} color={isActive ? (isMenu ? T.red : T.accentLight) : 'rgba(255,255,255,0.42)'} />
+                ? <Lock size={18} color="rgba(255,255,255,0.4)" />
+                : <item.icon size={20} color={isActive ? (isMenu ? T.red : 'white') : 'rgba(255,255,255,0.55)'} />
               }
               <span style={{
                 fontSize: '9px', fontWeight: isActive ? 700 : 500,
-                color: isActive ? (isMenu ? T.red : T.accentLight) : 'rgba(255,255,255,0.3)',
+                color: isActive ? (isMenu ? T.red : 'white') : 'rgba(255,255,255,0.45)',
                 lineHeight: 1,
               }}>
                 {item.label}

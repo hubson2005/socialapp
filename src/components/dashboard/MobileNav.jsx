@@ -56,6 +56,12 @@
  *        fondait dans un fond déjà coloré). Les boutons utilitaires (image de
  *        fond, suppression) reprennent exactement les mêmes couleurs que le
  *        footer de UserSidebar.jsx pour une cohérence totale desktop/mobile.
+ *  [C15] Fond bleu nuit foncé — remplace le dégradé magenta→orange par un
+ *        bleu nuit uni (`#0a0e1f`), aligné sur le nouveau fond de
+ *        UserSidebar.jsx. Les accents (états actifs, avatar, barre de
+ *        sélection, image de fond) sont recalés sur un bleu indigo
+ *        (`#3b4ff0`) au lieu du magenta/orange pour rester cohérents avec
+ *        ce fond sombre plutôt que de jurer dessus.
  *
  * NOUVEAU :
  *  [C14] Email du compte + bouton "Se déconnecter" déplacés en bas du tiroir
@@ -92,8 +98,9 @@ import {
 import { PLAN_ORDER } from './UserSidebar';
 
 // ─── Design tokens ────────────────────────────────────────────
-// [C13] Même fond que UserSidebar.jsx : dégradé de marque + voile noir.
-const BRAND_BG = 'linear-gradient(180deg, rgba(8,4,14,0.72), rgba(8,4,14,0.72)), linear-gradient(180deg,#db2777,#f97316)';
+// [C15] Fond bleu nuit uni, aligné sur UserSidebar.jsx (remplace l'ancien
+// dégradé de marque magenta→orange + voile noir).
+const BRAND_BG = '#0a0e1f';
 
 const T = {
   bg:           BRAND_BG,
@@ -103,13 +110,13 @@ const T = {
   textMuted:    'rgba(255,255,255,0.7)',
   textDim:      'rgba(255,255,255,0.5)',
   textGhost:    'rgba(255,255,255,0.4)',
-  accent:       '#db2777',
-  accentEnd:    '#f97316',
-  accentLight:  '#f472b6',
-  imageAccent:  '#f9a8d4',
-  activeBg:     'rgba(255,255,255,0.14)',
-  activeBgSoft: 'rgba(255,255,255,0.16)',
-  activeBar:    'linear-gradient(180deg,#f472b6,#fdba74)',
+  accent:       '#3b4ff0',
+  accentEnd:    '#8b5cf6',
+  accentLight:  '#8b9bff',
+  imageAccent:  '#8b9bff',
+  activeBg:     'rgba(59,79,240,0.2)',
+  activeBgSoft: 'rgba(59,79,240,0.28)',
+  activeBar:    'linear-gradient(180deg,#3b4ff0,#8b5cf6)',
   red:          '#f87171',
   redBg:        'rgba(239,68,68,0.12)',
   redBorder:    'rgba(239,68,68,0.35)',
@@ -546,8 +553,8 @@ export default function MobileNav({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '8px',
-                background: bgImageUrl ? 'rgba(244,114,182,0.16)' : 'rgba(255,255,255,0.07)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(244,114,182,0.4)' : 'rgba(255,255,255,0.1)'),
+                background: bgImageUrl ? 'rgba(59,79,240,0.16)' : 'rgba(255,255,255,0.07)',
+                border: '1px solid ' + (bgImageUrl ? 'rgba(59,79,240,0.4)' : 'rgba(255,255,255,0.1)'),
                 borderRadius: '10px', padding: '9px 12px',
                 cursor: uploadingBg ? 'not-allowed' : 'pointer',
                 position: 'relative', opacity: uploadingBg ? 0.7 : 1,

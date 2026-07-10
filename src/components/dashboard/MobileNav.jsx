@@ -56,6 +56,14 @@
  *        fondait dans un fond déjà coloré). Les boutons utilitaires (image de
  *        fond, suppression) reprennent exactement les mêmes couleurs que le
  *        footer de UserSidebar.jsx pour une cohérence totale desktop/mobile.
+ *
+ * NOUVEAU :
+ *  [C14] Email du compte + bouton "Se déconnecter" déplacés en bas du tiroir
+ *        (sous les infos de plan), pour rester cohérent avec UserSidebar.jsx
+ *        où le même bloc a été déplacé en bas de la sidebar desktop/tablette.
+ *        Props ajoutées : `userEmail` et `onSignOut`. Le bloc ne s'affiche
+ *        que si `onSignOut` est fourni (comportement optionnel, pas de crash
+ *        si le parent ne le passe pas encore).
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -79,6 +87,7 @@ import {
   Loader2,
   Crown,
   Lock,
+  LogOut,
 } from 'lucide-react';
 import { PLAN_ORDER } from './UserSidebar';
 
@@ -218,6 +227,9 @@ export default function MobileNav({
   uploadingBg,
   onUpgrade,    // [C5] () => void — remplace le lien href="/"
   isAdmin = false,
+  // ✅ [C14] NOUVEAU — email du compte + déconnexion, alignés sur UserSidebar.jsx
+  userEmail,
+  onSignOut,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef  = useRef(null);
@@ -323,6 +335,13 @@ export default function MobileNav({
   // [C7] Guard sur onBgRemove
   const handleBgRemove = () => {
     if (onBgRemove) onBgRemove();
+  };
+
+  // [C14] Ferme le tiroir avant de déclencher la déconnexion (évite un
+  // tiroir resté ouvert derrière l'écran de login après redirection).
+  const handleSignOut = () => {
+    setDrawerOpen(false);
+    onSignOut?.();
   };
 
   // ── Avatar initiale ──────────────────────────────────────────
@@ -515,7 +534,7 @@ export default function MobileNav({
           ))}
         </div>
 
-        {/* Footer : Image de fond + Infos plan */}
+        {/* Footer : Image de fond + Infos plan + Déconnexion */}
         <div style={{
           padding: '12px 16px calc(20px + env(safe-area-inset-bottom))',
           borderTop: `1px solid ${T.borderSubtle}`,
@@ -581,6 +600,7 @@ export default function MobileNav({
               background: limits.color + '18',
               border: `1px solid ${limits.color}44`,
               borderRadius: '12px', padding: '10px 12px',
+              marginBottom: onSignOut ? '10px' : 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '13px' }}>{limits.emoji}</span>
@@ -609,6 +629,32 @@ export default function MobileNav({
                   <Crown size={11} /> Changer d'offre
                 </button>
               )}
+            </div>
+          )}
+
+          {/* ✅ [C14] NOUVEAU — email du compte + déconnexion, alignés sur
+              le bloc équivalent en bas de UserSidebar.jsx (desktop/tablette). */}
+          {onSignOut && (
+            <div style={{ paddingTop: '10px', borderTop: `1px solid ${T.borderSubtle}` }}>
+              {userEmail && (
+                <p style={{
+                  color: T.textDim, fontSize: '11px', margin: '0 0 8px',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {userEmail}
+                </p>
+              )}
+              <button
+                onClick={handleSignOut}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  padding: '11px', background: T.redBg, border: `1px solid ${T.redBorder}`,
+                  borderRadius: '10px', color: T.red, fontSize: '13px', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <LogOut size={14} /> Se déconnecter
+              </button>
             </div>
           )}
         </div>

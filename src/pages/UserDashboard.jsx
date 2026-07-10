@@ -621,6 +621,7 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
           onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}
           bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
           onUpgrade={()=>handleOpenUpgrade()}
+          userEmail={user?.email} onSignOut={handleSignOut}
         />
       )}
 

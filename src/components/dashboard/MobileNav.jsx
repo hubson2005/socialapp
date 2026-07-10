@@ -50,6 +50,22 @@
  *        - Tab bar flottante masquée (fade + léger décalage vers le bas,
  *          pointer-events désactivés) tant que le tiroir est ouvert, pour
  *          éviter la superposition visuelle avec le tiroir plein écran.
+ *
+ *  [C16] Footer nettoyé :
+ *        - Suppression du bloc "X liens · Y produits" (retour utilisateur).
+ *        - Email et bouton "Se déconnecter" déplacés du header/de la liste
+ *          vers ce même footer, en bas du tiroir. Le lien "Changer
+ *          d'offre" reste affiché à côté quand applicable.
+ *
+ *  [C17] Alignement des noms de props sur UserDashboard.jsx : celui-ci
+ *        passait déjà `userEmail={user?.email}` et `onSignOut={handleSignOut}`
+ *        à <MobileNav /> (mêmes noms que pour <UserSidebar />), alors que
+ *        ce composant attendait encore `profile.email` / `onLogout`
+ *        (issus d'une itération précédente, jamais branchés côté parent).
+ *        Résultat : email et bouton "Se déconnecter" ne s'affichaient
+ *        jamais malgré des props bien passées depuis le Dashboard. Fix :
+ *        `onLogout` → `onSignOut`, `profile.email` → `userEmail` (prop
+ *        dédiée, plus besoin de la faire transiter par `profile`).
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -205,7 +221,8 @@ export default function MobileNav({
   bgImageUrl,
   uploadingBg,
   onUpgrade,
-  onLogout,     // [C14] optionnel — () => void, affiche "Se déconnecter" si fourni
+  userEmail,    // [C17] optionnel — email affiché dans le footer (aligné sur la prop envoyée par UserDashboard.jsx, ex-profile.email)
+  onSignOut,    // [C17] optionnel — () => void, affiche "Se déconnecter" si fourni (aligné sur la prop envoyée par UserDashboard.jsx, ex-onLogout)
   isAdmin = false,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -304,9 +321,9 @@ export default function MobileNav({
   };
 
   const handleLogout = () => {
-    if (onLogout) {
+    if (onSignOut) {
       setDrawerOpen(false);
-      onLogout();
+      onSignOut();
     }
   };
 
@@ -418,13 +435,6 @@ export default function MobileNav({
               <span style={{ color: limits.color || T.orange, fontSize: '11px', fontWeight: 700 }}>
                 {limits.label}{!isMaxPlan ? '+' : ''}
               </span>
-            </div>
-          )}
-
-          {profile?.email && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
-              <Mail size={13} color={T.textGhost} />
-              <span style={{ color: T.textDim, fontSize: '12.5px' }}>{profile.email}</span>
             </div>
           )}
         </div>
@@ -622,41 +632,47 @@ export default function MobileNav({
               </div>
             </div>
           )}
-
-          {/* Se déconnecter — [C14] optionnel, n'apparaît que si onLogout est fourni */}
-          {onLogout && (
-            <button
-              onClick={handleLogout}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '12px 14px', borderRadius: T.radius,
-                background: T.redBg, border: `1px solid ${T.redBorder}`,
-                cursor: 'pointer', margin: '10px 0 4px',
-              }}
-            >
-              <LogOut size={15} color={T.red} />
-              <span style={{ color: T.red, fontSize: '13.5px', fontWeight: 700 }}>Se déconnecter</span>
-            </button>
-          )}
         </div>
 
-        {/* Footer : infos plan restantes (liens/produits) */}
-        {limits && (
+        {/* Footer — [C16] email + "Se déconnecter" (déplacés depuis le
+            header / la liste) ; le bloc "X liens · Y produits" a été
+            retiré à la demande. Le lien "Changer d'offre" est conservé
+            s'il y a lieu. */}
+        {(userEmail || onSignOut || (!isMaxPlan && onUpgrade)) && (
           <div style={{
-            padding: '10px 20px calc(16px + env(safe-area-inset-bottom))',
+            padding: '12px 20px calc(16px + env(safe-area-inset-bottom))',
             borderTop: `1px solid ${T.borderSubtle}`,
             flexShrink: 0,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <p style={{ color: T.textDim, fontSize: '11px', margin: 0 }}>
-                {limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits
-              </p>
+            {userEmail && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <Mail size={13} color={T.textGhost} />
+                <span style={{ color: T.textDim, fontSize: '12.5px' }}>{userEmail}</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {onSignOut && (
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '11px 14px', borderRadius: T.radius,
+                    background: T.redBg, border: `1px solid ${T.redBorder}`,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <LogOut size={15} color={T.red} />
+                  <span style={{ color: T.red, fontSize: '13.5px', fontWeight: 700 }}>Se déconnecter</span>
+                </button>
+              )}
+
               {!isMaxPlan && onUpgrade && (
                 <button
                   onClick={onUpgrade}
                   style={{
-                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '5px',
+                    background: 'none', border: 'none', padding: '11px 4px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
                     color: T.orange, fontSize: '11px', fontWeight: 700,
                   }}
                 >

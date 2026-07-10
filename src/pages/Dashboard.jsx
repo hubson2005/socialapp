@@ -852,6 +852,7 @@ export default function Dashboard() {
   const [activeProfileId,  setActiveProfileId]  = useState(null);
   const [showTemplates,    setShowTemplates]    = useState(false);
   const [showNotifPanel,   setShowNotifPanel]   = useState(false);
+  const [uploadingBg,      setUploadingBg]      = useState(false);
   const notifPanelRef = useRef(null);
   const notifCountRef = useRef(0);
 
@@ -1004,6 +1005,25 @@ export default function Dashboard() {
     }});
   };
 
+  // Upload de l'image de fond depuis le tiroir mobile (MobileNav) — même
+  // logique que UserDashboard.jsx (uploadBgFile), pour rester cohérent
+  // entre les deux dashboards. Reçoit directement un File (MobileNav
+  // extrait déjà e.target.files[0] en interne).
+  const uploadBgFile = async (file) => {
+    if (!file) return;
+    if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
+    setUploadingBg(true);
+    try {
+      const name = 'bg-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
+      const { error } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(name);
+      updateLocal({ bg_image_url: data.publicUrl });
+      toast.success('Image de fond appliquée !');
+    } catch (err) { toast.error('Erreur : ' + err.message); }
+    finally { setUploadingBg(false); }
+  };
+
   const handleSignOut = async () => {
     if (hasChanges && !window.confirm('Modifications non sauvegardées. Se déconnecter quand même ?')) return;
     await signOut();
@@ -1125,7 +1145,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {isMobile && <MobileNav activeSection={activeSection} onNavigate={setActiveSection} profile={localProfile}/>}
+      {isMobile && (
+        <MobileNav
+          activeSection={activeSection}
+          onNavigate={setActiveSection}
+          profile={localProfile}
+          isAdmin={isAdmin}
+          userEmail={user?.email}
+          onSignOut={handleSignOut}
+          onBgUpload={uploadBgFile}
+          onBgRemove={() => updateLocal({ bg_image_url: null })}
+          bgImageUrl={localProfile?.bg_image_url}
+          uploadingBg={uploadingBg}
+        />
+      )}
       {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)}/>}
       <AnimatePresence>
         {showTemplates && <TemplatesModal onClose={()=>setShowTemplates(false)} onApply={applyTemplate}/>}

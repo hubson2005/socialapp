@@ -475,6 +475,13 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
   // le fichier de compiler du tout, sur n'importe quel appareil.
   // → un seul appel, une seule déclaration.
   const { isMobile, isTablet } = useBreakpoint();
+  // [D1] Desktop = ni mobile ni tablette. Le panneau garde une largeur
+  // maximale (720px) sur tous les formats — sur desktop, l'écran est
+  // souvent bien plus large que ça, donc le contenu restait collé à
+  // gauche. `isDesktop` sert uniquement à centrer horizontalement le bloc
+  // via `margin: 0 auto` sur ce format ; mobile/tablette/iOS/Android
+  // gardent leur comportement d'origine (pleine largeur, non centré).
+  const isDesktop = !isMobile && !isTablet;
   const [configs, setConfigs] = useState({});
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('Tous');
@@ -551,7 +558,12 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: isTablet ? '960px' : '720px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: '20px',
+      maxWidth: isTablet ? '960px' : '720px', width: '100%', minWidth: 0, boxSizing: 'border-box',
+      // [D1] centrage horizontal réservé au desktop
+      margin: isDesktop ? '0 auto' : undefined,
+    }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>

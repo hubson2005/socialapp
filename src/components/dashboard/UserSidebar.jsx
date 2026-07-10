@@ -161,9 +161,9 @@ export default function UserSidebar({
 
       <div style={{
         ...sidebarStyle,
-        background: 'rgba(6,4,18,0.97)',
+        background: 'linear-gradient(180deg,#db2777,#f97316)',
         backdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
+        borderRight: '1px solid rgba(255,255,255,0.18)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -174,21 +174,21 @@ export default function UserSidebar({
         <div style={{
           padding: collapsed && !isMobile ? '18px 0' : '16px',
           display: 'flex', alignItems: 'center', gap: '10px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(255,255,255,0.2)',
           justifyContent: collapsed && !isMobile ? 'center' : 'space-between',
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
             <img
               src="/Logo_SocialApp.png" alt=""
-              style={{ width: '30px', height: '30px', borderRadius: '9px', objectFit: 'cover', flexShrink: 0 }}
+              style={{ width: '30px', height: '30px', borderRadius: '9px', objectFit: 'cover', flexShrink: 0, boxShadow: '0 0 0 2px rgba(255,255,255,0.35)' }}
             />
             {(!collapsed || isMobile) && (
               <div>
-                <span style={{ color: 'white', fontSize: '14px', fontWeight: 800, display: 'block', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                <span style={{ color: 'white', fontSize: '14px', fontWeight: 800, display: 'block', lineHeight: 1, whiteSpace: 'nowrap', textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
                   SocialApp
                 </span>
-                <span style={{ color: limits.color, fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <span style={{ color: 'white', fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
                   {limits.emoji} {limits.label}
                 </span>
               </div>
@@ -199,45 +199,46 @@ export default function UserSidebar({
             aria-label={collapsed ? 'Déplier le menu' : 'Replier le menu'}
             style={{
               width: utilityBtnSize, height: utilityBtnSize, borderRadius: '8px',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(0,0,0,0.2)',
+              border: '1px solid rgba(255,255,255,0.25)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
             {collapsed && !isMobile
-              ? <ChevronRight size={13} color="rgba(255,255,255,0.6)" />
-              : <ChevronLeft  size={13} color="rgba(255,255,255,0.6)" />
+              ? <ChevronRight size={13} color="rgba(255,255,255,0.85)" />
+              : <ChevronLeft  size={13} color="rgba(255,255,255,0.85)" />
             }
           </button>
         </div>
 
         {/* ── Profile mini (expanded) ── */}
         {(!collapsed || isMobile) && profile && (
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
             <div
               onClick={() => handleNav('overview', false)}
               style={{
-                background: 'rgba(255,255,255,0.06)', borderRadius: '12px',
+                background: 'rgba(0,0,0,0.18)', borderRadius: '12px',
                 padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                border: '1px solid rgba(255,255,255,0.12)',
               }}
             >
               <AvatarBubble profile={profile} limits={limits} size={32} radius={9} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: 'white', fontSize: '12px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ color: 'white', fontSize: '12px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
                   {profile.display_name || 'Mon profil'}
                 </p>
                 {profile.username && (
-                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', margin: 0 }}>@{profile.username}</p>
+                  <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', margin: 0 }}>@{profile.username}</p>
                 )}
               </div>
-              <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              <ChevronRight size={13} color="rgba(255,255,255,0.6)" />
             </div>
           </div>
         )}
 
         {/* ── Avatar collapsed ── */}
         {collapsed && !isMobile && profile && (
-          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
             <div onClick={() => handleNav('overview', false)} style={{ cursor: 'pointer' }}>
               <AvatarBubble profile={profile} limits={limits} size={34} radius={9} />
             </div>
@@ -246,13 +247,13 @@ export default function UserSidebar({
 
         {/* ── Search ── */}
         {(!collapsed || isMobile) && (
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              background: 'rgba(255,255,255,0.06)', borderRadius: '9px',
-              padding: '7px 10px', border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(0,0,0,0.18)', borderRadius: '9px',
+              padding: '7px 10px', border: '1px solid rgba(255,255,255,0.15)',
             }}>
-              <Search size={12} color="rgba(255,255,255,0.3)" />
+              <Search size={12} color="rgba(255,255,255,0.6)" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -264,7 +265,7 @@ export default function UserSidebar({
                   onClick={() => setSearch('')}
                   aria-label="Effacer la recherche"
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                     width: touchDevice ? 32 : 16, height: touchDevice ? 32 : 16,
                   }}
@@ -294,8 +295,8 @@ export default function UserSidebar({
             return (
               <div key={group.id} style={{ marginBottom: '4px' }}>
                 {collapsed && !isMobile
-                  ? <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '6px 4px 8px' }} />
-                  : <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '8px 10px 4px', margin: 0 }}>
+                  ? <div style={{ height: '1px', background: 'rgba(255,255,255,0.2)', margin: '6px 4px 8px' }} />
+                  : <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '8px 10px 4px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>
                       {t(`group_${group.id}`, group.label)}
                     </p>
                 }
@@ -319,9 +320,9 @@ export default function UserSidebar({
                         padding: collapsed && !isMobile ? '10px 0' : '9px 10px',
                         borderRadius: '11px',
                         border: 'none',
-                        background: isActive && !locked ? 'rgba(219,39,119,0.18)' : 'transparent',
+                        background: isActive && !locked ? 'rgba(255,255,255,0.22)' : 'transparent',
                         cursor: locked ? 'default' : 'pointer',
-                        opacity: locked ? 0.45 : 1,
+                        opacity: locked ? 0.55 : 1,
                         justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
                         position: 'relative',
                         marginBottom: '2px',
@@ -332,7 +333,7 @@ export default function UserSidebar({
                         <div style={{
                           position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
                           width: '3px', height: '20px',
-                          background: 'linear-gradient(180deg,#db2777,#f97316)',
+                          background: 'white',
                           borderRadius: '0 3px 3px 0',
                         }} />
                       )}
@@ -340,29 +341,30 @@ export default function UserSidebar({
                       <div style={{
                         width: '30px', height: '30px', borderRadius: '9px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        background: isActive && !locked ? 'rgba(219,39,119,0.25)' : 'transparent',
+                        background: isActive && !locked ? 'rgba(255,255,255,0.25)' : 'transparent',
                       }}>
                         {locked
-                          ? <Lock size={14} color="rgba(255,255,255,0.3)" />
-                          : <item.icon size={15} color={isActive ? '#f472b6' : 'rgba(255,255,255,0.45)'} />
+                          ? <Lock size={14} color="rgba(255,255,255,0.55)" />
+                          : <item.icon size={15} color={isActive ? 'white' : 'rgba(255,255,255,0.8)'} />
                         }
                       </div>
 
                       {(!collapsed || isMobile) && (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
                           <span style={{
-                            color: isActive && !locked ? 'white' : 'rgba(255,255,255,0.55)',
+                            color: isActive && !locked ? 'white' : 'rgba(255,255,255,0.88)',
                             fontSize: '12.5px',
                             fontWeight: isActive && !locked ? 700 : 500,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.25)',
                           }}>
                             {t(item.id, item.label)}
                           </span>
                           {locked && (
                             <span style={{
                               flexShrink: 0,
-                              background: lockColor + '18',
-                              border: '1px solid ' + lockColor + '44',
+                              background: 'rgba(0,0,0,0.35)',
+                              border: '1px solid rgba(255,255,255,0.25)',
                               borderRadius: '5px',
                               padding: '1px 5px',
                               fontSize: '8px',
@@ -381,7 +383,7 @@ export default function UserSidebar({
                         <div style={{
                           position: 'absolute', top: '6px', right: '6px',
                           width: '10px', height: '10px', borderRadius: '50%',
-                          background: lockColor, border: '1px solid rgba(0,0,0,0.5)',
+                          background: lockColor, border: '2px solid rgba(255,255,255,0.7)',
                         }} />
                       )}
                     </button>
@@ -407,22 +409,22 @@ export default function UserSidebar({
 
         {/* ── Footer ── */}
         {(!collapsed || isMobile) && (
-          <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
 
             {/* ── Bouton image de fond ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <label style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
-                background: bgImageUrl ? 'rgba(219,39,119,0.15)' : 'rgba(255,255,255,0.06)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(219,39,119,0.4)' : 'rgba(255,255,255,0.1)'),
+                background: bgImageUrl ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.18)',
+                border: '1px solid ' + (bgImageUrl ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)'),
                 borderRadius: '8px', padding: '7px 10px', cursor: 'pointer',
                 position: 'relative',
               }}>
                 {uploadingBg
-                  ? <Loader2 size={12} color="#f472b6" className="animate-spin" />
-                  : <Image size={12} color={bgImageUrl ? '#f472b6' : 'rgba(255,255,255,0.4)'} />
+                  ? <Loader2 size={12} color="white" className="animate-spin" />
+                  : <Image size={12} color={bgImageUrl ? 'white' : 'rgba(255,255,255,0.7)'} />
                 }
-                <span style={{ color: bgImageUrl ? '#f472b6' : 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 600 }}>
+                <span style={{ color: bgImageUrl ? 'white' : 'rgba(255,255,255,0.7)', fontSize: '10px', fontWeight: 600 }}>
                   {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
                 </span>
                 <input
@@ -438,11 +440,11 @@ export default function UserSidebar({
                   aria-label="Retirer l'image de fond"
                   style={{
                     width: utilityBtnSize, height: utilityBtnSize, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                    background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.3)',
                     borderRadius: '8px', cursor: 'pointer', flexShrink: 0,
                   }}
                 >
-                  <X size={11} color="#f87171" />
+                  <X size={11} color="#fecaca" />
                 </button>
               )}
             </div>

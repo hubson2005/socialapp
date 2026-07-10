@@ -107,7 +107,7 @@ function DeleteConfirmModal({ form, onConfirm, onCancel, isPending }) {
             <AlertTriangle size={16} />
             <span style={{ fontWeight: 700, fontSize: '14px', color: 'white' }}>Supprimer le formulaire</span>
           </div>
-          <button type="button" onClick={onCancel} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '5px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', display: 'flex' }}>
+          <button type="button" onClick={onCancel} className="afp-icon-btn" style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '5px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', display: 'flex' }}>
             <X size={14} />
           </button>
         </div>
@@ -166,8 +166,16 @@ export default function AdminFormsPanel({ profileId }) {
     });
   }, [allForms, search, statusFilter]);
 
-  // Fix #10 : mémoïsé une seule fois
-  const baseUrl = useMemo(() => window.location.origin, []);
+  // Fix #10 : mémoïsé une seule fois — construit l'URL publique sur le domaine
+  // principal, PAS sur l'origine courante. Ce composant est servi depuis
+  // admin.socialapp.work, qui n'a pas de route publique /form/:id ; seul le
+  // domaine principal (socialapp.work) l'a. window.location.origin renvoyait
+  // donc un lien mort qui retombait sur le dashboard admin.
+  const baseUrl = useMemo(() => {
+    const { protocol, host } = window.location;
+    const publicHost = host.startsWith('admin.') ? host.slice('admin.'.length) : host;
+    return `${protocol}//${publicHost}`;
+  }, []);
   const publicUrl = useCallback((id) => `${baseUrl}/form/${id}`, [baseUrl]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -257,6 +265,43 @@ export default function AdminFormsPanel({ profileId }) {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
+      {/* Fixes responsive tablette/mobile : grille qui s'empile, dvh au lieu de vh
+          (Safari iOS), onglets scrollables au lieu de déborder, cibles tactiles
+          agrandies sur écran tactile, inputs à 16px pour éviter le zoom auto iOS. */}
+      <style>{`
+        @media (max-width: 900px) {
+          .afp-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .afp-panel input, .afp-panel textarea { font-size: 16px !important; }
+          .afp-builder-grid { grid-template-columns: 1fr !important; }
+        }
+        .afp-tabbar-scroll {
+          display: flex;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .afp-tabbar-scroll::-webkit-scrollbar { display: none; }
+        .afp-tabbar-scroll button { flex-shrink: 0; }
+        @media (max-width: 560px) {
+          .afp-tabbar { flex-wrap: wrap; }
+          .afp-tabbar-scroll { width: 100%; order: 1; }
+          .afp-actions {
+            margin-left: 0 !important;
+            width: 100%;
+            order: 2;
+            justify-content: flex-end;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 8px !important;
+          }
+        }
+        @media (pointer: coarse) {
+          .afp-icon-btn { width: 40px !important; height: 40px !important; }
+          .afp-swatch { width: 30px !important; height: 30px !important; }
+        }
+      `}</style>
+
       {/* Modal suppression */}
       {confirmDelete && (
         <DeleteConfirmModal
@@ -267,7 +312,7 @@ export default function AdminFormsPanel({ profileId }) {
         />
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="afp-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
         {/* En-tête */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
@@ -295,7 +340,7 @@ export default function AdminFormsPanel({ profileId }) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,300px) 1fr', gap: '16px', alignItems: 'start' }}>
+        <div className="afp-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,300px) 1fr', gap: '16px', alignItems: 'start' }}>
 
           {/* ── Liste + filtres ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -325,8 +370,8 @@ export default function AdminFormsPanel({ profileId }) {
               ))}
             </div>
 
-            {/* Liste des formulaires — Fix #9 : hauteur flexible */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
+            {/* Liste des formulaires — Fix #9 : hauteur flexible, dvh pour Safari iOS */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: 'calc(100dvh - 280px)', overflowY: 'auto' }}>
               {isLoading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}>
                   <Spinner size={18} />
@@ -373,30 +418,33 @@ export default function AdminFormsPanel({ profileId }) {
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', overflow: 'hidden' }}>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '0 14px' }}>
-              {[
-                { key: 'builder',  label: 'Constructeur', icon: FileText  },
-                { key: 'preview',  label: 'Aperçu',       icon: Eye       },
-                { key: 'settings', label: 'Paramètres',   icon: Settings  },
-              ].map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setTab(key)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, border: 'none', borderBottom: '2px solid ' + (tab === key ? '#6366f1' : 'transparent'), background: 'transparent', color: tab === key ? 'white' : 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
-                >
-                  <Icon size={13} /> {label}
-                </button>
-              ))}
+            <div className="afp-tabbar" style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '0 14px' }}>
+              <div className="afp-tabbar-scroll">
+                {[
+                  { key: 'builder',  label: 'Constructeur', icon: FileText  },
+                  { key: 'preview',  label: 'Aperçu',       icon: Eye       },
+                  { key: 'settings', label: 'Paramètres',   icon: Settings  },
+                ].map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setTab(key)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, border: 'none', whiteSpace: 'nowrap', borderBottom: '2px solid ' + (tab === key ? '#6366f1' : 'transparent'), background: 'transparent', color: tab === key ? 'white' : 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                  >
+                    <Icon size={13} /> {label}
+                  </button>
+                ))}
+              </div>
 
               {/* Actions header */}
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0' }}>
+              <div className="afp-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0', flexShrink: 0 }}>
                 {/* Fix #2 : ouvre la modale au lieu de supprimer directement */}
                 {selectedForm && (
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(true)}
                     title="Supprimer ce formulaire"
+                    className="afp-icon-btn"
                     style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                   >
                     <Trash2 size={13} />
@@ -414,13 +462,13 @@ export default function AdminFormsPanel({ profileId }) {
               </div>
             </div>
 
-            {/* Contenu des tabs */}
-            <div style={{ padding: '18px', maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
+            {/* Contenu des tabs — dvh pour Safari iOS */}
+            <div style={{ padding: '18px', maxHeight: 'calc(100dvh - 240px)', overflowY: 'auto' }}>
 
               {/* ─ Builder ─ */}
               {tab === 'builder' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '560px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="afp-builder-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', display: 'block', marginBottom: '5px' }}>Titre *</label>
                       <input
@@ -439,6 +487,7 @@ export default function AdminFormsPanel({ profileId }) {
                             key={c}
                             type="button"
                             onClick={() => setFormData(f => ({ ...f, bg_color: c }))}
+                            className="afp-swatch"
                             style={{ width: '24px', height: '24px', borderRadius: '50%', background: c, border: formData.bg_color === c ? '2px solid white' : '2px solid transparent', cursor: 'pointer' }}
                           />
                         ))}

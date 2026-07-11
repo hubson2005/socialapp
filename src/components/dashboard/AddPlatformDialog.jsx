@@ -251,6 +251,14 @@ const CATEGORY_ORDER = [
   'Business', 'Contact', 'Paiement', 'Autre',
 ];
 
+// Plateformes autorisées en plusieurs exemplaires (numéros différents),
+// avec leur quota max. Toute plateforme absente de cette liste reste
+// limitée à 1 exemplaire (comportement par défaut inchangé).
+const REPEATABLE_LIMITS = {
+  whatsapp: 2,
+  phone: 3,
+};
+
 export default function AddPlatformDialog({ open, onOpenChange, onSelect, existingPlatforms = [] }) {
   const [search, setSearch] = useState('');
 
@@ -258,8 +266,10 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
 
   const filtered = Object.entries(PLATFORMS).filter(([key, p]) => {
     const q = search.toLowerCase();
+    const usedCount = existingPlatforms.filter((pk) => pk === key).length;
+    const limit = REPEATABLE_LIMITS[key] ?? 1;
     return (
-      !existingPlatforms.includes(key) &&
+      usedCount < limit &&
       (p.label.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
     );
   });
@@ -338,4 +348,3 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
     </div>
   );
 }
-

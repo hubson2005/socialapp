@@ -36,6 +36,7 @@ import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels";
 import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
 import { subscribeToPush, ensurePushSubscription } from '../lib/push';
+import NotificationBell from "@/components/dashboard/NotificationBell";
 
 // ── Imports optionnels ──────────────────────────────────────────────────────
 // ⚠️ FIX: require() ne fonctionne pas avec Vite (ESM) — il levait une
@@ -1105,6 +1106,10 @@ export default function Dashboard() {
             <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', color:'rgba(255,255,255,0.9)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Eye size={13}/>{!isMobile && t('preview')}
             </button>
+            {/* 🔔 NotificationBell : notifications DB (ex: "Nouvel utilisateur
+                inscrit"), distinctes du bouton push ci-dessous qui ne gère
+                que l'abonnement aux notifications navigateur. */}
+            <NotificationBell />
             <div ref={notifPanelRef} style={{ position:'relative' }}>
               <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(0,0,0,0.25)':'rgba(0,0,0,0.2)', border:'1px solid '+(notifGranted?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.3)'), borderRadius:'9px', cursor:'pointer' }}>
                 {notifGranted ? <Bell size={14} color="#fff"/> : <BellOff size={14} color="rgba(255,255,255,0.7)"/>}

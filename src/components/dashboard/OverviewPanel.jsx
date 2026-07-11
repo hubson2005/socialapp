@@ -129,7 +129,24 @@ export default function OverviewPanel({
         </div>
 
         {/* QR Code */}
-        <div><QRCodeDisplay profileId={profile?.id} username={profile?.username}/></div>
+        {/* [FIX Q-ACTIVATION] isActivated transmis à QRCodeDisplay : tant que
+            le compte n'est pas activé (verrou anti-squattage de username
+            avant paiement), le username local n'est pas encore celui stocké
+            en base — générer le QR ici encoderait un lien qui répond
+            "Profil introuvable" une fois scanné. QRCodeDisplay affiche
+            désormais un état "en attente d'activation" dans ce cas plutôt
+            que de rendre un QR mort. userLogo/onNavigate ajoutés au passage
+            pour que le logo du profil et la redirection vers "Configurer
+            mon profil" (cas username manquant) fonctionnent aussi ici. */}
+        <div>
+          <QRCodeDisplay
+            profileId={profile?.id}
+            username={profile?.username}
+            userLogo={profile?.avatar_url}
+            isActivated={isActivated}
+            onNavigate={onNavigate}
+          />
+        </div>
 
         {/* Stats */}
         <div>

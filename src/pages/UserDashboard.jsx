@@ -408,6 +408,25 @@ export default function UserDashboard() {
     const sanitized = localProfile.username
       ? localProfile.username.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
       : null;
+
+    // [FIX Q-ACTIVATION] Le username n'est persisté en base que si le compte
+    // est activé (verrou anti-squattage de username avant paiement,
+    // intentionnel — cf. handleCreateProfile : is_activated démarre à false,
+    // activation manuelle depuis l'admin dashboard une fois le paiement
+    // confirmé). Avant ce fix, toute tentative de changer/définir le
+    // username avant activation était silencieusement ignorée à la
+    // sauvegarde : le QR affiché (basé sur le state local, voir
+    // QRCodeDisplay) encodait un lien qui n'existait pas en base, d'où
+    // "Profil introuvable" au scan sans que l'utilisateur comprenne
+    // pourquoi. On compare à la valeur RÉELLEMENT en base (la query
+    // `profiles`, pas le state local mutable) pour n'avertir que si un
+    // changement de username va effectivement être ignoré.
+    const serverProfile = profiles.find(p => p.id === localProfile.id);
+    const usernameWillBeIgnored = !isActivated && sanitized && sanitized !== (serverProfile?.username || null);
+    if (usernameWillBeIgnored) {
+      toast.warning("Nom d'utilisateur non enregistré : le compte doit d'abord être activé. Le QR code restera inactif jusqu'à l'activation.");
+    }
+
     const rawMedias = localProfile.event_images || (localProfile.event_image_url ? [localProfile.event_image_url] : []);
     const eventImagesArray = rawMedias.map(m => typeof m === 'string' ? m : m?.url).filter(Boolean);
     updateMutation.mutate({ id: localProfile.id, data: {

@@ -12,6 +12,20 @@ const sanitizeFileName = (value) =>
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-_]/g, '');
 
+// [FIX] Même règle de sanitisation que `handleSave` dans UserDashboard.jsx
+// (minuscules, accents retirés, espaces → tirets, caractères interdits
+// supprimés). Le champ username peut être modifié en direct dans
+// OverviewPanel sans passer par cette sanitisation avant la sauvegarde —
+// sans ce garde-fou ici, le QR pouvait encoder une valeur (casse, accent,
+// espace) différente de celle réellement stockée en base, et le scan
+// tombait alors sur "Profil introuvable" côté PublicProfile.jsx.
+const sanitizeUsername = (value) =>
+  (value || '').toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+
 // ─── Options de personnalisation ──────────────────────────────────────────────
 const DOT_STYLES = [
   { id: 'classy',         label: 'Classique'  },
@@ -86,7 +100,16 @@ function isLight(hex) {
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
-export default function QRCodeDisplay({ profileId, username, userLogo, isActive, onNavigate }) {
+// [FIX Q-ACTIVATION] Ajout de la prop `isActivated`. Le username n'est
+// persisté en base (voir handleSave dans UserDashboard.jsx) que si le
+// compte est activé — c'est un verrou anti-squattage de username avant
+// paiement, intentionnel et à conserver. Mais tant que le compte n'est
+// pas activé, `username` reçu ici (state local du dashboard) ne
+// correspond à RIEN en base : le QR généré encoderait donc un lien mort,
+// qui affiche "Profil introuvable" une fois scanné. On bloque désormais
+// l'affichage du QR dans ce cas précis, avec un message explicite, plutôt
+// que de laisser l'utilisateur partager un lien qui ne fonctionnera pas.
+export default function QRCodeDisplay({ profileId, username, userLogo, isActive, isActivated, onNavigate }) {
   const containerRef    = useRef(null);
   const qrInstanceRef   = useRef(null);
   const scriptLoadedRef = useRef(false);
@@ -157,7 +180,48 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
     );
   }
 
-  const profileUrl = `${BASE_URL}/${username}`;
+  // [FIX Q-ACTIVATION] GUARD : compte non activé → le username local n'est
+  // pas encore celui stocké en base (verrou anti-squattage avant paiement,
+  // voir handleSave). Générer le QR ici encoderait un lien qui répondra
+  // "Profil introuvable" au scan tant que le compte n'est pas activé.
+  if (isActivated === false) {
+    return (
+      <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
+        <div style={{
+          background:'rgba(255,255,255,0.05)',
+          border:'1px solid rgba(239,68,68,0.3)',
+          borderRadius:'20px',
+          padding:'24px 18px',
+          display:'flex',
+          flexDirection:'column',
+          alignItems:'center',
+          gap:'14px',
+          textAlign:'center',
+        }}>
+          <div style={{
+            width:'48px', height:'48px', borderRadius:'14px',
+            background:'rgba(239,68,68,0.12)',
+            border:'1px solid rgba(239,68,68,0.3)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <AlertTriangle size={22} color="#f87171" />
+          </div>
+          <div>
+            <p style={{ color:'white', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
+              Compte en attente d'activation
+            </p>
+            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', margin:0, lineHeight:1.6 }}>
+              Votre QR code sera généré une fois le paiement confirmé et votre compte activé. Le nom d'utilisateur choisi est réservé jusque-là.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // [FIX] Toujours sanitiser le username avant de construire le lien encodé
+  // dans le QR — voir le commentaire sur `sanitizeUsername` ci-dessus.
+  const profileUrl = `${BASE_URL}/${sanitizeUsername(username)}`;
   const LS_KEY     = `qr_config_${profileId}`;
 
   const upd = (key, val) => setCustomization(c => ({ ...c, [key]: val }));

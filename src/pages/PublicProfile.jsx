@@ -18,7 +18,7 @@
  *  [A2]  triggerQrScan() appelé dans le useEffect QR scan (après l'insert profile_stats)
  *  [A3]  triggerMarketplaceBuy() appelé dans ProductDetailModal sur "Commander sur WhatsApp"
  *
- * CORRECTIONS ADAPTATION MOBILE/TABLETTE/iOS/ANDROID (cette révision) :
+ * CORRECTIONS ADAPTATION MOBILE/TABLETTE/iOS/ANDROID (révision précédente) :
  *  [F1]  Verrouillage du scroll dupliqué entre ImageLightbox et ProductDetailModal
  *        → mutualisé dans un hook unique useBodyScrollLock() avec compteur global
  *        et pattern iOS-safe (position:fixed + restauration du scrollY). Supprime
@@ -67,6 +67,19 @@
  *  [F14] Vérification doublons : aucune règle CSS dupliquée résiduelle après
  *        cette relecture ; le seul doublon réel trouvé était la logique de
  *        verrouillage de scroll (voir [F1]), désormais mutualisée.
+ *
+ * CORRECTION QR / LIEN PUBLIC (cette révision) :
+ *  [Q1]  Lookup du profil passé de `.eq('username', username)` (comparaison
+ *        exacte, sensible à la casse) à `.ilike('username', username)`
+ *        (comparaison insensible à la casse). Le username affiché/édité
+ *        côté dashboard n'est sanitisé (minuscules, accents retirés,
+ *        espaces → tirets) qu'au moment de la sauvegarde — si le lien
+ *        partagé/scanné (QR, copier-coller, saisie manuelle) diverge ne
+ *        serait-ce que par la casse de ce qui est stocké en base, le
+ *        lookup exact échouait et affichait "Profil introuvable" alors
+ *        que le profil existe bel et bien. `.ilike` sans caractères
+ *        joker (%) reste une comparaison exacte hors casse — aucun risque
+ *        de faux positif entre deux usernames différents.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -516,10 +529,15 @@ export default function PublicProfile() {
   // ── Chargement initial ───────────────────────────────────────
   useEffect(() => {
     const init = async () => {
+      // [Q1] `.ilike` au lieu de `.eq` — lookup insensible à la casse.
+      // Sans caractères joker (%), c'est toujours une comparaison exacte
+      // du username, juste sans distinction majuscule/minuscule. Corrige
+      // le cas où le lien encodé dans le QR (ou saisi/partagé) diffère
+      // par la casse de ce qui est stocké en base.
       const { data, error } = await supabase
         .from('link_profiles')
         .select('*')
-        .eq('username', username)
+        .ilike('username', username)
         .maybeSingle();
 
       if (!isMounted.current) return; // [C8]

@@ -5,8 +5,8 @@ const CORE_ASSETS = [
   '/',
   '/manifest.json',
   '/Logo_SocialApp.png',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -48,7 +48,13 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(async () => {
+        const cached = await caches.match(request);
+        // Si ni le réseau ni le cache n'ont de réponse, on renvoie une
+        // Response explicite (sinon respondWith(undefined) plante avec
+        // "Failed to convert value to 'Response'").
+        return cached || new Response('Hors ligne', { status: 503, statusText: 'Offline' });
+      })
   );
 });
 

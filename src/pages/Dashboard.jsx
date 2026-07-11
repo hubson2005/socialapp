@@ -36,7 +36,7 @@ import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels";
 import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
 import { subscribeToPush, ensurePushSubscription } from '../lib/push';
-import NotificationBell from "@/components/dashboard/NotificationBell";
+import NotificationBell from "@/pages/NotificationBell";
 
 // ── Imports optionnels ──────────────────────────────────────────────────────
 // ⚠️ FIX: require() ne fonctionne pas avec Vite (ESM) — il levait une

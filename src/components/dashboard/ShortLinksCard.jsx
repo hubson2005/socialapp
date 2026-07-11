@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link2, Plus, Copy, Check, ExternalLink, Trash2, Loader2, Shuffle, Lock, MousePointerClick } from 'lucide-react';
+import { Link2, Plus, Copy, Check, ExternalLink, Trash2, Loader2, Shuffle, Lock, MousePointerClick, BarChart2, ChevronDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
+import { SHORTLINK_BASE_URL } from '../../hooks/shortlinkConfig';
+import ShortLinkResultDisplay from './ShortLinkResultDisplay';
 
 // Alphabet sans caractères ambigus (pas de 0/O, 1/l/I) — plus lisible sur un
 // flyer ou une affiche imprimée où le raccourci est retapé à la main.
@@ -31,6 +33,37 @@ const db = {
     if (error) throw error;
     return { id };
   },
+  clickEvents: async (shortlinkId, sinceDays = 14) => {
+    const since = new Date(Date.now() - sinceDays * 86400000).toISOString();
+    const { data, error } = await supabase
+      .from('shortlink_clicks').select('clicked_at, referrer')
+      .eq('shortlink_id', shortlinkId)
+      .gte('clicked_at', since);
+    if (error) throw error;
+    return data || [];
+  },
+};
+
+// Regroupe les événements bruts en points quotidiens pour le sparkline, et
+// calcule la source la plus fréquente (domaine du referrer, "Direct" si vide).
+const summarizeClickEvents = (events, days = 14) => {
+  const buckets = Array.from({ length: days }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (days - 1 - i)); d.setHours(0, 0, 0, 0);
+    return { date: d, count: 0 };
+  });
+  const refCounts = {};
+  events.forEach(ev => {
+    const t = new Date(ev.clicked_at); t.setHours(0, 0, 0, 0);
+    const bucket = buckets.find(b => b.date.getTime() === t.getTime());
+    if (bucket) bucket.count += 1;
+    let source = 'Direct';
+    if (ev.referrer) {
+      try { source = new URL(ev.referrer).hostname.replace(/^www\./, ''); } catch { source = 'Direct'; }
+    }
+    refCounts[source] = (refCounts[source] || 0) + 1;
+  });
+  const topSource = Object.entries(refCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  return { buckets, topSource, total: events.length };
 };
 
 const isUniqueViolation = (err) => err?.code === '23505' || /duplicate key/i.test(err?.message || '');
@@ -92,9 +125,56 @@ function SkeletonRow() {
   );
 }
 
+function Sparkline({ buckets }) {
+  const max = Math.max(1, ...buckets.map(b => b.count));
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '32px' }}>
+      {buckets.map((b, i) => (
+        <div key={i} title={`${b.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} — ${b.count} clic(s)`}
+          style={{
+            flex: 1, minWidth: '3px', borderRadius: '2px',
+            height: `${Math.max(3, (b.count / max) * 32)}px`,
+            background: b.count > 0 ? 'linear-gradient(180deg,#a78bfa,#6366f1)' : 'rgba(255,255,255,0.08)',
+          }} />
+      ))}
+    </div>
+  );
+}
+
+function AnalyticsPanel({ linkId }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['shortlink-clicks', linkId],
+    queryFn: () => db.clickEvents(linkId, 14),
+  });
+  const summary = useMemo(() => summarizeClickEvents(data || [], 14), [data]);
+
+  if (isLoading) {
+    return <div style={{ padding: '10px 2px', color: 'rgba(255,255,255,0.3)', fontSize: '11px' }}>Chargement des statistiques…</div>;
+  }
+
+  if (summary.total === 0) {
+    return <div style={{ padding: '10px 2px', color: 'rgba(255,255,255,0.3)', fontSize: '11px' }}>Aucun clic sur les 14 derniers jours</div>;
+  }
+
+  return (
+    <div style={{ padding: '10px 2px 4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <Sparkline buckets={summary.buckets} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px' }}>14 derniers jours</span>
+        {summary.topSource && (
+          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10.5px' }}>
+            Principale source : <strong style={{ color: '#c4b5fd' }}>{summary.topSource}</strong>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LinkRow({ link, domain, onDelete, deleting }) {
-  const [copied, setCopied] = useState(false);
-  const shortUrl = `${domain}/s/${link.slug}`;
+  const [copied, setCopied]   = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const shortUrl = `${domain}/${link.slug}`;
   const hue = useMemo(() => badgeColor(link.slug), [link.slug]);
 
   const handleCopy = () => {
@@ -110,55 +190,64 @@ function LinkRow({ link, domain, onDelete, deleting }) {
   };
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '10px 10px 10px 12px',
-    }}>
-      <div style={{
-        width: '32px', height: '32px', borderRadius: '9px', flexShrink: 0,
-        background: `${hue}22`, border: `1px solid ${hue}55`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: hue, fontSize: '13px', fontWeight: 800, textTransform: 'uppercase',
-      }}>
-        {link.slug.charAt(0)}
+    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 10px 10px 12px' }}>
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '9px', flexShrink: 0,
+          background: `${hue}22`, border: `1px solid ${hue}55`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: hue, fontSize: '13px', fontWeight: 800, textTransform: 'uppercase',
+        }}>
+          {link.slug.charAt(0)}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px', overflow: 'hidden' }}>
+            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12.5px', flexShrink: 0 }}>{domain.replace(/^https?:\/\//, '')}/</span>
+            <span style={{ color: 'white', fontSize: '12.5px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.slug}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'rgba(255,255,255,0.3)', fontSize: '10.5px' }}>
+              <MousePointerClick size={10} /> {link.clicks || 0}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '10.5px' }}>·</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10.5px' }}>{relativeTime(link.created_at)}</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+          <button onClick={() => setExpanded(v => !v)} title="Statistiques" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: expanded ? 'rgba(139,92,246,0.15)' : 'none', border: 'none', borderRadius: '8px', color: expanded ? '#a78bfa' : 'rgba(255,255,255,0.45)', cursor: 'pointer' }}>
+            {expanded ? <ChevronDown size={14} /> : <BarChart2 size={13} />}
+          </button>
+          <button onClick={handleCopy} title="Copier" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: copied ? 'rgba(34,197,94,0.15)' : 'none', border: 'none', borderRadius: '8px', color: copied ? '#4ade80' : 'rgba(255,255,255,0.45)', cursor: 'pointer', transition: 'background 0.15s' }}>
+            {copied ? <Check size={14} /> : <Copy size={13} />}
+          </button>
+          <a href={shortUrl} target="_blank" rel="noopener noreferrer" title="Ouvrir" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.45)', borderRadius: '8px' }}>
+            <ExternalLink size={13} />
+          </a>
+          <button onClick={onDelete} disabled={deleting} title="Supprimer" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: '8px', color: 'rgba(248,113,113,0.7)', cursor: 'pointer' }}>
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px', overflow: 'hidden' }}>
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12.5px', flexShrink: 0 }}>{domain.replace(/^https?:\/\//, '')}/s/</span>
-          <span style={{ color: 'white', fontSize: '12.5px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.slug}</span>
+      {expanded && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0 12px' }}>
+          <AnalyticsPanel linkId={link.id} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'rgba(255,255,255,0.3)', fontSize: '10.5px' }}>
-            <MousePointerClick size={10} /> {link.clicks || 0}
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '10.5px' }}>·</span>
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10.5px' }}>{relativeTime(link.created_at)}</span>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-        <button onClick={handleCopy} title="Copier" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: copied ? 'rgba(34,197,94,0.15)' : 'none', border: 'none', borderRadius: '8px', color: copied ? '#4ade80' : 'rgba(255,255,255,0.45)', cursor: 'pointer', transition: 'background 0.15s' }}>
-          {copied ? <Check size={14} /> : <Copy size={13} />}
-        </button>
-        <a href={shortUrl} target="_blank" rel="noopener noreferrer" title="Ouvrir" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.45)', borderRadius: '8px' }}>
-          <ExternalLink size={13} />
-        </a>
-        <button onClick={onDelete} disabled={deleting} title="Supprimer" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: '8px', color: 'rgba(248,113,113,0.7)', cursor: 'pointer' }}>
-          <Trash2 size={13} />
-        </button>
-      </div>
+      )}
     </div>
   );
 }
 
-export default function ShortLinksCard({ profileId, isActivated }) {
+export default function ShortLinksCard({ profileId, isActivated, profileUsername }) {
   const queryClient = useQueryClient();
   const [customSlug, setCustomSlug] = useState('');
   const [creating, setCreating]     = useState(false);
   const [focused, setFocused]       = useState(false);
+  const [justCreated, setJustCreated] = useState(null);
 
-  const domain = typeof window !== 'undefined' ? window.location.origin : 'socialapp.work';
+  const domain = SHORTLINK_BASE_URL;
 
   const { data: links = [], isLoading } = useQuery({
     queryKey: ['shortlinks', profileId],
@@ -203,6 +292,7 @@ export default function ShortLinksCard({ profileId, isActivated }) {
       if (!created) throw new Error('Impossible de générer un raccourci disponible, réessayez');
       queryClient.invalidateQueries({ queryKey: ['shortlinks', profileId] });
       setCustomSlug('');
+      setJustCreated(created);
       toast.success('Raccourci créé !');
     } catch (err) {
       toast.error('Erreur : ' + err.message);
@@ -249,7 +339,7 @@ export default function ShortLinksCard({ profileId, isActivated }) {
       {/* Création — préfixe domaine visible façon "bit.ly/" pour ancrer le contexte */}
       <div style={{ display: 'flex', gap: '7px', marginBottom: '14px' }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: focused ? 'rgba(139,92,246,0.08)' : 'rgba(255,255,255,0.05)', border: '1px solid ' + (focused ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.09)'), borderRadius: '10px', padding: '0 10px', transition: 'background 0.15s ease, border-color 0.15s ease' }}>
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', whiteSpace: 'nowrap' }}>{domain.replace(/^https?:\/\//, '')}/s/</span>
+          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', whiteSpace: 'nowrap' }}>{domain.replace(/^https?:\/\//, '')}/</span>
           <input
             type="text"
             value={customSlug}
@@ -279,6 +369,24 @@ export default function ShortLinksCard({ profileId, isActivated }) {
           <Shuffle size={13} />
         </button>
       </div>
+
+      {/* Confirmation forte après création — remplace le simple toast par un
+          affichage façon urls.fr, avec le lien d'origine pour contexte. */}
+      {justCreated && (
+        <div style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '14px', padding: '12px', marginBottom: '14px', position: 'relative' }}>
+          <button
+            onClick={() => setJustCreated(null)}
+            title="Fermer"
+            style={{ position: 'absolute', top: '8px', right: '8px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer' }}
+          >
+            <X size={13} />
+          </button>
+          <ShortLinkResultDisplay
+            originalUrl={profileUsername ? `${window.location.origin}/${profileUsername}` : window.location.origin}
+            shortUrl={`${SHORTLINK_BASE_URL}/${justCreated.slug}`}
+          />
+        </div>
+      )}
 
       {/* Liste des raccourcis existants */}
       {isLoading ? (

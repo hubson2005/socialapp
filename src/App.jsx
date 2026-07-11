@@ -27,6 +27,17 @@ const isAdminDomain = () => {
   );
 };
 
+// Sous-domaine dédié aux raccourcis de lien (lien.socialapp.work) — gratuit,
+// pas d'achat de domaine, juste un CNAME. Sur ce sous-domaine, le slug vit
+// directement à la racine (lien.socialapp.work/xxx), sans préfixe /s/.
+const isShortlinkDomain = () => {
+  const hostname = window.location.hostname;
+  return (
+    hostname === "lien.socialapp.work" ||
+    import.meta.env.VITE_FORCE_SHORTLINK === "true"
+  );
+};
+
 function AdminApp() {
   return (
     <Routes>
@@ -57,6 +68,23 @@ function AdminApp() {
       />
       <Route path="/"  element={<Navigate to="/dashboard" replace />} />
       <Route path="*"  element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
+// App dédiée au sous-domaine lien.socialapp.work — un seul job : résoudre le
+// slug en racine et rediriger. Tout le reste renvoie vers le domaine principal
+// plutôt que d'essayer d'afficher Home/PublicProfile sur ce sous-domaine.
+function ShortlinkApp() {
+  return (
+    <Routes>
+      <Route path="/:slug" element={<ShortLinkRedirect />} />
+      <Route
+        path="*"
+        element={
+          <Navigate to={`https://www.socialapp.work${window.location.pathname}`} replace={false} />
+        }
+      />
     </Routes>
   );
 }
@@ -109,9 +137,16 @@ function PublicApp() {
           par le catch-all et redirigée vers la home. */}
       <Route path="/form/:formId" element={<PublicForm />} />
 
+      {/* ✅ FIX BUG CRITIQUE : /s/:slug était déclarée APRÈS le catch-all "*"
+          ci-dessous — en React Router, l'ordre de déclaration fait foi, donc
+          cette route n'était JAMAIS atteinte. Tout raccourci /s/xxx tombait
+          silencieusement sur la redirection "*" vers "/". Remontée ici,
+          avant "/:username" et "*", pour rester joignable en secours même
+          si le sous-domaine lien.socialapp.work n'est pas encore propagé. */}
+      <Route path="/s/:slug" element={<ShortLinkRedirect />} />
+
       <Route path="/:username" element={<PublicProfile />} />
       <Route path="*"          element={<Navigate to="/" replace />} />
-      <Route path="/s/:slug" element={<ShortLinkRedirect />} />
     </Routes>
   );
 }
@@ -153,7 +188,8 @@ function RoleBasedDashboard() {
 export default function App() {
   return (
     <AuthProvider>
-      {isAdminDomain() ? <AdminApp /> : <PublicApp />}
+      {isAdminDomain() ? <AdminApp /> : isShortlinkDomain() ? <ShortlinkApp /> : <PublicApp />}
     </AuthProvider>
   );
 }
+

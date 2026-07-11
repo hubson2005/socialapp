@@ -168,8 +168,10 @@ export default function OverviewPanel({
         </div>
       </div>
 
-      {/* Raccourcis de lien — personnalisation + alias vers le profil public */}
-      <ShortLinksCard profileId={profile?.id} isActivated={isActivated} />
+      {/* Raccourcis de lien — personnalisation + alias vers le profil public.
+          profileUsername transmis pour que ShortLinksCard puisse afficher le
+          lien d'origine (profil public) dans la confirmation post-création. */}
+      <ShortLinksCard profileId={profile?.id} isActivated={isActivated} profileUsername={profile?.username} />
       {/* FIX OPACITÉ — les cartes utilisaient un fond quasi transparent
           (a.color+'14' = ~8% d'opacité, bordure +'33' = ~20%), ce qui les
           rendait trop translucides sur le fond sombre du dashboard. On
@@ -205,3 +207,4 @@ export default function OverviewPanel({
     </div>
   );
 }
+

@@ -281,12 +281,6 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     deleteMutation.mutate(selectedForm.id);
   };
 
-  // Bascule directe actif <-> inactif. Un formulaire encore "brouillon" (jamais publié)
-  // passe à "actif" au premier clic.
-  const handleToggleStatus = () => {
-    setFormData({ ...formData, status: formData.status === 'actif' ? 'inactif' : 'actif' });
-  };
-
   const handleBannerUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -730,68 +724,44 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px' }}>
                 <div>
                   <label style={labelStyle}>Statut</label>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-                    padding: '13px 15px',
-                    background: formData.status === 'actif' ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.03)',
-                    border: '1px solid ' + (formData.status === 'actif' ? 'rgba(52,211,153,0.22)' : 'rgba(255,255,255,0.08)'),
-                    borderRadius: '13px',
-                    transition: 'background 0.15s ease, border-color 0.15s ease',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-                      <span style={{
-                        width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-                        background: formData.status === 'actif' ? '#34d399' : formData.status === 'inactif' ? '#f87171' : 'rgba(255,255,255,0.35)',
-                        boxShadow: formData.status === 'actif' ? '0 0 0 4px rgba(52,211,153,0.14)' : 'none',
-                        transition: 'background 0.15s ease',
-                      }} />
-                      <div>
-                        <p style={{ color: 'white', fontSize: '12.5px', fontWeight: 700, margin: 0 }}>
-                          {formData.status === 'actif' ? 'Formulaire actif' : formData.status === 'inactif' ? 'Formulaire inactif' : 'Formulaire en brouillon'}
-                        </p>
-                        <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '10.5px', margin: '2px 0 0' }}>
-                          {formData.status === 'actif' ? 'Le lien public est accessible' : 'Le lien public est désactivé'}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleToggleStatus}
-                      role="switch"
-                      aria-checked={formData.status === 'actif'}
-                      title={formData.status === 'actif' ? 'Désactiver le formulaire' : 'Activer le formulaire'}
-                      style={{
-                        width: '42px', height: '24px', borderRadius: '100px', flexShrink: 0,
-                        border: 'none', cursor: 'pointer', position: 'relative', padding: 0,
-                        background: formData.status === 'actif' ? '#34d399' : 'rgba(255,255,255,0.16)',
-                        transition: 'background 0.15s ease',
-                      }}
-                    >
-                      <span style={{
-                        position: 'absolute', top: '3px',
-                        left: formData.status === 'actif' ? '21px' : '3px',
-                        width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                        transition: 'left 0.15s ease',
-                      }} />
-                    </button>
+                  {/* 3 boutons-interrupteurs indépendants : chacun est son propre bouton
+                      (pas une carte + toggle séparé). Cliquer sur un bouton active CE
+                      statut et désactive automatiquement les deux autres (un seul champ
+                      `status` en base) — visuellement, seul le bouton actif est rempli
+                      de sa couleur avec une coche, les deux autres restent neutres. */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {['brouillon', 'actif', 'inactif'].map(s => {
+                      const active = formData.status === s;
+                      const style = STATUS_STYLES[s];
+                      const labelText = s.charAt(0).toUpperCase() + s.slice(1);
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => setFormData({ ...formData, status: s })}
+                          role="switch"
+                          aria-checked={active}
+                          title={active ? `${labelText} activé` : `Activer « ${labelText} »`}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '9px 16px',
+                            background: active ? style.color : 'rgba(255,255,255,0.05)',
+                            border: '1px solid ' + (active ? style.color : 'rgba(255,255,255,0.1)'),
+                            borderRadius: '100px',
+                            color: active ? '#08110c' : 'rgba(255,255,255,0.45)',
+                            fontSize: '12px', fontWeight: 700,
+                            cursor: active ? 'default' : 'pointer',
+                            transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+                          }}
+                        >
+                          {active && <Check size={12} strokeWidth={3} />}
+                          {labelText}
+                        </button>
+                      );
+                    })}
                   </div>
-                  {/* Les 3 statuts restent accessibles : une fois sorti de "brouillon", l'interrupteur
-                      ne gère plus qu'actif/inactif (le cas courant) — ce lien permet d'y revenir
-                      explicitement, par exemple pour retirer temporairement un formulaire de la vue
-                      "actif/inactif" sans le classer comme délibérément désactivé. */}
-                  {formData.status !== 'brouillon' && (
-                    <button
-                      onClick={() => setFormData({ ...formData, status: 'brouillon' })}
-                      style={{
-                        background: 'none', border: 'none', color: 'rgba(255,255,255,0.32)',
-                        fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '2px 0',
-                        marginTop: '9px', display: 'block',
-                        textAlign: 'left', textDecoration: 'underline', textUnderlineOffset: '2px',
-                      }}
-                    >
-                      Repasser en brouillon
-                    </button>
-                  )}
+                  <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '10.5px', margin: '8px 0 0' }}>
+                    {formData.status === 'actif' ? 'Le lien public est accessible.' : 'Le lien public est désactivé.'}
+                  </p>
                 </div>
 
                 <div>

@@ -67,8 +67,8 @@ export default function OverviewPanel({
       {/* Top 3-column grid */}
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr':'repeat(3,1fr)', gap:'16px', alignItems:'start' }}>
 
-        {/* Profile card */}
-        <div style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px', overflow:'hidden' }}>
+        {/* Profile card — fond bleu nuit foncé opaque, cohérent avec la charte midnight blue */}
+        <div style={{ background:'linear-gradient(180deg,#0d1330,#0a0f24)', border:'1px solid rgba(99,102,241,0.25)', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 20px rgba(0,0,0,0.35)' }}>
           <ProfileHeader profile={profile} onUpdate={onUpdate}/>
 
           {/* Bloc méta compact — username + badge sur une ligne, expiry + statut sur l'autre */}

@@ -43,6 +43,7 @@ import FormsPanel from "@/components/forms/FormsPanel";
 import NotificationBell from './NotificationBell';
 import WaveModal from "@/components/dashboard/WaveModal";
 import FeatureUpgradeModal from "@/components/dashboard/FeatureUpgradeModal";
+import InstallPrompt from "@/components/dashboard/InstallPrompt";
 
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
 class PanelErrorBoundary extends React.Component {
@@ -631,6 +632,11 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
         <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':(isTablet?'20px':'24px'), paddingBottom:isMobile?'calc(100px + env(safe-area-inset-bottom))':'24px' }}>
           <PanelErrorBoundary>
             <div style={{ animation:'fadeIn 0.18s ease' }}>
+              {/* Bannière d'installation PWA — affichée en haut du contenu,
+                  sur toutes les sections, dès la connexion au dashboard. Le
+                  composant gère lui-même sa visibilité (déjà installé,
+                  fermé récemment, plateforme iOS vs Android/desktop). */}
+              <InstallPrompt />
               {renderSection()}
             </div>
           </PanelErrorBoundary>

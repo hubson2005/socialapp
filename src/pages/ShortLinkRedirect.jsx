@@ -33,9 +33,14 @@ export default function ShortLinkRedirect() {
       if (cancelled) return;
       if (profileError || !profile?.username) { setStatus('notfound'); return; }
 
-      // Comptage de clic en best-effort — ne bloque jamais la redirection,
-      // même si l'appel échoue (réseau, RPC indisponible, etc.).
-      supabase.rpc('increment_shortlink_clicks', { p_slug: slug }).then(() => {}).catch(() => {});
+      // Comptage de clic + log analytics (referrer, user-agent) en best-effort
+      // — ne bloque jamais la redirection, même si l'appel échoue (réseau,
+      // RPC indisponible, etc.).
+      supabase.rpc('increment_shortlink_clicks', {
+        p_slug: slug,
+        p_referrer: document.referrer || null,
+        p_user_agent: navigator.userAgent || null,
+      }).then(() => {}).catch(() => {});
 
       navigate(`/${profile.username}`, { replace: true });
     })();
@@ -63,3 +68,4 @@ export default function ShortLinkRedirect() {
     </div>
   );
 }
+

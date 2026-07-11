@@ -40,7 +40,15 @@ export async function notifyOwnerAction({ config, profileId, automation, context
   // ⚠️ Les colonnes doivent correspondre EXACTEMENT au schéma réel de la table `notifications` :
   // id, user_id, title, message, type, is_read, link, created_at
   // (il n'y a PAS de colonne `profile_id`, et la colonne s'appelle `is_read`, pas `read`)
-  const { data, error } = await supabase
+  //
+  // ⚠️ IMPORTANT : pas de .select() après l'insert.
+  // L'appelant (visiteur anonyme ou utilisateur authentifié différent du
+  // propriétaire) n'a pas le droit de RELIRE la notification qu'il vient
+  // de créer (policy SELECT : auth.uid() = user_id). Or `.insert().select()`
+  // génère un seul `INSERT ... RETURNING *` côté PostgREST : si le RETURNING
+  // échoue à cause du RLS, TOUT l'insert est annulé — la ligne n'est jamais
+  // écrite, sans qu'aucune erreur claire ne remonte facilement.
+  const { error } = await supabase
     .from('notifications')
     .insert({
       user_id: profile.user_id,
@@ -48,9 +56,7 @@ export async function notifyOwnerAction({ config, profileId, automation, context
       title,
       message,
       is_read: false,
-    })
-    .select()
-    .maybeSingle();
+    });
 
   if (error) {
     // Erreur remontée clairement au lieu d'être avalée silencieusement
@@ -59,5 +65,5 @@ export async function notifyOwnerAction({ config, profileId, automation, context
   }
 
   console.log(`[Action:notifyOwner] Notification créée → user=${profile.user_id}`);
-  return data;
+  return { user_id: profile.user_id };
 }

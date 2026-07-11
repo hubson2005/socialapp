@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link2, Plus, Copy, Check, ExternalLink, Trash2, Loader2, Shuffle, Lock, MousePointerClick, BarChart2, ChevronDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
-import { SHORTLINK_BASE_URL } from '../../hooks/shortlinkConfig';
+import { SHORTLINK_BASE_URL } from '../../hooks/ShortlinkConfig';
 import ShortLinkResultDisplay from './ShortLinkResultDisplay';
 
 // Alphabet sans caractères ambigus (pas de 0/O, 1/l/I) — plus lisible sur un

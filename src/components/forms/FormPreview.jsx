@@ -46,6 +46,23 @@ function RequiredMark() {
   return <span style={{ color: '#f87171', marginLeft: '4px' }}>*</span>;
 }
 
+// ─── Bannière façon Google Forms, en tête de carte. Remplace la fine barre de
+// couleur quand une bannière est définie ; sinon on retombe sur la barre `bg_color`.
+function FormBanner({ bannerUrl, bgColor }) {
+  if (bannerUrl) {
+    return (
+      <div style={{ width: '100%', aspectRatio: '4 / 1', overflow: 'hidden', background: 'rgba(0,0,0,0.25)' }}>
+        <img
+          src={bannerUrl}
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </div>
+    );
+  }
+  return <div style={{ height: '4px', background: bgColor || '#F97316' }} />;
+}
+
 // ─── Rendu d'un champ individuel (lecture / test) ──────────────────────────
 function PreviewField({ field, value, onChange }) {
   const meta = typeMeta(field.type);
@@ -218,7 +235,7 @@ function PreviewField({ field, value, onChange }) {
 }
 
 // ─── FormPreview principal ──────────────────────────────────────────────────
-// `form`  : { title, description, fields, bg_color, thank_you_message, redirect_url }
+// `form`  : { title, description, fields, bg_color, banner_url, thank_you_message, redirect_url }
 // `mode`  : 'preview' (dans l'éditeur, non soumissible) | 'public' (formulaire réel, soumissible)
 // `onSubmit` : callback appelé avec les valeurs, uniquement utile en mode 'public'
 export default function FormPreview({ form, mode = 'preview', onSubmit }) {
@@ -247,18 +264,21 @@ export default function FormPreview({ form, mode = 'preview', onSubmit }) {
     return (
       <div className="fp-preview" style={{
         background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '18px', padding: '40px 22px', textAlign: 'center',
+        borderRadius: '18px', overflow: 'hidden', textAlign: 'center',
       }}>
         <GlobalStyles />
-        <div style={{
-          width: '40px', height: '40px', borderRadius: '50%', margin: '0 auto 14px',
-          background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Check size={19} color="#22c55e" strokeWidth={2.5} />
+        <FormBanner bannerUrl={form?.banner_url} bgColor={form?.bg_color} />
+        <div style={{ padding: '40px 22px' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '50%', margin: '0 auto 14px',
+            background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Check size={19} color="#22c55e" strokeWidth={2.5} />
+          </div>
+          <p style={{ color: 'white', fontSize: '14px', fontWeight: 700, margin: 0 }}>
+            {form.thank_you_message || 'Merci pour votre réponse !'}
+          </p>
         </div>
-        <p style={{ color: 'white', fontSize: '14px', fontWeight: 700, margin: 0 }}>
-          {form.thank_you_message || 'Merci pour votre réponse !'}
-        </p>
       </div>
     );
   }
@@ -271,7 +291,7 @@ export default function FormPreview({ form, mode = 'preview', onSubmit }) {
       boxShadow: '0 12px 28px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.24)',
     }}>
       <GlobalStyles />
-      <div style={{ height: '4px', background: form?.bg_color || '#F97316' }} />
+      <FormBanner bannerUrl={form?.banner_url} bgColor={form?.bg_color} />
 
       <div style={{ padding: '24px 22px' }}>
         <h3 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: '0 0 6px', letterSpacing: '-0.01em' }}>

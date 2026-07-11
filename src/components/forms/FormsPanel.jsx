@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Trash2, FileText, Eye, Copy, ExternalLink, Settings,
-  Loader2, AlertCircle, Check, BarChart3, Inbox, RefreshCcw, Clock3,
+  Loader2, AlertCircle, Check, BarChart3, Inbox, RefreshCcw, Clock3, ImagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
@@ -19,6 +19,10 @@ const BG_COLORS = ['#F97316', '#3B82F6', '#10B981', '#8B5CF6', '#EF4444', '#EC48
 
 const ACCENT_GRADIENT = 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#a855f7 100%)';
 
+// Ratio d'une bannière façon Google Forms (recommandé ~1600×400px)
+const BANNER_RATIO = '4 / 1';
+const MAX_BANNER_SIZE = 3 * 1024 * 1024; // 3 Mo
+
 const emptyForm = (profileId) => ({
   profile_id: profileId,
   title: '',
@@ -26,6 +30,7 @@ const emptyForm = (profileId) => ({
   status: 'brouillon',
   fields: [],
   bg_color: '#F97316',
+  banner_url: '',
   thank_you_message: 'Merci pour votre réponse !',
   redirect_url: '',
 });
@@ -38,6 +43,7 @@ const toFormData = (form) => ({
   status:            form.status            || 'brouillon',
   fields:            form.fields            || [],
   bg_color:          form.bg_color          || '#F97316',
+  banner_url:        form.banner_url        || '',
   thank_you_message: form.thank_you_message || '',
   redirect_url:      form.redirect_url      || '',
 });
@@ -46,6 +52,38 @@ const formatDate = (iso) => {
   try {
     return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   } catch { return iso; }
+};
+
+// Copie robuste : l'API Clipboard moderne échoue silencieusement hors contexte sécurisé
+// (http, iframe sans permission clipboard-write, etc.) — on retombe alors sur execCommand,
+// et en dernier recours on laisse l'utilisateur sélectionner le texte lui-même.
+const copyToClipboard = async (text) => {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      toast.success('Lien copié !');
+      return;
+    }
+    throw new Error('Clipboard API indisponible dans ce contexte');
+  } catch {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (!ok) throw new Error('execCommand a échoué');
+      toast.success('Lien copié !');
+    } catch {
+      toast.error('Copie automatique impossible — sélectionnez le lien et copiez-le manuellement (Ctrl/Cmd+C)');
+    }
+  }
 };
 
 // ─── DB layer (Supabase) ──────────────────────────────────────────────────
@@ -230,6 +268,24 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     deleteMutation.mutate(selectedForm.id);
   };
 
+  // Bascule directe actif <-> inactif. Un formulaire encore "brouillon" (jamais publié)
+  // passe à "actif" au premier clic.
+  const handleToggleStatus = () => {
+    setFormData({ ...formData, status: formData.status === 'actif' ? 'inactif' : 'actif' });
+  };
+
+  const handleBannerUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Veuillez choisir un fichier image'); e.target.value = ''; return; }
+    if (file.size > MAX_BANNER_SIZE) { toast.error('Image trop lourde (3 Mo maximum)'); e.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => setFormData(prev => ({ ...prev, banner_url: reader.result }));
+    reader.onerror = () => toast.error("Erreur lors de la lecture de l'image");
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const publicUrl = (id) => `${window.location.origin}/form/${id}`;
 
   const inputFocusStyle = (key) => focusedField === key
@@ -237,6 +293,15 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
     : {};
 
   const fieldLabelById = (id) => formData.fields.find(f => f.id === id)?.label || id;
+
+  // Sélectionne tout le texte d'un élément au clic (fallback manuel si la copie auto échoue)
+  const selectAllText = (e) => {
+    const range = document.createRange();
+    range.selectNodeContents(e.currentTarget);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
 
   return (
     <div className="fp-panel" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -249,6 +314,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           .fp-panel .fp-icon-delete:hover { background: rgba(239,68,68,0.16) !important; }
           .fp-panel .fp-swatch:hover { transform: scale(1.12); }
           .fp-panel .fp-refresh:hover { border-color: rgba(255,255,255,0.22) !important; }
+          .fp-panel .fp-banner-drop:hover { border-color: rgba(139,92,246,0.4) !important; background: rgba(139,92,246,0.04) !important; }
         }
         @media (max-width: 860px) {
           .fp-panel .fp-grid { grid-template-columns: 1fr !important; }
@@ -571,6 +637,62 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                   />
                 </div>
 
+                {/* Bannière façon Google Forms, affichée en haut du formulaire public */}
+                <div>
+                  <label style={labelStyle}>Bannière (image d'en-tête)</label>
+                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10.5px', margin: '0 0 9px' }}>
+                    Affichée en haut du formulaire. Format recommandé : 1600 × 400px (ratio 4:1).
+                  </p>
+                  {formData.banner_url ? (
+                    <div style={{
+                      position: 'relative', borderRadius: '13px', overflow: 'hidden',
+                      border: '1px solid rgba(255,255,255,0.09)', aspectRatio: BANNER_RATIO,
+                      background: 'rgba(0,0,0,0.2)',
+                    }}>
+                      <img
+                        src={formData.banner_url}
+                        alt="Bannière du formulaire"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                      <button
+                        onClick={() => setFormData({ ...formData, banner_url: '' })}
+                        title="Retirer la bannière"
+                        style={{
+                          position: 'absolute', top: '8px', right: '8px',
+                          width: '27px', height: '27px', borderRadius: '8px',
+                          background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.15)',
+                          color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', backdropFilter: 'blur(4px)',
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      htmlFor="fp-banner-upload"
+                      className="fp-banner-drop"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: '7px', aspectRatio: BANNER_RATIO,
+                        background: 'rgba(255,255,255,0.025)', border: '1.5px dashed rgba(255,255,255,0.14)',
+                        borderRadius: '13px', cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
+                        transition: 'border-color 0.15s ease, background 0.15s ease',
+                      }}
+                    >
+                      <ImagePlus size={18} color="rgba(167,139,250,0.6)" />
+                      <span style={{ fontSize: '11.5px', fontWeight: 600 }}>Ajouter une bannière</span>
+                      <input
+                        id="fp-banner-upload"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleBannerUpload}
+                      />
+                    </label>
+                  )}
+                </div>
+
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px' }}>
                   <p style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: '0 0 11px', letterSpacing: '-0.005em' }}>
                     Champs du formulaire
@@ -595,29 +717,50 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px' }}>
                 <div>
                   <label style={labelStyle}>Statut</label>
-                  <div style={{ display: 'flex', gap: '7px' }}>
-                    {['brouillon', 'actif', 'inactif'].map(s => {
-                      const active = formData.status === s;
-                      const style = STATUS_STYLES[s];
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => setFormData({ ...formData, status: s })}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '8px 14px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 700,
-                            border: '1px solid ' + (active ? style.border : 'rgba(255,255,255,0.09)'),
-                            background: active ? style.bg : 'rgba(255,255,255,0.03)',
-                            color: active ? style.color : 'rgba(255,255,255,0.38)',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          {active && <Check size={11} />}
-                          {s}
-                        </button>
-                      );
-                    })}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                    padding: '13px 15px',
+                    background: formData.status === 'actif' ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: '1px solid ' + (formData.status === 'actif' ? 'rgba(52,211,153,0.22)' : 'rgba(255,255,255,0.08)'),
+                    borderRadius: '13px',
+                    transition: 'background 0.15s ease, border-color 0.15s ease',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                      <span style={{
+                        width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+                        background: formData.status === 'actif' ? '#34d399' : formData.status === 'inactif' ? '#f87171' : 'rgba(255,255,255,0.35)',
+                        boxShadow: formData.status === 'actif' ? '0 0 0 4px rgba(52,211,153,0.14)' : 'none',
+                        transition: 'background 0.15s ease',
+                      }} />
+                      <div>
+                        <p style={{ color: 'white', fontSize: '12.5px', fontWeight: 700, margin: 0 }}>
+                          {formData.status === 'actif' ? 'Formulaire actif' : formData.status === 'inactif' ? 'Formulaire inactif' : 'Formulaire en brouillon'}
+                        </p>
+                        <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '10.5px', margin: '2px 0 0' }}>
+                          {formData.status === 'actif' ? 'Le lien public est accessible' : 'Le lien public est désactivé'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleToggleStatus}
+                      role="switch"
+                      aria-checked={formData.status === 'actif'}
+                      title={formData.status === 'actif' ? 'Désactiver le formulaire' : 'Activer le formulaire'}
+                      style={{
+                        width: '42px', height: '24px', borderRadius: '100px', flexShrink: 0,
+                        border: 'none', cursor: 'pointer', position: 'relative', padding: 0,
+                        background: formData.status === 'actif' ? '#34d399' : 'rgba(255,255,255,0.16)',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute', top: '3px',
+                        left: formData.status === 'actif' ? '21px' : '3px',
+                        width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                        transition: 'left 0.15s ease',
+                      }} />
+                    </button>
                   </div>
                 </div>
 
@@ -661,15 +804,20 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                       </p>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <code style={{
-                        flex: 1, fontSize: '11px', color: '#c4b5fd', background: 'rgba(0,0,0,0.35)',
-                        padding: '8px 11px', borderRadius: '9px', overflow: 'hidden', textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.05)',
-                      }}>
+                      <code
+                        onClick={selectAllText}
+                        title="Cliquer pour sélectionner le lien"
+                        style={{
+                          flex: 1, fontSize: '11px', color: '#c4b5fd', background: 'rgba(0,0,0,0.35)',
+                          padding: '8px 11px', borderRadius: '9px', overflow: 'hidden', textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.05)', cursor: 'text',
+                          userSelect: 'all',
+                        }}
+                      >
                         {publicUrl(selectedForm.id)}
                       </code>
                       <button
-                        onClick={() => { navigator.clipboard.writeText(publicUrl(selectedForm.id)); toast.success('Lien copié !'); }}
+                        onClick={() => copyToClipboard(publicUrl(selectedForm.id))}
                         title="Copier le lien"
                         style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
                       >

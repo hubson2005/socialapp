@@ -66,6 +66,12 @@
  *        jamais malgré des props bien passées depuis le Dashboard. Fix :
  *        `onLogout` → `onSignOut`, `profile.email` → `userEmail` (prop
  *        dédiée, plus besoin de la faire transiter par `profile`).
+ *
+ *  [C18] Footer — bouton "Se déconnecter" trop imposant (pleine largeur,
+ *        fond quasi transparent) : réduit à sa largeur naturelle, fond
+ *        rouge plein (opaque) pour un meilleur contraste, et repositionné
+ *        sous la ligne email au lieu d'être aligné à côté d'elle sur une
+ *        rangée horizontale forcée en pleine largeur.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -637,7 +643,11 @@ export default function MobileNav({
         {/* Footer — [C16] email + "Se déconnecter" (déplacés depuis le
             header / la liste) ; le bloc "X liens · Y produits" a été
             retiré à la demande. Le lien "Changer d'offre" est conservé
-            s'il y a lieu. */}
+            s'il y a lieu.
+            [C18] Bouton "Se déconnecter" réduit à sa largeur naturelle
+            (au lieu de flex:1 pleine largeur), fond rouge plein/opaque
+            (au lieu de quasi transparent), et positionné sous l'email
+            au lieu d'être aligné à côté sur une rangée. */}
         {(userEmail || onSignOut || (!isMaxPlan && onUpgrade)) && (
           <div style={{
             padding: '12px 20px calc(16px + env(safe-area-inset-bottom))',
@@ -651,19 +661,19 @@ export default function MobileNav({
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
               {onSignOut && (
                 <button
                   onClick={handleLogout}
                   style={{
-                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: '11px 14px', borderRadius: T.radius,
-                    background: T.redBg, border: `1px solid ${T.redBorder}`,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    padding: '8px 14px', borderRadius: T.radius,
+                    background: 'rgba(239,68,68,0.85)', border: '1px solid rgba(239,68,68,0.9)',
                     cursor: 'pointer',
                   }}
                 >
-                  <LogOut size={15} color={T.red} />
-                  <span style={{ color: T.red, fontSize: '13.5px', fontWeight: 700 }}>Se déconnecter</span>
+                  <LogOut size={13} color="white" />
+                  <span style={{ color: 'white', fontSize: '12.5px', fontWeight: 700 }}>Se déconnecter</span>
                 </button>
               )}
 
@@ -671,7 +681,7 @@ export default function MobileNav({
                 <button
                   onClick={onUpgrade}
                   style={{
-                    background: 'none', border: 'none', padding: '11px 4px', cursor: 'pointer',
+                    background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
                     color: T.orange, fontSize: '11px', fontWeight: 700,
                   }}

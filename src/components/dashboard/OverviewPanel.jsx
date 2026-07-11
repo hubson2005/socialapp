@@ -7,6 +7,7 @@ import {
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import StatsCard from "@/components/dashboard/StatsCard";
+import ShortLinksCard from "@/components/dashboard/ShortLinksCard";
 
 function useWindowWidth() {
   const [width, setWidth] = React.useState(
@@ -167,7 +168,8 @@ export default function OverviewPanel({
         </div>
       </div>
 
-      {/* Quick actions grid */}
+      {/* Raccourcis de lien — personnalisation + alias vers le profil public */}
+      <ShortLinksCard profileId={profile?.id} isActivated={isActivated} />
       {/* FIX OPACITÉ — les cartes utilisaient un fond quasi transparent
           (a.color+'14' = ~8% d'opacité, bordure +'33' = ~20%), ce qui les
           rendait trop translucides sur le fond sombre du dashboard. On

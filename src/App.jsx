@@ -11,6 +11,7 @@ import TermsOfService from "./pages/TermsOfService";
 import DeleteAccount  from "./pages/DeleteAccount";
 import ResetPassword  from "./pages/ResetPassword";
 import WhatsAppCRM    from "./pages/WhatsAppCRM";
+import ShortLinkRedirect from './pages/ShortLinkRedirect';
 import { Loader2 } from "lucide-react";
 import {
   ProtectedRoute,
@@ -110,6 +111,7 @@ function PublicApp() {
 
       <Route path="/:username" element={<PublicProfile />} />
       <Route path="*"          element={<Navigate to="/" replace />} />
+      <Route path="/s/:slug" element={<ShortLinkRedirect />} />
     </Routes>
   );
 }

@@ -25,15 +25,24 @@ export default function InstallPrompt() {
   const ios = React.useMemo(() => isIOS(), []);
 
   React.useEffect(() => {
-    if (isStandalone()) return; // déjà installé, on n'affiche rien
+    const forceDebug = new URLSearchParams(window.location.search).get('forceInstallPrompt') === '1';
+
+    if (isStandalone() && !forceDebug) return; // déjà installé, on n'affiche rien
 
     const dismissedUntil = Number(localStorage.getItem(DISMISS_KEY) || 0);
-    if (Date.now() < dismissedUntil) return;
+    if (Date.now() < dismissedUntil && !forceDebug) return;
 
     if (ios) {
       // iOS n'a pas d'event beforeinstallprompt : on affiche direct
       setVisible(true);
       return;
+    }
+
+    if (forceDebug) {
+      // Debug : affiche le bandeau même sans beforeinstallprompt réel
+      // (le bouton "Installer" ne fera rien tant que l'event n'est pas
+      // arrivé, mais permet de valider visuellement le rendu/placement).
+      setVisible(true);
     }
 
     const handler = (e) => {

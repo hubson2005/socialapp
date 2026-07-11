@@ -517,7 +517,13 @@ export default function UserDashboard() {
       return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={()=>handleOpenUpgrade(nav.label, nav.locked)} />;
     }
     switch (activeSection) {
-      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} />;
+      // FIX — OverviewPanel reçoit désormais onUpgrade=handleOpenUpgrade :
+      // le bouton "Upgrader → PRO" de la carte Statistiques (repli quand
+      // limits.hasStats est false) ouvre la même modale de paiement Wave
+      // (FeatureUpgradeModal) que les autres fonctionnalités verrouillées,
+      // au lieu de rediriger vers "/". On lui passe explicitement le nom
+      // de la feature ("Statistiques") et le palier requis ("pro").
+      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} />;
       case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
       // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,

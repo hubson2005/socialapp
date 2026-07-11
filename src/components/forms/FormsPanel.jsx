@@ -54,36 +54,49 @@ const formatDate = (iso) => {
   } catch { return iso; }
 };
 
-// Copie robuste : l'API Clipboard moderne échoue silencieusement hors contexte sécurisé
-// (http, iframe sans permission clipboard-write, etc.) — on retombe alors sur execCommand,
-// et en dernier recours on laisse l'utilisateur sélectionner le texte lui-même.
+// Copie robuste, en 3 paliers — chacun peut échouer pour des raisons différentes
+// (permissions-policy bloquant clipboard-write, navigateur ancien, geste utilisateur
+// perdu à cause d'un await trop tôt, etc.), donc on tente le suivant plutôt que
+// d'abandonner. Les erreurs réelles sont loguées en console pour pouvoir diagnostiquer
+// si le problème persiste malgré les 3 paliers.
 const copyToClipboard = async (text) => {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
+  // Palier 1 — API Clipboard moderne (nécessite un contexte sécurisé + permission,
+  // pas garantie selon les en-têtes Permissions-Policy du domaine d'hébergement).
+  if (navigator.clipboard?.writeText) {
+    try {
       await navigator.clipboard.writeText(text);
       toast.success('Lien copié !');
       return;
-    }
-    throw new Error('Clipboard API indisponible dans ce contexte');
-  } catch {
-    try {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.top = '0';
-      textarea.style.left = '0';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const ok = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      if (!ok) throw new Error('execCommand a échoué');
-      toast.success('Lien copié !');
-    } catch {
-      toast.error('Copie automatique impossible — sélectionnez le lien et copiez-le manuellement (Ctrl/Cmd+C)');
+    } catch (err) {
+      console.warn('[copyToClipboard] navigator.clipboard.writeText a échoué :', err);
     }
   }
+
+  // Palier 2 — document.execCommand, plus ancien mais souvent encore autorisé
+  // là où l'API Clipboard est bloquée par une politique de permissions.
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (!ok) throw new Error('execCommand("copy") a renvoyé false');
+    toast.success('Lien copié !');
+    return;
+  } catch (err) {
+    console.warn('[copyToClipboard] execCommand fallback a échoué :', err);
+  }
+
+  // Palier 3 — copie automatique impossible : on guide vers la copie manuelle.
+  toast.error('Copie automatique bloquée par le navigateur — cliquez sur le lien pour le sélectionner, puis Ctrl/Cmd+C');
 };
 
 // ─── DB layer (Supabase) ──────────────────────────────────────────────────
@@ -762,6 +775,23 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                       }} />
                     </button>
                   </div>
+                  {/* Les 3 statuts restent accessibles : une fois sorti de "brouillon", l'interrupteur
+                      ne gère plus qu'actif/inactif (le cas courant) — ce lien permet d'y revenir
+                      explicitement, par exemple pour retirer temporairement un formulaire de la vue
+                      "actif/inactif" sans le classer comme délibérément désactivé. */}
+                  {formData.status !== 'brouillon' && (
+                    <button
+                      onClick={() => setFormData({ ...formData, status: 'brouillon' })}
+                      style={{
+                        background: 'none', border: 'none', color: 'rgba(255,255,255,0.32)',
+                        fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '2px 0',
+                        marginTop: '9px', display: 'block',
+                        textAlign: 'left', textDecoration: 'underline', textUnderlineOffset: '2px',
+                      }}
+                    >
+                      Repasser en brouillon
+                    </button>
+                  )}
                 </div>
 
                 <div>

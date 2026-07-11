@@ -23,7 +23,7 @@ function useWindowWidth() {
 export default function OverviewPanel({
   profile, limits, isActivated, onNavigate,
   onUpdate, onSave, hasChanges, saving, plan,
-  onRequestActivation,
+  onRequestActivation, onUpgrade,
 }) {
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];
@@ -54,12 +54,12 @@ export default function OverviewPanel({
           <div>
             <p style={{ color:'#93c5fd', fontSize:'13px', fontWeight:600, margin:'0 0 2px' }}>Compte en attente d'activation</p>
             <p style={{ color:'rgba(147,197,253,0.6)', fontSize:'11px', margin:0 }}>
-              Certaines fonctionnalités sont verrouillées. Contactez le support pour activer votre compte.
+              Certaines fonctionnalités sont verrouillées. Envoyez votre paiement via Wave CI au numéro : +225 05 76 03 12 12 pour l'activer
             </p>
           </div>
           <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer"
-            style={{ marginLeft:'auto', background:'#25D366', borderRadius:'8px', padding:'6px 12px', color:'white', fontSize:'11px', fontWeight:700, textDecoration:'none', flexShrink:0, display:'flex', alignItems:'center', gap:'5px', whiteSpace:'nowrap' }}>
-            WhatsApp →
+            style={{ marginLeft:'auto', background:'#25D366', borderRadius:'8px', padding:'8px 14px', color:'white', fontSize:'11px', fontWeight:700, textDecoration:'none', flexShrink:0, display:'flex', alignItems:'center', gap:'5px', whiteSpace:'nowrap' }}>
+            WhatsApp — Envoyer la preuve
           </a>
         </div>
       )}
@@ -158,25 +158,34 @@ export default function OverviewPanel({
               <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'13px', fontWeight:600, margin:'0 0 4px' }}>Statistiques</p>
               <p style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px', margin:'0 0 6px' }}>Disponible avec l'offre PRO</p>
               <p style={{ color:'rgba(255,255,255,0.2)', fontSize:'10px', margin:'0 0 14px' }}>15 000 FCFA / an</p>
-              <a href="/"
-                style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,140,0,0.15)', border:'1px solid rgba(255,140,0,0.3)', borderRadius:'10px', padding:'7px 14px', color:'#ff8c00', fontSize:'12px', fontWeight:600, textDecoration:'none' }}>
+              <button type="button" onClick={()=>onUpgrade?.('Statistiques','pro')}
+                style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,140,0,0.15)', border:'1px solid rgba(255,140,0,0.3)', borderRadius:'10px', padding:'7px 14px', color:'#ff8c00', fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 <Crown size={12}/> Upgrader → PRO
-              </a>
+              </button>
             </div>
           )}
         </div>
       </div>
 
       {/* Quick actions grid */}
+      {/* FIX OPACITÉ — les cartes utilisaient un fond quasi transparent
+          (a.color+'14' = ~8% d'opacité, bordure +'33' = ~20%), ce qui les
+          rendait trop translucides sur le fond sombre du dashboard. On
+          garde exactement les mêmes couleurs (a.color) mais avec des
+          canaux alpha bien plus élevés pour un rendu "opaque" :
+          fond ~78% (+'c8'), bordure ~55% (+'8c'), hover ~88% (+'e0').
+          Le texte reste blanc/blanc-atténué, toujours lisible sur ces
+          fonds plus denses. Les cartes verrouillées gardent leur style
+          gris neutre inchangé. */}
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr 1fr':'repeat(3,1fr)', gap:'10px' }}>
         {quickActions.map(a => (
           <button key={a.section} onClick={()=>onNavigate(a.section)}
-            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.locked?'rgba(255,255,255,0.02)':a.color+'14', border:'1px solid '+(a.locked?'rgba(255,255,255,0.05)':a.color+'33'), borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', opacity:a.locked?0.55:1 }}
-            onMouseEnter={e=>{ if(!a.locked){e.currentTarget.style.background=a.color+'26';e.currentTarget.style.transform='translateY(-2px)';}}}
-            onMouseLeave={e=>{ e.currentTarget.style.background=a.locked?'rgba(255,255,255,0.02)':a.color+'14';e.currentTarget.style.transform='translateY(0)';}}>
+            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.locked?'rgba(255,255,255,0.06)':a.color+'c8', border:'1px solid '+(a.locked?'rgba(255,255,255,0.1)':a.color+'8c'), borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', opacity:a.locked?0.55:1 }}
+            onMouseEnter={e=>{ if(!a.locked){e.currentTarget.style.background=a.color+'e0';e.currentTarget.style.transform='translateY(-2px)';}}}
+            onMouseLeave={e=>{ e.currentTarget.style.background=a.locked?'rgba(255,255,255,0.06)':a.color+'c8';e.currentTarget.style.transform='translateY(0)';}}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:a.color+'22', border:'1px solid '+a.color+'44', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                {a.locked ? <Lock size={15} color="rgba(255,255,255,0.25)"/> : <a.icon size={16} color={a.color}/>}
+              <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'rgba(0,0,0,0.22)', border:'1px solid rgba(255,255,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                {a.locked ? <Lock size={15} color="rgba(255,255,255,0.35)"/> : <a.icon size={16} color="white"/>}
               </div>
               {a.locked && (
                 <span style={{ background:'rgba(255,140,0,0.12)', border:'1px solid rgba(255,140,0,0.3)', borderRadius:'5px', padding:'2px 6px', fontSize:'8.5px', color:'#ff8c00', fontWeight:700 }}>
@@ -186,7 +195,7 @@ export default function OverviewPanel({
             </div>
             <div>
               <p style={{ color:'white', fontSize:'12px', fontWeight:700, margin:'0 0 2px' }}>{a.label}</p>
-              <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'10px', margin:0 }}>{a.desc}</p>
+              <p style={{ color:a.locked?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.8)', fontSize:'10px', margin:0 }}>{a.desc}</p>
             </div>
           </button>
         ))}

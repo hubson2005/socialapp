@@ -7,6 +7,8 @@ import {
   ChevronRight,
   MapPin,
   Plus,
+  Calendar,
+  CalendarDays,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -115,6 +117,90 @@ function EventMediaCarousel({ medias = [], onRemove, adminMode = false }) {
   );
 }
 
+const formatEventDate = (iso) => {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    let s = d.toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  } catch {
+    return null;
+  }
+};
+
+// ─── EventPreviewCard ──────────────────────────────────────────────────────
+// Aperçu en direct de la carte événement telle qu'elle apparaîtra publiquement :
+// se met à jour instantanément à chaque frappe/upload, sans appel réseau.
+function EventPreviewCard({ profile }) {
+  const medias = Array.isArray(profile.event_images)
+    ? profile.event_images
+    : profile.event_image_url
+    ? [profile.event_image_url]
+    : [];
+
+  const c1 = profile.event_color1 || "#ff6b35";
+  const c2 = profile.event_color2 || "#f7c948";
+
+  const name        = profile.event_name?.trim();
+  const location     = profile.event_location?.trim();
+  const description  = profile.event_description?.trim();
+  const formattedDate = formatEventDate(profile.event_date);
+
+  return (
+    <div style={{
+      borderRadius: "20px", overflow: "hidden", position: "relative",
+      background: `linear-gradient(160deg, ${c1}, ${c2})`,
+      boxShadow: "0 16px 40px -14px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.08) inset",
+      border: "1px solid rgba(255,255,255,0.1)",
+    }}>
+      {medias.length > 0 ? (
+        <EventMediaCarousel medias={medias} adminMode={false} />
+      ) : (
+        <div style={{
+          aspectRatio: "16/9", display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(0,0,0,0.12)",
+        }}>
+          <CalendarDays size={30} color="rgba(255,255,255,0.4)" />
+        </div>
+      )}
+
+      <div style={{
+        padding: "16px 17px 18px",
+        background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.18) 100%)",
+      }}>
+        {name ? (
+          <h3 style={{ color: "white", fontSize: "18px", fontWeight: 800, margin: 0, letterSpacing: "-0.01em", lineHeight: 1.25 }}>
+            {name}
+          </h3>
+        ) : (
+          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", fontStyle: "italic", margin: 0 }}>
+            Nom de l'événement…
+          </p>
+        )}
+
+        {formattedDate && (
+          <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "12px", margin: "9px 0 0", display: "flex", alignItems: "center", gap: "6px" }}>
+            <Calendar size={12} style={{ flexShrink: 0 }} /> {formattedDate}
+          </p>
+        )}
+
+        {location && (
+          <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "12px", margin: "6px 0 0", display: "flex", alignItems: "center", gap: "6px" }}>
+            <MapPin size={12} style={{ flexShrink: 0 }} /> {location}
+          </p>
+        )}
+
+        {description && (
+          <p style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", margin: "11px 0 0", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+            {description}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── EventPanel ───────────────────────────────────────────────────────────────
 export default function EventPanel({ localProfile, updateLocal, isActivated }) {
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -190,140 +276,175 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
     boxSizing: "border-box",
   };
 
+  const previewLabelStyle = {
+    color: "rgba(255,255,255,0.38)", fontSize: "10.5px", fontWeight: 700,
+    textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 9px",
+    display: "flex", alignItems: "center", gap: "6px",
+  };
+
+  const previewBlock = (
+    <div style={{ width: "100%", minWidth: 0 }}>
+      <p style={previewLabelStyle}>
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#34d399", flexShrink: 0 }} />
+        Aperçu en direct
+      </p>
+      <EventPreviewCard profile={localProfile} />
+    </div>
+  );
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "680px", minWidth: 0 }}>
+    <div style={{
+      display: "flex", flexDirection: isMobile ? "column" : "row",
+      gap: isMobile ? "18px" : "22px",
+      width: "100%", maxWidth: isMobile ? "680px" : "1000px",
+      alignItems: "flex-start", minWidth: 0,
+    }}>
 
-      {/* Header */}
-      <div>
-        <h2 style={{ color: "white", fontSize: "18px", fontWeight: 800, margin: 0 }}>Mode Événement</h2>
-        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "12px", margin: "4px 0 0" }}>
-          Ajoutez des images ou vidéos de votre événement
-        </p>
-      </div>
+      {/* ── Colonne édition ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", minWidth: 0, flex: isMobile ? "none" : "1 1 auto" }}>
 
-      {/* Infos événement */}
-      <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", display: "flex", flexDirection: "column", gap: "12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
-        <input type="text" value={localProfile.event_name || ""} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" style={inputStyle} />
+        {/* Header */}
+        <div>
+          <h2 style={{ color: "white", fontSize: "18px", fontWeight: 800, margin: 0 }}>Mode Événement</h2>
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "12px", margin: "4px 0 0" }}>
+            Ajoutez des images ou vidéos de votre événement
+          </p>
+        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px", width: "100%", minWidth: 0 }}>
-          <input type="datetime-local" value={localProfile.event_date || ""} onChange={(e) => updateLocal({ event_date: e.target.value })} style={inputStyle} />
+        {/* Aperçu — affiché ici sur mobile, juste sous le header, pour rester visible sans scroller */}
+        {isMobile && previewBlock}
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
-            <MapPin size={14} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
-            <input type="text" value={localProfile.event_location || ""} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu" style={{ background: "transparent", border: "none", color: "white", fontSize: "13px", outline: "none", flex: 1, width: "100%", minWidth: 0 }} />
+        {/* Infos événement */}
+        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", display: "flex", flexDirection: "column", gap: "12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+          <input type="text" value={localProfile.event_name || ""} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" style={inputStyle} />
+
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px", width: "100%", minWidth: 0 }}>
+            <input type="datetime-local" value={localProfile.event_date || ""} onChange={(e) => updateLocal({ event_date: e.target.value })} style={inputStyle} />
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+              <MapPin size={14} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
+              <input type="text" value={localProfile.event_location || ""} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu" style={{ background: "transparent", border: "none", color: "white", fontSize: "13px", outline: "none", flex: 1, width: "100%", minWidth: 0 }} />
+            </div>
+          </div>
+
+          <textarea value={localProfile.event_description || ""} onChange={(e) => updateLocal({ event_description: e.target.value })} placeholder="Description..." rows={3} style={{ ...inputStyle, resize: "none" }} />
+        </div>
+
+        {/* Couleurs */}
+        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {EVENT_COLOR_PRESETS.map((p, i) => (
+              <button key={i} onClick={() => updateLocal({ event_color1: p.c1, event_color2: p.c2 })} style={{
+                width: "32px", height: "32px", borderRadius: "9px",
+                background: `linear-gradient(135deg,${p.c1},${p.c2})`,
+                border: localProfile.event_color1 === p.c1 ? "3px solid white" : "3px solid transparent",
+                cursor: "pointer", flexShrink: 0,
+              }} />
+            ))}
           </div>
         </div>
 
-        <textarea value={localProfile.event_description || ""} onChange={(e) => updateLocal({ event_description: e.target.value })} placeholder="Description..." rows={3} style={{ ...inputStyle, resize: "none" }} />
-      </div>
+        {/* ── Médias ── */}
+        <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
 
-      {/* Couleurs */}
-      <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          {EVENT_COLOR_PRESETS.map((p, i) => (
-            <button key={i} onClick={() => updateLocal({ event_color1: p.c1, event_color2: p.c2 })} style={{
-              width: "32px", height: "32px", borderRadius: "9px",
-              background: `linear-gradient(135deg,${p.c1},${p.c2})`,
-              border: localProfile.event_color1 === p.c1 ? "3px solid white" : "3px solid transparent",
-              cursor: "pointer", flexShrink: 0,
-            }} />
-          ))}
-        </div>
-      </div>
+          {/* Header médias — bouton "+" toujours à droite */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+            <ImagePlus size={14} color="rgba(255,255,255,0.5)" />
+            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "12px", fontWeight: 600 }}>Médias</span>
 
-      {/* ── Médias ── */}
-      <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
-
-        {/* Header médias — bouton "+" toujours à droite */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          <ImagePlus size={14} color="rgba(255,255,255,0.5)" />
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "12px", fontWeight: 600 }}>Médias</span>
-
-          {imgCount > 0 && (
-            <span style={{ background: "rgba(255,255,255,0.12)", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
-              🖼 {imgCount}
-            </span>
-          )}
-          {videoCount > 0 && (
-            <span style={{ background: "rgba(99,102,241,0.3)", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "#a5b4fc", fontWeight: 600 }}>
-              ▶ {videoCount}
-            </span>
-          )}
-
-          {/* Bouton "+ Ajouter" — toujours visible, aligné à droite */}
-          <button
-            type="button"
-            disabled={uploadingMedia}
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              marginLeft: "auto",
-              display: "flex", alignItems: "center", gap: "5px",
-              padding: "5px 10px",
-              background: "rgba(99,102,241,0.2)",
-              border: "1px solid rgba(99,102,241,0.4)",
-              borderRadius: "8px",
-              color: "#a5b4fc",
-              fontSize: "11px", fontWeight: 700,
-              cursor: uploadingMedia ? "wait" : "pointer",
-              opacity: uploadingMedia ? 0.6 : 1,
-              transition: "all .15s",
-              flexShrink: 0,
-            }}
-          >
-            {uploadingMedia
-              ? <Loader2 size={11} className="animate-spin" />
-              : <Plus size={11} />
-            }
-            {uploadingMedia ? "Envoi…" : "Ajouter"}
-          </button>
-        </div>
-
-        {/* Input unique — déclenché par ref depuis le header et la zone vide */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          style={{ display: "none" }}
-          onChange={handleMediaUpload}
-          disabled={uploadingMedia}
-        />
-
-        {/* Carousel si médias existants */}
-        {eventMedias.length > 0 && (
-          <EventMediaCarousel medias={eventMedias} onRemove={handleRemoveMedia} adminMode />
-        )}
-
-        {/* Zone vide — clique aussi sur l'input via le ref */}
-        {eventMedias.length === 0 && (
-          <div
-            onClick={() => !uploadingMedia && fileInputRef.current?.click()}
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
-              background: "rgba(255,255,255,0.03)",
-              border: "2px dashed rgba(255,255,255,0.12)",
-              borderRadius: "14px",
-              padding: isMobile ? "20px" : "28px",
-              cursor: uploadingMedia ? "wait" : "pointer",
-              opacity: uploadingMedia ? 0.7 : 1,
-              userSelect: "none",
-            }}
-          >
-            {uploadingMedia ? (
-              <Loader2 size={20} color="rgba(99,102,241,0.8)" className="animate-spin" />
-            ) : (
-              <>
-                <ImagePlus size={18} color="rgba(255,255,255,0.3)" />
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "12px", margin: 0, textAlign: "center" }}>
-                  Cliquez ou utilisez le bouton Ajouter
-                </p>
-              </>
+            {imgCount > 0 && (
+              <span style={{ background: "rgba(255,255,255,0.12)", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
+                🖼 {imgCount}
+              </span>
             )}
+            {videoCount > 0 && (
+              <span style={{ background: "rgba(99,102,241,0.3)", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "#a5b4fc", fontWeight: 600 }}>
+                ▶ {videoCount}
+              </span>
+            )}
+
+            {/* Bouton "+ Ajouter" — toujours visible, aligné à droite */}
+            <button
+              type="button"
+              disabled={uploadingMedia}
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                marginLeft: "auto",
+                display: "flex", alignItems: "center", gap: "5px",
+                padding: "5px 10px",
+                background: "rgba(99,102,241,0.2)",
+                border: "1px solid rgba(99,102,241,0.4)",
+                borderRadius: "8px",
+                color: "#a5b4fc",
+                fontSize: "11px", fontWeight: 700,
+                cursor: uploadingMedia ? "wait" : "pointer",
+                opacity: uploadingMedia ? 0.6 : 1,
+                transition: "all .15s",
+                flexShrink: 0,
+              }}
+            >
+              {uploadingMedia
+                ? <Loader2 size={11} className="animate-spin" />
+                : <Plus size={11} />
+              }
+              {uploadingMedia ? "Envoi…" : "Ajouter"}
+            </button>
           </div>
-        )}
+
+          {/* Input unique — déclenché par ref depuis le header et la zone vide */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={handleMediaUpload}
+            disabled={uploadingMedia}
+          />
+
+          {/* Carousel si médias existants */}
+          {eventMedias.length > 0 && (
+            <EventMediaCarousel medias={eventMedias} onRemove={handleRemoveMedia} adminMode />
+          )}
+
+          {/* Zone vide — clique aussi sur l'input via le ref */}
+          {eventMedias.length === 0 && (
+            <div
+              onClick={() => !uploadingMedia && fileInputRef.current?.click()}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+                background: "rgba(255,255,255,0.03)",
+                border: "2px dashed rgba(255,255,255,0.12)",
+                borderRadius: "14px",
+                padding: isMobile ? "20px" : "28px",
+                cursor: uploadingMedia ? "wait" : "pointer",
+                opacity: uploadingMedia ? 0.7 : 1,
+                userSelect: "none",
+              }}
+            >
+              {uploadingMedia ? (
+                <Loader2 size={20} color="rgba(99,102,241,0.8)" className="animate-spin" />
+              ) : (
+                <>
+                  <ImagePlus size={18} color="rgba(255,255,255,0.3)" />
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "12px", margin: 0, textAlign: "center" }}>
+                    Cliquez ou utilisez le bouton Ajouter
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
+
+      {/* ── Colonne aperçu — desktop uniquement, reste visible pendant le scroll ── */}
+      {!isMobile && (
+        <div style={{ width: "300px", flexShrink: 0, position: "sticky", top: "20px" }}>
+          {previewBlock}
+        </div>
+      )}
 
     </div>
   );
 }
-

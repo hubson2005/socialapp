@@ -104,9 +104,9 @@ export default function Home() {
   }, []);
 
   const plans = [
-    { name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa', subtitle: 'Particulier, petit commerce, entrepreneur débutant', bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)', btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)', features: ['1 profil · 3 liens sociaux', 'Page publique', 'QR Code standard', '1 import PDF', 'Marketplace (4 produits)'] },
-    { name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true, subtitle: 'Professionnels, influenceurs, restaurants, hôtels, boutiques', bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)', btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none', features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics & statistiques détaillées', 'Temps réel — flux visiteurs live', 'Mode Événement inclus', 'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés (3)', 'Marketplace (10 produits)', '3 imports PDFs', 'QR Code premium', 'Support standard'] },
-    { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'Grandes entreprises, agences com, marques établies', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics avancés complets', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA (génération automatique)', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Toutes les intégrations', 'Marketplace illimitée', '10 imports PDFs', 'QR Code dynamique', '1 mois Événement offert', 'Support VIP prioritaire'] },
+    { name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa', subtitle: 'Particulier, petit commerce, Étudiants, Freelances', bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)', btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)', features: ['1 profil · 3 liens sociaux', 'Page publique', 'QR Code standard', '1 import PDF', 'Marketplace (4 produits)'] },
+    { name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true, subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)', btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none', features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics & statistiques détaillées', 'Temps réel — flux visiteurs live', 'Mode Événement inclus', 'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés (3)', 'Marketplace (10 produits)', '3 imports PDFs', 'QR Code premium', 'Support standard'] },
+    { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics avancés complets', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA (génération automatique)', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Toutes les intégrations', 'Marketplace illimitée', '10 imports PDFs', 'QR Code dynamique', '1 mois Événement offert', 'Support VIP prioritaire'] },
   ];
 
   const faqs = [
@@ -674,36 +674,50 @@ export default function Home() {
         </section>
 
         {/* ════════════ FOOTER ════════════ */}
-        <footer style={{ padding: '40px 48px 28px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(0,0,0,.25)' }}>
-          {/* Ligne logo + liens */}
-          <div className="sa-footer-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ ...S.navIcon, width: '30px', height: '30px', borderRadius: '8px', fontSize: '14px' }}>
-                <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <footer style={{ padding: '56px 48px 28px', borderTop: '1px solid rgba(255,255,255,.08)', background: 'rgba(0,0,0,.25)' }}>
+          <div className="sa-footer-grid" style={{ maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr', gap: '48px', marginBottom: '40px' }}>
+
+            {/* Colonne marque */}
+            <div className="sa-footer-brand" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                <div style={{ ...S.navIcon, width: '32px', height: '32px', borderRadius: '9px', fontSize: '14px' }}>
+                  <img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <span style={{ fontWeight: '800', fontSize: '17px' }}>SocialApp</span>
               </div>
-              <span style={{ fontWeight: '800', fontSize: '16px' }}>SocialApp</span>
+              <p style={{ color: 'rgba(255,255,255,.45)', fontSize: '13px', lineHeight: '1.8', maxWidth: '340px', marginBottom: '18px' }}>
+                Plateforme SaaS ivoirienne 🇨🇮 : profil digital, CRM, QR Code et marketplace pour développer votre activité. Mise en ligne en 5 minutes, accessible partout en Afrique.
+              </p>
+              <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', padding: '9px 18px', background: 'rgba(37,211,102,.1)', border: '1px solid rgba(37,211,102,.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}>💬 WhatsApp</a>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 20px', background: 'rgba(37,211,102,.1)', border: '1px solid rgba(37,211,102,.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}>WhatsApp</a>
-              <button type="button" onClick={handleCTA} style={{ padding: '10px 20px', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: '100px', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>{user ? 'Mon dashboard' : 'Se connecter'}</button>
+
+            {/* Colonne liens plateforme */}
+            <div className="sa-footer-col" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,.8)', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: '18px' }}>Plateforme</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (
+                  <a key={h} href={h} className="sa-footer-link">{l}</a>
+                ))}
+              </div>
+            </div>
+
+            {/* Colonne compte / légal */}
+            <div className="sa-footer-col" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,.8)', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: '18px' }}>Compte</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                <button type="button" onClick={handleCTA} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }} className="sa-footer-link">
+                  {user ? 'Mon dashboard' : 'Se connecter'}
+                </button>
+                <a href="/privacy-policy" className="sa-footer-link">Politique de confidentialité</a>
+                <a href="/terms-of-service" className="sa-footer-link">Conditions d'utilisation</a>
+              </div>
             </div>
           </div>
 
-          {/* À propos mini */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '20px', marginBottom: '20px' }}>
-            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', lineHeight: '1.8', maxWidth: '780px' }}>
-              <strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>À propos de SocialApp</strong> — Plateforme SaaS développée en Côte d'Ivoire 🇨🇮 qui aide les professionnels et entreprises à créer un profil digital public, gérer leurs prospects, suivre leurs statistiques et développer leur activité grâce à des outils CRM, QR Codes et automatisations intégrés. Données sécurisées · Mobile Money accepté · Mis en ligne en 5 min · Accessible partout en Afrique.
-            </p>
-          </div>
-
-          {/* Ligne légale */}
-          <div className="sa-footer-legal" style={{ borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <p style={{ color: 'rgba(255,255,255,.5)', fontSize: '12px' }}>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire 🇨🇮</p>
-            <div className="sa-footer-legal-links" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <a href="/privacy-policy" className="sa-footer-link">Politique de confidentialité</a>
-              <span className="sa-footer-dot" style={{ color: 'rgba(255,255,255,.15)', fontSize: '12px' }}>·</span>
-              <a href="/terms-of-service" className="sa-footer-link">Conditions d'utilisation</a>
-            </div>
+          {/* Barre légale — séparateur unique */}
+          <div className="sa-footer-legal" style={{ maxWidth: '1400px', margin: '0 auto', borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <p style={{ color: 'rgba(255,255,255,.4)', fontSize: '12px' }}>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire 🇨🇮</p>
+            <p style={{ color: 'rgba(255,255,255,.3)', fontSize: '12px' }}>Mobile Money · Wave · Orange Money</p>
           </div>
         </footer>
 
@@ -711,3 +725,4 @@ export default function Home() {
     </>
   );
 }
+

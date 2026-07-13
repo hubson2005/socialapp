@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { X, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+// [LOGOS RÉELS] Fichiers placés dans src/assets/ — adapte les noms de
+// fichiers ci-dessous si tu les as nommés différemment (ex: orangemoney.svg
+// au lieu de orange-money.svg). Vite transforme chaque import en URL utilisable
+// directement dans un <img src=... />.
+import orangeMoneyLogo from '../../assets/orange-money.svg';
+import mtnMomoLogo from '../../assets/mtn-momo.svg';
+import moovMoneyLogo from '../../assets/moov-money.svg';
+import waveLogo from '../../assets/wave.svg';
+
 export const PLATFORMS = {
   // ── Réseaux sociaux ──────────────────────────────────────────────────────
   instagram: {
@@ -179,6 +188,20 @@ export const PLATFORMS = {
     placeholder: 'https://etsy.com/shop/tonnom',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#F16521"/><path d="M8.5 5.5v12.8c0 .5.2.9.7 1.1l3.8 1.1v-.7l-3.5-1V5.5c0-.5-.2-.9-.5-1.1v7.4C8.7 11.3 8.5 10.8 8.5 10.5v-5zm7 0V8h-3.7V6.5c0-.5-.4-1-1-1h-1.3c.3.2.5.6.5 1V10h3.7v1.5h-3.7V15c0 .5.4 1 1 1h3.5v1.5h-4c-.7 0-1.3-.7-1.3-1.5V5c0-.8.6-1.5 1.3-1.5h5c.7 0 1 .3 1 1v1z" fill="white"/></svg>),
   },
+  appstore: {
+  label: 'App Store', color: '#0D96F6', category: 'Business',
+  placeholder: 'https://apps.apple.com/app/id123456789',
+  icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#0D96F6"/>
+      <path d="M14.7 5.5h1.8l-3.1 5.4 1.7 2.9h2l-2.7-4.6 2.3-3.7zm-5.4 0l-1 1.7 4.3 7.4H6.8l-1 1.7h7.8l1.1 1.9h2l-1.1-1.9h2.1l1-1.7h-4.1L10.3 5.5h-1z" fill="white"/></svg>
+  ),
+},
+playstore: {
+  label: 'Google Play', color: '#e2ab25', category: 'Business',
+  placeholder: 'https://play.google.com/store/apps/details?id=com.example.app',
+  icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#ffffff"/><path d="M5 4.5v15l8.5-7.5L5 4.5z" fill="#34A853"/><path d="M13.5 12l2.5-2.2 3 1.7c.7.4.7 1.4 0 1.8l-3 1.7-2.5-2z" fill="#FBBC04"/><path d="M13.5 12L5 19.5l11-6.2-2.5-1.3z" fill="#EA4335"/>
+      <path d="M13.5 12L5 4.5l11 6.2-2.5 1.3z" fill="#4285F4"/></svg>
+  ),
+},
 
   // ── Contact ──────────────────────────────────────────────────────────────
   email: {
@@ -216,23 +239,40 @@ export const PLATFORMS = {
     placeholder: 'https://cash.app/$tonpseudo',
     icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#00D54B"/><path d="M13.5 8.5c.7.2 1.3.6 1.8 1.2l1.2-1.2c-.7-.9-1.8-1.5-3-1.7V5.5h-1.5V7c-1.8.3-3 1.5-3 3 0 1.8 1.2 2.7 3 3.3 1.5.5 2 .9 2 1.7 0 .7-.6 1.2-1.5 1.2-.9 0-1.7-.4-2.3-1.1l-1.2 1.2c.8.9 1.9 1.5 3.2 1.7V19h1.5v-1.8c2-.3 3.2-1.6 3.2-3.2 0-1.9-1.3-2.9-3.2-3.5-1.3-.4-1.8-.8-1.8-1.5 0-.6.5-1 1.3-1 .8 0 1.4.3 1.8.8l.5.7z" fill="white"/></svg>),
   },
+  // [AJOUT] Mobile money — moyens de paiement dominants en zone UEMOA/Afrique
+  // de l'Ouest (Orange Money, MTN MoMo, Moov Money, Wave). Contrairement à
+  // PayPal/Cash App, il n'existe pas de format d'URL universel par
+  // utilisateur : le placeholder pointe vers un lien de paiement générique
+  // (page CinetPay/FedaPay/lien marchand) que chacun personnalise.
+  // [LOGO RÉEL] logoUrl pointe vers un fichier hébergé (ex: bucket Supabase
+  // Storage public). Tant que logoUrl est vide/invalide, le badge SVG stylisé
+  // (icon) sert de repli automatique — voir le composant PlatformIcon plus bas.
+  orangemoney: {
+    label: 'Orange Money', color: '#FF6600', category: 'Paiement',
+    placeholder: 'https://orangemoney.ci/paiement/tonlien',
+    logoUrl: orangeMoneyLogo,
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FF6600"/><circle cx="12" cy="12" r="7" fill="none" stroke="white" strokeWidth="1.5"/><text x="12" y="15.5" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="8" fill="white">OM</text></svg>),
+  },
+  mtnmomo: {
+    label: 'MTN Mobile Money', color: '#FFCC08', category: 'Paiement',
+    placeholder: 'https://momo.mtn.ci/paiement/tonlien',
+    logoUrl: mtnMomoLogo,
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FFCC08"/><text x="12" y="15" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="7.5" fill="#000000">MoMo</text></svg>),
+  },
+  moovmoney: {
+    label: 'Moov Money', color: '#004B87', category: 'Paiement',
+    placeholder: 'https://moovmoney.ci/paiement/tonlien',
+    logoUrl: moovMoneyLogo,
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#004B87"/><text x="12" y="15" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="7" fill="white">Moov</text></svg>),
+  },
+  wave: {
+    label: 'Wave', color: '#1DC8CD', category: 'Paiement',
+    placeholder: 'https://pay.wave.com/m/tonlien',
+    logoUrl: waveLogo,
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#001A72"/><path d="M4 12c1.5-3 2.5-3 4 0s2.5 3 4 0 2.5-3 4 0 2.5 3 4 0" stroke="#1DC8CD" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>),
+  },
 
   // ── Autre ────────────────────────────────────────────────────────────────
-  appstore: {
-  label: 'App Store', color: '#0D96F6', category: 'Business',
-  placeholder: 'https://apps.apple.com/app/id123456789',
-  icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#0D96F6"/>
-      <path d="M14.7 5.5h1.8l-3.1 5.4 1.7 2.9h2l-2.7-4.6 2.3-3.7zm-5.4 0l-1 1.7 4.3 7.4H6.8l-1 1.7h7.8l1.1 1.9h2l-1.1-1.9h2.1l1-1.7h-4.1L10.3 5.5h-1z" fill="white"/></svg>
-  ),
-},
-
-playstore: {
-  label: 'Google Play', color: '#e2ab25', category: 'Business',
-  placeholder: 'https://play.google.com/store/apps/details?id=com.example.app',
-  icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#ffffff"/><path d="M5 4.5v15l8.5-7.5L5 4.5z" fill="#34A853"/><path d="M13.5 12l2.5-2.2 3 1.7c.7.4.7 1.4 0 1.8l-3 1.7-2.5-2z" fill="#FBBC04"/><path d="M13.5 12L5 19.5l11-6.2-2.5-1.3z" fill="#EA4335"/>
-      <path d="M13.5 12L5 4.5l11 6.2-2.5 1.3z" fill="#4285F4"/></svg>
-  ),
-},
   website: {
     label: 'Site web', color: '#6366F1', category: 'Autre',
     placeholder: 'https://tonsite.com',
@@ -258,6 +298,25 @@ const REPEATABLE_LIMITS = {
   whatsapp: 2,
   phone: 3,
 };
+
+// [LOGO RÉEL] Affiche platform.logoUrl (vraie image de marque hébergée) si
+// elle est définie et charge correctement ; sinon, repli automatique sur le
+// badge SVG stylisé (platform.icon). Ainsi, ajouter un vrai logo se résume à
+// renseigner `logoUrl` dans PLATFORMS — aucune autre modif nécessaire.
+function PlatformIcon({ platform }) {
+  const [failed, setFailed] = useState(false);
+  if (platform.logoUrl && !failed) {
+    return (
+      <img
+        src={platform.logoUrl}
+        alt={platform.label}
+        onError={() => setFailed(true)}
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    );
+  }
+  return platform.icon;
+}
 
 export default function AddPlatformDialog({ open, onOpenChange, onSelect, existingPlatforms = [] }) {
   const [search, setSearch] = useState('');
@@ -327,7 +386,7 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {platform.icon}
+                      <PlatformIcon platform={platform} />
                     </div>
                     <div>
                       <p style={{ color: 'white', fontSize: '13px', fontWeight: 500, margin: 0 }}>{platform.label}</p>

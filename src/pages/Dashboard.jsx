@@ -30,6 +30,7 @@ import MobileNav from "@/components/dashboard/MobileNav";
 import EventManager from "@/components/dashboard/EventManager";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
+import BookingCalendarPanel from "@/components/dashboard/BookingCalendarPanel";
 import RealtimePanel from "@/components/dashboard/RealtimePanel";
 import { useTranslation } from "react-i18next";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
@@ -112,6 +113,7 @@ const SIDEBAR_NAV = [
   { id: 'eventmanager',    label: 'Event Manager',     icon: CalendarDays,    group: 'content', badge: 'NEW' },
   { id: 'marketplace',     label: 'Marketplace',       icon: ShoppingBag,     group: 'content' },
   { id: 'documents',       label: 'Documents',         icon: FileText,        group: 'content' },
+  { id: 'booking',       label: 'Calendrier',      icon: CalendarClock,   group: 'content',   locked: null,       path: null                        },
   { id: 'forms',           label: 'Formulaires',       icon: FileText,        group: 'content' },
   { id: 'accounts',        label: 'Comptes',           icon: Users,           group: 'admin' },
   { id: 'settings',        label: 'Paramètres',        icon: Settings,        group: 'admin' },
@@ -1059,6 +1061,7 @@ export default function Dashboard() {
       case 'analytics':       return <AnalyticsPanel profileId={localProfile.id}/>;
       case 'leads':           return <LeadsCRMPanel profileId={localProfile.id}/>;
       case 'whatsapp-crm':    return <WhatsappCRMPanel profileId={localProfile.id}/>;
+      case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
       case 'automations':     return <AutomationsPanel profileId={localProfile.id}/>;
       case 'integrations':    return <IntegrationsPanel profileId={localProfile.id}/>;
       case 'boost':           return BoostPanel ? <BoostPanel profileId={localProfile.id} profile={localProfile}/> : <ComingSoon label="Boost"/>;

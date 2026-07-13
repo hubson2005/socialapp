@@ -18,22 +18,28 @@ import leadsCrmMockupWebp from '../assets/LEADS_CRM.webp';
 function PlanModal({ onClose, onSelect }) {
   const plans = [
     {
-      name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa',
-      subtitle: 'Particulier, petit commerce, Étudiants, Freelances',
-      bg: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.25)',
-      features: ['1 profil · 3 liens sociaux', 'Page publique', 'QR Code standard', '1 import PDF', 'Marketplace (4 produits)'],
+      name: "BASIC", emoji: "⚡", price: "10 000", color: "#a78bfa",
+      subtitle: "Particulier, petit commerce, Étudiants, Freelances",
+      bg: "rgba(99,102,241,.08)", border: "1px solid rgba(99,102,241,.25)",
+      features: [ "1 profil", "3 liens sociaux", "Page publique", "QR Code standard", "1 import PDF", "Marketplace (4 produits)",
+      ],
     },
     {
-      name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true,
-      subtitle: 'Prestataires de services, Professions libérales, Créateurs de contenu, Automobile, Commerçants, Événementiel',
-      bg: 'rgba(255,107,53,.1)', border: '2px solid rgba(255,107,53,.55)',
-      features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC', 'Analytics & stats détaillées', 'Temps réel — visiteurs live', 'Mode Événement inclus', 'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés (3)', 'Marketplace (10 produits)', 'Support standard'],
+      name: "PRO", emoji: "🚀", price: "15 000", color: "#ff6b35", popular: true,
+      subtitle: "Prestataires de services, Professions libérales, Créateurs de contenu, Automobile, Commerçants, Événementiel",
+      bg: "rgba(255,107,53,.1)", border: "2px solid rgba(255,107,53,.55)",
+      features: [ "1 profil", "8 liens sociaux", "1 Carte NFC ou PVC", "Analytics & statistiques détaillées", "Visiteurs en temps réel",
+        "Mode Événement", "Calendrier de réservation", "3 formulaires personnalisés", "Marketplace (10 produits)", "Support standard",
+      ],
     },
     {
-      name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948',
-      subtitle: 'PME et grandes entreprises, Agences de communication, Événementiel, Réseaux de magasins, ONG et institutions, Cliniques et centres de santé, Banques et assurances ...' ,
-      bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)',
-      features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Marketplace illimitée', 'Support VIP prioritaire'],
+      name: "BUSINESS", emoji: "💼", price: "25 000", color: "#f7c948",
+      subtitle: "PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances",
+      bg: "rgba(247,201,72,.06)",
+      border: "1px solid rgba(247,201,72,.28)",
+      features: [ "1 profil", "17 liens sociaux", "1 Carte NFC ou PVC", "CRM & Pipeline de leads", "CRM WhatsApp", "Campagnes WhatsApp IA",
+        "Calendrier de réservation illimité", "Formulaires illimités", "Automatisations", "Marketplace illimitée", "Support VIP prioritaire",
+     ],
     },
   ];
 

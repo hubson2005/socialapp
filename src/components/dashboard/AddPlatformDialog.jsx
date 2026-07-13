@@ -307,12 +307,21 @@ function PlatformIcon({ platform }) {
   const [failed, setFailed] = useState(false);
   if (platform.logoUrl && !failed) {
     return (
-      <img
-        src={platform.logoUrl}
-        alt={platform.label}
-        onError={() => setFailed(true)}
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-      />
+      <div
+        style={{
+          width: '100%', height: '100%', borderRadius: '8px',
+          background: platform.color, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '6px', boxSizing: 'border-box',
+        }}
+      >
+        <img
+          src={platform.logoUrl}
+          alt={platform.label}
+          onError={() => setFailed(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        />
+      </div>
     );
   }
   return platform.icon;

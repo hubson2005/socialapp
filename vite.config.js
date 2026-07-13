@@ -21,6 +21,7 @@ export default defineConfig({
   },
 
   build: {
+    sourcemap: true, // TEMPORAIRE — à retirer une fois le bug trouvé
     rollupOptions: {
       output: {
         manualChunks(id) {

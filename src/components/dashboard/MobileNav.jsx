@@ -77,6 +77,18 @@
  *        NAV_LOCK[NAV_IDS.BOOKING] = 'pro', pour que seuls les plans
  *        Pro et Business (currentOrder >= PLAN_ORDER.pro) y aient accès —
  *        auparavant l'item n'était soumis à aucune restriction de plan.
+ *
+ *  [C20] FIX — NAV_IDS.CRM valait 'crm', un id qui ne correspond à aucun
+ *        `case` dans le switch de rendu du dashboard (celui-ci n'a qu'un
+ *        `case 'leads'` pour afficher <LeadsCRMPanel .../>, hérité de la
+ *        convention utilisée côté Sidebar desktop / SIDEBAR_NAV). Résultat :
+ *        taper sur "Leads" (tab bar ou tiroir) appelait onNavigate('crm'),
+ *        qui tombait dans le `default: return null` du switch → panneau
+ *        vide, comme si le lien n'existait pas du tout. NAV_IDS.CRM est
+ *        utilisé partout dans ce fichier (TAB_ITEMS, SIDEBAR_GROUPS,
+ *        NAV_LOCK) via la constante, jamais en chaîne 'crm' en dur ailleurs
+ *        — un seul changement de valeur ('crm' → 'leads') suffit donc à
+ *        tout resynchroniser sans toucher au reste du fichier.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -145,7 +157,14 @@ const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 // ─── Config navigation ────────────────────────────────────────
 const NAV_IDS = {
   OVERVIEW:     'overview',
-  CRM:          'crm',
+  // [FIX C20] 'crm' → 'leads' : aligné sur le `case 'leads'` utilisé par le
+  // switch de rendu du dashboard (celui qui affiche <LeadsCRMPanel .../>).
+  // Avec l'ancienne valeur 'crm', taper sur "Leads" (tab bar ou tiroir)
+  // appelait onNavigate('crm'), qui ne correspondait à aucun `case` côté
+  // dashboard → panneau vide, comme si le lien n'existait pas. NAV_IDS.CRM
+  // est utilisé partout dans ce fichier (TAB_ITEMS, SIDEBAR_GROUPS,
+  // NAV_LOCK) donc ce seul changement suffit à tout resynchroniser.
+  CRM:          'leads',
   PLATFORMS:    'platforms',
   REALTIME:     'realtime',
   AUTOMATIONS:  'automations',

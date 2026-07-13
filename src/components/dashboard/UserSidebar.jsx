@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3, X,
@@ -17,7 +17,6 @@ export const USER_NAV = [
   { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null                        },
   { id: 'booking',       label: 'Calendrier',      icon: CalendarClock,   group: 'content',   locked: null,       path: null                        },
   { id: 'forms',         label: 'Formulaires',     icon: FileText,        group: 'content',   locked: null,       path: null                        },
-  ...
   { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null                        },
   { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null                        },
   // ── Masqués côté Dashboard utilisateur : en cours de test sur le Dashboard admin ──

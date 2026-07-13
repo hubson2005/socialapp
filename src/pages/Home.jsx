@@ -27,13 +27,13 @@ function PlanModal({ onClose, onSelect }) {
       name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true,
       subtitle: 'Professionnels, influenceurs, restaurants, hôtels, boutiques',
       bg: 'rgba(255,107,53,.1)', border: '2px solid rgba(255,107,53,.55)',
-      features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC', 'Analytics & stats détaillées', 'Temps réel — visiteurs live', 'Mode Événement inclus', 'Marketplace (10 produits)', 'Support standard'],
+      features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC', 'Analytics & stats détaillées', 'Temps réel — visiteurs live', 'Mode Événement inclus', 'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés (3)', 'Marketplace (10 produits)', 'Support standard'],
     },
     {
       name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948',
       subtitle: 'Grandes entreprises, agences com, marques établies',
       bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)',
-      features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Automatisations', 'Marketplace illimitée', 'Support VIP prioritaire'],
+      features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Marketplace illimitée', 'Support VIP prioritaire'],
     },
   ];
 
@@ -99,8 +99,8 @@ export default function Home() {
 
   const plans = [
     { name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa', subtitle: 'Particulier, petit commerce, entrepreneur débutant', bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)', btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)', features: ['1 profil · 3 liens sociaux', 'Page publique', 'QR Code standard', '1 import PDF', 'Marketplace (4 produits)'] },
-    { name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true, subtitle: 'Professionnels, influenceurs, restaurants, hôtels, boutiques', bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)', btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none', features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics & statistiques détaillées', 'Temps réel — flux visiteurs live', 'Mode Événement inclus', 'Marketplace (10 produits)', '3 imports PDFs', 'QR Code premium', 'Support standard'] },
-    { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'Grandes entreprises, agences com, marques établies', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics avancés complets', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Automatisations', 'Toutes les intégrations', 'Marketplace illimitée', '10 imports PDFs', 'QR Code dynamique', '1 mois Événement offert', 'Support VIP prioritaire'] },
+    { name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true, subtitle: 'Professionnels, influenceurs, restaurants, hôtels, boutiques', bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)', btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none', features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics & statistiques détaillées', 'Temps réel — flux visiteurs live', 'Mode Événement inclus', 'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés (3)', 'Marketplace (10 produits)', '3 imports PDFs', 'QR Code premium', 'Support standard'] },
+    { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'Grandes entreprises, agences com, marques établies', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics avancés complets', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA (génération automatique)', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Toutes les intégrations', 'Marketplace illimitée', '10 imports PDFs', 'QR Code dynamique', '1 mois Événement offert', 'Support VIP prioritaire'] },
   ];
 
   const faqs = [
@@ -427,6 +427,9 @@ export default function Home() {
                 { icon: '🛍️', bg: 'rgba(245,158,11,.15)', title: 'Marketplace intégrée', desc: 'Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission sur vos ventes.', tag: '✓ Toutes les offres', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
                 { icon: '👥', bg: 'rgba(236,72,153,.15)', title: 'CRM & Pipeline de leads', desc: 'Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.', tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
                 { icon: '🎉', bg: 'rgba(255,107,53,.15)', title: 'Mode Événement', desc: 'Compte à rebours live, galerie photos & vidéos (50 Mo), bouton réservation. Parfait pour soirées et concerts.', tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
+                { icon: '📅', bg: 'rgba(93,202,165,.15)', title: 'Calendrier de réservation', desc: 'Vos clients réservent un créneau ou une place directement depuis votre profil public, sans échange de messages.', tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
+                { icon: '📝', bg: 'rgba(59,130,246,.15)', title: 'Formulaires personnalisés', desc: 'Créez des formulaires sur mesure (contact, devis, inscription) et recevez les réponses directement dans votre dashboard.', tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
+                { icon: '🤖', bg: 'rgba(37,211,102,.15)', title: 'Campagnes WhatsApp IA', desc: "Décrivez votre offre, l'IA génère vos messages de campagne (promo, relance, nouveauté) prêts à envoyer.", tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
                 { icon: '⚡', bg: 'rgba(139,92,246,.15)', title: 'Automatisations & Intégrations', desc: 'Automatisez vos réponses, connectez vos outils. Webhooks, notifications push, flux temps réel.', tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
               ].map((f, i) => (
                 <div key={i} style={S.fcard} className={`sa-fcard sa-rv sa-d${(i % 4) + 1}`}>

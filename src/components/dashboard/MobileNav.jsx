@@ -72,6 +72,11 @@
  *        rouge plein (opaque) pour un meilleur contraste, et repositionné
  *        sous la ligne email au lieu d'être aligné à côté d'elle sur une
  *        rangée horizontale forcée en pleine largeur.
+ *
+ *  [C19] Verrouillage du Calendrier (booking) : ajout de l'entrée
+ *        NAV_LOCK[NAV_IDS.BOOKING] = 'pro', pour que seuls les plans
+ *        Pro et Business (currentOrder >= PLAN_ORDER.pro) y aient accès —
+ *        auparavant l'item n'était soumis à aucune restriction de plan.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -156,10 +161,12 @@ const NAV_IDS = {
 };
 
 // Verrouillage par plan, aligné sur USER_NAV (UserSidebar.jsx).
+// [C19] Calendrier (BOOKING) désormais réservé aux plans Pro et Business.
 const NAV_LOCK = {
   [NAV_IDS.EVENT]:        'pro',
   [NAV_IDS.ANALYTICS]:    'pro',
   [NAV_IDS.REALTIME]:     'pro',
+  [NAV_IDS.BOOKING]:      'pro',
   [NAV_IDS.CRM]:          'business',
   [NAV_IDS.AUTOMATIONS]:  'business',
   [NAV_IDS.INTEGRATIONS]: 'business',
@@ -650,7 +657,8 @@ export default function MobileNav({
             [C18] Bouton "Se déconnecter" réduit à sa largeur naturelle
             (au lieu de flex:1 pleine largeur), fond rouge plein/opaque
             (au lieu de quasi transparent), et positionné sous l'email
-            au lieu d'être aligné à côté sur une rangée. */}
+            au lieu d'être aligné à côté d'elle sur une rangée horizontale
+            forcée en pleine largeur. */}
         {(userEmail || onSignOut || (!isMaxPlan && onUpgrade)) && (
           <div style={{
             padding: '12px 20px calc(16px + env(safe-area-inset-bottom))',

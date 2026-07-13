@@ -21,6 +21,8 @@ export const TRIGGERS = {
   NEW_LEAD:             'new_lead',
   PAYMENT_RECEIVED:     'payment_received',
   CALENDLY_BOOKED:      'calendly_booked',
+  NEW_BOOKING:              'new_booking',              
+  NEW_EVENT_REGISTRATION:   'new_event_registration', 
   MARKETPLACE_BUY:      'marketplace_buy',
   // ── Nouveaux (CRM client-side) ─────────────────────────────────
   LEAD_STATUS_CHANGED:  'lead_status_changed',
@@ -42,6 +44,8 @@ export const TRIGGER_LABELS = {
   [TRIGGERS.NEW_LEAD]:            '👤 Nouveau contact',
   [TRIGGERS.PAYMENT_RECEIVED]:    '💰 Paiement reçu',
   [TRIGGERS.CALENDLY_BOOKED]:     '📅 RDV Calendly',
+  [TRIGGERS.NEW_BOOKING]:            '🗓️ Nouvelle réservation',     
+  [TRIGGERS.NEW_EVENT_REGISTRATION]: '🎟️ Inscription à un événement', 
   [TRIGGERS.MARKETPLACE_BUY]:     '🛍️ Achat Marketplace',
   [TRIGGERS.LEAD_STATUS_CHANGED]: '🔄 Statut lead changé',
   [TRIGGERS.LEAD_TAGGED]:         '🏷️ Tag ajouté au lead',

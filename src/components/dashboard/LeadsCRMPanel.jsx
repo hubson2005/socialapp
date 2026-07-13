@@ -17,6 +17,7 @@ import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus
 import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
 import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
 import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
+import BookingCalendarPanel from "@/components/panels/BookingCalendarPanel";
 
 // ─── CORRECTIONS RESPONSIVE / BUGS (cette révision) ──────────────────────────
 //  [FIX1] BUG BLOQUANT : commentaire JSX mal fermé dans la modale "Nouveau

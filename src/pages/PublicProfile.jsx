@@ -94,6 +94,7 @@ import { triggerQrScan }          from '../lib/triggers/qr';
 import { triggerMarketplaceBuy }  from '../lib/triggers/marketplace';
 import { triggerMarketplaceClick } from '../lib/triggers/marketplaceClick'; // [A6]
 import SEO from "../components/SEO";
+import PublicBookingWidget from '@/pages//PublicBookingWidget'; 
 
 // ─── Constantes ───────────────────────────────────────────────
 // [C11] Numéro support centralisé — modifier ici uniquement
@@ -863,7 +864,11 @@ export default function PublicProfile() {
             )}
           </div>
         )}
-
+   {/* Réservation */}
+        <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
+          <PublicBookingWidget profileId={profile.id} />
+        </div>
+        
         {/* Boutique */}
         {sortedProducts.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>

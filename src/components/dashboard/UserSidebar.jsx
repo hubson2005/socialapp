@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3, X,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
-  Image, Loader2, LogOut,
+  Image, Loader2, LogOut, CalendarClock,
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
@@ -15,7 +15,9 @@ export const USER_NAV = [
   { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: 'pro',      path: null                        },
   { id: 'marketplace',   label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null,       path: null                        },
   { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null                        },
+  { id: 'booking',       label: 'Calendrier',      icon: CalendarClock,   group: 'content',   locked: null,       path: null                        },
   { id: 'forms',         label: 'Formulaires',     icon: FileText,        group: 'content',   locked: null,       path: null                        },
+  ...
   { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null                        },
   { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null                        },
   // ── Masqués côté Dashboard utilisateur : en cours de test sur le Dashboard admin ──

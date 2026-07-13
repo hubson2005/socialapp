@@ -34,6 +34,7 @@ import OverviewPanel from "@/components/dashboard/OverviewPanel";
 import EventPanel from "@/components/dashboard/EventPanel";
 import { useTranslation } from 'react-i18next';
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
+import BookingCalendarPanel from "@/components/panels/BookingCalendarPanel";
 import BoostPanel from "@/components/dashboard/BoostPanel";
 import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
 import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
@@ -545,6 +546,7 @@ export default function UserDashboard() {
       case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
       case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
       case 'whatsapp-crm':    return limits.hasCRM      ? <WhatsappCRMPanel profileId={localProfile.id} /> : null;
+      case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
       case 'automations':     return <AutomationsPanel     profileId={localProfile.id} />;
       case 'meta':            return <MetaIntegrationPanel profile={localProfile} isAdmin={isAdmin} />;
       case 'integrations':    return <IntegrationsPanel    profileId={localProfile.id} isAdmin={isAdmin} />;

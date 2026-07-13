@@ -327,7 +327,19 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
             </div>
           </div>
 
-          <textarea value={localProfile.event_description || ""} onChange={(e) => updateLocal({ event_description: e.target.value })} placeholder="Description..." rows={3} style={{ ...inputStyle, resize: "none" }} />
+         <textarea value={localProfile.event_description || ""} onChange={(e) => updateLocal({ event_description: e.target.value })} placeholder="Description..." rows={3} style={{ ...inputStyle, resize: "none" }} />
+
+          {/* Lien de réservation externe (Calendly, Wave, formulaire, etc.) */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+            <Calendar size={14} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
+            <input
+              type="url"
+              value={localProfile.event_booking_url || ""}
+              onChange={(e) => updateLocal({ event_booking_url: e.target.value })}
+              placeholder="Lien de réservation (https://...)"
+              style={{ background: "transparent", border: "none", color: "white", fontSize: "13px", outline: "none", flex: 1, width: "100%", minWidth: 0 }}
+            />
+          </div>
         </div>
 
         {/* Couleurs */}

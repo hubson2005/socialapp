@@ -29,11 +29,15 @@ export async function sendWhatsappAction({ config, profileId, context }) {
     return null;
   }
 
+  if (!profileId) {
+    console.warn('[Action:sendWhatsapp] Aucun profileId disponible — l\'Edge Function va rejeter la requête.');
+  }
+
   // Appel à l'Edge Function webhooks (action whatsapp)
   const { error: fnError } = await supabase.functions.invoke('webhooks', {
     body: {
-      action:    'send_whatsapp',
-      profileId,
+      action:     'send_whatsapp',
+      profile_id: profileId, // ✅ snake_case attendu par l'Edge Function
       phone,
       message,
     },

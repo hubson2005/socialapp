@@ -6,7 +6,7 @@ import { supabase } from "../../supabase";
 // ============================================================
 const COLORS = {
   bg: '#faf8f5',
-  card: '#ffffff',
+  card: '#000000',
   cardAlt: '#f3f1ec',
   border: 'rgba(108,99,255,0.18)',
   accent: '#a78bfa',
@@ -27,7 +27,7 @@ const s = {
     color: active ? '#fff' : COLORS.textMuted, border: `1px solid ${active ? 'transparent' : COLORS.border}`,
     transition: 'all .15s',
   }),
-  card: { background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 18, marginBottom: 14 },
+  card: { background: COLORS.card, color: '#ffffff', border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 18, marginBottom: 14 },
   row: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
   input: {
     background: COLORS.cardAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '10px 12px',

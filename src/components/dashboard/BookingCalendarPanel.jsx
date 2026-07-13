@@ -255,9 +255,37 @@ function AvailabilityTab({ profileId }) {
     load();
   };
 
-  const updateSlot = async (id, field, value) => {
-    await supabase.from('booking_availability').update({ [field]: value }).eq('id', id);
-    load();
+  // FIX — l'ancien updateSlot(id, field, value) envoyait UN SEUL champ par
+  // PATCH (start_time OU end_time selon l'input modifié). La contrainte SQL
+  // `CHECK (end_time > start_time)` est évaluée sur la ligne COMPLÈTE en
+  // base : si la nouvelle valeur d'un champ, combinée à l'ancienne valeur
+  // encore stockée de l'autre champ, viole temporairement la contrainte
+  // (ex: on modifie start_time à 16:00 alors que end_time est encore à
+  // 15:59 en base), Supabase rejette la requête avec 400 — même si la
+  // paire FINALE visée par l'utilisateur est parfaitement valide. On
+  // envoie désormais toujours les deux champs ensemble (issus du même
+  // objet `sl` local), et on valide côté client avant l'appel réseau.
+  const updateSlot = async (id, field, currentSlot, value) => {
+    const next = { ...currentSlot, [field]: value };
+
+    // Si end <= start après cette modif, on ne sauvegarde pas encore
+    // (l'utilisateur est probablement en train de modifier l'autre champ
+    // juste après) — mais on met à jour l'affichage local pour ne pas
+    // bloquer la saisie.
+    if (next.end_time && next.start_time && next.end_time <= next.start_time) {
+      setSlots(prev => prev.map(sl => sl.id === id ? next : sl));
+      return;
+    }
+
+    setSlots(prev => prev.map(sl => sl.id === id ? next : sl)); // optimiste
+    const { error } = await supabase
+      .from('booking_availability')
+      .update({ start_time: next.start_time, end_time: next.end_time })
+      .eq('id', id);
+    if (error) {
+      console.error('updateSlot error:', error);
+      load(); // resynchronise avec la base en cas d'échec
+    }
   };
 
   const removeSlot = async (id) => {
@@ -292,9 +320,9 @@ function AvailabilityTab({ profileId }) {
             {slotsByDay(day).length === 0 && <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Fermé</div>}
             {slotsByDay(day).map((sl) => (
               <div key={sl.id} style={{ ...s.row, marginBottom: 6 }}>
-                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.start_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'start_time', e.target.value)} />
+                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.start_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'start_time', sl, e.target.value)} />
                 <span style={{ color: COLORS.textMuted }}>à</span>
-                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.end_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'end_time', e.target.value)} />
+                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.end_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'end_time', sl, e.target.value)} />
                 <button style={s.btnDanger} onClick={() => removeSlot(sl.id)}>✕</button>
               </div>
             ))}

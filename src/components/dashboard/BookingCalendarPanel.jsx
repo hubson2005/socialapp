@@ -5,17 +5,17 @@ import { supabase } from "../../supabase";
 // STYLES (cohérents avec le thème dark de SocialApp)
 // ============================================================
 const COLORS = {
-  bg: '#060412',
-  card: '#0c0d1a',
-  cardAlt: '#12101f',
-  border: 'rgba(167,139,250,0.15)',
+  bg: '#faf8f5',
+  card: '#ffffff',
+  cardAlt: '#f3f1ec',
+  border: 'rgba(108,99,255,0.18)',
   accent: '#a78bfa',
   accent2: '#6c63ff',
-  text: '#f1f0f7',
-  textMuted: '#8a8798',
-  danger: '#f87171',
-  success: '#4ade80',
-  warning: '#fbbf24',
+  text: '#1e1b2e',
+  textMuted: '#726c82',
+  danger: '#dc2626',
+  success: '#16a34a',
+  warning: '#d97706',
 };
 
 const s = {
@@ -51,18 +51,11 @@ const s = {
     background: `${color}22`, color, textTransform: 'uppercase', letterSpacing: 0.3,
   }),
   empty: { textAlign: 'center', padding: 40, color: COLORS.textMuted, fontSize: 14 },
-  errorBox: {
-    background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.3)',
-    color: COLORS.danger, borderRadius: 8, padding: '10px 12px', fontSize: 13, marginBottom: 12,
-  },
 };
 
 const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 const STATUS_COLORS = { pending: COLORS.warning, confirmed: COLORS.success, cancelled: COLORS.danger, completed: COLORS.accent, no_show: COLORS.textMuted };
 const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé', completed: 'Terminé', no_show: 'Absent' };
-
-// Valide un format "HH:MM" complet avant d'envoyer à Postgres (colonne type `time`)
-const isValidTime = (val) => typeof val === 'string' && /^\d{2}:\d{2}$/.test(val);
 
 // ============================================================
 // COMPOSANT PRINCIPAL
@@ -239,13 +232,6 @@ function AvailabilityTab({ profileId }) {
   const [blocked, setBlocked] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newBlock, setNewBlock] = useState({ blocked_date: '', reason: '' });
-  const [error, setError] = useState(null);
-
-  // Valeurs locales des inputs time, tenues séparément des données Supabase.
-  // Cela évite d'envoyer un PATCH à chaque frappe (et notamment les valeurs
-  // vides/incomplètes que le navigateur peut émettre pendant la saisie),
-  // qui causaient les erreurs 400 Bad Request.
-  const [localTimes, setLocalTimes] = useState({}); // { [slotId]: { start_time, end_time } }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -256,16 +242,6 @@ function AvailabilityTab({ profileId }) {
     setSlots(a.data || []);
     setBlocked(b.data || []);
     setLoading(false);
-
-    // Réinitialise les valeurs locales à partir des données fraîches
-    const times = {};
-    (a.data || []).forEach((sl) => {
-      times[sl.id] = {
-        start_time: sl.start_time?.slice(0, 5) || '',
-        end_time: sl.end_time?.slice(0, 5) || '',
-      };
-    });
-    setLocalTimes(times);
   }, [profileId]);
 
   useEffect(() => { load(); }, [load]);
@@ -273,68 +249,31 @@ function AvailabilityTab({ profileId }) {
   const slotsByDay = (day) => slots.filter((sl) => sl.day_of_week === day);
 
   const addSlot = async (day) => {
-    setError(null);
-    const { error: err } = await supabase.from('booking_availability').insert({
+    await supabase.from('booking_availability').insert({
       profile_id: profileId, day_of_week: day, start_time: '09:00', end_time: '17:00', is_active: true,
     });
-    if (err) { setError(err.message); return; }
     load();
   };
 
-  // Met à jour uniquement l'état local pendant la saisie (pas d'appel réseau)
-  const handleLocalTimeChange = (slotId, field, value) => {
-    setLocalTimes((prev) => ({
-      ...prev,
-      [slotId]: { ...prev[slotId], [field]: value },
-    }));
-  };
-
-  // Envoie le PATCH uniquement quand le champ perd le focus, et seulement
-  // si la valeur est un HH:MM complet et différente de l'originale.
-  const commitTime = async (slot, field) => {
-    const value = localTimes[slot.id]?.[field];
-
-    if (!isValidTime(value)) {
-      // Valeur incomplète/invalide : on revient à la valeur d'origine sans appeler l'API
-      setLocalTimes((prev) => ({
-        ...prev,
-        [slot.id]: { ...prev[slot.id], [field]: slot[field]?.slice(0, 5) || '' },
-      }));
-      return;
-    }
-
-    const original = slot[field]?.slice(0, 5) || '';
-    if (value === original) return; // rien n'a changé, pas besoin de PATCH
-
-    setError(null);
-    const { error: err } = await supabase.from('booking_availability').update({ [field]: value }).eq('id', slot.id);
-    if (err) {
-      setError(err.message);
-      return;
-    }
+  const updateSlot = async (id, field, value) => {
+    await supabase.from('booking_availability').update({ [field]: value }).eq('id', id);
     load();
   };
 
   const removeSlot = async (id) => {
-    setError(null);
-    const { error: err } = await supabase.from('booking_availability').delete().eq('id', id);
-    if (err) { setError(err.message); return; }
+    await supabase.from('booking_availability').delete().eq('id', id);
     load();
   };
 
   const addBlock = async () => {
     if (!newBlock.blocked_date) return alert('Choisis une date.');
-    setError(null);
-    const { error: err } = await supabase.from('booking_blocked_dates').insert({ profile_id: profileId, ...newBlock });
-    if (err) { setError(err.message); return; }
+    await supabase.from('booking_blocked_dates').insert({ profile_id: profileId, ...newBlock });
     setNewBlock({ blocked_date: '', reason: '' });
     load();
   };
 
   const removeBlock = async (id) => {
-    setError(null);
-    const { error: err } = await supabase.from('booking_blocked_dates').delete().eq('id', id);
-    if (err) { setError(err.message); return; }
+    await supabase.from('booking_blocked_dates').delete().eq('id', id);
     load();
   };
 
@@ -342,8 +281,6 @@ function AvailabilityTab({ profileId }) {
 
   return (
     <div>
-      {error && <div style={s.errorBox}>⚠️ {error}</div>}
-
       <div style={s.card}>
         <strong style={{ display: 'block', marginBottom: 12 }}>Planning hebdomadaire récurrent</strong>
         {DAYS.map((label, day) => (
@@ -355,21 +292,9 @@ function AvailabilityTab({ profileId }) {
             {slotsByDay(day).length === 0 && <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Fermé</div>}
             {slotsByDay(day).map((sl) => (
               <div key={sl.id} style={{ ...s.row, marginBottom: 6 }}>
-                <input
-                  style={{ ...s.input, flex: '0 1 110px' }}
-                  type="time"
-                  value={localTimes[sl.id]?.start_time ?? sl.start_time?.slice(0, 5) ?? ''}
-                  onChange={(e) => handleLocalTimeChange(sl.id, 'start_time', e.target.value)}
-                  onBlur={() => commitTime(sl, 'start_time')}
-                />
+                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.start_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'start_time', e.target.value)} />
                 <span style={{ color: COLORS.textMuted }}>à</span>
-                <input
-                  style={{ ...s.input, flex: '0 1 110px' }}
-                  type="time"
-                  value={localTimes[sl.id]?.end_time ?? sl.end_time?.slice(0, 5) ?? ''}
-                  onChange={(e) => handleLocalTimeChange(sl.id, 'end_time', e.target.value)}
-                  onBlur={() => commitTime(sl, 'end_time')}
-                />
+                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.end_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'end_time', e.target.value)} />
                 <button style={s.btnDanger} onClick={() => removeSlot(sl.id)}>✕</button>
               </div>
             ))}

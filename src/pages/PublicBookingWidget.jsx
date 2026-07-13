@@ -2,50 +2,59 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase'; // même chemin que PublicProfile.jsx
 import { triggerNewBooking, triggerNewEventRegistration } from '../lib/triggers/booking';
 
-// Palette "glass" alignée sur le style réel de PublicProfile.jsx : cartes
-// translucides + backdrop-filter par-dessus le fond dynamique (image ou
-// dégradé de thème), plutôt que des cartes solides comme dans le dashboard.
+// Palette "premium" : fond opaque (plus de simple transparence sur le fond
+// dynamique), accent émeraude, séparation nette entre l'en-tête et le
+// contenu, cohérent avec la maquette validée.
 const COLORS = {
-  glass: 'rgba(255,255,255,0.10)',
-  glassAlt: 'rgba(255,255,255,0.06)',
-  border: 'rgba(255,255,255,0.15)',
-  accent: '#a78bfa', accent2: '#6c63ff',
-  text: '#ffffff', textMuted: 'rgba(255,255,255,0.55)',
-  success: '#22c55e', danger: '#f87171',
+  surface: '#141220',       // fond opaque de la carte
+  surfaceAlt: '#1c1930',    // fond des blocs internes (service, créneau...)
+  badgeBg: '#173229',       // fond du badge icône
+  border: 'rgba(255,255,255,0.08)',
+  borderStrong: 'rgba(93,202,165,0.18)',
+  accent: '#5dcaa5', accent2: '#3fae8c',
+  accentDark: '#0a1f18',    // texte sur fond accent (contraste AA)
+  accentSoft: '#9fe1cb',    // texte accent sur fond sombre
+  text: '#ffffff', textMuted: '#8b889c',
+  success: '#5dcaa5', danger: '#f87171',
 };
 
 const s = {
   wrap: {
-    background: COLORS.glass, border: `1px solid ${COLORS.border}`, borderRadius: 20, padding: 20, color: COLORS.text,
-    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+    background: COLORS.surface, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 18, padding: 24, color: COLORS.text,
   },
-  title: { fontSize: 16, fontWeight: 800, margin: '0 0 4px', color: '#fff' },
-  subtitle: { color: COLORS.textMuted, fontSize: 13, margin: '0 0 16px' },
+  headerRow: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
+  iconBadge: {
+    width: 36, height: 36, borderRadius: 10, background: COLORS.badgeBg, display: 'flex',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18,
+  },
+  title: { fontSize: 16, fontWeight: 500, margin: 0, color: '#fff', letterSpacing: '0.2px' },
+  subtitle: { color: COLORS.textMuted, fontSize: 12, margin: '2px 0 0' },
+  divider: { height: 1, background: COLORS.border, margin: '0 0 16px' },
   tabs: { display: 'flex', gap: 8, marginBottom: 16 },
   tab: (active) => ({
-    flex: 1, textAlign: 'center', padding: '10px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13,
-    background: active ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : COLORS.glassAlt,
-    color: active ? '#fff' : COLORS.textMuted, touchAction: 'manipulation',
+    flex: 1, textAlign: 'center', padding: '10px 12px', borderRadius: 9, cursor: 'pointer', fontWeight: 500, fontSize: 13,
+    background: active ? COLORS.accent : COLORS.surfaceAlt,
+    color: active ? COLORS.accentDark : COLORS.textMuted, touchAction: 'manipulation',
   }),
   item: {
-    background: COLORS.glassAlt, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 14, marginBottom: 10, cursor: 'pointer', touchAction: 'manipulation',
+    background: COLORS.surfaceAlt, borderLeft: `2px solid ${COLORS.accent}`, borderRadius: 12, padding: 16, marginBottom: 10,
+    cursor: 'pointer', touchAction: 'manipulation',
   },
-  itemSelected: { border: `1px solid ${COLORS.accent}`, boxShadow: `0 0 0 1px ${COLORS.accent}` },
+  itemSelected: { boxShadow: `0 0 0 1px ${COLORS.accent}` },
   input: {
-    width: '100%', boxSizing: 'border-box', background: 'rgba(0,0,0,0.25)', border: `1px solid ${COLORS.border}`, borderRadius: 10,
+    width: '100%', boxSizing: 'border-box', background: '#0d0c16', border: `1px solid ${COLORS.border}`, borderRadius: 9,
     padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', marginBottom: 10,
   },
   btn: {
-    width: '100%', background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})`, color: '#fff', border: 'none',
-    borderRadius: 14, padding: '14px 16px', fontWeight: 700, fontSize: 15, cursor: 'pointer', touchAction: 'manipulation',
-    boxShadow: '0 4px 20px rgba(167,139,250,0.35)',
+    width: '100%', background: COLORS.accent, color: COLORS.accentDark, border: 'none',
+    borderRadius: 9, padding: '14px 16px', fontWeight: 500, fontSize: 15, cursor: 'pointer', touchAction: 'manipulation',
   },
   btnGhost: { background: 'transparent', color: COLORS.textMuted, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', touchAction: 'manipulation' },
   slotGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 8, marginBottom: 16 },
   slot: (selected) => ({
-    padding: '10px 6px', textAlign: 'center', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    background: selected ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : COLORS.glassAlt,
-    color: selected ? '#fff' : '#fff', border: `1px solid ${selected ? 'transparent' : COLORS.border}`, touchAction: 'manipulation',
+    padding: '10px 6px', textAlign: 'center', borderRadius: 9, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+    background: selected ? COLORS.accent : COLORS.surfaceAlt,
+    color: selected ? COLORS.accentDark : '#fff', border: `1px solid ${selected ? 'transparent' : COLORS.border}`, touchAction: 'manipulation',
   }),
   empty: { textAlign: 'center', color: COLORS.textMuted, fontSize: 13, padding: 20 },
   success: { textAlign: 'center', padding: 30 },
@@ -77,8 +86,14 @@ export default function PublicBookingWidget({ profileId }) {
 
   return (
     <div style={s.wrap}>
-      <h3 style={s.title}>📅 Prendre rendez-vous</h3>
-      <p style={s.subtitle}>Réserve directement un créneau ou une place.</p>
+      <div style={s.headerRow}>
+        <div style={s.iconBadge}>📅</div>
+        <div>
+          <h3 style={s.title}>Prendre rendez-vous</h3>
+          <p style={s.subtitle}>Réserve directement un créneau ou une place</p>
+        </div>
+      </div>
+      <div style={s.divider} />
 
       {services.length > 0 && events.length > 0 && (
         <div style={s.tabs}>
@@ -184,8 +199,8 @@ function ServiceBookingFlow({ profileId, services }) {
         {services.map((svc) => (
           <div key={svc.id} style={s.item} onClick={() => pickService(svc)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong>{svc.name}</strong>
-              <span style={{ color: COLORS.accent, fontWeight: 700 }}>{svc.price > 0 ? `${svc.price.toLocaleString('fr-FR')} FCFA` : 'Gratuit'}</span>
+              <strong style={{ fontWeight: 500 }}>{svc.name}</strong>
+              <span style={{ color: COLORS.accentSoft, fontWeight: 500 }}>{svc.price > 0 ? `${svc.price.toLocaleString('fr-FR')} FCFA` : 'Gratuit'}</span>
             </div>
             <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 4 }}>{svc.duration_minutes} min{svc.description ? ` · ${svc.description}` : ''}</div>
           </div>
@@ -204,12 +219,12 @@ function ServiceBookingFlow({ profileId, services }) {
             const active = date === iso;
             return (
               <div key={iso} onClick={() => pickDate(iso)} style={{
-                flex: '0 0 auto', minWidth: 56, textAlign: 'center', padding: '8px 6px', borderRadius: 10, cursor: 'pointer',
-                background: active ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : COLORS.cardAlt,
-                color: active ? '#fff' : COLORS.text, border: `1px solid ${active ? 'transparent' : COLORS.border}`,
+                flex: '0 0 auto', minWidth: 56, textAlign: 'center', padding: '8px 6px', borderRadius: 9, cursor: 'pointer',
+                background: active ? COLORS.accent : COLORS.surfaceAlt,
+                color: active ? COLORS.accentDark : COLORS.text, border: `1px solid ${active ? 'transparent' : COLORS.border}`,
               }}>
                 <div style={{ fontSize: 11, opacity: 0.8 }}>{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</div>
-                <div style={{ fontWeight: 700 }}>{d.getDate()}</div>
+                <div style={{ fontWeight: 500 }}>{d.getDate()}</div>
               </div>
             );
           })}
@@ -306,12 +321,12 @@ function EventBookingFlow({ profileId, events }) {
       <div>
         {events.map((ev) => (
           <div key={ev.id} style={s.item} onClick={() => ev.spots_remaining > 0 && setEvent(ev)}>
-            <strong>{ev.title}</strong>
+            <strong style={{ fontWeight: 500 }}>{ev.title}</strong>
             <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 4 }}>
               {new Date(ev.event_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {ev.start_time?.slice(0, 5)}
               {ev.location ? ` · ${ev.location}` : ''}
             </div>
-            <div style={{ marginTop: 6, fontSize: 13, color: ev.spots_remaining > 0 ? COLORS.success : COLORS.danger, fontWeight: 700 }}>
+            <div style={{ marginTop: 6, fontSize: 13, color: ev.spots_remaining > 0 ? COLORS.success : COLORS.danger, fontWeight: 500 }}>
               {ev.spots_remaining > 0 ? `${ev.spots_remaining} place(s) restante(s)` : 'Complet'}
             </div>
           </div>

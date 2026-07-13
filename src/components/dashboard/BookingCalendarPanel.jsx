@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient'; // ⚠️ adapte ce chemin si besoin
+import { supabase } from "../../supabase";
 
 // ============================================================
 // STYLES (cohérents avec le thème dark de SocialApp)

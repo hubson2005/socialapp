@@ -34,7 +34,7 @@ import OverviewPanel from "@/components/dashboard/OverviewPanel";
 import EventPanel from "@/components/dashboard/EventPanel";
 import { useTranslation } from 'react-i18next';
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
-import BookingCalendarPanel from "@/components/panels/BookingCalendarPanel";
+import BookingCalendarPanel from "@/components/dashboard/BookingCalendarPanel";
 import BoostPanel from "@/components/dashboard/BoostPanel";
 import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
 import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";

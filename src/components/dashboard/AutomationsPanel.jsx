@@ -57,6 +57,25 @@
 //       bornée à la tranche tablette 768–1023px, l'autre s'applique
 //       à partir de 768px pour la mise en page du modal — objectifs
 //       différents, gardées telles quelles).
+//
+// SUPPRESSION RAPIDE + ARCHIVAGE (cette révision) :
+//  [A1] Ajout d'une colonne `archived` (boolean, défaut false) sur la
+//       table `automations` (migration Supabase). Une automation
+//       archivée est masquée des filtres "Tous / Actives / Inactives"
+//       et des statistiques d'en-tête, sans que ses données (logs,
+//       historique, config) soient perdues — contrairement à la
+//       suppression qui reste définitive.
+//  [A2] Bouton "🗑 Supprimer" désormais accessible directement sur
+//       chaque carte de la liste (avec confirmation), en plus de celui
+//       déjà présent dans la modale d'édition — plus besoin d'ouvrir
+//       une automation juste pour la supprimer.
+//  [A3] Bouton "📦 Archiver / 📤 Désarchiver" ajouté sur chaque carte
+//       et dans la modale d'édition (toggleArchive). Depuis la modale,
+//       archiver referme automatiquement la modale puisque
+//       l'automation sort de la vue courante.
+//  [A4] Nouvel onglet de filtre "📦 Archivées (n)" affichant uniquement
+//       les automations archivées ; les onglets "Tous/Actives/Inactives"
+//       les excluent systématiquement.
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -720,7 +739,7 @@ export default function AutomationsPanel({ profileId }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette automation ?')) return;
+    if (!window.confirm('Supprimer définitivement cette automation ? Cette action est irréversible.')) return;
     const { error } = await supabase.from('automations').delete().eq('id', id);
     if (error) { console.error('DELETE ERROR:', error); return; }
     setAutomations(prev => prev.filter(a => a.id !== id));
@@ -737,9 +756,30 @@ export default function AutomationsPanel({ profileId }) {
     if (error) setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: target.active } : a));
   };
 
+  // [A1][A3] Archiver / désarchiver une automation. Ne supprime aucune
+  // donnée (config, logs, historique) — masque simplement l'automation
+  // des filtres actifs par défaut ; réversible à tout moment.
+  const toggleArchive = async (id) => {
+    const target = automations.find(a => a.id === id);
+    if (!target) return;
+    const newArchived = !target.archived;
+    setAutomations(prev => prev.map(a => a.id === id ? { ...a, archived: newArchived } : a));
+    const { error } = await supabase.from('automations')
+      .update({ archived: newArchived, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) setAutomations(prev => prev.map(a => a.id === id ? { ...a, archived: target.archived } : a));
+  };
+
   /* ── Filtres ── */
   const filtered = useMemo(() => automations.filter(a => {
-    const matchFilter = filter === 'Tous' || (filter === 'Actives' && a.active) || (filter === 'Inactives' && !a.active);
+    // [A4] "Archivées" n'affiche QUE les automations archivées ; les
+    // autres onglets (Tous/Actives/Inactives) les excluent toujours.
+    if (filter === 'Archivées') {
+      if (!a.archived) return false;
+    } else if (a.archived) {
+      return false;
+    }
+    const matchFilter = filter === 'Tous' || filter === 'Archivées'
+      || (filter === 'Actives' && a.active) || (filter === 'Inactives' && !a.active);
     // [M8] Recherche sur le nom ou le libellé du déclencheur
     const triggerLabel = TRIGGER_LABELS[a.trigger] || a.trigger || '';
     const matchSearch  = (a.name || '').toLowerCase().includes(search.toLowerCase())
@@ -748,10 +788,14 @@ export default function AutomationsPanel({ profileId }) {
   }), [automations, filter, search]);
 
   /* ── Stats ── */
-  const totalRuns  = automations.reduce((sum, a) => sum + (a.runs || 0), 0);
-  const totalScore = automations.reduce((sum, a) => sum + (a.score || 0), 0);
-  const nbActive   = automations.filter(a => a.active).length;
-  const nbInactive = automations.filter(a => !a.active).length;
+  // [A1] Calculées hors automations archivées, pour ne pas fausser la
+  // vue d'ensemble avec des automations mises de côté par l'utilisateur.
+  const nonArchived = automations.filter(a => !a.archived);
+  const totalRuns   = nonArchived.reduce((sum, a) => sum + (a.runs || 0), 0);
+  const totalScore  = nonArchived.reduce((sum, a) => sum + (a.score || 0), 0);
+  const nbActive    = nonArchived.filter(a => a.active).length;
+  const nbInactive  = nonArchived.filter(a => !a.active).length;
+  const nbArchived  = automations.length - nonArchived.length;
 
   /* ── Log helpers ── */
   const logStatusCls = s => ({ ok:'log-status ls-ok', err:'log-status ls-err', skip:'log-status ls-skip' }[s] || 'log-status ls-skip');
@@ -829,7 +873,14 @@ export default function AutomationsPanel({ profileId }) {
 
         <div className="ap-modal-footer">
           {!isCreate && (
-            <button className="ap-btn-sec" onClick={() => handleDelete(modal.id)} style={{ marginRight:'auto', color:'#f45b5b' }}>🗑 Supprimer</button>
+            <>
+              <button className="ap-btn-sec" onClick={() => handleDelete(modal.id)} style={{ marginRight:'auto', color:'#f45b5b' }}>🗑 Supprimer</button>
+              {/* [A3] Archiver/désarchiver depuis la modale — referme la modale
+                  car l'automation change de vue (elle sort du filtre courant). */}
+              <button className="ap-btn-sec" onClick={() => { toggleArchive(modal.id); setModal(null); }}>
+                {modal.archived ? '📤 Désarchiver' : '📦 Archiver'}
+              </button>
+            </>
           )}
           <button className="ap-btn-sec" onClick={() => setModal(null)}>Annuler</button>
           <button className="ap-btn-primary" onClick={isCreate ? handleCreate : handleSave}>
@@ -883,8 +934,12 @@ export default function AutomationsPanel({ profileId }) {
         {tab === 'automations' && (
           <>
             <div className="ap-toolbar">
-              {['Tous','Actives','Inactives'].map(f => (
-                <button key={f} className={`ap-filter-btn${filter === f ? ' on' : ''}`} onClick={() => setFilter(f)}>{f}</button>
+              {/* [A4] Onglet "Archivées" avec compteur — les automations
+                  archivées n'apparaissent que sous ce filtre dédié. */}
+              {['Tous','Actives','Inactives','Archivées'].map(f => (
+                <button key={f} className={`ap-filter-btn${filter === f ? ' on' : ''}`} onClick={() => setFilter(f)}>
+                  {f === 'Archivées' ? `📦 Archivées${nbArchived ? ` (${nbArchived})` : ''}` : f}
+                </button>
               ))}
               <div className="ap-search">
                 <span style={{ fontSize:14, color:'#5c6070' }}>🔍</span>
@@ -916,6 +971,13 @@ export default function AutomationsPanel({ profileId }) {
                           <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.1)':'rgba(100,100,120,.2)', color:auto.active?'#22d07a':'#5c6070', padding:'2px 7px', borderRadius:20 }}>
                             {auto.active ? 'Actif' : 'Inactif'}
                           </span>
+                          {/* [A1] Badge visuel pour repérer une automation archivée
+                              (visible seulement sous l'onglet "Archivées"). */}
+                          {auto.archived && (
+                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(100,100,120,.18)', color:'#9fa3b0', padding:'2px 7px', borderRadius:20 }}>
+                              📦 Archivé
+                            </span>
+                          )}
                           {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
                             <span style={{ fontSize:10, fontWeight:700, background:'rgba(251,191,36,.12)', color:'#fbbf24', padding:'2px 7px', borderRadius:20 }}>
                               ⏳ Bientôt
@@ -944,13 +1006,26 @@ export default function AutomationsPanel({ profileId }) {
                           <span className="ap-tog-lbl">{auto.active ? 'ON' : 'OFF'}</span>
                           <button className={`ap-toggle ${auto.active ? 'on' : 'off'}`} onClick={() => toggleAuto(auto.id)} />
                         </div>
-                        <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
+                        {/* [A2][A3] Actions rapides directement sur la carte :
+                            modifier, archiver/désarchiver, supprimer — sans
+                            avoir à ouvrir la modale d'édition. flexWrap
+                            permet aux boutons de passer à la ligne sur les
+                            très petits écrans plutôt que de déborder. */}
+                        <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
+                          <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
+                          <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); toggleArchive(auto.id); }}>
+                            {auto.archived ? '📤 Désarchiver' : '📦 Archiver'}
+                          </button>
+                          <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px', color:'#f45b5b' }} onClick={e => { e.stopPropagation(); handleDelete(auto.id); }}>🗑</button>
+                        </div>
                       </div>
                     </div>
                   );
                 })}
                 {!filtered.length && (
-                  <div style={{ textAlign:'center', padding:'50px 0', color:'#5c6070', fontSize:13 }}>Aucune automation trouvée</div>
+                  <div style={{ textAlign:'center', padding:'50px 0', color:'#5c6070', fontSize:13 }}>
+                    {filter === 'Archivées' ? 'Aucune automation archivée' : 'Aucune automation trouvée'}
+                  </div>
                 )}
               </div>
             )}

@@ -42,7 +42,10 @@ const s = {
     background: 'rgba(248,113,113,0.12)', color: COLORS.danger, border: '1px solid rgba(248,113,113,0.3)',
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14,
   },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 20 },
+  // Les propriétés responsive (colonnes, wrap, overflow) vivent dans les
+  // classes CSS injectées (bcp-stats / bcp-main / bcp-tabs) plutôt qu'ici,
+  // car un style inline a toujours priorité sur une media query CSS.
+  statsGrid: { gap: 14, marginBottom: 20 },
   statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'center' },
   statIcon: (color) => ({
     width: 48, height: 48, borderRadius: 12, background: `${color}22`, color,
@@ -51,8 +54,8 @@ const s = {
   statValue: { fontSize: 26, fontWeight: 800, lineHeight: 1.1 },
   statLabel: { fontSize: 13, fontWeight: 600, marginTop: 2 },
   statSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
-  mainGrid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 18, alignItems: 'start' },
-  tabs: { display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' },
+  mainGrid: { gap: 18, alignItems: 'start' },
+  tabs: { display: 'flex', gap: 8, marginBottom: 18 },
   tab: (active) => ({
     padding: '10px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600,
     background: active ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : COLORS.panel,
@@ -79,6 +82,33 @@ const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Sa
 const STATUS_COLORS = { pending: COLORS.warning, confirmed: COLORS.success, cancelled: COLORS.danger, completed: COLORS.accent, no_show: COLORS.textMuted };
 const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé', completed: 'Terminé', no_show: 'Absent' };
 const SERVICE_ICON_COLORS = [COLORS.accent, COLORS.blue, COLORS.success, COLORS.warning];
+
+// Media queries : mobile < 640px (Android/iPhone), tablette 640–1023px,
+// desktop >= 1024px (iPad du mockup en landscape ≈ dashboard desktop).
+// Injecté une seule fois ; les propriétés responsive ne sont PAS dupliquées
+// en inline style ci-dessus pour laisser ces règles s'appliquer.
+const RESPONSIVE_CSS = `
+.bcp-stats { display: grid; grid-template-columns: repeat(4, 1fr); }
+.bcp-main { display: grid; grid-template-columns: minmax(0,1fr) 320px; }
+.bcp-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.bcp-tabs::-webkit-scrollbar { display: none; }
+.bcp-sidebar-desktop { display: block; }
+.bcp-recent-mobile { display: none; }
+.bcp-svc-actions { display: flex; }
+.bcp-svc-chevron { display: none; }
+@media (max-width: 1023px) {
+  .bcp-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 899px) {
+  .bcp-main { grid-template-columns: 1fr; }
+  .bcp-sidebar-desktop { display: none; }
+  .bcp-recent-mobile { display: block; }
+}
+@media (max-width: 639px) {
+  .bcp-svc-actions { display: none; }
+  .bcp-svc-chevron { display: inline-flex; }
+}
+`;
 
 const dateKey = (d) => {
   const dt = (d instanceof Date) ? d : new Date(d);
@@ -167,18 +197,21 @@ export default function BookingCalendarPanel({ profileId }) {
         </button>
       </div>
 
+      {/* CSS responsive — mobile / tablette / desktop (voir mockups) */}
+      <style>{RESPONSIVE_CSS}</style>
+
       {/* STATS */}
-      <div style={s.statsGrid}>
+      <div className="bcp-stats" style={s.statsGrid}>
         <StatCard icon="📦" color={COLORS.accent} value={activeServicesCount} label="Services" sub="Actifs dans votre agenda" />
         <StatCard icon="📅" color={COLORS.blue} value={monthBookings.length} label="Réservations" sub="Ce mois-ci" />
         <StatCard icon="🕒" color={COLORS.success} value={todayBookings.length} label="Aujourd'hui" sub="Rendez-vous prévus" />
         <StatCard icon="📈" color={COLORS.warning} value={`${confirmationRate}%`} label="Confirmées" sub="Taux de confirmation" />
       </div>
 
-      {/* CONTENU PRINCIPAL + SIDEBAR */}
-      <div style={s.mainGrid}>
+      {/* CONTENU PRINCIPAL + SIDEBAR (sidebar masquée < 900px, remplacée par un flux "Réservations récentes") */}
+      <div className="bcp-main" style={s.mainGrid}>
         <div>
-          <div style={s.tabs}>
+          <div className="bcp-tabs" style={s.tabs}>
             {[
               ['services', '📦 Services'],
               ['availability', '🕒 Disponibilités'],
@@ -203,9 +236,14 @@ export default function BookingCalendarPanel({ profileId }) {
             />
           )}
           {tab === 'stats' && <StatsTab overview={overview} />}
+
+          {/* Repli mobile : remplace la sidebar calendrier/agenda par un flux compact */}
+          <div className="bcp-recent-mobile">
+            <RecentBookingsCard bookings={overview.bookings} onSeeAll={goToBookingsTab} />
+          </div>
         </div>
 
-        <div>
+        <div className="bcp-sidebar-desktop">
           <MiniCalendar
             month={calendarMonth}
             setMonth={setCalendarMonth}
@@ -334,6 +372,43 @@ function AgendaPanel({ selectedDate, bookings, onSeeAll }) {
       })}
       <button style={{ ...s.btnGhost, width: '100%', textAlign: 'center', marginTop: 14, color: COLORS.accent, borderColor: COLORS.borderStrong }} onClick={onSeeAll}>
         Voir l'agenda complet →
+      </button>
+    </div>
+  );
+}
+
+// ============================================================
+// RÉSERVATIONS RÉCENTES (repli mobile quand la sidebar est masquée)
+// ============================================================
+function RecentBookingsCard({ bookings, onSeeAll }) {
+  const recent = bookings
+    .slice()
+    .sort((a, b) => (b.booking_date + (b.start_time || '')).localeCompare(a.booking_date + (a.start_time || '')))
+    .slice(0, 4);
+
+  return (
+    <div style={s.card}>
+      <strong style={{ display: 'block', marginBottom: 12 }}>Réservations récentes</strong>
+      {recent.length === 0 && <div style={{ ...s.empty, padding: 20 }}>Aucune réservation pour l'instant.</div>}
+      {recent.map((b) => {
+        const label = b.booking_services?.name || b.booking_events?.title || 'Réservation';
+        return (
+          <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderTop: `1px solid ${COLORS.border}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{b.client_name}</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 12, color: COLORS.textMuted }}>
+                {new Date(b.booking_date).toLocaleDateString('fr-FR')} · {b.start_time?.slice(0, 5)}
+              </div>
+              <span style={s.badge(STATUS_COLORS[b.status])}>{STATUS_LABELS[b.status]}</span>
+            </div>
+          </div>
+        );
+      })}
+      <button style={{ ...s.btnGhost, width: '100%', textAlign: 'center', marginTop: 14, color: COLORS.accent, borderColor: COLORS.borderStrong }} onClick={onSeeAll}>
+        Voir toutes les réservations →
       </button>
     </div>
   );
@@ -472,11 +547,19 @@ function ServicesTab({ profileId, onDataChanged }) {
                 <span style={s.badge(svc.is_active ? COLORS.success : COLORS.textMuted)}>{svc.is_active ? 'Actif' : 'Inactif'}</span>
               </div>
             </div>
-            <div style={s.row}>
+            <div className="bcp-svc-actions" style={s.row}>
               <button style={s.btnGhost} onClick={() => toggleActive(svc)}>{svc.is_active ? 'Désactiver' : 'Activer'}</button>
               <div style={s.btnIcon} title="Modifier" onClick={() => setForm(svc)}>✎</div>
-              <div style={s.btnIcon} title="Dupliquer" onClick={() => duplicate(svc)}>⧉</div>
-              <div style={s.btnDanger} title="Supprimer" onClick={() => remove(svc.id)}>🗑</div>
+              <div style={s.btnIcon} title="Dupliquer" onClick={(e) => { e.stopPropagation(); duplicate(svc); }}>⧉</div>
+              <div style={s.btnDanger} title="Supprimer" onClick={(e) => { e.stopPropagation(); remove(svc.id); }}>🗑</div>
+            </div>
+            {/* Mobile (< 640px) : la ligne entière ouvre l'édition, remplace les icônes par un chevron */}
+            <div
+              className="bcp-svc-chevron"
+              style={{ color: COLORS.textMuted, fontSize: 18, cursor: 'pointer' }}
+              onClick={() => setForm(svc)}
+            >
+              ›
             </div>
           </div>
           <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 8 }}>

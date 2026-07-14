@@ -19,7 +19,7 @@ import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore
 import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
 
 
-// ─── CORRECTIONS RESPONSIVE / BUGS (cette révision) ──────────────────────────
+// ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
 //  [FIX1] BUG BLOQUANT : commentaire JSX mal fermé dans la modale "Nouveau
 //         lead" — `{/* [tablet] */>` au lieu de `{/* [tablet] */}` avant le
 //         `>`. C'était une erreur de syntaxe qui empêchait le fichier de
@@ -54,6 +54,28 @@ import { triggerTaskCompleted }              from '../../lib/triggers/taskComple
 //         dans l'état vide, et un scroll interne (au lieu de laisser une
 //         colonne pleine pousser la page en hauteur pendant que les autres
 //         restent vides à côté).
+//
+// ─── GRILLE + PAGINATION VUE LISTE (cette révision) ───────────────────────────
+//  [G1] La vue "Liste" affichait les leads en lignes pleine largeur, un par
+//       ligne, sans pagination — demande utilisateur : passage à une grille
+//       de cartes 4 colonnes x 4 lignes (16 leads/page), avec pagination
+//       pour la suite. `LEADS_PAGE_SIZE = 16`.
+//  [G2] Ajout d'un composant `Pagination` réutilisable (précédent/suivant +
+//       numéros de page, "…" si trop de pages) et d'un helper
+//       `getPageNumbers` qui compresse l'affichage au-delà de quelques pages.
+//  [G3] Nouveau composant `LeadGridCard` : reprend les informations de
+//       l'ancienne ligne (checkbox, statut, téléphone/entreprise, tags,
+//       score, WhatsApp) dans un format carte verticale compact, adapté à
+//       une grille plutôt qu'à une ligne pleine largeur.
+//  [G4] La grille utilise `repeat(auto-fill, minmax(240px, 1fr))` : 4
+//       colonnes sur desktop/tablette large, mais se réduit proprement à 2
+//       ou 1 colonne(s) sur mobile plutôt que d'écraser les cartes en
+//       dessous d'une largeur lisible. La pagination reste fixée à 16
+//       leads/page quel que soit le nombre de colonnes réellement affiché.
+//  [G5] Le changement de vue/filtre/tag/recherche réinitialise `page` à 1
+//       (même effet que pour la sélection), et un garde-fou (`useEffect`)
+//       ramène `page` sur la dernière page valide si des leads sont
+//       supprimés entre-temps.
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: UserPlus    },
@@ -89,6 +111,9 @@ const EMPTY_LEAD = {
   status: 'prospect', source: 'manuel', notes: '', score: 0,
 };
 
+// [G1] Pagination de la vue liste : 16 leads par page (4 colonnes x 4 lignes)
+const LEADS_PAGE_SIZE = 16;
+
 const scoreLabel = (s) =>
   s <= 30  ? { label: 'Froid',    color: '#06b6d4', icon: '❄️'  } :
   s <= 60  ? { label: 'Tiède',    color: '#f59e0b', icon: '🌡️'  } :
@@ -101,6 +126,45 @@ const tagColor = (tag) => {
   for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
   return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
 };
+
+// [G2] Génère une liste compacte de numéros de page avec "…" si besoin
+// (évite d'afficher des dizaines de boutons quand il y a beaucoup de pages)
+function getPageNumbers(current, total) {
+  const delta = 1;
+  const range = [];
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+    range.push(i);
+  }
+  const withDots = [];
+  if (current - delta > 2) withDots.push(1, '…'); else withDots.push(1);
+  withDots.push(...range);
+  if (current + delta < total - 1) withDots.push('…', total);
+  else if (total > 1) withDots.push(total);
+  return withDots;
+}
+
+// [G2] Barre de pagination réutilisée sous la grille de leads
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null;
+  const pages = getPageNumbers(page, totalPages);
+  const btn = (active, disabled) => ({
+    minWidth: 32, height: 32, padding: '0 8px', borderRadius: 8, cursor: disabled ? 'not-allowed' : 'pointer',
+    border: `1px solid ${active ? '#6366f1' : 'rgba(255,255,255,0.1)'}`,
+    background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
+    color: disabled ? 'rgba(255,255,255,0.2)' : active ? '#a78bfa' : 'rgba(255,255,255,0.55)',
+    fontSize: 12, fontWeight: 700,
+  });
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={btn(false, page === 1)}>‹</button>
+      {pages.map((p, i) => p === '…'
+        ? <span key={`dots-${i}`} style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, padding: '0 4px' }}>…</span>
+        : <button key={p} onClick={() => onChange(p)} style={btn(p === page, false)}>{p}</button>
+      )}
+      <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} style={btn(false, page === totalPages)}>›</button>
+    </div>
+  );
+}
 
 // [FIX7] Fond sombre légèrement teinté indigo (au lieu du gris plat #2f2f2f)
 // + classe "crm-field" pour le halo au focus (voir <style> global plus bas) —
@@ -680,6 +744,53 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
   );
 }
 
+// [G3] Carte compacte pour la vue liste en grille (4 colonnes desktop).
+// Reprend les mêmes informations que l'ancienne ligne pleine largeur
+// (statut, contact, tags, score, WhatsApp), condensées verticalement pour
+// tenir dans une case de grille au lieu d'une ligne pleine largeur.
+function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
+  const { color: sc } = scoreLabel(lead.score || 0);
+  return (
+    <motion.div
+      layout onClick={onOpen}
+      {...(canHover ? { whileHover: { background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.07)' } } : {})}
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 10, padding: 14,
+        background: isSelected ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${isSelected ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.08)'}`,
+        borderRadius: 14, cursor: 'pointer', transition: 'border-color .15s, background .15s', minWidth: 0,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <Checkbox checked={isSelected} onChange={onToggleSelect} />
+        <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `2px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: sc }}>
+          {(lead.name || '?')[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: 'white', fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
+          <div style={{ marginTop: 4 }}><StatusBadge status={lead.status} /></div>
+        </div>
+      </div>
+
+      {(lead.phone || lead.company) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.4)', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}</span>}
+          {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.4)', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Building2 size={10} /> {lead.company}</span>}
+        </div>
+      )}
+
+      {!!lead.tags?.length && <TagChips tags={lead.tags} size="small" />}
+
+      <ScoreBar score={lead.score || 0} />
+
+      <div onClick={e => e.stopPropagation()}>
+        <WhatsAppBtn phone={lead.phone} leadId={lead.id}
+          onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]); }} />
+      </div>
+    </motion.div>
+  );
+}
+
 export default function LeadsCRMPanel({ profileId }) {
   const { isMobile, isTablet } = useBreakpoint(); // [tablet]
   const [leads, setLeads]               = useState([]);
@@ -694,6 +805,7 @@ export default function LeadsCRMPanel({ profileId }) {
   const [adding, setAdding]             = useState(false);
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [bulkStatus, setBulkStatus]     = useState('');
+  const [page, setPage]                 = useState(1); // [G1] page courante de la vue liste
   // [FIX6] Détecté une seule fois : évite un état "survolé" collé après un
   // tap sur les lignes de la liste, sur les appareils tactiles.
   const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
@@ -708,7 +820,9 @@ export default function LeadsCRMPanel({ profileId }) {
     return () => { supabase.removeChannel(channel); };
   }, [profileId]);
 
-  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); }, [view, filter, tagFilter, search]);
+  // [G5] Réinitialise aussi la page courante quand la vue/le filtre/le tag/
+  // la recherche changent (même logique que pour la sélection existante).
+  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setPage(1); }, [view, filter, tagFilter, search]);
 
   const loadLeads = async () => {
     setLoading(true);
@@ -840,6 +954,14 @@ export default function LeadsCRMPanel({ profileId }) {
   const someSelected = filteredLeads.some(l => selectedIds.has(l.id));
   const toggleSelectAll = () => { if (allSelected) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(filteredLeads.map(l => l.id))); } };
 
+  // [G1] Pagination : 16 leads (4x4) par page pour la vue liste
+  const totalPages     = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PAGE_SIZE));
+  const paginatedLeads  = filteredLeads.slice((page - 1) * LEADS_PAGE_SIZE, page * LEADS_PAGE_SIZE);
+
+  // [G5] Garde-fou : si des leads sont supprimés et que la page courante
+  // n'existe plus, on retombe sur la dernière page valide.
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
 
   return (
@@ -941,7 +1063,7 @@ export default function LeadsCRMPanel({ profileId }) {
       )}
 
       {view === 'list' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" /></div>
           ) : filteredLeads.length === 0 ? (
@@ -955,37 +1077,33 @@ export default function LeadsCRMPanel({ profileId }) {
                 <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={toggleSelectAll}>
                   {allSelected ? 'Tout désélectionner' : `Tout sélectionner (${filteredLeads.length})`}
                 </span>
+                {totalPages > 1 && (
+                  <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.25)' }}>
+                    Page {page}/{totalPages} — {filteredLeads.length} lead{filteredLeads.length > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
 
-              {filteredLeads.map(lead => {
-                const { color: sc } = scoreLabel(lead.score || 0);
-                const isSelected = selectedIds.has(lead.id);
-                return (
-                  <motion.div key={lead.id} layout onClick={() => setSelectedLead(lead)}
-                    {...(canHover ? { whileHover: { background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.07)' } } : {})}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: isSelected ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isSelected ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, cursor: 'pointer', transition: 'border-color .15s, background .15s' }}>
-                    <Checkbox checked={isSelected} onChange={() => toggleSelect(lead.id)} />
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `2px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: sc }}>
-                      {(lead.name || '?')[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{lead.name}</span>
-                        <StatusBadge status={lead.status} />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, color: 'rgba(255,255,255,0.35)', fontSize: 12, flexWrap: 'wrap' }}>
-                        {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {lead.phone}</span>}
-                        {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={11} /> {lead.company}</span>}
-                        {(isTablet || !isMobile) && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Globe size={11} /> {SOURCES.find(s => s.id === lead.source)?.label || lead.source}</span>}
-                      </div>
-                      {!!lead.tags?.length && <div style={{ marginTop: 6 }}><TagChips tags={lead.tags} size="small" /></div>}
-                    </div>
-                    {(isTablet || !isMobile) && <div style={{ width: isTablet ? 110 : 90, flexShrink: 0 }}><ScoreBar score={lead.score || 0} /></div>}
-                    <WhatsAppBtn phone={lead.phone} leadId={lead.id} compact
-                      onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]); }} />
-                  </motion.div>
-                );
-              })}
+              {/* [G1][G3][G4] Grille de cartes — 4 colonnes sur desktop/tablette
+                  large (4x4 = 16 leads/page), qui se réduit à 2 ou 1 colonne(s)
+                  sur écrans plus étroits via auto-fill/minmax plutôt que de
+                  forcer 4 colonnes illisibles sur mobile. La pagination reste
+                  fixée à 16 leads/page quel que soit le nombre de colonnes
+                  réellement affichées. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                {paginatedLeads.map(lead => (
+                  <LeadGridCard
+                    key={lead.id}
+                    lead={lead}
+                    isSelected={selectedIds.has(lead.id)}
+                    onToggleSelect={() => toggleSelect(lead.id)}
+                    onOpen={() => setSelectedLead(lead)}
+                    canHover={canHover}
+                  />
+                ))}
+              </div>
+
+              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
             </>
           )}
         </div>

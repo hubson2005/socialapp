@@ -90,7 +90,7 @@ const db = {
   // "Mes profils", en les prenant pour les siens. On filtre donc
   // explicitement ici — la vue "tous les profils" reste dans
   // UserActivationPanel, qui la gère intentionnellement et n'expose que
-  // l'activation/le plan, jamais l'édition du contenu public.
+  // l'activation/le plan/la suppression, jamais l'édition du contenu public.
   list: async (userId) => {
     const { data, error } = await supabase.from('link_profiles').select('*').eq('user_id', userId).order('created_at', { ascending: true });
     if (error) throw error;
@@ -481,8 +481,8 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
 // ─── UserActivationPanel ──────────────────────────────────────────────────────
 // Panneau volontairement "cross-users" — c'est ici, et ici seulement, que
 // l'admin doit pouvoir voir/agir sur tous les profils de la plateforme
-// (activation, plan). Contrairement à `db.list()` (voir plus haut), cette
-// requête n'est pas un bug : elle est censée tout retourner.
+// (activation, plan, suppression). Contrairement à `db.list()` (voir plus
+// haut), cette requête n'est pas un bug : elle est censée tout retourner.
 const PLAN_OPTIONS = [
   { id: 'basic',    label: 'Basic',    color: '#9ca3af' },
   { id: 'pro',      label: 'Pro',      color: '#f97316' },
@@ -519,6 +519,33 @@ function UserActivationPanel() {
     },
     onError: (error) => toast.error('Erreur : ' + error.message),
   });
+  // [NEW] Suppression définitive d'un compte (profil) depuis le panneau
+  // admin. Cible directement `link_profiles` (et NON `db.delete`, qui
+  // supprime dans la table `leads` — utilitaire distinct, sans rapport avec
+  // ce panneau). Nécessite que la policy RLS admin sur `link_profiles`
+  // couvre bien la commande DELETE (elle couvre déjà SELECT/UPDATE, comme
+  // le prouvent les mutations activate/deactivate/plan ci-dessus) — sinon
+  // Supabase renverra une erreur de permission, remontée via onError.
+  const deleteProfileMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('link_profiles').delete().eq('id', id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.setQueryData(['adminAllProfiles'], (old) => (old || []).filter(p => p.id !== deletedId));
+      toast.success('Compte supprimé définitivement');
+    },
+    onError: (error) => toast.error('Échec de la suppression : ' + error.message),
+  });
+  const handleDeleteProfile = (p) => {
+    const confirmed = window.confirm(
+      'Supprimer définitivement le compte "' + (p.display_name || 'Sans nom') + '" ?\n\n' +
+      'Cette action est irréversible : la page publique, les liens, leads et statistiques associés seront perdus.'
+    );
+    if (!confirmed) return;
+    deleteProfileMutation.mutate(p.id);
+  };
   const filtered = allProfiles.filter(p=>{
     const q=search.toLowerCase();
     return (!q||(p.display_name||'').toLowerCase().includes(q)||(p.username||'').toLowerCase().includes(q))
@@ -579,6 +606,17 @@ function UserActivationPanel() {
                 ? <button onClick={()=>deactivateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.1)',color:'#f87171',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><X size={10}/>Désact.</button>
                 : <button onClick={()=>activateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(34,197,94,0.35)',background:'rgba(34,197,94,0.12)',color:'#22c55e',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><Check size={10}/>Activer</button>
               }
+              {/* [NEW] Suppression définitive — bouton distinct de Désact.,
+                  volontairement rouge plein pour marquer l'irréversibilité,
+                  avec confirmation obligatoire dans handleDeleteProfile. */}
+              <button
+                onClick={()=>handleDeleteProfile(p)}
+                disabled={deleteProfileMutation.isPending}
+                title="Supprimer définitivement ce compte"
+                style={{width:'28px',height:'28px',borderRadius:'8px',border:'1px solid rgba(239,68,68,0.35)',background:'rgba(239,68,68,0.12)',color:'#f87171',display:'flex',alignItems:'center',justifyContent:'center',cursor:deleteProfileMutation.isPending?'not-allowed':'pointer',flexShrink:0,opacity:deleteProfileMutation.isPending?0.5:1}}
+              >
+                <Trash2 size={12}/>
+              </button>
             </div>
           );
         })}

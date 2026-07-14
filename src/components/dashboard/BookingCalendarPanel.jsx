@@ -1,92 +1,340 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from "../../supabase";
 
 // ============================================================
-// STYLES (cohérents avec le thème dark de SocialApp)
+// THEME — dark, cohérent avec le reste du dashboard SocialApp
 // ============================================================
 const COLORS = {
-  bg: '#faf8f5',
-  card: '#000000',
-  cardAlt: '#f3f1ec',
-  border: 'rgba(108,99,255,0.18)',
+  bg: '#060412',
+  panel: '#0c0d1a',
+  card: '#11101f',
+  cardAlt: '#161528',
+  border: 'rgba(167,139,250,0.14)',
+  borderStrong: 'rgba(167,139,250,0.28)',
   accent: '#a78bfa',
   accent2: '#6c63ff',
-  text: '#1e1b2e',
-  textMuted: '#726c82',
-  danger: '#dc2626',
-  success: '#16a34a',
-  warning: '#d97706',
+  text: '#f5f3ff',
+  textMuted: '#8b87a0',
+  danger: '#f87171',
+  success: '#34d399',
+  warning: '#fbbf24',
+  blue: '#60a5fa',
 };
 
 const s = {
   wrap: { background: COLORS.bg, color: COLORS.text, borderRadius: 16, padding: 20, fontFamily: 'inherit' },
-  tabs: { display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' },
+  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+  btn: {
+    background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})`, color: '#fff', border: 'none',
+    borderRadius: 10, padding: '12px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+    boxShadow: '0 8px 24px rgba(108,99,255,0.35)', display: 'flex', alignItems: 'center', gap: 8,
+  },
+  btnGhost: {
+    background: 'transparent', color: COLORS.textMuted, border: `1px solid ${COLORS.border}`,
+    borderRadius: 8, padding: '8px 12px', fontSize: 13, cursor: 'pointer',
+  },
+  btnIcon: {
+    background: COLORS.cardAlt, color: COLORS.textMuted, border: `1px solid ${COLORS.border}`,
+    borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', fontSize: 14,
+  },
+  btnDanger: {
+    background: 'rgba(248,113,113,0.12)', color: COLORS.danger, border: '1px solid rgba(248,113,113,0.3)',
+    borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14,
+  },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 20 },
+  statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'center' },
+  statIcon: (color) => ({
+    width: 48, height: 48, borderRadius: 12, background: `${color}22`, color,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
+  }),
+  statValue: { fontSize: 26, fontWeight: 800, lineHeight: 1.1 },
+  statLabel: { fontSize: 13, fontWeight: 600, marginTop: 2 },
+  statSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
+  mainGrid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 18, alignItems: 'start' },
+  tabs: { display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' },
   tab: (active) => ({
     padding: '10px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600,
-    background: active ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : COLORS.card,
+    background: active ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : COLORS.panel,
     color: active ? '#fff' : COLORS.textMuted, border: `1px solid ${active ? 'transparent' : COLORS.border}`,
-    transition: 'all .15s',
+    transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 6,
   }),
-  card: { background: COLORS.card, color: '#ffffff', border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 18, marginBottom: 14 },
+  card: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 18, marginBottom: 14 },
   row: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
   input: {
     background: COLORS.cardAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '10px 12px',
     color: COLORS.text, fontSize: 14, outline: 'none', flex: '1 1 160px',
   },
   label: { fontSize: 12, color: COLORS.textMuted, marginBottom: 4, display: 'block', fontWeight: 600 },
-  btn: {
-    background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})`, color: '#fff', border: 'none',
-    borderRadius: 8, padding: '10px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer',
-  },
-  btnGhost: {
-    background: 'transparent', color: COLORS.textMuted, border: `1px solid ${COLORS.border}`,
-    borderRadius: 8, padding: '8px 12px', fontSize: 13, cursor: 'pointer',
-  },
-  btnDanger: {
-    background: 'rgba(248,113,113,0.12)', color: COLORS.danger, border: '1px solid rgba(248,113,113,0.3)',
-    borderRadius: 8, padding: '8px 12px', fontSize: 13, cursor: 'pointer',
-  },
   badge: (color) => ({
     fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 999,
     background: `${color}22`, color, textTransform: 'uppercase', letterSpacing: 0.3,
   }),
   empty: { textAlign: 'center', padding: 40, color: COLORS.textMuted, fontSize: 14 },
+  sidebarCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 16, marginBottom: 16 },
 };
 
+const DAYS_MON_FIRST = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 const STATUS_COLORS = { pending: COLORS.warning, confirmed: COLORS.success, cancelled: COLORS.danger, completed: COLORS.accent, no_show: COLORS.textMuted };
 const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé', completed: 'Terminé', no_show: 'Absent' };
+const SERVICE_ICON_COLORS = [COLORS.accent, COLORS.blue, COLORS.success, COLORS.warning];
+
+const dateKey = (d) => {
+  const dt = (d instanceof Date) ? d : new Date(d);
+  return dt.toISOString().slice(0, 10);
+};
+const fmtDateFr = (d) => (d instanceof Date ? d : new Date(d)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 
 // ============================================================
 // COMPOSANT PRINCIPAL
 // ============================================================
 export default function BookingCalendarPanel({ profileId }) {
   const [tab, setTab] = useState('services');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date(); d.setDate(1); return d;
+  });
+  const [overview, setOverview] = useState({ services: [], bookings: [], loading: true });
+  const [quickForm, setQuickForm] = useState(null); // formulaire "Nouveau rendez-vous"
+
+  // Chargement léger (lecture seule) pour les stats, le calendrier et l'agenda.
+  // Les onglets ci-dessous gèrent leurs propres opérations CRUD ; ils appellent
+  // refreshOverview() après chaque création/modification/suppression pour que
+  // les stats et le calendrier restent synchronisés instantanément.
+  const loadOverview = useCallback(async () => {
+    const [svcRes, bkRes] = await Promise.all([
+      supabase.from('booking_services').select('id, is_active').eq('profile_id', profileId),
+      supabase
+        .from('bookings')
+        .select('id, booking_date, start_time, end_time, status, client_name, party_size, service_id, event_id, booking_services(name,color), booking_events(title)')
+        .eq('profile_id', profileId)
+        .order('booking_date', { ascending: false })
+        .limit(500),
+    ]);
+    setOverview({
+      services: svcRes.data || [],
+      bookings: bkRes.data || [],
+      loading: false,
+    });
+  }, [profileId]);
+
+  useEffect(() => { loadOverview(); }, [loadOverview]);
+
+  // ---------- Stats ----------
+  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const activeServicesCount = overview.services.filter((sv) => sv.is_active).length;
+  const monthBookings = overview.bookings.filter((b) => {
+    const d = new Date(b.booking_date);
+    return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  });
+  const todayBookings = overview.bookings.filter((b) => dateKey(b.booking_date) === dateKey(today));
+  const confirmationRate = monthBookings.length
+    ? Math.round((monthBookings.filter((b) => b.status === 'confirmed' || b.status === 'completed').length / monthBookings.length) * 100)
+    : 0;
+
+  // ---------- Calendrier & agenda ----------
+  const bookingsByDate = useMemo(() => {
+    const map = {};
+    overview.bookings.forEach((b) => {
+      const k = dateKey(b.booking_date);
+      if (!map[k]) map[k] = [];
+      map[k].push(b);
+    });
+    return map;
+  }, [overview.bookings]);
+
+  const agendaForSelected = (bookingsByDate[dateKey(selectedDate)] || [])
+    .slice()
+    .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+
+  const goToBookingsTab = () => setTab('bookings');
 
   return (
     <div style={s.wrap}>
-      <div style={{ marginBottom: 18 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>📅 Calendrier de réservation</h2>
-        <p style={{ margin: '4px 0 0', color: COLORS.textMuted, fontSize: 14 }}>
-          Gère tes créneaux de RDV, tes disponibilités et tes événements.
-        </p>
+      {/* HEADER */}
+      <div style={s.headerRow}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10 }}>
+            📅 Calendrier de réservation
+          </h2>
+          <p style={{ margin: '4px 0 0', color: COLORS.textMuted, fontSize: 14 }}>
+            Gère tes services, disponibilités et réservations en toute simplicité.
+          </p>
+        </div>
+        <button style={s.btn} onClick={() => { setTab('bookings'); setQuickForm({ booking_date: dateKey(selectedDate) }); }}>
+          + Nouveau rendez-vous
+        </button>
       </div>
 
-      <div style={s.tabs}>
-        {[
-          ['services', 'Services'],
-          ['availability', 'Disponibilités'],
-          ['events', 'Événements'],
-          ['bookings', 'Réservations'],
-        ].map(([key, label]) => (
-          <div key={key} style={s.tab(tab === key)} onClick={() => setTab(key)}>{label}</div>
+      {/* STATS */}
+      <div style={s.statsGrid}>
+        <StatCard icon="📦" color={COLORS.accent} value={activeServicesCount} label="Services" sub="Actifs dans votre agenda" />
+        <StatCard icon="📅" color={COLORS.blue} value={monthBookings.length} label="Réservations" sub="Ce mois-ci" />
+        <StatCard icon="🕒" color={COLORS.success} value={todayBookings.length} label="Aujourd'hui" sub="Rendez-vous prévus" />
+        <StatCard icon="📈" color={COLORS.warning} value={`${confirmationRate}%`} label="Confirmées" sub="Taux de confirmation" />
+      </div>
+
+      {/* CONTENU PRINCIPAL + SIDEBAR */}
+      <div style={s.mainGrid}>
+        <div>
+          <div style={s.tabs}>
+            {[
+              ['services', '📦 Services'],
+              ['availability', '🕒 Disponibilités'],
+              ['events', '✨ Évènements'],
+              ['bookings', '📅 Réservations'],
+              ['stats', '📊 Statistiques'],
+            ].map(([key, label]) => (
+              <div key={key} style={s.tab(tab === key)} onClick={() => setTab(key)}>{label}</div>
+            ))}
+          </div>
+
+          {tab === 'services' && <ServicesTab profileId={profileId} onDataChanged={loadOverview} />}
+          {tab === 'availability' && <AvailabilityTab profileId={profileId} />}
+          {tab === 'events' && <EventsTab profileId={profileId} onDataChanged={loadOverview} />}
+          {tab === 'bookings' && (
+            <BookingsTab
+              profileId={profileId}
+              services={overview.services}
+              onDataChanged={loadOverview}
+              quickForm={quickForm}
+              setQuickForm={setQuickForm}
+            />
+          )}
+          {tab === 'stats' && <StatsTab overview={overview} />}
+        </div>
+
+        <div>
+          <MiniCalendar
+            month={calendarMonth}
+            setMonth={setCalendarMonth}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            bookingsByDate={bookingsByDate}
+          />
+          <AgendaPanel selectedDate={selectedDate} bookings={agendaForSelected} onSeeAll={goToBookingsTab} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// STAT CARD
+// ============================================================
+function StatCard({ icon, color, value, label, sub }) {
+  return (
+    <div style={s.statCard}>
+      <div style={s.statIcon(color)}>{icon}</div>
+      <div>
+        <div style={s.statValue}>{value}</div>
+        <div style={{ ...s.statLabel, color }}>{label}</div>
+        <div style={s.statSub}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MINI CALENDRIER (mois, sélection de jour, points de RDV)
+// ============================================================
+function MiniCalendar({ month, setMonth, selectedDate, setSelectedDate, bookingsByDate }) {
+  const year = month.getFullYear();
+  const m = month.getMonth();
+  const firstOfMonth = new Date(year, m, 1);
+  // Grille lundi-first : décalage entre 0 (lundi) et 6 (dimanche)
+  const firstWeekday = (firstOfMonth.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, m + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, m, 0).getDate();
+
+  const cells = [];
+  for (let i = firstWeekday - 1; i >= 0; i--) {
+    cells.push({ day: daysInPrevMonth - i, outside: true, date: new Date(year, m - 1, daysInPrevMonth - i) });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, outside: false, date: new Date(year, m, d) });
+  }
+  while (cells.length % 7 !== 0 || cells.length < 42) {
+    const next = cells.length - (firstWeekday + daysInMonth) + 1;
+    cells.push({ day: next, outside: true, date: new Date(year, m + 1, next) });
+    if (cells.length >= 42) break;
+  }
+
+  const monthLabel = month.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+  return (
+    <div style={s.sidebarCard}>
+      <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 14 }}>
+        <strong style={{ textTransform: 'capitalize', fontSize: 15 }}>{monthLabel}</strong>
+        <div style={s.row}>
+          <div style={s.btnIcon} onClick={() => setMonth(new Date(year, m - 1, 1))}>‹</div>
+          <div style={s.btnIcon} onClick={() => setMonth(new Date(year, m + 1, 1))}>›</div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+        {DAYS_MON_FIRST.map((d) => (
+          <div key={d} style={{ textAlign: 'center', fontSize: 11, color: COLORS.textMuted, fontWeight: 700 }}>{d}</div>
         ))}
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        {cells.map((c, i) => {
+          const key = dateKey(c.date);
+          const hasBookings = !!bookingsByDate[key]?.length;
+          const isSelected = dateKey(selectedDate) === key;
+          const isToday = dateKey(new Date()) === key;
+          return (
+            <div
+              key={i}
+              onClick={() => setSelectedDate(c.date)}
+              style={{
+                textAlign: 'center', padding: '7px 0', borderRadius: 8, cursor: 'pointer', fontSize: 13,
+                color: c.outside ? 'rgba(139,135,160,0.4)' : (isSelected ? '#fff' : COLORS.text),
+                background: isSelected ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : (isToday ? COLORS.cardAlt : 'transparent'),
+                fontWeight: isToday || isSelected ? 700 : 500,
+                position: 'relative',
+              }}
+            >
+              {c.day}
+              {hasBookings && !isSelected && (
+                <div style={{ width: 4, height: 4, borderRadius: '50%', background: COLORS.accent, margin: '2px auto 0' }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-      {tab === 'services' && <ServicesTab profileId={profileId} />}
-      {tab === 'availability' && <AvailabilityTab profileId={profileId} />}
-      {tab === 'events' && <EventsTab profileId={profileId} />}
-      {tab === 'bookings' && <BookingsTab profileId={profileId} />}
+// ============================================================
+// AGENDA DU JOUR SÉLECTIONNÉ
+// ============================================================
+function AgendaPanel({ selectedDate, bookings, onSeeAll }) {
+  return (
+    <div style={s.sidebarCard}>
+      <strong style={{ display: 'block', marginBottom: 12, fontSize: 15 }}>
+        Agenda du {fmtDateFr(selectedDate)}
+      </strong>
+      {bookings.length === 0 && <div style={{ ...s.empty, padding: 20 }}>Aucune réservation ce jour.</div>}
+      {bookings.map((b) => {
+        const color = b.booking_services?.color || COLORS.accent;
+        const label = b.booking_services?.name || b.booking_events?.title || 'Réservation';
+        return (
+          <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderTop: `1px solid ${COLORS.border}` }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, marginTop: 6, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted }}>{b.start_time?.slice(0, 5)}{b.end_time ? `–${b.end_time.slice(0, 5)}` : ''}</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted }}>{b.client_name}</div>
+            </div>
+            <span style={s.badge(STATUS_COLORS[b.status])}>{STATUS_LABELS[b.status]}</span>
+          </div>
+        );
+      })}
+      <button style={{ ...s.btnGhost, width: '100%', textAlign: 'center', marginTop: 14, color: COLORS.accent, borderColor: COLORS.borderStrong }} onClick={onSeeAll}>
+        Voir l'agenda complet →
+      </button>
     </div>
   );
 }
@@ -94,7 +342,7 @@ export default function BookingCalendarPanel({ profileId }) {
 // ============================================================
 // SERVICES
 // ============================================================
-function ServicesTab({ profileId }) {
+function ServicesTab({ profileId, onDataChanged }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null); // null = fermé, {} = nouveau, {...} = édition
@@ -111,6 +359,8 @@ function ServicesTab({ profileId }) {
   }, [profileId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const refresh = () => { load(); onDataChanged?.(); };
 
   const save = async () => {
     const payload = {
@@ -132,18 +382,24 @@ function ServicesTab({ profileId }) {
       await supabase.from('booking_services').insert(payload);
     }
     setForm(null);
-    load();
+    refresh();
+  };
+
+  const duplicate = async (svc) => {
+    const { id, created_at, ...rest } = svc;
+    await supabase.from('booking_services').insert({ ...rest, name: `${svc.name} (copie)` });
+    refresh();
   };
 
   const remove = async (id) => {
     if (!window.confirm('Supprimer ce service ?')) return;
     await supabase.from('booking_services').delete().eq('id', id);
-    load();
+    refresh();
   };
 
   const toggleActive = async (svc) => {
     await supabase.from('booking_services').update({ is_active: !svc.is_active }).eq('id', svc.id);
-    load();
+    refresh();
   };
 
   if (loading) return <div style={s.empty}>Chargement…</div>;
@@ -200,18 +456,27 @@ function ServicesTab({ profileId }) {
 
       {services.length === 0 && !form && <div style={s.empty}>Aucun service. Crée ton premier type de RDV pour commencer.</div>}
 
-      {services.map((svc) => (
+      {services.map((svc, i) => (
         <div key={svc.id} style={s.card}>
           <div style={{ ...s.row, justifyContent: 'space-between' }}>
             <div style={s.row}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: svc.color, display: 'inline-block' }} />
-              <strong>{svc.name}</strong>
-              <span style={s.badge(svc.is_active ? COLORS.success : COLORS.textMuted)}>{svc.is_active ? 'Actif' : 'Inactif'}</span>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                background: `${svc.color || SERVICE_ICON_COLORS[i % 4]}22`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: svc.color || SERVICE_ICON_COLORS[i % 4], display: 'inline-block' }} />
+              </div>
+              <div>
+                <strong>{svc.name}</strong>{' '}
+                <span style={s.badge(svc.is_active ? COLORS.success : COLORS.textMuted)}>{svc.is_active ? 'Actif' : 'Inactif'}</span>
+              </div>
             </div>
             <div style={s.row}>
               <button style={s.btnGhost} onClick={() => toggleActive(svc)}>{svc.is_active ? 'Désactiver' : 'Activer'}</button>
-              <button style={s.btnGhost} onClick={() => setForm(svc)}>Modifier</button>
-              <button style={s.btnDanger} onClick={() => remove(svc.id)}>Supprimer</button>
+              <div style={s.btnIcon} title="Modifier" onClick={() => setForm(svc)}>✎</div>
+              <div style={s.btnIcon} title="Dupliquer" onClick={() => duplicate(svc)}>⧉</div>
+              <div style={s.btnDanger} title="Supprimer" onClick={() => remove(svc.id)}>🗑</div>
             </div>
           </div>
           <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 8 }}>
@@ -255,36 +520,23 @@ function AvailabilityTab({ profileId }) {
     load();
   };
 
-  // FIX — l'ancien updateSlot(id, field, value) envoyait UN SEUL champ par
-  // PATCH (start_time OU end_time selon l'input modifié). La contrainte SQL
-  // `CHECK (end_time > start_time)` est évaluée sur la ligne COMPLÈTE en
-  // base : si la nouvelle valeur d'un champ, combinée à l'ancienne valeur
-  // encore stockée de l'autre champ, viole temporairement la contrainte
-  // (ex: on modifie start_time à 16:00 alors que end_time est encore à
-  // 15:59 en base), Supabase rejette la requête avec 400 — même si la
-  // paire FINALE visée par l'utilisateur est parfaitement valide. On
-  // envoie désormais toujours les deux champs ensemble (issus du même
-  // objet `sl` local), et on valide côté client avant l'appel réseau.
+  // On envoie toujours les deux champs (start_time + end_time) ensemble pour
+  // éviter que la contrainte SQL CHECK (end_time > start_time) ne rejette
+  // une mise à jour intermédiaire valide au final mais invalide ligne par ligne.
   const updateSlot = async (id, field, currentSlot, value) => {
     const next = { ...currentSlot, [field]: value };
-
-    // Si end <= start après cette modif, on ne sauvegarde pas encore
-    // (l'utilisateur est probablement en train de modifier l'autre champ
-    // juste après) — mais on met à jour l'affichage local pour ne pas
-    // bloquer la saisie.
     if (next.end_time && next.start_time && next.end_time <= next.start_time) {
-      setSlots(prev => prev.map(sl => sl.id === id ? next : sl));
+      setSlots((prev) => prev.map((sl) => (sl.id === id ? next : sl)));
       return;
     }
-
-    setSlots(prev => prev.map(sl => sl.id === id ? next : sl)); // optimiste
+    setSlots((prev) => prev.map((sl) => (sl.id === id ? next : sl)));
     const { error } = await supabase
       .from('booking_availability')
       .update({ start_time: next.start_time, end_time: next.end_time })
       .eq('id', id);
     if (error) {
       console.error('updateSlot error:', error);
-      load(); // resynchronise avec la base en cas d'échec
+      load();
     }
   };
 
@@ -323,7 +575,7 @@ function AvailabilityTab({ profileId }) {
                 <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.start_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'start_time', sl, e.target.value)} />
                 <span style={{ color: COLORS.textMuted }}>à</span>
                 <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.end_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'end_time', sl, e.target.value)} />
-                <button style={s.btnDanger} onClick={() => removeSlot(sl.id)}>✕</button>
+                <div style={s.btnDanger} onClick={() => removeSlot(sl.id)}>✕</div>
               </div>
             ))}
           </div>
@@ -352,7 +604,7 @@ function AvailabilityTab({ profileId }) {
 // ============================================================
 // ÉVÉNEMENTS
 // ============================================================
-function EventsTab({ profileId }) {
+function EventsTab({ profileId, onDataChanged }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null);
@@ -365,6 +617,8 @@ function EventsTab({ profileId }) {
   }, [profileId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const refresh = () => { load(); onDataChanged?.(); };
 
   const save = async () => {
     const payload = {
@@ -387,13 +641,13 @@ function EventsTab({ profileId }) {
       await supabase.from('booking_events').insert(payload);
     }
     setForm(null);
-    load();
+    refresh();
   };
 
   const remove = async (id) => {
     if (!window.confirm('Supprimer cet événement ?')) return;
     await supabase.from('booking_events').delete().eq('id', id);
-    load();
+    refresh();
   };
 
   if (loading) return <div style={s.empty}>Chargement…</div>;
@@ -461,8 +715,8 @@ function EventsTab({ profileId }) {
           <div style={{ ...s.row, justifyContent: 'space-between' }}>
             <strong>{ev.title}</strong>
             <div style={s.row}>
-              <button style={s.btnGhost} onClick={() => setForm(ev)}>Modifier</button>
-              <button style={s.btnDanger} onClick={() => remove(ev.id)}>Supprimer</button>
+              <div style={s.btnIcon} title="Modifier" onClick={() => setForm(ev)}>✎</div>
+              <div style={s.btnDanger} title="Supprimer" onClick={() => remove(ev.id)}>🗑</div>
             </div>
           </div>
           <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 6 }}>
@@ -476,9 +730,9 @@ function EventsTab({ profileId }) {
 }
 
 // ============================================================
-// RÉSERVATIONS (liste + gestion statut)
+// RÉSERVATIONS (liste + gestion statut + création manuelle rapide)
 // ============================================================
-function BookingsTab({ profileId }) {
+function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickForm }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -498,9 +752,47 @@ function BookingsTab({ profileId }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const refresh = () => { load(); onDataChanged?.(); };
+
   const setStatus = async (id, status) => {
     await supabase.from('bookings').update({ status }).eq('id', id);
-    load();
+    refresh();
+  };
+
+  // Création manuelle depuis le bouton "+ Nouveau rendez-vous".
+  // ⚠️ Hypothèse : la colonne de clé étrangère vers booking_services
+  // s'appelle `service_id` (déduite de l'embed booking_services(...)).
+  // Vérifie/ajuste ce nom si ta table utilise un autre nom de colonne.
+  const saveQuickBooking = async () => {
+    if (!quickForm?.client_name?.trim()) return alert('Le nom du client est requis.');
+    if (!quickForm?.service_id) return alert('Choisis un service.');
+    if (!quickForm?.booking_date || !quickForm?.start_time) return alert('Date et heure sont requises.');
+
+    const svc = services.find((sv) => String(sv.id) === String(quickForm.service_id));
+    let end_time = quickForm.end_time;
+    if (!end_time && svc?.duration_minutes) {
+      const [h, m] = quickForm.start_time.split(':').map(Number);
+      const total = h * 60 + m + svc.duration_minutes;
+      end_time = `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    }
+
+    const { error } = await supabase.from('bookings').insert({
+      profile_id: profileId,
+      service_id: quickForm.service_id,
+      client_name: quickForm.client_name.trim(),
+      client_phone: quickForm.client_phone?.trim() || null,
+      client_email: quickForm.client_email?.trim() || null,
+      booking_date: quickForm.booking_date,
+      start_time: quickForm.start_time,
+      end_time: end_time || null,
+      status: 'confirmed',
+    });
+    if (error) {
+      console.error(error);
+      return alert("Erreur lors de la création. Vérifie le nom de la colonne service_id dans ta table `bookings`.");
+    }
+    setQuickForm(null);
+    refresh();
   };
 
   const filtered = filter === 'all' ? bookings : bookings.filter((b) => b.status === filter);
@@ -509,6 +801,43 @@ function BookingsTab({ profileId }) {
 
   return (
     <div>
+      {quickForm && (
+        <div style={s.card}>
+          <strong style={{ display: 'block', marginBottom: 12 }}>Nouveau rendez-vous</strong>
+          <div style={s.row}>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={s.label}>Client *</label>
+              <input style={s.input} value={quickForm.client_name || ''} onChange={(e) => setQuickForm({ ...quickForm, client_name: e.target.value })} />
+            </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={s.label}>Service *</label>
+              <select style={{ ...s.input, appearance: 'auto' }} value={quickForm.service_id || ''} onChange={(e) => setQuickForm({ ...quickForm, service_id: e.target.value })}>
+                <option value="">Choisir…</option>
+                {services.map((sv) => <option key={sv.id} value={sv.id}>{sv.name || `Service #${sv.id}`}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ ...s.row, marginTop: 10 }}>
+            <div style={{ flex: '1 1 140px' }}>
+              <label style={s.label}>Date *</label>
+              <input style={s.input} type="date" value={quickForm.booking_date || ''} onChange={(e) => setQuickForm({ ...quickForm, booking_date: e.target.value })} />
+            </div>
+            <div style={{ flex: '1 1 110px' }}>
+              <label style={s.label}>Heure *</label>
+              <input style={s.input} type="time" value={quickForm.start_time || ''} onChange={(e) => setQuickForm({ ...quickForm, start_time: e.target.value })} />
+            </div>
+            <div style={{ flex: '1 1 160px' }}>
+              <label style={s.label}>Téléphone</label>
+              <input style={s.input} value={quickForm.client_phone || ''} onChange={(e) => setQuickForm({ ...quickForm, client_phone: e.target.value })} />
+            </div>
+          </div>
+          <div style={{ ...s.row, marginTop: 14, justifyContent: 'flex-end' }}>
+            <button style={s.btnGhost} onClick={() => setQuickForm(null)}>Annuler</button>
+            <button style={s.btn} onClick={saveQuickBooking}>Créer le rendez-vous</button>
+          </div>
+        </div>
+      )}
+
       <div style={{ ...s.tabs, marginBottom: 14 }}>
         {['all', 'pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map((f) => (
           <div key={f} style={s.tab(filter === f)} onClick={() => setFilter(f)}>
@@ -547,6 +876,72 @@ function BookingsTab({ profileId }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================================================
+// STATISTIQUES
+// ============================================================
+function StatsTab({ overview }) {
+  const bookings = overview.bookings;
+  const total = bookings.length;
+
+  const byStatus = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map((st) => ({
+    st, count: bookings.filter((b) => b.status === st).length,
+  }));
+
+  const byService = useMemo(() => {
+    const map = {};
+    bookings.forEach((b) => {
+      const name = b.booking_services?.name || b.booking_events?.title || 'Autre';
+      const color = b.booking_services?.color || COLORS.accent;
+      if (!map[name]) map[name] = { name, color, count: 0 };
+      map[name].count += 1;
+    });
+    return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 6);
+  }, [bookings]);
+
+  const maxServiceCount = Math.max(1, ...byService.map((x) => x.count));
+
+  return (
+    <div>
+      <div style={s.card}>
+        <strong style={{ display: 'block', marginBottom: 14 }}>Répartition par statut ({total} réservation(s) au total)</strong>
+        {byStatus.map(({ st, count }) => (
+          <div key={st} style={{ marginBottom: 10 }}>
+            <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 13 }}>{STATUS_LABELS[st]}</span>
+              <span style={{ fontSize: 13, color: COLORS.textMuted }}>{count}</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 999, background: COLORS.cardAlt, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${total ? (count / total) * 100 : 0}%`,
+                background: STATUS_COLORS[st], borderRadius: 999,
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={s.card}>
+        <strong style={{ display: 'block', marginBottom: 14 }}>Services les plus réservés</strong>
+        {byService.length === 0 && <div style={s.empty}>Pas encore de données.</div>}
+        {byService.map((sv) => (
+          <div key={sv.name} style={{ marginBottom: 10 }}>
+            <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 13 }}>{sv.name}</span>
+              <span style={{ fontSize: 13, color: COLORS.textMuted }}>{sv.count}</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 999, background: COLORS.cardAlt, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${(sv.count / maxServiceCount) * 100}%`,
+                background: sv.color, borderRadius: 999,
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

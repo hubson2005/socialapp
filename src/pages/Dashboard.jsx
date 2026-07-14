@@ -40,14 +40,6 @@ import { subscribeToPush, ensurePushSubscription } from '../lib/push';
 import NotificationBell from "@/pages/NotificationBell";
 
 // ── Imports optionnels ──────────────────────────────────────────────────────
-// ⚠️ FIX: require() ne fonctionne pas avec Vite (ESM) — il levait une
-// ReferenceError silencieusement attrapée par catch{}, donc ces 3 panneaux
-// restaient TOUJOURS null même si les fichiers existaient. Remplacé par des
-// imports statiques classiques.
-//
-// Si l'un de ces fichiers n'existe pas encore chez toi, commente la ligne
-// d'import correspondante ET remplace la variable par `null` ci-dessous,
-// sinon le build Vite échouera avec "failed to resolve import".
 import BoostPanel from "@/components/dashboard/BoostPanel";
 import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
 import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
@@ -66,10 +58,41 @@ function useWindowWidth() {
   return width;
 }
 
+// [FIX-ADMIN] Hook partagé pour la vérification du rôle admin — remplace
+// l'ancien `useAuth().isAdmin` qui se basait sur `session.user.app_metadata.role`.
+// Ce champ n'est synchronisé par AUCUN trigger/fonction avec la table
+// `public.user_roles` (vérifié en base) : il peut donc être définitivement
+// absent, ou refléter un rôle révoqué depuis longtemps. `user_roles` est la
+// seule source de vérité (RLS: no_self_insert/update/delete_role, lecture de
+// son propre rôle uniquement) — c'est elle qu'il faut interroger, comme le
+// fait déjà UserDashboard.jsx.
+function useIsAdmin(userId) {
+  const { data: role } = useQuery({
+    queryKey: ['userRole', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+      if (error) throw error;
+      return data?.role || null;
+    },
+    enabled: !!userId,
+  });
+  return role === 'admin';
+}
+
 // ─── DB ───────────────────────────────────────────────────────────────────────
 const db = {
-  list: async () => {
-    const { data, error } = await supabase.from('link_profiles').select('*').order('created_at', { ascending: true });
+  // [FIX-SCOPE] `list` est maintenant scopé au user_id de l'appelant. Avant,
+  // cette requête ne filtrait rien et comptait sur la policy RLS
+  // `link_profiles_admin_all` pour "faire le tri" — mais cette policy est
+  // vraie pour TOUTE ligne dès lors que l'appelant est admin (elle ne
+  // compare pas profile.user_id à auth.uid()). Résultat : un admin listait
+  // ET pouvait éditer/sauvegarder les profils de TOUS les clients sous
+  // "Mes profils", en les prenant pour les siens. On filtre donc
+  // explicitement ici — la vue "tous les profils" reste dans
+  // UserActivationPanel, qui la gère intentionnellement et n'expose que
+  // l'activation/le plan, jamais l'édition du contenu public.
+  list: async (userId) => {
+    const { data, error } = await supabase.from('link_profiles').select('*').eq('user_id', userId).order('created_at', { ascending: true });
     if (error) throw error;
     return data ?? [];
   },
@@ -84,7 +107,7 @@ const db = {
     return updated;
   },
   delete: async (id) => {
-    const { error } = await supabase.from('link_profiles').delete().eq('id', id);
+    const { error } = await supabase.from('leads').delete().eq('id', id);
     if (error) throw error;
     return { id };
   },
@@ -187,6 +210,14 @@ function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
 }
 
 // ─── AnalyticsPanel ───────────────────────────────────────────────────────────
+// [FIX-PERF] Remplace les 2 requêtes brutes (toutes les lignes de
+// profile_stats sur la période, + toutes celles de la période précédente)
+// par un seul appel RPC `fn_profile_analytics`, qui fait l'agrégation
+// (comptages, group by pays/plateforme) côté Postgres. Avant, un profil à
+// fort trafic pouvait transférer des dizaines de milliers de lignes au
+// navigateur juste pour afficher 4 chiffres et 2 top-6. La fonction vérifie
+// aussi explicitement la propriété du profil (SECURITY DEFINER + check
+// interne), indépendamment des policies RLS de la table.
 function AnalyticsPanel({ profileId }) {
   const [period, setPeriod]     = useState('7d');
   const [stats, setStats]       = useState(null);
@@ -199,20 +230,11 @@ function AnalyticsPanel({ profileId }) {
     (async () => {
       setLoading(true);
       const days = period==='7d'?7:period==='30d'?30:90;
-      const from = new Date(); from.setDate(from.getDate()-days);
-      const {data:viewsData} = await supabase.from('profile_stats').select('created_at,country,country_name,platform').eq('profile_id',profileId).gte('created_at',from.toISOString());
-      const {data:prevData}  = await supabase.from('profile_stats').select('id').eq('profile_id',profileId).eq('event_type','view').gte('created_at',new Date(from.getTime()-days*86400000).toISOString()).lt('created_at',from.toISOString());
-      const views    = (viewsData||[]).filter(r=>!r.platform);
-      const clicks   = (viewsData||[]).filter(r=>r.platform);
-      const prevCount = prevData?.length||0;
-      const trend    = prevCount>0?Math.round(((views.length-prevCount)/prevCount)*100):null;
-      setStats({ views:views.length, clicks:clicks.length, ctr:views.length>0?Math.round((clicks.length/views.length)*100):0, trend, trendUp:trend!==null?trend>=0:true });
-      const geoMap={};
-      views.forEach(r=>{ const k=r.country_name||r.country||'Inconnu'; geoMap[k]={count:(geoMap[k]?.count||0)+1,code:r.country}; });
-      setGeoData(Object.entries(geoMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6));
-      const clickMap={};
-      clicks.forEach(r=>{ clickMap[r.platform]=(clickMap[r.platform]||0)+1; });
-      setTopLinks(Object.entries(clickMap).sort((a,b)=>b[1]-a[1]).slice(0,6));
+      const { data, error } = await supabase.rpc('fn_profile_analytics', { p_profile_id: profileId, p_days: days });
+      if (error) { console.error(error); setLoading(false); return; }
+      setStats({ views: data.views, clicks: data.clicks, ctr: data.ctr, trend: data.trend, trendUp: data.trendUp });
+      setGeoData((data.geo || []).map(g => [g.country, { count: g.count, code: g.code }]));
+      setTopLinks((data.topLinks || []).map(l => [l.platform, l.count]));
       setLoading(false);
     })();
   }, [profileId, period]);
@@ -457,6 +479,10 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
 }
 
 // ─── UserActivationPanel ──────────────────────────────────────────────────────
+// Panneau volontairement "cross-users" — c'est ici, et ici seulement, que
+// l'admin doit pouvoir voir/agir sur tous les profils de la plateforme
+// (activation, plan). Contrairement à `db.list()` (voir plus haut), cette
+// requête n'est pas un bug : elle est censée tout retourner.
 const PLAN_OPTIONS = [
   { id: 'basic',    label: 'Basic',    color: '#9ca3af' },
   { id: 'pro',      label: 'Pro',      color: '#f97316' },
@@ -562,28 +588,96 @@ function UserActivationPanel() {
 }
 
 // ─── PlatformsPanel ───────────────────────────────────────────────────────────
+// [FIX-DND-TOUCH] Le réordonnancement des liens utilisait l'API HTML5
+// drag-and-drop native (`draggable`, onDragStart/onDragOver/onDrop). Cette
+// API ne fonctionne pas sur écrans tactiles (Safari iOS ne la supporte pas
+// du tout, Android Chrome seulement très partiellement) — c'est exactement
+// le même bug déjà corrigé dans LeadsCRMPanel (pipeline), resté ici.
+// Remplacé par des Pointer Events (souris + tactile unifiés), même pattern
+// que PipelineCard dans LeadsCRMPanel.jsx.
+function DraggableLinkCard({ link, index, onUpdate, onRemove, isDragging, onDragStart, onDragMove, onDragEnd, showHandle }) {
+  const startRef = useRef({ x: 0, y: 0, dragging: false, pointerId: null });
+
+  const handlePointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // On ignore le drag si le pointerdown vient d'un champ interactif de la
+    // carte (input, select, bouton) pour ne pas bloquer la saisie normale.
+    if (e.target.closest('input,select,textarea,button,a')) return;
+    startRef.current = { x: e.clientX, y: e.clientY, dragging: false, pointerId: e.pointerId };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    const s = startRef.current;
+    if (s.pointerId !== e.pointerId) return;
+    if (!s.dragging) {
+      const dx = e.clientX - s.x;
+      const dy = e.clientY - s.y;
+      if (Math.hypot(dx, dy) < 6) return;
+      s.dragging = true;
+      onDragStart(index);
+    }
+    e.preventDefault();
+    onDragMove(e.clientX, e.clientY);
+  };
+
+  const handlePointerUp = (e) => {
+    const s = startRef.current;
+    if (s.pointerId !== e.pointerId) return;
+    if (s.dragging) onDragEnd(e.clientX, e.clientY);
+    startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
+  };
+
+  const handlePointerCancel = () => {
+    if (startRef.current.dragging) onDragEnd(null, null);
+    startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
+  };
+
+  return (
+    <div
+      data-link-index={index}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      style={{ position:'relative', touchAction:'none', opacity:isDragging?0.45:1, transition:'opacity .1s, transform .15s', cursor:'grab', borderRadius:'16px' }}
+    >
+      {showHandle && <div style={{position:'absolute',top:'50%',left:'8px',transform:'translateY(-50%)',zIndex:2,color:'rgba(255,255,255,0.25)',pointerEvents:'none'}}><GripVertical size={14}/></div>}
+      <PlatformCard link={link} index={index} onUpdate={onUpdate} onRemove={onRemove}/>
+    </div>
+  );
+}
+
 function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDialog }) {
-  const [linksPage, setLinksPage]           = useState(0);
-  const dragIndexRef                        = useRef(null);
-  const [dragOverIndex, setDragOverIndex]   = useState(null);
+  const [linksPage, setLinksPage]     = useState(0);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [overIndex, setOverIndex]       = useState(null);
   const links          = localProfile?.links || [];
   const pagedLinks     = links.slice(linksPage * LINKS_PER_PAGE, (linksPage + 1) * LINKS_PER_PAGE);
   const totalLinkPages = Math.ceil(links.length / LINKS_PER_PAGE);
 
-  const handleDragStart = useCallback((e,idx)=>{ dragIndexRef.current=idx; e.dataTransfer.effectAllowed='move'; setTimeout(()=>{ if(e.currentTarget) e.currentTarget.style.opacity='0.4'; },0); },[]);
-  const handleDragEnd   = useCallback((e)=>{ e.currentTarget.style.opacity='1'; dragIndexRef.current=null; setDragOverIndex(null); },[]);
-  const handleDragOver  = useCallback((e,idx)=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; setDragOverIndex(idx); },[]);
-  const handleDragLeave = useCallback(()=>setDragOverIndex(null),[]);
-  const handleDrop = useCallback((e,toIdx)=>{
-    e.preventDefault();
-    const fromIdx=dragIndexRef.current;
-    if(fromIdx===null||fromIdx===toIdx){ setDragOverIndex(null); return; }
-    const newLinks=[...(localProfile?.links||[])];
-    const [moved]=newLinks.splice(fromIdx,1);
-    newLinks.splice(toIdx,0,moved);
-    updateLocal({links:newLinks});
-    setDragOverIndex(null); dragIndexRef.current=null;
-  },[localProfile,updateLocal]);
+  // Détecte, via elementFromPoint, la carte de lien survolée par le
+  // pointeur — fonctionne identiquement à la souris et au doigt.
+  const findIndexAt = (x, y) => {
+    if (x == null || y == null) return null;
+    const el = document.elementFromPoint(x, y);
+    const card = el && el.closest('[data-link-index]');
+    return card ? Number(card.getAttribute('data-link-index')) : null;
+  };
+
+  const handleDragStart = useCallback((idx) => setDraggedIndex(idx), []);
+  const handleDragMove  = useCallback((x, y) => setOverIndex(findIndexAt(x, y)), []);
+  const handleDragEnd = useCallback((x, y) => {
+    const toIdx = findIndexAt(x, y);
+    const fromIdx = draggedIndex;
+    if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
+      const newLinks = [...(localProfile?.links || [])];
+      const [moved] = newLinks.splice(fromIdx, 1);
+      newLinks.splice(toIdx, 0, moved);
+      updateLocal({ links: newLinks });
+    }
+    setDraggedIndex(null); setOverIndex(null);
+  }, [draggedIndex, localProfile, updateLocal]);
 
   const handleUpdateLink = useCallback((index,updated)=>{ const l=[...(localProfile?.links||[])]; l[index]=updated; updateLocal({links:l}); },[localProfile,updateLocal]);
   const handleRemoveLink = useCallback((index)=>{ const l=(localProfile?.links||[]).filter((_,i)=>i!==index); updateLocal({links:l}); setLinksPage(p=>Math.min(p,Math.max(0,Math.ceil(l.length/LINKS_PER_PAGE)-1))); },[localProfile,updateLocal]);
@@ -608,15 +702,15 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))',gap:'10px'}}>
             {pagedLinks.map((link,i)=>{
               const absoluteIndex=linksPage*LINKS_PER_PAGE+i;
-              const isDragOver=dragOverIndex===absoluteIndex;
               return (
-                <div key={link.id||link.platform+'-'+absoluteIndex}
-                  draggable onDragStart={e=>handleDragStart(e,absoluteIndex)} onDragEnd={handleDragEnd}
-                  onDragOver={e=>handleDragOver(e,absoluteIndex)} onDragLeave={handleDragLeave} onDrop={e=>handleDrop(e,absoluteIndex)}
-                  style={{position:'relative',transition:'transform 0.15s',transform:isDragOver?'scale(1.02)':'scale(1)',outline:isDragOver?'2px dashed rgba(255,255,255,0.5)':'2px solid transparent',borderRadius:'16px',cursor:'grab'}}>
-                  {links.length>1&&<div style={{position:'absolute',top:'50%',left:'8px',transform:'translateY(-50%)',zIndex:2,color:'rgba(255,255,255,0.25)',pointerEvents:'none'}}><GripVertical size={14}/></div>}
-                  <PlatformCard link={link} index={absoluteIndex} onUpdate={u=>handleUpdateLink(absoluteIndex,u)} onRemove={()=>handleRemoveLink(absoluteIndex)}/>
-                </div>
+                <DraggableLinkCard
+                  key={link.id||link.platform+'-'+absoluteIndex}
+                  link={link} index={absoluteIndex}
+                  onUpdate={u=>handleUpdateLink(absoluteIndex,u)} onRemove={()=>handleRemoveLink(absoluteIndex)}
+                  isDragging={draggedIndex===absoluteIndex}
+                  onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}
+                  showHandle={links.length>1}
+                />
               );
             })}
           </div>
@@ -841,7 +935,13 @@ function TemplatesModal({ onClose, onApply }) {
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const queryClient = useQueryClient();
-  const { signOut, user, isAdmin } = useAuth();
+  const { signOut, user } = useAuth();
+  // [FIX-ADMIN] `isAdmin` vient maintenant de `public.user_roles` (source
+  // de vérité, RLS verrouillée) plutôt que de `useAuth().isAdmin`, qui se
+  // basait sur `app_metadata.role` — jamais synchronisé avec `user_roles`
+  // (vérifié : aucun trigger ne relie les deux). Cf. commentaire sur
+  // `useIsAdmin` plus haut dans ce fichier.
+  const isAdmin = useIsAdmin(user?.id);
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
   const { t } = useTranslation();
@@ -862,14 +962,25 @@ export default function Dashboard() {
   const [notifPrefs, setNotifPrefs] = useState({ notif_view: true, notif_click: true, notif_expiry: true, notif_threshold: 10 });
   const expiryNotifiedRef = useRef(false);
 
+  // [FIX-CACHE-STALE] Avant, un `localStorage` existant court-circuitait
+  // totalement la requête réseau (return anticipé) — si les préférences
+  // étaient modifiées ailleurs (autre appareil, panel admin), cet onglet ne
+  // les revoyait jamais tant que le cache n'était pas vidé manuellement. On
+  // affiche maintenant le cache immédiatement (perception de rapidité) MAIS
+  // on rafraîchit toujours depuis la base ensuite, et on remet à jour le
+  // cache local avec la valeur fraîche.
   useEffect(() => {
     if (!user?.id) return;
     try {
       const cached = localStorage.getItem(`user_settings_${user.id}`);
-      if (cached) { setNotifPrefs(prev => ({ ...prev, ...JSON.parse(cached) })); return; }
+      if (cached) setNotifPrefs(prev => ({ ...prev, ...JSON.parse(cached) }));
     } catch {}
     supabase.from('user_settings').select('notif_view,notif_click,notif_expiry,notif_threshold').eq('user_id',user.id).maybeSingle()
-      .then(({ data }) => { if (data) setNotifPrefs(prev => ({ ...prev, ...data })); });
+      .then(({ data }) => {
+        if (!data) return;
+        setNotifPrefs(prev => ({ ...prev, ...data }));
+        try { localStorage.setItem(`user_settings_${user.id}`, JSON.stringify(data)); } catch {}
+      });
   }, [user?.id]);
 
   useEffect(() => {
@@ -878,7 +989,13 @@ export default function Dashboard() {
     return () => window.removeEventListener('app_notif_prefs_change', handler);
   }, []);
 
-  const { data: profiles = [], isLoading } = useQuery({ queryKey: ['linkProfiles'], queryFn: db.list });
+  // [FIX-SCOPE] db.list est désormais scopé à user.id (voir commentaire sur
+  // `db.list` plus haut) — la clé de query inclut donc user?.id.
+  const { data: profiles = [], isLoading } = useQuery({
+    queryKey: ['linkProfiles', user?.id],
+    queryFn: () => db.list(user.id),
+    enabled: !!user?.id,
+  });
 
   useEffect(() => { setSidebarCollapsed(isMobile); }, [isMobile]);
 
@@ -943,17 +1060,17 @@ export default function Dashboard() {
 
   const deleteMutation = useMutation({
     mutationFn: id => db.delete(id),
-    onSuccess: (_, deletedId) => { queryClient.invalidateQueries({ queryKey: ['linkProfiles'] }); setActiveProfileId(prev => prev === deletedId ? null : prev); setLocalProfile(null); toast.success('Profil supprimé !'); },
+    onSuccess: (_, deletedId) => { queryClient.invalidateQueries({ queryKey: ['linkProfiles', user?.id] }); setActiveProfileId(prev => prev === deletedId ? null : prev); setLocalProfile(null); toast.success('Profil supprimé !'); },
   });
 
   const createMutation = useMutation({
     mutationFn: data => db.create(data),
-    onSuccess: (created) => { queryClient.invalidateQueries({ queryKey: ['linkProfiles'] }); setActiveProfileId(created.id); setLocalProfile(created); setHasChanges(false); toast.success('Profil créé !'); },
+    onSuccess: (created) => { queryClient.invalidateQueries({ queryKey: ['linkProfiles', user?.id] }); setActiveProfileId(created.id); setLocalProfile(created); setHasChanges(false); toast.success('Profil créé !'); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.update(id, data),
-    onSuccess: () => { setHasChanges(false); queryClient.invalidateQueries({ queryKey: ['linkProfiles'] }); toast.success('Modifications sauvegardées !'); },
+    onSuccess: () => { setHasChanges(false); queryClient.invalidateQueries({ queryKey: ['linkProfiles', user?.id] }); toast.success('Modifications sauvegardées !'); },
     onError: (error) => toast.error('Erreur : ' + error.message),
   });
 
@@ -1008,10 +1125,6 @@ export default function Dashboard() {
     }});
   };
 
-  // Upload de l'image de fond depuis le tiroir mobile (MobileNav) — même
-  // logique que UserDashboard.jsx (uploadBgFile), pour rester cohérent
-  // entre les deux dashboards. Reçoit directement un File (MobileNav
-  // extrait déjà e.target.files[0] en interne).
   const uploadBgFile = async (file) => {
     if (!file) return;
     if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
@@ -1081,8 +1194,6 @@ export default function Dashboard() {
     }
   };
 
-  // Dégradé rose → orange repris de l'icône fournie (même dégradé que le
-  // dashboard user), appliqué ici à la topbar admin.
   const TOPBAR_GRADIENT = 'linear-gradient(120deg, #ff1f6d 0%, #ff5e3a 55%, #ffab2e 100%)';
 
   return (
@@ -1092,8 +1203,6 @@ export default function Dashboard() {
       </div>
 
       <div style={{ flex:1, height:'100dvh', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1, overflowX:'hidden', overflowY:'hidden' }}>
-        {/* Top bar — dégradé rose/orange repris de l'icône, au lieu du fond
-            sombre translucide d'origine. */}
         <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_GRADIENT, borderBottom:'1px solid rgba(255,255,255,0.15)', boxShadow:'0 4px 20px rgba(255,60,90,0.25)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'28px', height:'28px', borderRadius:'8px', objectFit:'cover', flexShrink:0 }}/>}
@@ -1101,7 +1210,6 @@ export default function Dashboard() {
             {hasChanges && <span style={{ background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.35)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fff', fontWeight:600 }}>{t('unsaved')}</span>}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-            {/* ✅ FIX: bouton Templates ajouté — setShowTemplates n'était jamais appelé nulle part */}
             <button onClick={()=>setShowTemplates(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', color:'rgba(255,255,255,0.9)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Sparkles size={13}/>{!isMobile && 'Templates'}
             </button>
@@ -1109,9 +1217,6 @@ export default function Dashboard() {
             <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', color:'rgba(255,255,255,0.9)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Eye size={13}/>{!isMobile && t('preview')}
             </button>
-            {/* 🔔 NotificationBell : notifications DB (ex: "Nouvel utilisateur
-                inscrit"), distinctes du bouton push ci-dessous qui ne gère
-                que l'abonnement aux notifications navigateur. */}
             <NotificationBell />
             <div ref={notifPanelRef} style={{ position:'relative' }}>
               <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(0,0,0,0.25)':'rgba(0,0,0,0.2)', border:'1px solid '+(notifGranted?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.3)'), borderRadius:'9px', cursor:'pointer' }}>
@@ -1143,7 +1248,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Zone scrollable */}
         <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':'24px', paddingBottom:isMobile?'100px':'24px' }}>
           <AnimatePresence>
             <motion.div key={activeSection} initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:0.12 }}>

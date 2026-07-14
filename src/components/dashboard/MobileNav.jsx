@@ -89,6 +89,21 @@
  *        NAV_LOCK) via la constante, jamais en chaîne 'crm' en dur ailleurs
  *        — un seul changement de valeur ('crm' → 'leads') suffit donc à
  *        tout resynchroniser sans toucher au reste du fichier.
+ *
+ *  [C21] FIX — Section "Gestion des comptes" absente du tiroir mobile côté
+ *        admin. Le Dashboard.jsx desktop a sa propre <Sidebar> avec un item
+ *        `accounts` (groupe 'admin', icône Users) → son switch de rendu a
+ *        un `case 'accounts': return <UserActivationPanel/>`. Mais côté
+ *        mobile, Dashboard.jsx monte CE composant (<MobileNav />), qui
+ *        n'avait jamais eu d'entrée `accounts` ni dans NAV_IDS ni dans
+ *        SIDEBAR_GROUPS — alors que la prop `isAdmin` lui était déjà
+ *        transmise (`<MobileNav isAdmin={isAdmin} ... />`), sans rien à
+ *        conditionner dessus. Résultat : impossible d'accéder à la gestion
+ *        des comptes depuis un mobile admin, quelle que soit la valeur de
+ *        `isAdmin`. Fix : ajout de NAV_IDS.ACCOUNTS = 'accounts' (même
+ *        valeur que le `case` du dashboard) et d'un groupe "Administration"
+ *        dans SIDEBAR_GROUPS, marqué `adminOnly: true` et filtré au rendu
+ *        selon la prop `isAdmin` déjà reçue par ce composant.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -176,11 +191,20 @@ const NAV_IDS = {
   FORMS:        'forms',
   ANALYTICS:    'analytics',
   SETTINGS:     'settings',
+  // [C21] Aligné sur le `case 'accounts'` du switch de rendu de
+  // Dashboard.jsx (celui qui affiche <UserActivationPanel/>, "Gestion des
+  // comptes"). Cette section existait déjà côté Sidebar desktop
+  // (SIDEBAR_NAV, groupe 'admin') mais n'avait jamais été répliquée ici —
+  // MobileNav ignorait donc totalement cette entrée, malgré la prop
+  // `isAdmin` déjà transmise par Dashboard.jsx.
+  ACCOUNTS:     'accounts',
   MENU:         '__menu__',
 };
 
 // Verrouillage par plan, aligné sur USER_NAV (UserSidebar.jsx).
 // [C19] Calendrier (BOOKING) désormais réservé aux plans Pro et Business.
+// NAV_IDS.ACCOUNTS n'y figure pas : ce n'est pas un item soumis au plan,
+// mais réservé aux comptes admin (filtré directement dans SIDEBAR_GROUPS).
 const NAV_LOCK = {
   [NAV_IDS.EVENT]:        'pro',
   [NAV_IDS.ANALYTICS]:    'pro',
@@ -202,6 +226,9 @@ const TAB_ITEMS = [
 
 // [C14] Chaque item porte désormais une `description` (sous-titre affiché
 // dans le tiroir, comme sur la maquette).
+// [C21] Groupe "Administration" ajouté, marqué `adminOnly: true` — filtré
+// au rendu selon la prop `isAdmin`. Icône Users alignée sur l'item
+// "Comptes" du SIDEBAR_NAV desktop (Dashboard.jsx).
 const SIDEBAR_GROUPS = [
   {
     label: 'Navigation',
@@ -233,6 +260,13 @@ const SIDEBAR_GROUPS = [
     items: [
       { id: NAV_IDS.REALTIME,  label: 'Temps réel', icon: Radio,     badge: 'LIVE', description: "Suivez l'activité en direct" },
       { id: NAV_IDS.ANALYTICS, label: 'Analytics',  icon: BarChart3, description: 'Statistiques et performances' },
+    ],
+  },
+  {
+    label: 'Administration',
+    adminOnly: true,
+    items: [
+      { id: NAV_IDS.ACCOUNTS, label: 'Gestion des comptes', icon: Users, description: 'Activez et gérez les comptes utilisateurs' },
     ],
   },
   {
@@ -366,6 +400,9 @@ export default function MobileNav({
   // [C14] LOGIQUE DE RENDU DE LA PHOTO DE PROFIL INCHANGÉE — seuls la
   // taille et l'emplacement dans le layout ont été adaptés à la maquette.
   const avatarInitial = profile?.display_name?.charAt(0)?.toUpperCase() || '?';
+
+  // [C21] Groupes visibles : on retire "Administration" si isAdmin est faux.
+  const visibleGroups = SIDEBAR_GROUPS.filter(group => !group.adminOnly || isAdmin);
 
   // ─────────────────────────────────────────────────────────────
   return (
@@ -508,7 +545,7 @@ export default function MobileNav({
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          {SIDEBAR_GROUPS.map(group => (
+          {visibleGroups.map(group => (
             <div key={group.label} style={{ marginBottom: '4px' }}>
               <p style={{
                 color: T.textGhost, fontSize: '9px', fontWeight: 700,

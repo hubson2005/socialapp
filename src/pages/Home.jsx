@@ -5,8 +5,7 @@ import { Helmet } from "react-helmet-async";
 import logo from '../assets/Logo_SocialApp.png';
 import eventMockup from '../assets/MODE_EVENEMENT.png';
 import eventMockupWebp from '../assets/MODE_EVENEMENT.webp';
-import marketplaceMockup from '../assets/MARKETPLACE.png';
-import marketplaceMockupWebp from '../assets/MARKETPLACE.webp';
+import marketplaceWoman from '../assets/marketplace-woman.png';
 import tempsReelMockup from '../assets/TEMPS_REEL.png';
 import tempsReelMockupWebp from '../assets/TEMPS_REEL.webp';
 import leadsCrmMockup from '../assets/LEADS_CRM.png';
@@ -80,6 +79,108 @@ function PlanModal({ onClose, onSelect }) {
         @media(max-width:700px){.sa-modal-plans{grid-template-columns:1fr!important}}
         .sa-modal-plan:hover{transform:translateY(-5px);box-shadow:0 16px 48px rgba(0,0,0,.5)}
         .sa-modal-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,107,53,.3)}
+      `}</style>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   MOCKUP ANIMÉ — BOUTIQUE MARKETPLACE
+   Le téléphone se construit en direct : les cartes
+   produits apparaissent une à une avec un halo
+   lumineux, puis les boutons de contact, en boucle.
+───────────────────────────────────────────── */
+function MarketplaceMockup() {
+  const products = [
+    { emoji: '👟', bg: 'linear-gradient(135deg,#5a4a63,#241a2b)', price: '14 000', old: '20 000', badge: '-30%', badgeBg: '#ff6b35' },
+    { emoji: '👗', bg: 'linear-gradient(135deg,#7a4a3a,#2e1f18)', price: '10 000', old: null, badge: 'Disponible', badgeBg: '#22c55e' },
+    { emoji: '📱', bg: 'linear-gradient(135deg,#3a4a5a,#1a232e)', price: '180 000', old: null, badge: 'Épuisé', badgeBg: 'rgba(255,255,255,.28)' },
+    { emoji: '👜', bg: 'linear-gradient(135deg,#4a3a5a,#20182e)', price: '9 000', old: null, badge: '-20%', badgeBg: '#ff6b35' },
+  ];
+
+  return (
+    <div className="mp-scene">
+      <img src={marketplaceWoman} alt="Cliente ravie utilisant SocialApp" loading="lazy" className="sa-float mp-woman" />
+
+      <div className="mp-phone">
+        <div className="mp-screen">
+          <div className="mp-profile">
+            <div className="mp-avatar">S</div>
+            <div className="mp-brand">SocialApp <span style={{ color: '#22c55e' }}>✔</span></div>
+            <div className="mp-sub">Votre boutique, votre profil</div>
+            <div className="mp-cta">Ouvrir ma boutique →</div>
+          </div>
+
+          <div className="mp-tab">🛍 Boutique</div>
+
+          <div className="mp-grid">
+            {products.map((p, i) => (
+              <div key={i} className={`mp-card mp-card-${i + 1}`}>
+                <div className="mp-photo" style={{ background: p.bg }}>
+                  <span className="mp-badge" style={{ background: p.badgeBg }}>{p.badge}</span>
+                  <span className="mp-emoji">{p.emoji}</span>
+                </div>
+                <div className="mp-info">
+                  <span className="mp-price">{p.price} F</span>
+                  {p.old && <span className="mp-old">{p.old} F</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mp-contacts">
+            <div className="mp-row mp-row-1"><span className="mp-ico" style={{ background: '#ff6b35' }}>☎</span>Téléphone</div>
+            <div className="mp-row mp-row-2"><span className="mp-ico" style={{ background: '#1877F2' }}>f</span>Facebook</div>
+            <div className="mp-row mp-row-3"><span className="mp-ico" style={{ background: '#25D366' }}>✆</span>WhatsApp</div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .mp-scene{ position:relative; display:flex; align-items:center; justify-content:center; }
+        .mp-woman{ height:400px; margin-right:-46px; z-index:1; filter:drop-shadow(0 20px 34px rgba(0,0,0,.5)); }
+        .mp-phone{ position:relative; width:240px; height:500px; background:#0e0709; border-radius:36px; border:2px solid rgba(255,255,255,.08); box-shadow:0 0 0 6px #04020e, 0 30px 70px rgba(0,0,0,.55); padding:8px; z-index:2; flex-shrink:0; }
+        .mp-screen{ position:relative; width:100%; height:100%; background:linear-gradient(180deg,#150d10,#0c070a); border-radius:28px; padding:24px 10px 12px; overflow:hidden; }
+        .mp-profile{ display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:8px; }
+        .mp-avatar{ width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#ff6b35,#f7c948); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:15px; margin-bottom:5px; }
+        .mp-brand{ font-size:10.5px; font-weight:700; color:#fff; display:flex; gap:4px; align-items:center; }
+        .mp-sub{ font-size:7px; color:rgba(255,255,255,.45); margin-top:2px; }
+        .mp-cta{ margin-top:6px; font-size:7px; font-weight:700; color:#fff; background:linear-gradient(90deg,#ff6b35,#f7c948); padding:4px 11px; border-radius:20px; animation:mpCta 2.4s ease-in-out infinite; }
+        .mp-tab{ display:inline-flex; width:fit-content; font-size:7px; font-weight:700; color:#fff; background:rgba(255,107,53,.18); border:1px solid rgba(255,107,53,.4); padding:4px 9px; border-radius:14px; margin-bottom:7px; }
+        .mp-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        .mp-card{ position:relative; border-radius:11px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); overflow:hidden; height:90px; animation-duration:6s; animation-iteration-count:infinite; animation-timing-function:ease-out; }
+        .mp-card-1{ animation-name:mpCard1; }
+        .mp-card-2{ animation-name:mpCard2; }
+        .mp-card-3{ animation-name:mpCard3; }
+        .mp-card-4{ animation-name:mpCard4; }
+        .mp-photo{ position:relative; height:58px; display:flex; align-items:center; justify-content:center; }
+        .mp-emoji{ font-size:20px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+        .mp-badge{ position:absolute; top:5px; left:5px; font-size:5.5px; font-weight:800; color:#fff; padding:2px 5px; border-radius:5px; white-space:nowrap; }
+        .mp-info{ padding:5px 7px; }
+        .mp-price{ font-size:8.5px; font-weight:800; color:#fff; }
+        .mp-old{ font-size:6px; color:rgba(255,255,255,.4); text-decoration:line-through; margin-left:4px; }
+        .mp-contacts{ margin-top:7px; display:flex; flex-direction:column; gap:4px; }
+        .mp-row{ display:flex; align-items:center; gap:6px; font-size:7px; font-weight:600; color:#fff; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:8px; padding:4px 7px; animation-duration:6s; animation-iteration-count:infinite; animation-timing-function:ease-out; }
+        .mp-row-1{ animation-name:mpRow1; }
+        .mp-row-2{ animation-name:mpRow2; }
+        .mp-row-3{ animation-name:mpRow3; }
+        .mp-ico{ width:14px; height:14px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:7.5px; color:#fff; flex-shrink:0; }
+
+        @keyframes mpCta{ 0%,100%{ box-shadow:0 3px 10px rgba(255,107,53,.25); } 50%{ box-shadow:0 3px 18px rgba(255,107,53,.6); } }
+
+        @keyframes mpCard1{ 0%,5%{opacity:0;transform:translateY(12px) scale(.93);} 11%{opacity:1;transform:translateY(-2px) scale(1.03);} 16%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
+        @keyframes mpCard2{ 0%,13%{opacity:0;transform:translateY(12px) scale(.93);} 19%{opacity:1;transform:translateY(-2px) scale(1.03);} 24%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
+        @keyframes mpCard3{ 0%,22%{opacity:0;transform:translateY(12px) scale(.93);} 28%{opacity:1;transform:translateY(-2px) scale(1.03);} 33%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
+        @keyframes mpCard4{ 0%,30%{opacity:0;transform:translateY(12px) scale(.93);} 36%{opacity:1;transform:translateY(-2px) scale(1.03);} 41%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
+
+        @keyframes mpRow1{ 0%,40%{opacity:0;transform:translateY(8px);} 46%,90%{opacity:1;transform:translateY(0);} 96%,100%{opacity:0;transform:translateY(8px);} }
+        @keyframes mpRow2{ 0%,44%{opacity:0;transform:translateY(8px);} 50%,90%{opacity:1;transform:translateY(0);} 96%,100%{opacity:0;transform:translateY(8px);} }
+        @keyframes mpRow3{ 0%,48%{opacity:0;transform:translateY(8px);} 54%,90%{opacity:1;transform:translateY(0);} 96%,100%{opacity:0;transform:translateY(8px);} }
+
+        @media (max-width:640px){
+          .mp-woman{ height:260px; margin-right:-26px; }
+          .mp-phone{ width:186px; height:388px; }
+        }
       `}</style>
     </div>
   );
@@ -509,10 +610,7 @@ export default function Home() {
             </div>
             <div className="sa-twocol" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <picture>
-                  <source srcSet={marketplaceMockupWebp} type="image/webp" />
-                  <img src={marketplaceMockup} alt="Boutique SocialApp sur mobile" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.28))', borderRadius: '32px' }} />
-                </picture>
+                <MarketplaceMockup />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {[
@@ -725,4 +823,3 @@ export default function Home() {
     </>
   );
 }
-

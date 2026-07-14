@@ -1,6 +1,5 @@
-const CACHE_NAME = 'socialapp-cache-v1';
+const CACHE_NAME = 'socialapp-cache-v2'; // ⬅️ bump this on every deploy (or generate at build time)
 
-// Fichiers statiques essentiels mis en cache dès l'installation
 const CORE_ASSETS = [
   '/',
   '/manifest.json',
@@ -19,46 +18,49 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Stratégie : réseau d'abord, secours sur le cache si offline.
-// On ne met en cache que le GET (les appels API Supabase en POST/PATCH ne
-// sont jamais interceptés) et on ignore les requêtes vers d'autres domaines
-// (ex: Supabase, WhatsApp) pour ne jamais servir une réponse API périmée.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Navigation requests (index.html / app shell) must ALWAYS go to the
+  // network first and never be served stale — this is what was causing
+  // old, since-deleted hashed chunk URLs to be requested after a deploy.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match('/'))
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        // ⬅️ THE KEY FIX: only cache genuinely successful responses.
+        // Previously a 403/404 response was cached forever, so even
+        // after fixing the deploy, the browser kept re-serving the
+        // cached failure for that URL.
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
         return response;
       })
       .catch(async () => {
         const cached = await caches.match(request);
-        // Si ni le réseau ni le cache n'ont de réponse, on renvoie une
-        // Response explicite (sinon respondWith(undefined) plante avec
-        // "Failed to convert value to 'Response'").
         return cached || new Response('Hors ligne', { status: 503, statusText: 'Offline' });
       })
   );
 });
 
-// --- Notifications Web Push (existant) ---
+// --- Push notifications (unchanged) ---
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   event.waitUntil(
@@ -72,7 +74,5 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(
-    clients.openWindow('/')
-  );
+  event.waitUntil(clients.openWindow('/'));
 });

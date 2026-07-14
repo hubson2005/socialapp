@@ -274,21 +274,8 @@ function generateWebhookUrl(profileId, integrationId) {
 }
 
 // ─── Carte intégration ────────────────────────────────────────────────────────
-// CORRECTIONS :
-//  [P1] console.log debug supprimé
-//  [P2] onClick retiré du DIV wrapper externe — double toggle corrigé
-//  [P3] e.stopPropagation() sur bouton Déconnecter
-//  [P4] e.stopPropagation() sur bouton Chevron
-//  [R1] BUG BLOQUANT corrigé : `isTablet` était utilisé dans ce composant
-//       (bouton copier du webhook) sans jamais être défini ici — il n'existait
-//       que dans le composant parent. C'était un ReferenceError qui plantait
-//       le rendu dès qu'on dépliait une intégration avec webhook (Zapier,
-//       Make, Stripe, etc.) sur TOUS les appareils, pas seulement tablette.
-//       → `isTablet` est maintenant reçu en prop depuis IntegrationsPanel.
-//  [R2] Cibles tactiles agrandies (chevron / déconnexion / copier) pour
-//       rester confortables au doigt sur iOS/Android, pas seulement tablette.
 function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }) {
-  const [expanded, setExpanded] = useState(false); // [P1] console.log supprimé
+  const [expanded, setExpanded] = useState(false);
   const [fields, setFields] = useState(config?.fields || {});
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -299,7 +286,8 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
   const { LogoComponent } = integration;
   const hasContent = integration.hasWebhook || integration.fields.length > 0;
 
-  // [R2] taille de bouton tactile cohérente sur tous les appareils (mini 38px, 44px en tablette)
+  // Taille de bouton tactile cohérente sur tous les appareils (mini 38px, 44px en tablette).
+  // 44px = taille minimale recommandée par Apple HIG et Material Design pour un tap confortable.
   const tapBtnSize = isTablet ? '44px' : '38px';
 
   const handleCopy = (text) => {
@@ -338,10 +326,8 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
       transition: 'border-color 0.2s',
       minWidth: 0,
     }}>
-      {/* [P2] onClick retiré du wrapper — seul le div logo+texte est cliquable */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0 }}>
 
-        {/* [P2] Seule source du toggle */}
         <div
           onClick={() => hasContent && setExpanded(v => !v)}
           style={{
@@ -378,10 +364,9 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
           </div>
         </div>
 
-        {/* Boutons — frères du div logo+texte */}
         {isConnected && (
           <button
-            onClick={e => { e.stopPropagation(); handleDisconnect(); }} // [P3]
+            onClick={e => { e.stopPropagation(); handleDisconnect(); }}
             style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             <X size={11} />
@@ -389,7 +374,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
         )}
         {hasContent && (
           <button
-            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }} // [P4]
+            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
             style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -408,7 +393,6 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
                 <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
                   {webhookUrl}
                 </span>
-                {/* [R1] utilise désormais `isTablet` reçu en prop (plus de ReferenceError) */}
                 <button onClick={() => handleCopy(webhookUrl)} style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '8px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {copied ? <Check size={10} color="#22c55e" /> : <Copy size={10} color="rgba(255,255,255,0.5)" />}
                 </button>
@@ -468,19 +452,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
 
 // ─── Panel principal ───────────────────────────────────────────────────────────
 const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
-  // [R3] BUG BLOQUANT corrigé : `useBreakpoint()` était appelé DEUX fois avec
-  // `isTablet` déclaré deux fois (`const { isTablet } = ...` puis
-  // `const { isMobile, isTablet } = ...`). C'est un SyntaxError
-  // ("Identifier 'isTablet' has already been declared") qui empêchait
-  // le fichier de compiler du tout, sur n'importe quel appareil.
-  // → un seul appel, une seule déclaration.
   const { isMobile, isTablet } = useBreakpoint();
-  // [D1] Desktop = ni mobile ni tablette. Le panneau garde une largeur
-  // maximale (720px) sur tous les formats — sur desktop, l'écran est
-  // souvent bien plus large que ça, donc le contenu restait collé à
-  // gauche. `isDesktop` sert uniquement à centrer horizontalement le bloc
-  // via `margin: 0 auto` sur ce format ; mobile/tablette/iOS/Android
-  // gardent leur comportement d'origine (pleine largeur, non centré).
   const isDesktop = !isMobile && !isTablet;
   const [configs, setConfigs] = useState({});
   const [loading, setLoading] = useState(true);
@@ -548,11 +520,20 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
     .filter(c => c.id !== 'Tous')
     .filter(c => filtered.some(i => i.category === c.id));
 
-  // [tablet] grille partagée pour les listes de cartes
+  // [D2] Grille responsive auto-adaptative (remplace le binaire isTablet).
+  // `auto-fill` + `minmax(260px, 1fr)` calcule le nombre de colonnes à
+  // partir de la largeur RÉELLE du conteneur, donc ça s'ajuste tout seul,
+  // sans dépendre d'un seuil isMobile/isTablet arbitraire :
+  //  - petit Android (~360px)      -> 1 colonne
+  //  - iPhone standard (~390px)    -> 1 colonne
+  //  - iPhone Max en paysage       -> 2 colonnes
+  //  - iPad mini / tablette portrait -> 2 colonnes
+  //  - iPad Pro / desktop          -> 2 colonnes (le panel plafonne à 960px)
+  // Ça garantit un rendu correct sur Android, iOS et tablette, y compris
+  // en rotation d'écran, sans avoir à multiplier les cas isMobile/isTablet.
   const cardGridStyle = {
-    display: isTablet ? 'grid' : 'flex',
-    gridTemplateColumns: isTablet ? '1fr 1fr' : undefined,
-    flexDirection: isTablet ? undefined : 'column',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
     gap: '8px',
     minWidth: 0,
   };
@@ -561,7 +542,6 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
     <div style={{
       display: 'flex', flexDirection: 'column', gap: '20px',
       maxWidth: isTablet ? '960px' : '720px', width: '100%', minWidth: 0, boxSizing: 'border-box',
-      // [D1] centrage horizontal réservé au desktop
       margin: isDesktop ? '0 auto' : undefined,
     }}>
 
@@ -573,7 +553,6 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
             {connectedCount} active{connectedCount !== 1 ? 's' : ''} · {INTEGRATIONS.length} disponibles
           </p>
         </div>
-        {/* [tablet] touch target 44px */}
         <button onClick={loadConfigs} style={{ width: isTablet ? '44px' : '38px', height: isTablet ? '44px' : '38px', borderRadius: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
           <RefreshCw size={13} color="rgba(255,255,255,0.5)" />
         </button>
@@ -672,7 +651,6 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>Actives</p>
               </div>
-              {/* [tablet] 2 colonnes */}
               <div style={cardGridStyle}>
                 {INTEGRATIONS.filter(i => configs[i.id]?.connected).map(integration => (
                   <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} isTablet={isTablet} />
@@ -687,7 +665,6 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{cat.label}</p>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
               </div>
-              {/* [tablet] 2 colonnes par catégorie */}
               <div style={cardGridStyle}>
                 {filtered.filter(i => i.category === cat.id && !configs[i.id]?.connected).map(integration => (
                   <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} isTablet={isTablet} />
@@ -697,7 +674,6 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
           ))}
         </div>
       ) : (
-        /* [tablet] 2 colonnes vue filtrée */
         <div style={cardGridStyle}>
           {filtered.filter(i => configs[i.id]?.connected).map(integration => (
             <IntegrationCard key={integration.id} integration={integration} config={configs[integration.id]} onSave={handleSave} onDisconnect={handleDisconnect} isTablet={isTablet} />

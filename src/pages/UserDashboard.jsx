@@ -217,6 +217,36 @@ function EventMediaCarousel({ medias = [], onRemove, adminMode = false }) {
   );
 }
 
+// Bannière de rappel d'abonnement SenePay — même emplacement/logique que
+// <InstallPrompt /> (visible en haut du contenu, sur toutes les sections).
+// Affichée uniquement si l'abonnement expire bientôt (≤ 7 jours) ou si le
+// profil est désactivé faute de renouvellement (cf. process_senepay_expirations
+// côté Supabase, qui met is_activated=false sans palier gratuit).
+function SubscriptionRenewalBanner({ subscription, isActivated, onRenew, loading }) {
+  if (!subscription) return null;
+  const expiresAt = subscription.expires_at ? new Date(subscription.expires_at) : null;
+  const isExpired = subscription.status === 'expired' || !isActivated;
+  const daysLeft = expiresAt ? Math.ceil((expiresAt - new Date()) / 86400000) : null;
+  const isExpiringSoon = !isExpired && daysLeft !== null && daysLeft <= 7;
+  if (!isExpired && !isExpiringSoon) return null;
+
+  const color = isExpired ? '#f87171' : '#fbbf24';
+  return (
+    <div style={{ background:color+'14', border:'1px solid '+color+'40', borderRadius:'14px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px', flexWrap:'wrap' }}>
+      <span style={{ fontSize:'18px', flexShrink:0 }}>{isExpired ? '🔒' : '⏰'}</span>
+      <p style={{ flex:1, minWidth:'200px', margin:0, color:'white', fontSize:'13px', lineHeight:1.4 }}>
+        {isExpired
+          ? 'Votre abonnement a expiré et votre profil public est désactivé.'
+          : `Votre abonnement expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''} (${expiresAt.toLocaleDateString('fr-FR')}).`}
+      </p>
+      <button onClick={onRenew} disabled={loading} type="button"
+        style={{ padding:'8px 16px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,'+color+','+color+'aa)', color:'#1a1200', fontWeight:700, fontSize:'12px', cursor:loading?'default':'pointer', whiteSpace:'nowrap', opacity:loading?0.7:1, flexShrink:0 }}>
+        {loading ? 'Chargement…' : 'Renouveler maintenant'}
+      </button>
+    </div>
+  );
+}
+
 function MiniStat({ label, value, icon: Icon, color }) {
   return (
     <div style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', padding:'14px 16px', display:'flex', flexDirection:'column', gap:'8px' }}>
@@ -286,6 +316,9 @@ export default function UserDashboard() {
   const [localProfile, setLocalProfile]     = useState(null);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [hasChanges, setHasChanges]         = useState(false);
+  // Paiement SenePay en cours (bloque le double-clic sur "Choisir un plan" /
+  // "Renouveler maintenant" pendant la création de la session de paiement).
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const rawPlan     = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
   const isActivated = localProfile?.is_activated === true;
@@ -327,7 +360,40 @@ export default function UserDashboard() {
     if (featureName) setFeatureUpgrade({ featureName, requiredPlan: requiredPlan || 'pro' });
     else setShowPlanModal(true);
   };
-  const handlePlanSelect  = (planSlug) => { setShowPlanModal(false); navigate(`/login?plan=${encodeURIComponent(planSlug)}`); };
+
+  // Abonnement SenePay courant (table `subscriptions`, une ligne par user_id).
+  // Alimente la bannière de rappel de renouvellement.
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('subscriptions').select('*').eq('user_id', user.id).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Point d'entrée unique pour créer une session de paiement SenePay
+  // (souscription initiale via PlanModal, ou renouvellement via la
+  // bannière). Redirige vers le lien de paiement Wave/Orange Money/Free
+  // Money renvoyé par la fonction Edge `senepay-checkout`.
+  const startSenepayCheckout = async (planSlug, mode = 'new') => {
+    if (!localProfile?.id || checkoutLoading) return;
+    setCheckoutLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('senepay-checkout', {
+        body: { profile_id: localProfile.id, plan: planSlug, mode },
+      });
+      if (error) throw error;
+      if (!data?.checkoutUrl) throw new Error('Lien de paiement indisponible');
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      toast.error('Paiement indisponible pour le moment : ' + (err.message || 'réessaie plus tard'));
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handlePlanSelect = (planSlug) => { setShowPlanModal(false); startSenepayCheckout(planSlug, 'new'); };
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['userProfiles', user?.id],
@@ -639,6 +705,12 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
                   composant gère lui-même sa visibilité (déjà installé,
                   fermé récemment, plateforme iOS vs Android/desktop). */}
               <InstallPrompt />
+              <SubscriptionRenewalBanner
+                subscription={subscription}
+                isActivated={isActivated}
+                loading={checkoutLoading}
+                onRenew={() => startSenepayCheckout(effectivePlan, 'renewal')}
+              />
               {renderSection()}
             </div>
           </PanelErrorBoundary>
@@ -660,8 +732,11 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
 
       {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)} />}
 
-      {/* Modale d'activation de compte — montant dynamique selon effectivePlan */}
-      <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} plan={effectivePlan} />}</AnimatePresence>
+      {/* Modale d'activation de compte (Wave manuel) — DÉSACTIVÉE pour le
+          moment : SenePay active désormais le compte automatiquement via
+          le webhook (is_activated=true dès paiement confirmé). État et
+          import conservés pour réactivation facile si besoin. */}
+      {/* <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} plan={effectivePlan} />}</AnimatePresence> */}
 
       {/* Modale d'upgrade ciblée sur UNE feature verrouillée (Analytics, Événement, CRM…) */}
       <AnimatePresence>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from "../../supabase";
 
 // ============================================================
@@ -22,7 +22,10 @@ const COLORS = {
 };
 
 const s = {
-  wrap: { background: COLORS.bg, color: COLORS.text, borderRadius: 16, padding: 20, fontFamily: 'inherit' },
+  wrap: {
+    background: COLORS.bg, color: COLORS.text, borderRadius: 16, padding: 20, fontFamily: 'inherit',
+    width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden',
+  },
   headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
   btn: {
     background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})`, color: '#fff', border: 'none',
@@ -46,7 +49,7 @@ const s = {
   // classes CSS injectées (bcp-stats / bcp-main / bcp-tabs) plutôt qu'ici,
   // car un style inline a toujours priorité sur une media query CSS.
   statsGrid: { gap: 14, marginBottom: 20 },
-  statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'center' },
+  statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 },
   statIcon: (color) => ({
     width: 48, height: 48, borderRadius: 12, background: `${color}22`, color,
     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
@@ -88,12 +91,18 @@ const SERVICE_ICON_COLORS = [COLORS.accent, COLORS.blue, COLORS.success, COLORS.
 // Injecté une seule fois ; les propriétés responsive ne sont PAS dupliquées
 // en inline style ci-dessus pour laisser ces règles s'appliquer.
 const RESPONSIVE_CSS = `
-.bcp-stats { display: grid; grid-template-columns: repeat(4, 1fr); }
-.bcp-main { display: grid; grid-template-columns: minmax(0,1fr) 320px; }
+/* FIX — reset box-sizing scopé au panneau (border-box partout). Sans ça,
+   les padding s'ajoutent aux largeurs en % et poussent le contenu au-delà
+   du viewport sur mobile (Android/iOS), ce qui tronque tout à droite. */
+.bcp-wrap, .bcp-wrap *, .bcp-wrap *::before, .bcp-wrap *::after { box-sizing: border-box; }
+.bcp-wrap { overflow-x: hidden; max-width: 100%; }
+.bcp-stats { display: grid; grid-template-columns: repeat(4, 1fr); min-width: 0; }
+.bcp-main { display: grid; grid-template-columns: minmax(0,1fr) 320px; min-width: 0; }
+.bcp-main > * { min-width: 0; }
 .bcp-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .bcp-tabs::-webkit-scrollbar { display: none; }
-.bcp-sidebar-desktop { display: block; }
-.bcp-recent-mobile { display: none; }
+.bcp-sidebar-desktop { display: block; min-width: 0; }
+.bcp-recent-mobile { display: none; min-width: 0; }
 .bcp-svc-actions { display: flex; }
 .bcp-svc-chevron { display: none; }
 @media (max-width: 1023px) {
@@ -107,6 +116,11 @@ const RESPONSIVE_CSS = `
 @media (max-width: 639px) {
   .bcp-svc-actions { display: none; }
   .bcp-svc-chevron { display: inline-flex; }
+}
+/* Très petits écrans Android (ex: anciens téléphones ~360px et moins) :
+   1 seule colonne pour éviter des cartes stats trop compressées. */
+@media (max-width: 380px) {
+  .bcp-stats { grid-template-columns: 1fr; }
 }
 `;
 
@@ -181,7 +195,7 @@ export default function BookingCalendarPanel({ profileId }) {
   const goToBookingsTab = () => setTab('bookings');
 
   return (
-    <div style={s.wrap}>
+    <div className="bcp-wrap" style={s.wrap}>
       {/* HEADER */}
       <div style={s.headerRow}>
         <div>
@@ -265,11 +279,97 @@ function StatCard({ icon, color, value, label, sub }) {
   return (
     <div style={s.statCard}>
       <div style={s.statIcon(color)}>{icon}</div>
-      <div>
+      <div style={{ minWidth: 0, flex: 1 }}>
         <div style={s.statValue}>{value}</div>
         <div style={{ ...s.statLabel, color }}>{label}</div>
-        <div style={s.statSub}>{sub}</div>
+        <div style={{ ...s.statSub, overflowWrap: 'anywhere' }}>{sub}</div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SELECT PERSONNALISÉ
+// ============================================================
+// FIX — Le <select> HTML natif utilisé pour "Service" déclenchait sur
+// Android/Chrome le picker natif de l'OS (plein écran, hors du thème dark
+// de l'app — cf. capture "Choisir…"). Ce picker natif est fourni par le
+// système d'exploitation dès l'ouverture du menu : impossible à styliser
+// en CSS une fois ouvert, quelle que soit la classe appliquée au <select>
+// lui-même. Remplacé par un dropdown 100% custom (même logique que les
+// menus du reste de l'app), qui reste toujours dans le thème sombre et ne
+// délègue jamais le rendu à l'UI native, sur mobile comme sur desktop.
+function CustomSelect({ value, onChange, options, placeholder = 'Choisir…' }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => String(o.value) === String(value));
+
+  return (
+    <div ref={ref} style={{ position: 'relative', width: '100%' }}>
+      <div
+        onClick={() => setOpen((v) => !v)}
+        role="button"
+        tabIndex={0}
+        style={{
+          ...s.input,
+          width: '100%', boxSizing: 'border-box', flex: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', userSelect: 'none',
+        }}
+      >
+        <span style={{ color: selected ? COLORS.text : COLORS.textMuted }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <span style={{
+          color: COLORS.textMuted, fontSize: 11, marginLeft: 8,
+          transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s',
+        }}>
+          ▼
+        </span>
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 50,
+          background: COLORS.panel, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 10,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.5)', maxHeight: 220, overflowY: 'auto',
+        }}>
+          {options.length === 0 && (
+            <div style={{ padding: '10px 12px', color: COLORS.textMuted, fontSize: 13 }}>Aucune option</div>
+          )}
+          {options.map((opt) => {
+            const isSelected = String(opt.value) === String(value);
+            return (
+              <div
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                style={{
+                  padding: '10px 12px', fontSize: 14, cursor: 'pointer',
+                  background: isSelected ? 'rgba(167,139,250,0.14)' : 'transparent',
+                  color: isSelected ? COLORS.accent : COLORS.text,
+                  fontWeight: isSelected ? 700 : 500,
+                }}
+              >
+                {opt.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -359,14 +459,14 @@ function AgendaPanel({ selectedDate, bookings, onSeeAll }) {
         const color = b.booking_services?.color || COLORS.accent;
         const label = b.booking_services?.name || b.booking_events?.title || 'Réservation';
         return (
-          <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderTop: `1px solid ${COLORS.border}` }}>
+          <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderTop: `1px solid ${COLORS.border}`, flexWrap: 'wrap' }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, marginTop: 6, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 140px', minWidth: 0 }}>
               <div style={{ fontSize: 13, color: COLORS.textMuted }}>{b.start_time?.slice(0, 5)}{b.end_time ? `–${b.end_time.slice(0, 5)}` : ''}</div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted }}>{b.client_name}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{label}</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'anywhere' }}>{b.client_name}</div>
             </div>
-            <span style={s.badge(STATUS_COLORS[b.status])}>{STATUS_LABELS[b.status]}</span>
+            <span style={{ ...s.badge(STATUS_COLORS[b.status]), flexShrink: 0 }}>{STATUS_LABELS[b.status]}</span>
           </div>
         );
       })}
@@ -393,13 +493,13 @@ function RecentBookingsCard({ bookings, onSeeAll }) {
       {recent.map((b) => {
         const label = b.booking_services?.name || b.booking_events?.title || 'Réservation';
         return (
-          <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderTop: `1px solid ${COLORS.border}` }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{b.client_name}</div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</div>
+          <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderTop: `1px solid ${COLORS.border}`, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{b.client_name}</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'anywhere' }}>{label}</div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 12, color: COLORS.textMuted }}>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, whiteSpace: 'nowrap' }}>
                 {new Date(b.booking_date).toLocaleDateString('fr-FR')} · {b.start_time?.slice(0, 5)}
               </div>
               <span style={s.badge(STATUS_COLORS[b.status])}>{STATUS_LABELS[b.status]}</span>
@@ -894,10 +994,15 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
             </div>
             <div style={{ flex: '1 1 180px' }}>
               <label style={s.label}>Service *</label>
-              <select style={{ ...s.input, appearance: 'auto' }} value={quickForm.service_id || ''} onChange={(e) => setQuickForm({ ...quickForm, service_id: e.target.value })}>
-                <option value="">Choisir…</option>
-                {services.map((sv) => <option key={sv.id} value={sv.id}>{sv.name || `Service #${sv.id}`}</option>)}
-              </select>
+              {/* FIX — remplace le <select> natif par CustomSelect (voir
+                  commentaire sur le composant) pour éviter le picker Android
+                  hors-thème visible sur les captures. */}
+              <CustomSelect
+                value={quickForm.service_id || ''}
+                onChange={(val) => setQuickForm({ ...quickForm, service_id: val })}
+                options={services.map((sv) => ({ value: sv.id, label: sv.name || `Service #${sv.id}` }))}
+                placeholder="Choisir…"
+              />
             </div>
           </div>
           <div style={{ ...s.row, marginTop: 10 }}>

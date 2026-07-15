@@ -49,7 +49,7 @@ const s = {
   // classes CSS injectées (bcp-stats / bcp-main / bcp-tabs) plutôt qu'ici,
   // car un style inline a toujours priorité sur une media query CSS.
   statsGrid: { gap: 14, marginBottom: 20 },
-  statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 },
+  statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0 },
   statIcon: (color) => ({
     width: 48, height: 48, borderRadius: 12, background: `${color}22`, color,
     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
@@ -282,7 +282,7 @@ function StatCard({ icon, color, value, label, sub }) {
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={s.statValue}>{value}</div>
         <div style={{ ...s.statLabel, color }}>{label}</div>
-        <div style={{ ...s.statSub, overflowWrap: 'anywhere' }}>{sub}</div>
+        <div style={{ ...s.statSub, overflowWrap: 'break-word' }}>{sub}</div>
       </div>
     </div>
   );
@@ -463,8 +463,8 @@ function AgendaPanel({ selectedDate, bookings, onSeeAll }) {
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, marginTop: 6, flexShrink: 0 }} />
             <div style={{ flex: '1 1 140px', minWidth: 0 }}>
               <div style={{ fontSize: 13, color: COLORS.textMuted }}>{b.start_time?.slice(0, 5)}{b.end_time ? `–${b.end_time.slice(0, 5)}` : ''}</div>
-              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{label}</div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'anywhere' }}>{b.client_name}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'break-word' }}>{label}</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'break-word' }}>{b.client_name}</div>
             </div>
             <span style={{ ...s.badge(STATUS_COLORS[b.status]), flexShrink: 0 }}>{STATUS_LABELS[b.status]}</span>
           </div>
@@ -495,8 +495,8 @@ function RecentBookingsCard({ bookings, onSeeAll }) {
         return (
           <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderTop: `1px solid ${COLORS.border}`, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{b.client_name}</div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'anywhere' }}>{label}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'break-word' }}>{b.client_name}</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'break-word' }}>{label}</div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ fontSize: 12, color: COLORS.textMuted, whiteSpace: 'nowrap' }}>

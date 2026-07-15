@@ -116,6 +116,23 @@ const RESPONSIVE_CSS = `
 @media (max-width: 639px) {
   .bcp-svc-actions { display: none; }
   .bcp-svc-chevron { display: inline-flex; }
+  /* FIX — sur mobile, l'icône + le texte du StatCard côte à côte forçaient
+     les libellés longs ("Actifs dans votre agenda") à retomber sous
+     l'icône en plusieurs lignes désalignées (cf. capture utilisateur).
+     On bascule la carte en colonne : icône centrée en haut, texte centré
+     en dessous, aligné proprement quelle que soit la longueur du libellé. */
+  .bcp-stat-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+  .bcp-stat-icon {
+    margin: 0 auto;
+  }
+  .bcp-stat-text {
+    width: 100%;
+  }
 }
 /* Très petits écrans Android (ex: anciens téléphones ~360px et moins) :
    1 seule colonne pour éviter des cartes stats trop compressées. */
@@ -277,9 +294,9 @@ export default function BookingCalendarPanel({ profileId }) {
 // ============================================================
 function StatCard({ icon, color, value, label, sub }) {
   return (
-    <div style={s.statCard}>
-      <div style={s.statIcon(color)}>{icon}</div>
-      <div style={{ minWidth: 0, flex: 1 }}>
+    <div className="bcp-stat-card" style={s.statCard}>
+      <div className="bcp-stat-icon" style={s.statIcon(color)}>{icon}</div>
+      <div className="bcp-stat-text" style={{ minWidth: 0, flex: 1 }}>
         <div style={s.statValue}>{value}</div>
         <div style={{ ...s.statLabel, color }}>{label}</div>
         <div style={{ ...s.statSub, overflowWrap: 'break-word' }}>{sub}</div>

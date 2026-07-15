@@ -233,7 +233,7 @@ export default function BookingCalendarPanel({ profileId }) {
               ['bookings', '📅 Réservations'],
               ['stats', '📊 Statistiques'],
             ].map(([key, label]) => (
-              <div key={key} style={s.tab(tab === key)} onClick={() => setTab(key)}>{label}</div>
+              <div key={key} style={{ ...s.tab(tab === key), flexShrink: 0 }} onClick={() => setTab(key)}>{label}</div>
             ))}
           </div>
 
@@ -1026,9 +1026,13 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
         </div>
       )}
 
-      <div style={{ ...s.tabs, marginBottom: 14 }}>
+      {/* FIX — cette ligne (6 filtres) débordait sans scroll ni retour à la
+          ligne sur mobile ("Terminé" tronqué net, "Annulé"/"Absent"
+          inatteignables). On applique la même classe bcp-tabs que la barre
+          d'onglets du haut, qui gère déjà le scroll horizontal tactile. */}
+      <div className="bcp-tabs" style={{ ...s.tabs, marginBottom: 14 }}>
         {['all', 'pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map((f) => (
-          <div key={f} style={s.tab(filter === f)} onClick={() => setFilter(f)}>
+          <div key={f} style={{ ...s.tab(filter === f), flexShrink: 0 }} onClick={() => setFilter(f)}>
             {f === 'all' ? 'Toutes' : STATUS_LABELS[f]}
           </div>
         ))}

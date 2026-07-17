@@ -745,6 +745,8 @@ const DASHBOARD_BG = { background: '#0c0d1a' };
             onClose={()=>setFeatureUpgrade(null)}
             featureName={featureUpgrade.featureName}
             requiredPlan={featureUpgrade.requiredPlan}
+            onUpgrade={() => startSenepayCheckout(featureUpgrade.requiredPlan, 'new')}
+            loading={checkoutLoading}
           />
         )}
       </AnimatePresence>

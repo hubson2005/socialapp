@@ -292,6 +292,36 @@ function PlatformsPanel({ localProfile, updateLocal, limits, showAddDialog, setS
   );
 }
 
+function PaymentRequiredGate({ plan, onPay, loading, onChangePlan, onSignOut, userEmail }) {
+  const info = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
+  return (
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#0f0a1e,#2d1b69)', padding:'24px' }}>
+      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', maxWidth:'380px', width:'100%' }}>
+        <div style={{ fontSize:'44px', marginBottom:'16px' }}>{info.emoji}</div>
+        <h1 style={{ color:'white', fontSize:'22px', fontWeight:800, margin:'0 0 8px' }}>Finalisez votre inscription</h1>
+        <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'14px', margin:'0 0 24px', lineHeight:1.6 }}>
+          Un dernier pas avant d'accéder à votre espace : réglez votre abonnement <strong style={{ color:info.color }}>{info.label}</strong> pour activer votre profil.
+        </p>
+        <div style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', padding:'20px', marginBottom:'20px' }}>
+          <p style={{ color:'white', fontSize:'30px', fontWeight:900, margin:'0 0 4px' }}>{info.price}</p>
+          <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'12px', margin:0 }}>Mobile Money · Wave · Orange Money</p>
+        </div>
+        <button onClick={onPay} disabled={loading} type="button" style={{ width:'100%', padding:'14px', borderRadius:'14px', border:'none', background:loading?'rgba(255,255,255,0.1)':`linear-gradient(135deg,${info.color},${info.color}aa)`, color:'white', fontWeight:800, fontSize:'15px', cursor:loading?'default':'pointer', marginBottom:'12px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit' }}>
+          {loading ? <Loader2 size={16} className="animate-spin" /> : `Payer ${info.price} →`}
+        </button>
+        <button onClick={onChangePlan} type="button" style={{ width:'100%', padding:'11px', background:'transparent', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'12px', color:'rgba(255,255,255,0.5)', fontSize:'13px', cursor:'pointer', marginBottom:'20px', fontFamily:'inherit' }}>
+          Changer d'offre
+        </button>
+        <p style={{ color:'rgba(255,255,255,0.25)', fontSize:'12px' }}>
+          Connecté en tant que {userEmail}
+          {' · '}
+          <button onClick={onSignOut} type="button" style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:'12px', cursor:'pointer', textDecoration:'underline', padding:0, fontFamily:'inherit' }}>Se déconnecter</button>
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Main UserDashboard ───────────────────────────────────────────────────────
 export default function UserDashboard() {
   const queryClient = useQueryClient();
@@ -363,7 +393,7 @@ export default function UserDashboard() {
 
   // Abonnement SenePay courant (table `subscriptions`, une ligne par user_id).
   // Alimente la bannière de rappel de renouvellement.
-  const { data: subscription } = useQuery({
+  const { data: subscription, isLoading: subscriptionLoading } = useQuery({
     queryKey: ['subscription', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase.from('subscriptions').select('*').eq('user_id', user.id).maybeSingle();
@@ -576,6 +606,31 @@ export default function UserDashboard() {
     return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99);
   };
 
+  // Compte jamais payé (pas de ligne dans `subscriptions`) : accès au
+  // dashboard entièrement bloqué tant que le paiement n'est pas fait — on
+  // ne se fie plus à `rawPlan` seul (qui accordait déjà les quotas de
+  // l'offre choisie à l'inscription, avant tout paiement). Les comptes
+  // dont l'abonnement est simplement EXPIRÉ (une ligne `subscription`
+  // existe déjà) gardent le comportement actuel : bandeau de rappel,
+  // dashboard toujours accessible.
+// subscriptionLoading évite un flash de l'écran de paiement pour un
+  // utilisateur déjà activé, le temps que la requête `subscription`
+  // réponde (undefined pendant le chargement ≠ "pas d'abonnement").
+  if (!isAdmin && !isActivated && !subscriptionLoading && !subscription) {
+    return (
+      <>
+        <PaymentRequiredGate
+          plan={rawPlan}
+          onPay={() => startSenepayCheckout(rawPlan, 'new')}
+          loading={checkoutLoading}
+          onChangePlan={() => setShowPlanModal(true)}
+          onSignOut={handleSignOut}
+          userEmail={user?.email}
+        />
+        <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
+      </>
+    );
+  }
   const renderSection = () => {
     if (isCurrentSectionLocked()) {
       const nav = USER_NAV.find(n => n.id === activeSection);

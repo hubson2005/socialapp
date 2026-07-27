@@ -48,6 +48,17 @@ const s = {
     background: COLORS.danger, color: '#fff', border: 'none',
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14,
   },
+  // FIX — bouton texte en rouge (ex: "Annuler", "Supprimer"), distinct de
+  // btnDanger qui est figé à 32x32 pour les icônes seules (X, 🗑). Réutiliser
+  // btnDanger pour du texte forçait "Annuler" à déborder de la boîte carrée
+  // et à se superposer au contenu voisin (cf. capture utilisateur).
+  // Style "cadre" (comme btnGhost) pour rester visuellement cohérent avec
+  // les boutons voisins "Marquer terminé" / "Absent", mais en rouge pour
+  // signaler l'action destructive.
+  btnDangerText: {
+    background: 'rgba(248,113,113,0.12)', color: COLORS.danger, border: `1px solid rgba(248,113,113,0.4)`,
+    borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+  },
   // Les propriétés responsive (colonnes, wrap, overflow) vivent dans les
   // classes CSS injectées (bcp-stats / bcp-main / bcp-tabs) plutôt qu'ici,
   // car un style inline a toujours priorité sur une media query CSS.
@@ -814,7 +825,7 @@ function AvailabilityTab({ profileId }) {
         {blocked.map((b) => (
           <div key={b.id} style={{ ...s.row, justifyContent: 'space-between', marginTop: 10 }}>
             <span>{new Date(b.blocked_date).toLocaleDateString('fr-FR')} {b.reason ? `— ${b.reason}` : ''}</span>
-            <button style={s.btnDanger} onClick={() => removeBlock(b.id)}>Supprimer</button>
+            <button style={s.btnDangerText} onClick={() => removeBlock(b.id)}>Supprimer</button>
           </div>
         ))}
       </div>
@@ -1101,7 +1112,7 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
               {b.status === 'pending' && <button style={s.btnGhost} onClick={() => setStatus(b.id, 'confirmed')}>Confirmer</button>}
               <button style={s.btnGhost} onClick={() => setStatus(b.id, 'completed')}>Marquer terminé</button>
               <button style={s.btnGhost} onClick={() => setStatus(b.id, 'no_show')}>Absent</button>
-              <button style={s.btnDanger} onClick={() => setStatus(b.id, 'cancelled')}>Annuler</button>
+              <button style={s.btnDangerText} onClick={() => setStatus(b.id, 'cancelled')}>Annuler</button>
             </div>
           )}
         </div>

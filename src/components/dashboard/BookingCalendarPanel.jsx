@@ -601,9 +601,11 @@ function ServicesTab({ profileId, onDataChanged }) {
     if (!payload.name) return alert('Le nom du service est requis.');
 
     if (form.id) {
-      await supabase.from('booking_services').update(payload).eq('id', form.id);
+      const { error } = await supabase.from('booking_services').update(payload).eq('id', form.id);
+      if (error) { console.error('update booking_services error:', error); return alert(`Erreur : ${error.message}`); }
     } else {
-      await supabase.from('booking_services').insert(payload);
+      const { error } = await supabase.from('booking_services').insert(payload);
+      if (error) { console.error('insert booking_services error:', error); return alert(`Erreur : ${error.message}`); }
     }
     setForm(null);
     refresh();
@@ -611,18 +613,30 @@ function ServicesTab({ profileId, onDataChanged }) {
 
   const duplicate = async (svc) => {
     const { id, created_at, ...rest } = svc;
-    await supabase.from('booking_services').insert({ ...rest, name: `${svc.name} (copie)` });
+    const { error } = await supabase.from('booking_services').insert({ ...rest, name: `${svc.name} (copie)` });
+    if (error) {
+      console.error('duplicate booking_services error:', error);
+      return alert(`Erreur lors de la duplication : ${error.message}`);
+    }
     refresh();
   };
 
   const remove = async (id) => {
     if (!window.confirm('Supprimer ce service ?')) return;
-    await supabase.from('booking_services').delete().eq('id', id);
+    const { error } = await supabase.from('booking_services').delete().eq('id', id);
+    if (error) {
+      console.error('remove booking_services error:', error);
+      return alert(`Erreur lors de la suppression : ${error.message}`);
+    }
     refresh();
   };
 
   const toggleActive = async (svc) => {
-    await supabase.from('booking_services').update({ is_active: !svc.is_active }).eq('id', svc.id);
+    const { error } = await supabase.from('booking_services').update({ is_active: !svc.is_active }).eq('id', svc.id);
+    if (error) {
+      console.error('toggleActive booking_services error:', error);
+      return alert(`Erreur : ${error.message}`);
+    }
     refresh();
   };
 

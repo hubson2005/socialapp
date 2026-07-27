@@ -41,8 +41,11 @@ const s = {
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', fontSize: 14,
   },
+  // FIX — bouton "X" (danger) rendu 100% opaque : fond plein + texte blanc,
+  // au lieu du rgba(...,0.12) quasi transparent qui se fondait dans le fond
+  // sombre du panneau (cf. capture utilisateur, croix illisible).
   btnDanger: {
-    background: 'rgba(248,113,113,0.12)', color: COLORS.danger, border: '1px solid rgba(248,113,113,0.3)',
+    background: COLORS.danger, color: '#fff', border: 'none',
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14,
   },
   // Les propriétés responsive (colonnes, wrap, overflow) vivent dans les
@@ -96,6 +99,24 @@ const RESPONSIVE_CSS = `
    du viewport sur mobile (Android/iOS), ce qui tronque tout à droite. */
 .bcp-wrap, .bcp-wrap *, .bcp-wrap *::before, .bcp-wrap *::after { box-sizing: border-box; }
 .bcp-wrap { overflow-x: hidden; max-width: 100%; }
+
+/* FIX — les icônes natives des <input type="time"> et <input type="date">
+   (horloge / calendrier) sont dessinées en noir par le navigateur et
+   restaient quasi invisibles sur le fond sombre du panneau (cf. capture
+   utilisateur, icônes entourées en violet illisibles). color-scheme: dark
+   indique au navigateur d'utiliser des contrôles natifs clairs, et le
+   filter inverse + éclaircit l'icône pour un rendu net dans notre thème. */
+.bcp-wrap input[type="time"],
+.bcp-wrap input[type="date"] {
+  color-scheme: dark;
+}
+.bcp-wrap input[type="time"]::-webkit-calendar-picker-indicator,
+.bcp-wrap input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) brightness(1.4);
+  cursor: pointer;
+  opacity: 1;
+}
+
 .bcp-stats { display: grid; grid-template-columns: repeat(4, 1fr); min-width: 0; }
 .bcp-main { display: grid; grid-template-columns: minmax(0,1fr) 320px; min-width: 0; }
 .bcp-main > * { min-width: 0; }

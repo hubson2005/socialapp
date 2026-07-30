@@ -543,7 +543,7 @@ export default function Home() {
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', color: '#a78bfa', fontWeight: '600' }}>✓ Inclus dans toutes les offres</div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <img src={profilMockup} alt="Profil digital SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '110%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.25))' }} />
+                <img src={profilMockup} alt="Profil digital SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '80%', maxWidth: '480px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.25))' }} />
               </div>
             </div>
           </div>

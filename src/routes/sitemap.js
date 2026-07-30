@@ -26,6 +26,8 @@ const {
                           { path: "/contact", changefreq: "monthly", priority: 0.5 },
                             { path: "/a-propos", changefreq: "monthly", priority: 0.5 },
                               { path: "/fonctionnalites", changefreq: "monthly", priority: 0.8 },
+                              { path: "/blog", changefreq: "weekly", priority: 0.7 },
+                                  { path: "/blog/socialapp-vs-linktree-cote-divoire", changefreq: "monthly", priority: 0.6 },
                               ];
 
                               function sendXml(res, xml) {

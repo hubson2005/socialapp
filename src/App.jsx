@@ -6,6 +6,8 @@ import UserDashboard  from "./pages/UserDashboard";
 import PublicProfile  from "./pages/PublicProfile";
 import PublicForm from "./components/forms/PublicForm";
 import Home           from "./pages/Home";
+import Blog           from "./pages/Blog";
+import BlogPostPage   from "./pages/BlogPostPage";
 import PrivacyPolicy  from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import DeleteAccount  from "./pages/DeleteAccount";
@@ -109,6 +111,9 @@ function PublicApp() {
       <Route path="/form/:formId" element={<PublicForm />} />
 
       <Route path="/:username" element={<PublicProfile />} />
+      {/* Blog — doit aussi être déclaré avant "/:username" pour la même raison */}
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="*"          element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -363,6 +363,8 @@ export default function Home() {
             .sa-nav-cta{padding:7px 16px!important;font-size:12px!important}
             .sa-mockup-overflow{width:100%!important;max-width:100%!important}
             .sa-footer-top{flex-direction:column!important;align-items:center!important;text-align:center!important}
+            .sa-footer-grid{grid-template-columns:1fr!important;text-align:center!important;gap:32px!important}
+            .sa-footer-brand{align-items:center!important}
             .sa-footer-legal{flex-direction:column!important;text-align:center!important;gap:14px!important}
             .sa-footer-legal-links{flex-direction:column!important;gap:10px!important}
             .sa-footer-legal-links .sa-footer-dot{display:none!important}

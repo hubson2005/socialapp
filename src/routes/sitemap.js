@@ -28,6 +28,7 @@ const {
                               { path: "/fonctionnalites", changefreq: "monthly", priority: 0.8 },
                               { path: "/blog", changefreq: "weekly", priority: 0.7 },
                                   { path: "/blog/socialapp-vs-linktree-cote-divoire", changefreq: "monthly", priority: 0.6 },
+                                  { path: "/blog/crm-whatsapp-pme-afrique-ouest-2026", changefreq: "monthly", priority: 0.6 },
                               ];
 
                               function sendXml(res, xml) {

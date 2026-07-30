@@ -377,7 +377,14 @@ export default function Home() {
 
         {/* ════════════ NAV ════════════ */}
         <nav style={S.nav}>
-          <div style={S.navLogo}>
+          <div
+            style={{ ...S.navLogo, cursor: 'pointer' }}
+            role="button"
+            tabIndex={0}
+            aria-label="Retour à l'accueil SocialApp"
+            onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); } }}
+          >
             <div style={S.navIcon}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
             <span className="sa-nav-brand-text" style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-.5px' }}>SocialApp</span>
           </div>

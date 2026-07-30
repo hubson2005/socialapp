@@ -10,6 +10,7 @@ import tempsReelMockup from '../assets/TEMPS_REEL.png';
 import tempsReelMockupWebp from '../assets/TEMPS_REEL.webp';
 import leadsCrmMockup from '../assets/LEADS_CRM.png';
 import leadsCrmMockupWebp from '../assets/LEADS_CRM.webp';
+import profilMockup from '../assets/INTERFACE_SOCIALAPP.png';
 
 /* ─────────────────────────────────────────────
    MODAL DE SÉLECTION D'OFFRE
@@ -525,6 +526,28 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        {/* ════════════ PROFIL DIGITAL ════════════ */}
+        <section id="profil-digital" style={S.sec} className="sa-sec">
+          <div style={S.secInner}>
+            <div className="sa-twocol sa-rv" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
+              <div>
+                <SectionLabel bg="rgba(255,107,53,.1)" border="1px solid rgba(255,107,53,.3)" color="#ff6b35" dotBg="#ff6b35">Profil digital</SectionLabel>
+                <h2 style={S.secTitle}>Un seul lien pour<br /><GradText>toute votre présence</GradText></h2>
+                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Votre profil digital SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
+                {[
+                  { icon: '🎨', bg: 'rgba(255,107,53,.1)', bd: 'rgba(255,107,53,.2)', title: 'Personnalisation complète', desc: 'Couleurs, photo, username unique. Un profil à votre image, sans code.' },
+                  { icon: '📱', bg: 'rgba(99,102,241,.1)', bd: 'rgba(99,102,241,.2)', title: 'Accessible partout', desc: 'Lien direct ou QR code à scanner, imprimable sur carte de visite ou vitrine.' },
+                  { icon: '✅', bg: 'rgba(34,197,94,.1)', bd: 'rgba(34,197,94,.2)', title: 'Badge vérifié', desc: 'Renforcez la confiance de vos visiteurs dès le premier coup d\'œil.' },
+                ].map((f, i) => (<div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '16px' }}><div style={{ width: '40px', height: '40px', borderRadius: '12px', background: f.bg, border: `1px solid ${f.bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{f.icon}</div><div><div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>{f.title}</div><div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', lineHeight: '1.6' }}>{f.desc}</div></div></div>))}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', color: '#a78bfa', fontWeight: '600' }}>✓ Inclus dans toutes les offres</div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <img src={profilMockup} alt="Profil digital SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '110%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.25))' }} />
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* ════════════ FEATURES ════════════ */}
         <section id="features" style={{ ...S.sec }} className="sa-sec">

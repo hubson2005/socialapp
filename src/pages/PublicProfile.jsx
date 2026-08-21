@@ -122,6 +122,17 @@ import PublicBookingWidget from '@/pages//PublicBookingWidget';
 // [C11] Numéro support centralisé — modifier ici uniquement
 const SUPPORT_WHATSAPP = '2250576031212';
 
+// [O9] Surface opaque des cartes (révision 2) — le premier passage
+// (rgba blanc 0.16→0.20) restait translucide et quasi invisible sur les
+// images de fond. On passe à une surface unie proche de la couleur de
+// fond de page (#0f0a1e), quasi opaque (0.94), qui masque réellement
+// l'image derrière au lieu de la laisser transparaître.
+const CARD_BG        = 'rgba(20,14,38,0.62)';
+const CARD_BG_HOVER   = 'rgba(32,23,58,0.74)';
+const CARD_BORDER    = '1px solid rgba(255,255,255,0.18)';
+const CARD_BLUR      = { backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)' };
+const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
+
 const KEYFRAME_SKELETON_ID  = 'pp-keyframes-skeleton';
 const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
 
@@ -468,7 +479,7 @@ function PublicProductCard({ product, onOpen }) {
     <div
       onClick={() => onOpen(product)}
       className="pp-shop-card"
-      style={{ background:CARD_BG, border:CARD_BORDER, borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s,background 0.15s', touchAction:'manipulation' }}
+      style={{ background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s,background 0.15s', touchAction:'manipulation' }}
       onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
       onTouchEnd={e => e.currentTarget.style.transform   = 'scale(1)'}
     >
@@ -880,7 +891,7 @@ export default function PublicProfile() {
               // [O4/O9] Fond opaque CARD_BG au lieu de rgba blanc translucide
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
-                  <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER }}>
+                  <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
                     <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1 }}>{String(v).padStart(2, '0')}</div>
                     <div style={{ fontWeight:'700', fontSize:'9px', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
                   </div>
@@ -889,7 +900,7 @@ export default function PublicProfile() {
             )}
             {profile.event_description && (
               // [O5/O9] Fond opaque CARD_BG au lieu de rgba blanc translucide
-              <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER }}>
+              <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
                 <p style={{ fontSize:'13px', color:'rgba(255,255,255,0.75)', lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
               </div>
             )}
@@ -944,7 +955,7 @@ export default function PublicProfile() {
               {/* [O3] Fond 0.08→0.16, bordure 0.12→0.20 */}
               {documents.map(doc => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
+                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
                   onMouseEnter={e => e.currentTarget.style.background = CARD_BG_HOVER}
                   onMouseLeave={e => e.currentTarget.style.background = CARD_BG}
                 >
@@ -985,7 +996,7 @@ export default function PublicProfile() {
                 <RippleButton
                   onClick={() => handleLinkClick(link)}
                   platformColor={platform.color || '#6366f1'}
-                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, cursor:'pointer', textAlign:'left', boxShadow:'0 4px 16px rgba(0,0,0,0.3)', transition:'background 0.15s,transform 0.1s' }}
+                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, ...CARD_BLUR, cursor:'pointer', textAlign:'left', boxShadow:CARD_SHADOW, transition:'background 0.15s,transform 0.1s' }}
                 >
                   <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}

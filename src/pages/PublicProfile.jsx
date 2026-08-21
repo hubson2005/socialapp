@@ -103,7 +103,7 @@
  *        transparaître. Libellé du countdown repassé en blanc translucide
  *        (était noir sur noir, invisible, avec l'ancien fond clair).
  *
- * PASSE "PRO" INSPIRÉE LINKTREE / BEACONS / BIO.SITE (cette révision) :
+ * PASSE "PRO" INSPIRÉE LINKTREE / BEACONS / BIO.SITE (révision précédente) :
  *  [P1]  Police : import Google Fonts "Manrope" (une seule famille, plusieurs
  *        graisses) appliquée à toute la page — remplace la police système
  *        par défaut, qui lisait "app générique". Feature "ss01"/tabular
@@ -112,9 +112,8 @@
  *        (Web Share API avec repli "copier le lien") + retour visuel
  *        (icône qui se change en check + toast) — le geste de partage est
  *        le cœur de l'UX Linktree/Beacons et manquait totalement ici.
- *  [P3]  Avatar : anneau animé en dégradé (conic-gradient tournant, façon
- *        "story ring") pour les profils vérifiés, cohérent avec le badge
- *        existant, remplace l'anneau statique.
+ *  [P3]  Avatar : anneau en dégradé (conic-gradient) pour les profils
+ *        vérifiés, cohérent avec le badge existant.
  *  [P4]  Fond non-image : dégradé "mesh" à 3 taches radiales animées très
  *        lentement au lieu d'un simple linear-gradient plat — donne de la
  *        profondeur sans nuire à la lisibilité (respecte toujours
@@ -130,6 +129,26 @@
  *  [P7]  En-tête : bio et nom resserrés, meilleure hiérarchie typographique
  *        (poids/tracking), séparateur discret avant les sections pour
  *        structurer la lecture façon page pro.
+ *
+ * PASSE "CARTES BLANCHES + AVATAR FIGÉ" (cette révision) :
+ *  [W1]  Avatar vérifié : suppression de l'animation de rotation de
+ *        l'anneau (pp-spin) — l'anneau reste figé (toujours dégradé
+ *        conique statique), comme demandé.
+ *  [W2]  CARD_BG / CARD_BG_HOVER / CARD_BORDER passés d'une surface sombre
+ *        translucide à une surface blanche quasi opaque. Toutes les
+ *        cartes qui s'appuient dessus (boutons de liens, cartes boutique,
+ *        cartes documents, bloc countdown, bloc description événement)
+ *        sont donc désormais blanches.
+ *  [W3]  Chaque texte/icône affiché *à l'intérieur* d'une carte CARD_BG a
+ *        son contraste inversé (blanc → noir/gris foncé) pour rester
+ *        lisible sur fond blanc, sans toucher aux éléments hors cartes
+ *        (avatar, titres de section, fond de page, boutons colorés,
+ *        modales) qui restent inchangés.
+ *  [W4]  Anneau de focus clavier (:focus-visible) des cartes/boutons de
+ *        liens passé d'un blanc translucide (invisible sur fond blanc) à
+ *        une couleur de marque indigo, visible sur fond clair ET foncé ;
+ *        le bouton "Partager" (fond toujours sombre) garde son anneau
+ *        blanc d'origine.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -150,16 +169,22 @@ import PublicBookingWidget from '@/pages//PublicBookingWidget';
 // [C11] Numéro support centralisé — modifier ici uniquement
 const SUPPORT_WHATSAPP = '2250576031212';
 
-// [O9] Surface opaque des cartes (révision 2) — le premier passage
-// (rgba blanc 0.16→0.20) restait translucide et quasi invisible sur les
-// images de fond. On passe à une surface unie proche de la couleur de
-// fond de page (#0f0a1e), quasi opaque (0.94), qui masque réellement
-// l'image derrière au lieu de la laisser transparaître.
-const CARD_BG        = 'rgba(20,14,38,0.62)';
-const CARD_BG_HOVER   = 'rgba(32,23,58,0.74)';
-const CARD_BORDER    = '1px solid rgba(255,255,255,0.18)';
+// [W2] Surface des cartes — passée en blanc quasi opaque (au lieu de la
+// surface sombre CARD_BG précédente) pour que boutons de liens, cartes
+// boutique, cartes documents, bloc countdown et bloc description
+// événement soient blancs, tout en gardant l'effet "glass" via le blur.
+const CARD_BG        = 'rgba(255,255,255,0.94)';
+const CARD_BG_HOVER  = 'rgba(255,255,255,1)';
+const CARD_BORDER    = '1px solid rgba(0,0,0,0.10)';
 const CARD_BLUR      = { backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)' };
 const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
+
+// [W3] Couleurs de texte dédiées au contenu affiché sur les cartes
+// blanches (CARD_BG), pour garder un bon contraste (au lieu du blanc
+// utilisé auparavant sur fond sombre).
+const CARD_TEXT        = '#15102a';
+const CARD_TEXT_MUTED  = 'rgba(21,16,42,0.55)';
+const CARD_TEXT_FAINT  = 'rgba(21,16,42,0.42)';
 
 // [P1] Police de marque unique pour toute la page
 const FONT_STACK = "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -462,7 +487,7 @@ function RippleButton({ onClick, style, children, platformColor }) {
       style={{ ...style, position:'relative', overflow:'hidden', touchAction:'manipulation', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}
     >
       {ripples.map(r => (
-        <span key={r.id} style={{ position:'absolute', left:r.x, top:r.y, width:'8px', height:'8px', borderRadius:'50%', background:'rgba(255,255,255,0.45)', transform:'translate(-50%,-50%) scale(0)', animation:'pp-ripple 0.6s ease-out forwards', pointerEvents:'none' }} />
+        <span key={r.id} style={{ position:'absolute', left:r.x, top:r.y, width:'8px', height:'8px', borderRadius:'50%', background:'rgba(0,0,0,0.18)', transform:'translate(-50%,-50%) scale(0)', animation:'pp-ripple 0.6s ease-out forwards', pointerEvents:'none' }} />
       ))}
       {children}
     </button>
@@ -554,7 +579,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   );
 }
 
-// [O2] Fond 0.08→0.16, bordure 0.12→0.20 · [O8] halo au survol desktop
+// [W2][W3] Carte boutique blanche — fond CARD_BG, textes en CARD_TEXT/CARD_TEXT_MUTED
 function PublicProductCard({ product, onOpen }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -567,23 +592,23 @@ function PublicProductCard({ product, onOpen }) {
       onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
       onTouchEnd={e => e.currentTarget.style.transform   = 'scale(1)'}
     >
-      <div style={{ position:'relative', aspectRatio:'4/3', background:'rgba(255,255,255,0.05)', overflow:'hidden' }}>
+      <div style={{ position:'relative', aspectRatio:'4/3', background:'rgba(0,0,0,0.05)', overflow:'hidden' }}>
         {product.image_url
           ? <LazyImg src={product.image_url} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ShoppingBag size={28} color="rgba(255,255,255,0.2)" /></div>
+          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ShoppingBag size={28} color="rgba(0,0,0,0.2)" /></div>
         }
         {discount > 0 && <div style={{ position:'absolute', top:'8px', left:'8px', background:'#22c55e', borderRadius:'6px', padding:'2px 7px', fontSize:'11px', fontWeight:700, color:'white' }}>-{discount}%</div>}
         {!product.is_available && (
           <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <span style={{ background:'rgba(0,0,0,0.7)', color:'rgba(255,255,255,0.7)', fontSize:'10px', fontWeight:700, padding:'4px 10px', borderRadius:'20px' }}>INDISPONIBLE</span>
+            <span style={{ background:'rgba(0,0,0,0.7)', color:'rgba(255,255,255,0.9)', fontSize:'10px', fontWeight:700, padding:'4px 10px', borderRadius:'20px' }}>INDISPONIBLE</span>
           </div>
         )}
-        <div style={{ position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.6)', borderRadius:'100px', padding:'3px 8px', fontSize:'10px', color:'rgba(255,255,255,0.8)', fontWeight:600 }}>Voir +</div>
+        <div style={{ position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.6)', borderRadius:'100px', padding:'3px 8px', fontSize:'10px', color:'rgba(255,255,255,0.9)', fontWeight:600 }}>Voir +</div>
       </div>
       <div style={{ padding:'10px 12px 12px' }}>
-        <span style={{ fontSize:'16px', fontWeight:800, color:product.original_price ? '#ff6b35' : 'white', display:'block', lineHeight:1.1 }}>{formatPrice(product.price)}</span>
-        {product.original_price && <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', textDecoration:'line-through' }}>{formatPrice(product.original_price)}</span>}
-        <p style={{ color:'rgba(255,255,255,0.85)', fontSize:'12px', fontWeight:600, margin:'4px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{product.title}</p>
+        <span style={{ fontSize:'16px', fontWeight:800, color:product.original_price ? '#ff6b35' : CARD_TEXT, display:'block', lineHeight:1.1 }}>{formatPrice(product.price)}</span>
+        {product.original_price && <span style={{ fontSize:'11px', color:CARD_TEXT_FAINT, textDecoration:'line-through' }}>{formatPrice(product.original_price)}</span>}
+        <p style={{ color:CARD_TEXT, opacity:0.85, fontSize:'12px', fontWeight:600, margin:'4px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{product.title}</p>
       </div>
     </div>
   );
@@ -626,9 +651,11 @@ export default function PublicProfile() {
   // [F10] .pp-content-col / .pp-shop-grid : adaptation tablette (>=768px)
   // [F13] prefers-reduced-motion : coupe les animations décoratives
   // [O8] Halos de survol desktop sur cartes boutique et boutons de liens
-  // [P3] Anneau avatar tournant (story ring) pour profils vérifiés
+  // [W1] Anneau avatar : plus d'animation de rotation (figé)
+  // [W4] Focus clavier : anneau indigo sur cartes/boutons de liens (fond
+  //      désormais blanc), anneau blanc conservé sur le bouton "Partager"
+  //      (fond toujours sombre)
   // [P4] Fond "mesh" animé très lentement (respecte reduced-motion)
-  // [P5] Focus clavier visible + légère élévation au tap des boutons de liens
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_MAIN_ID)) {
       const s = document.createElement('style');
@@ -650,17 +677,20 @@ export default function PublicProfile() {
         }
         .pp-link-btn              { animation:pp-fadeSlideUp 0.4s ease both; }
 
-        /* [P3] Anneau tournant façon "story" pour l'avatar vérifié */
+        /* [W1] Anneau "story" de l'avatar vérifié — figé (dégradé conique
+           statique, plus de rotation) */
         .pp-avatar-ring--verified {
           background: conic-gradient(from 0deg,#6366f1,#22c55e,#f7c948,#ff6b35,#6366f1);
-          animation: pp-spin 6s linear infinite;
         }
 
-        /* [P5] Interactions clavier/tap plus premium sur les liens */
+        /* [P5][W4] Interactions clavier/tap sur les liens et cartes */
         .pp-link-btn-el:active { transform: translateY(1px); }
         .pp-link-btn-el:focus-visible,
-        .pp-share-btn:focus-visible,
         .pp-shop-card:focus-visible {
+          outline: 2px solid #6366f1;
+          outline-offset: 2px;
+        }
+        .pp-share-btn:focus-visible {
           outline: 2px solid rgba(255,255,255,0.85);
           outline-offset: 2px;
         }
@@ -684,7 +714,6 @@ export default function PublicProfile() {
         /* [F13] Réduction des animations si demandé au niveau système */
         @media (prefers-reduced-motion: reduce) {
           .pp-link-btn { animation:none; }
-          .pp-avatar-ring--verified { animation:none; }
           .pp-mesh-blob { animation:none !important; }
           *, *::before, *::after { animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
         }
@@ -980,8 +1009,8 @@ export default function PublicProfile() {
 
         {/* Avatar */}
         <div style={{ position:'relative', marginBottom:'16px' }}>
-          {/* [P3] Anneau tournant (story ring) pour les profils vérifiés,
-              anneau statique discret sinon */}
+          {/* [W1] Anneau figé (dégradé conique statique) pour les profils
+              vérifiés, anneau statique discret sinon */}
           <div
             className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
             style={{
@@ -1050,20 +1079,20 @@ export default function PublicProfile() {
               </div>
             )}
             {countdown && (
-              // [O4/O9] Fond opaque CARD_BG au lieu de rgba blanc translucide
+              // [W2][W3] Fond blanc CARD_BG, libellé en CARD_TEXT_MUTED pour rester lisible
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
                   <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
                     <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{String(v).padStart(2, '0')}</div>
-                    <div style={{ fontWeight:'700', fontSize:'9px', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
+                    <div style={{ fontWeight:'700', fontSize:'9px', color:CARD_TEXT_MUTED, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
                   </div>
                 ))}
               </div>
             )}
             {profile.event_description && (
-              // [O5/O9] Fond opaque CARD_BG au lieu de rgba blanc translucide
+              // [W2][W3] Fond blanc CARD_BG, texte en CARD_TEXT pour rester lisible
               <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
-                <p style={{ fontSize:'13px', color:'rgba(255,255,255,0.75)', lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
+                <p style={{ fontSize:'13px', color:CARD_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
               </div>
             )}
             {profile.event_booking_url && (
@@ -1114,7 +1143,7 @@ export default function PublicProfile() {
               <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-              {/* [O3] Fond 0.08→0.16, bordure 0.12→0.20 */}
+              {/* [W2][W3] Fond blanc CARD_BG, textes en CARD_TEXT / CARD_TEXT_MUTED */}
               {documents.map(doc => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
                   style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
@@ -1123,9 +1152,9 @@ export default function PublicProfile() {
                 >
                   <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={18} color="#ef4444" /></div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ color:'white', fontSize:'13px', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.name}</div>
+                    <div style={{ color:CARD_TEXT, fontSize:'13px', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.name}</div>
                     {doc.file_size && (
-                      <div style={{ color:'rgba(255,255,255,0.4)', fontSize:'11px', marginTop:'2px' }}>
+                      <div style={{ color:CARD_TEXT_MUTED, fontSize:'11px', marginTop:'2px' }}>
                         PDF · {doc.file_size < 1048576 ? Math.round(doc.file_size / 1024) + ' Ko' : (doc.file_size / 1048576).toFixed(1) + ' Mo'}
                       </div>
                     )}
@@ -1137,7 +1166,7 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Liens — [O1] fond 0.12→0.20, bordure 0.15→0.24 · [P5] focus visible + tap élévation */}
+        {/* Liens — [W2][W3] fond blanc CARD_BG, libellé/icône en CARD_TEXT / CARD_TEXT_MUTED */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = (link.platform || '').toLowerCase();
@@ -1158,13 +1187,13 @@ export default function PublicProfile() {
                 <RippleButton
                   onClick={() => handleLinkClick(link)}
                   platformColor={platform.color || '#6366f1'}
-                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, borderTop:'1px solid rgba(255,255,255,0.22)', ...CARD_BLUR, cursor:'pointer', textAlign:'left', boxShadow:CARD_SHADOW, transition:'background 0.15s,transform 0.1s' }}
+                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, borderTop:'1px solid rgba(0,0,0,0.08)', ...CARD_BLUR, cursor:'pointer', textAlign:'left', boxShadow:CARD_SHADOW, transition:'background 0.15s,transform 0.1s' }}
                 >
                   <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
                   </div>
-                  <span style={{ color:'white', fontWeight:'700', letterSpacing:'0.02em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
-                  <ExternalLink size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink:0 }} />
+                  <span style={{ color:CARD_TEXT, fontWeight:'700', letterSpacing:'0.02em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
+                  <ExternalLink size={16} color={CARD_TEXT_MUTED} style={{ flexShrink:0 }} />
                 </RippleButton>
               </div>
             );

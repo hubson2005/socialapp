@@ -68,18 +68,40 @@
  *        cette relecture ; le seul doublon réel trouvé était la logique de
  *        verrouillage de scroll (voir [F1]), désormais mutualisée.
  *
- * CORRECTION QR / LIEN PUBLIC (cette révision) :
+ * CORRECTION QR / LIEN PUBLIC (révision précédente) :
  *  [Q1]  Lookup du profil passé de `.eq('username', username)` (comparaison
  *        exacte, sensible à la casse) à `.ilike('username', username)`
- *        (comparaison insensible à la casse). Le username affiché/édité
- *        côté dashboard n'est sanitisé (minuscules, accents retirés,
- *        espaces → tirets) qu'au moment de la sauvegarde — si le lien
- *        partagé/scanné (QR, copier-coller, saisie manuelle) diverge ne
- *        serait-ce que par la casse de ce qui est stocké en base, le
- *        lookup exact échouait et affichait "Profil introuvable" alors
- *        que le profil existe bel et bien. `.ilike` sans caractères
- *        joker (%) reste une comparaison exacte hors casse — aucun risque
- *        de faux positif entre deux usernames différents.
+ *        (comparaison insensible à la casse).
+ *
+ * AMÉLIORATION LISIBILITÉ / OPACITÉ DES CARTES (cette révision) :
+ *  [O1]  Boutons de liens (.pp-link-btn) : fond rgba(255,255,255,0.12→0.20),
+ *        bordure 0.15→0.24. Le fond translucide devenait quasi invisible
+ *        sur les images d'arrière-plan claires ou très texturées.
+ *  [O2]  Cartes boutique (PublicProductCard) : fond 0.08→0.16, bordure
+ *        0.12→0.20 pour détacher nettement la carte du fond derrière elle.
+ *  [O3]  Cartes documents : fond 0.08→0.16, bordure 0.12→0.20 (même logique
+ *        que [O2], garde la bordure rouge distinctive intacte).
+ *  [O4]  Bloc countdown (jours/heures/min/sec) : fond 0.28→0.42, bordure
+ *        0.25→0.35 — les chiffres orange perdaient en contraste sur fond
+ *        clair.
+ *  [O5]  Bloc description événement : fond 0.32→0.45, bordure 0.35→0.42.
+ *  [O6]  Bouton support WhatsApp : fond 0.15→0.22, bordure 0.3→0.38.
+ *  [O7]  Superposition #__bg_overlay__ légèrement assombrie
+ *        (0.52/0.36 → 0.58/0.42) pour homogénéiser le contraste sous
+ *        toutes les cartes, y compris celles restées sur fond dégradé (pas
+ *        d'image).
+ *  [O8]  Halo au survol desktop ajouté sur les cartes boutique et les
+ *        boutons de liens (@media (hover:hover)) pour un retour visuel
+ *        cohérent avec l'opacité renforcée.
+ *  [O9]  RÉVISION 2 — le passage [O1]-[O8] (rgba blanc translucide,
+ *        0.16→0.20) restait visuellement quasi identique sur les images
+ *        de fond photo. Remplacé par une surface unie CARD_BG
+ *        (rgba(15,10,30,0.94), proche du fond de page #0f0a1e) sur les
+ *        boutons de liens, cartes boutique, cartes documents, bloc
+ *        countdown et bloc description événement : ces cartes masquent
+ *        maintenant réellement l'image derrière au lieu de la laisser
+ *        transparaître. Libellé du countdown repassé en blanc translucide
+ *        (était noir sur noir, invisible, avec l'ancien fond clair).
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -99,6 +121,15 @@ import PublicBookingWidget from '@/pages//PublicBookingWidget';
 // ─── Constantes ───────────────────────────────────────────────
 // [C11] Numéro support centralisé — modifier ici uniquement
 const SUPPORT_WHATSAPP = '2250576031212';
+
+// [O9] Surface opaque des cartes (révision 2) — le premier passage
+// (rgba blanc 0.16→0.20) restait translucide et quasi invisible sur les
+// images de fond. On passe à une surface unie proche de la couleur de
+// fond de page (#0f0a1e), quasi opaque (0.94), qui masque réellement
+// l'image derrière au lieu de la laisser transparaître.
+const CARD_BG        = 'rgb(15,10,30)';
+const CARD_BG_HOVER   = 'rgb(24,17,46)';
+const CARD_BORDER    = '1px solid rgba(255,255,255,0.14)';
 
 const KEYFRAME_SKELETON_ID  = 'pp-keyframes-skeleton';
 const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
@@ -341,6 +372,7 @@ function RippleButton({ onClick, style, children, platformColor }) {
     <button
       onClick={onClick}
       onPointerDown={handlePointerDown}
+      className="pp-link-btn-el"
       style={{ ...style, position:'relative', overflow:'hidden', touchAction:'manipulation', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}
     >
       {ripples.map(r => (
@@ -436,6 +468,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   );
 }
 
+// [O2] Fond 0.08→0.16, bordure 0.12→0.20 · [O8] halo au survol desktop
 function PublicProductCard({ product, onOpen }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -443,7 +476,8 @@ function PublicProductCard({ product, onOpen }) {
   return (
     <div
       onClick={() => onOpen(product)}
-      style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s', touchAction:'manipulation' }}
+      className="pp-shop-card"
+      style={{ background:CARD_BG, border:CARD_BORDER, borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s,background 0.15s', touchAction:'manipulation' }}
       onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
       onTouchEnd={e => e.currentTarget.style.transform   = 'scale(1)'}
     >
@@ -494,6 +528,7 @@ export default function PublicProfile() {
   // [C7] Keyframes principales injectées une seule fois
   // [F10] .pp-content-col / .pp-shop-grid : adaptation tablette (>=768px)
   // [F13] prefers-reduced-motion : coupe les animations décoratives
+  // [O8] Halos de survol desktop sur cartes boutique et boutons de liens
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_MAIN_ID)) {
       const s = document.createElement('style');
@@ -515,6 +550,12 @@ export default function PublicProfile() {
         @media (min-width:768px) {
           .pp-content-col { max-width:480px; }
           .pp-shop-grid   { grid-template-columns:repeat(3,1fr); gap:12px; }
+        }
+
+        /* [O8] Halo au survol desktop uniquement (évite un "collant" tactile) */
+        @media (hover: hover) {
+          .pp-link-btn-el:hover  { background:${CARD_BG_HOVER} !important; }
+          .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
         }
 
         /* [F13] Réduction des animations si demandé au niveau système */
@@ -655,10 +696,12 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [profile?.is_event, profile?.event_date]);
 
-  // ── [C5][F9] Background style — injection unifiée, sans flash ───
+  // ── [C5][F9][O7] Background style — injection unifiée, sans flash ───
   // [F2] 100vh → 100dvh pour éviter le rognage par la barre d'adresse iOS
   // [F9] Dépendances resserrées : ne se recrée plus sur un changement de
   // profil non lié au fond (évite un micro-flash inutile).
+  // [O7] Overlay assombri (0.52/0.36 → 0.58/0.42) pour homogénéiser le
+  // contraste sous les cartes désormais plus opaques.
   useEffect(() => {
     if (!profile) return;
 
@@ -671,7 +714,7 @@ export default function PublicProfile() {
       const safeUrl = encodeURI(profile.bg_image_url);
       bgCss = `
         #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background-image:url(${JSON.stringify(safeUrl)});background-size:cover;background-position:center;background-repeat:no-repeat; }
-        #__bg_overlay__ { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-9;background:linear-gradient(160deg,rgba(0,0,0,0.52),rgba(0,0,0,0.36));pointer-events:none; }
+        #__bg_overlay__ { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-9;background:linear-gradient(160deg,rgba(0,0,0,0.58),rgba(0,0,0,0.42));pointer-events:none; }
       `;
     } else {
       const { bg1, bg2 } = parseColors(profile.theme_color);
@@ -843,17 +886,19 @@ export default function PublicProfile() {
               </div>
             )}
             {countdown && (
+              // [O4/O9] Fond opaque CARD_BG au lieu de rgba blanc translucide
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
-                  <div key={l} style={{ background:'rgba(255,255,255,0.28)', borderRadius:'12px', padding:'10px', textAlign:'center', border:'1px solid rgba(255,255,255,0.25)' }}>
+                  <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER }}>
                     <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1 }}>{String(v).padStart(2, '0')}</div>
-                    <div style={{ fontWeight:'700', fontSize:'9px', color:'rgb(0,0,0)', textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
+                    <div style={{ fontWeight:'700', fontSize:'9px', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
                   </div>
                 ))}
               </div>
             )}
             {profile.event_description && (
-              <div style={{ background:'rgba(255,255,255,0.32)', borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:'1px solid rgba(255,255,255,0.35)' }}>
+              // [O5/O9] Fond opaque CARD_BG au lieu de rgba blanc translucide
+              <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER }}>
                 <p style={{ fontSize:'13px', color:'rgba(255,255,255,0.75)', lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
               </div>
             )}
@@ -905,11 +950,12 @@ export default function PublicProfile() {
               <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              {/* [O3] Fond 0.08→0.16, bordure 0.12→0.20 */}
               {documents.map(doc => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
+                  onMouseEnter={e => e.currentTarget.style.background = CARD_BG_HOVER}
+                  onMouseLeave={e => e.currentTarget.style.background = CARD_BG}
                 >
                   <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={18} color="#ef4444" /></div>
                   <div style={{ flex:1, minWidth:0 }}>
@@ -927,7 +973,7 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Liens */}
+        {/* Liens — [O1] fond 0.12→0.20, bordure 0.15→0.24 */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = (link.platform || '').toLowerCase();
@@ -948,7 +994,7 @@ export default function PublicProfile() {
                 <RippleButton
                   onClick={() => handleLinkClick(link)}
                   platformColor={platform.color || '#6366f1'}
-                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.15)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', cursor:'pointer', textAlign:'left', boxShadow:'0 2px 12px rgba(0,0,0,0.15)', transition:'background 0.15s,transform 0.1s' }}
+                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, cursor:'pointer', textAlign:'left', boxShadow:'0 4px 16px rgba(0,0,0,0.3)', transition:'background 0.15s,transform 0.1s' }}
                 >
                   <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
@@ -961,12 +1007,12 @@ export default function PublicProfile() {
           })}
         </div>
 
-        {/* Support — [C11] numéro centralisé */}
+        {/* Support — [C11] numéro centralisé · [O6] fond 0.15→0.22, bordure 0.3→0.38 */}
         <a
           href={`https://wa.me/${SUPPORT_WHATSAPP}`}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.15)', border:'1px solid rgba(37,211,102,0.3)', borderRadius:'12px', padding:'10px 20px', color:'#25D366', fontSize:'13px', fontWeight:'500', textDecoration:'none', touchAction:'manipulation' }}
+          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.22)', border:'1px solid rgba(37,211,102,0.38)', borderRadius:'12px', padding:'10px 20px', color:'#25D366', fontSize:'13px', fontWeight:'500', textDecoration:'none', touchAction:'manipulation' }}
         >
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>

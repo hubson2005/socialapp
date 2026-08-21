@@ -122,15 +122,6 @@ import PublicBookingWidget from '@/pages//PublicBookingWidget';
 // [C11] Numéro support centralisé — modifier ici uniquement
 const SUPPORT_WHATSAPP = '2250576031212';
 
-// [O9] Surface opaque des cartes (révision 2) — le premier passage
-// (rgba blanc 0.16→0.20) restait translucide et quasi invisible sur les
-// images de fond. On passe à une surface unie proche de la couleur de
-// fond de page (#0f0a1e), quasi opaque (0.94), qui masque réellement
-// l'image derrière au lieu de la laisser transparaître.
-const CARD_BG        = 'rgb(15,10,30)';
-const CARD_BG_HOVER   = 'rgb(24,17,46)';
-const CARD_BORDER    = '1px solid rgba(255,255,255,0.14)';
-
 const KEYFRAME_SKELETON_ID  = 'pp-keyframes-skeleton';
 const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
 

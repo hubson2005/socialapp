@@ -73,7 +73,7 @@
  *        exacte, sensible à la casse) à `.ilike('username', username)`
  *        (comparaison insensible à la casse).
  *
- * AMÉLIORATION LISIBILITÉ / OPACITÉ DES CARTES (cette révision) :
+ * AMÉLIORATION LISIBILITÉ / OPACITÉ DES CARTES (révision précédente) :
  *  [O1]  Boutons de liens (.pp-link-btn) : fond rgba(255,255,255,0.12→0.20),
  *        bordure 0.15→0.24. Le fond translucide devenait quasi invisible
  *        sur les images d'arrière-plan claires ou très texturées.
@@ -102,13 +102,41 @@
  *        maintenant réellement l'image derrière au lieu de la laisser
  *        transparaître. Libellé du countdown repassé en blanc translucide
  *        (était noir sur noir, invisible, avec l'ancien fond clair).
+ *
+ * PASSE "PRO" INSPIRÉE LINKTREE / BEACONS / BIO.SITE (cette révision) :
+ *  [P1]  Police : import Google Fonts "Manrope" (une seule famille, plusieurs
+ *        graisses) appliquée à toute la page — remplace la police système
+ *        par défaut, qui lisait "app générique". Feature "ss01"/tabular
+ *        activée sur le countdown pour des chiffres alignés.
+ *  [P2]  Barre d'actions flottante (haut de page) : bouton "Partager" natif
+ *        (Web Share API avec repli "copier le lien") + retour visuel
+ *        (icône qui se change en check + toast) — le geste de partage est
+ *        le cœur de l'UX Linktree/Beacons et manquait totalement ici.
+ *  [P3]  Avatar : anneau animé en dégradé (conic-gradient tournant, façon
+ *        "story ring") pour les profils vérifiés, cohérent avec le badge
+ *        existant, remplace l'anneau statique.
+ *  [P4]  Fond non-image : dégradé "mesh" à 3 taches radiales animées très
+ *        lentement au lieu d'un simple linear-gradient plat — donne de la
+ *        profondeur sans nuire à la lisibilité (respecte toujours
+ *        prefers-reduced-motion).
+ *  [P5]  Boutons de liens : légère élévation au tap (translateY), bordure
+ *        supérieure "highlight" 1px façon carte premium, largeur de bordure
+ *        gauche harmonisée. Focus clavier visible (outline) pour
+ *        l'accessibilité — absent auparavant.
+ *  [P6]  Pied de page : remplace la mention statique "Tous droits réservés"
+ *        par un badge de marque discret, cliquable, façon "Fait avec
+ *        SocialApp" (mécanique de croissance virale standard des outils
+ *        link-in-bio), + lien support conservé au-dessus.
+ *  [P7]  En-tête : bio et nom resserrés, meilleure hiérarchie typographique
+ *        (poids/tracking), séparateur discret avant les sections pour
+ *        structurer la lecture façon page pro.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download } from 'lucide-react';
+import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2 } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
 // [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
@@ -133,8 +161,12 @@ const CARD_BORDER    = '1px solid rgba(255,255,255,0.18)';
 const CARD_BLUR      = { backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)' };
 const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
 
+// [P1] Police de marque unique pour toute la page
+const FONT_STACK = "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
 const KEYFRAME_SKELETON_ID  = 'pp-keyframes-skeleton';
 const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
+const FONT_LINK_ID          = 'pp-font-manrope';
 
 // ─── [F1] Verrouillage du scroll body — mutualisé ──────────────
 // Remplace les deux implémentations dupliquées (ImageLightbox et
@@ -298,7 +330,7 @@ function ProfileSkeleton() {
   }, []);
 
   return (
-    <div style={{ minHeight:'100dvh', background:'#0f0a1e', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px' }}>
+    <div style={{ minHeight:'100dvh', background:'#0f0a1e', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px', fontFamily:FONT_STACK }}>
       <div className="pp-sk" style={{ width:118, height:118, borderRadius:28, marginBottom:16 }} />
       <div className="pp-sk" style={{ width:180, height:22, marginBottom:10 }} />
       <div className="pp-sk" style={{ width:240, height:14, marginBottom:6 }} />
@@ -328,6 +360,58 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
     <path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2zm5.2 13.8c-.2.6-1.3 1.2-1.8 1.2-.5.1-1.1.1-1.6-.1-1-.3-2-1-2.8-1.8A9.2 9.2 0 0 1 9 12.4c-.2-.5-.2-1-.1-1.5.1-.5.6-1.1 1-1.3.3-.1.5-.1.7 0 .2 0 .3 0 .4.3l.6 1.6c0 .1.1.3 0 .4-.1.2-.2.3-.3.4-.1.1-.3.3-.2.5.4.7 1 1.3 1.7 1.7.2.1.4 0 .5-.1l.5-.6c.2-.2.4-.2.6-.1l1.4.7c.2.1.4.2.4.4.1.3 0 .8-.2 1z"/>
   </svg>
 );
+
+// [P2] Barre d'actions flottante — partage natif avec repli "copier le lien".
+// Retour visuel : icône Share2 → Check pendant 1.8s + toast texte discret.
+// C'est le geste central des outils link-in-bio pro (Linktree, Beacons,
+// Bio.site en font tous un bouton de premier plan) et il manquait ici.
+function ShareBar({ profile }) {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef(null);
+
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+
+  const handleShare = async () => {
+    const url = `https://www.socialapp.work/${profile.username}`;
+    const shareData = { title: profile.display_name, text: profile.bio || '', url };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+      throw new Error('no-native-share');
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => setCopied(false), 1800);
+      } catch {
+        window.prompt('Copiez ce lien :', url);
+      }
+    }
+  };
+
+  return (
+    <button
+      onClick={handleShare}
+      aria-label="Partager ce profil"
+      className="pp-share-btn"
+      style={{
+        display:'flex', alignItems:'center', gap:'7px',
+        background: copied ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.08)',
+        border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.16)'}`,
+        color: copied ? '#4ade80' : 'rgba(255,255,255,0.85)',
+        borderRadius:'100px', padding:'8px 16px', fontSize:'12px', fontWeight:700,
+        cursor:'pointer', touchAction:'manipulation', ...CARD_BLUR,
+        transition:'background 0.2s,border-color 0.2s,color 0.2s',
+      }}
+    >
+      {copied ? <Check size={14} /> : <Share2 size={14} />}
+      {copied ? 'Lien copié' : 'Partager'}
+    </button>
+  );
+}
 
 // [F1] Body-scroll lock mutualisé · [F2] 90vh → 90dvh · [F3] webkit prefix
 // [F4] Bouton de fermeture agrandi à 44×44 + touchAction manipulation
@@ -527,10 +611,24 @@ export default function PublicProfile() {
     return () => { isMounted.current = false; };
   }, []);
 
+  // [P1] Import de la police de marque (une seule fois, avant tout rendu de texte)
+  useEffect(() => {
+    if (!document.getElementById(FONT_LINK_ID)) {
+      const link = document.createElement('link');
+      link.id = FONT_LINK_ID;
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap';
+      document.head.appendChild(link);
+    }
+  }, []);
+
   // [C7] Keyframes principales injectées une seule fois
   // [F10] .pp-content-col / .pp-shop-grid : adaptation tablette (>=768px)
   // [F13] prefers-reduced-motion : coupe les animations décoratives
   // [O8] Halos de survol desktop sur cartes boutique et boutons de liens
+  // [P3] Anneau avatar tournant (story ring) pour profils vérifiés
+  // [P4] Fond "mesh" animé très lentement (respecte reduced-motion)
+  // [P5] Focus clavier visible + légère élévation au tap des boutons de liens
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_MAIN_ID)) {
       const s = document.createElement('style');
@@ -544,7 +642,28 @@ export default function PublicProfile() {
         @keyframes pp-fadeInOverlay { from{opacity:0} to{opacity:1} }
         @keyframes pp-slideUp     { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
         @keyframes pp-zoomIn      { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
+        @keyframes pp-spin        { to{transform:rotate(360deg)} }
+        @keyframes pp-meshDrift   {
+          0%,100% { transform:translate(0,0) scale(1); }
+          33%     { transform:translate(3%,-4%) scale(1.06); }
+          66%     { transform:translate(-3%,3%) scale(1.03); }
+        }
         .pp-link-btn              { animation:pp-fadeSlideUp 0.4s ease both; }
+
+        /* [P3] Anneau tournant façon "story" pour l'avatar vérifié */
+        .pp-avatar-ring--verified {
+          background: conic-gradient(from 0deg,#6366f1,#22c55e,#f7c948,#ff6b35,#6366f1);
+          animation: pp-spin 6s linear infinite;
+        }
+
+        /* [P5] Interactions clavier/tap plus premium sur les liens */
+        .pp-link-btn-el:active { transform: translateY(1px); }
+        .pp-link-btn-el:focus-visible,
+        .pp-share-btn:focus-visible,
+        .pp-shop-card:focus-visible {
+          outline: 2px solid rgba(255,255,255,0.85);
+          outline-offset: 2px;
+        }
 
         /* [F10] Colonne de contenu partagée (liens, boutique, docs, événement) */
         .pp-content-col { width:100%; max-width:384px; }
@@ -556,13 +675,17 @@ export default function PublicProfile() {
 
         /* [O8] Halo au survol desktop uniquement (évite un "collant" tactile) */
         @media (hover: hover) {
-          .pp-link-btn-el:hover  { background:${CARD_BG_HOVER} !important; }
+          .pp-link-btn-el:hover  { background:${CARD_BG_HOVER} !important; transform:translateY(-1px); }
           .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
+          .pp-share-btn:hover    { background:rgba(255,255,255,0.14) !important; }
+          .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
         }
 
         /* [F13] Réduction des animations si demandé au niveau système */
         @media (prefers-reduced-motion: reduce) {
           .pp-link-btn { animation:none; }
+          .pp-avatar-ring--verified { animation:none; }
+          .pp-mesh-blob { animation:none !important; }
           *, *::before, *::after { animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
         }
       `;
@@ -698,12 +821,15 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [profile?.is_event, profile?.event_date]);
 
-  // ── [C5][F9][O7] Background style — injection unifiée, sans flash ───
+  // ── [C5][F9][O7][P4] Background style — injection unifiée, sans flash ───
   // [F2] 100vh → 100dvh pour éviter le rognage par la barre d'adresse iOS
   // [F9] Dépendances resserrées : ne se recrée plus sur un changement de
   // profil non lié au fond (évite un micro-flash inutile).
   // [O7] Overlay assombri (0.52/0.36 → 0.58/0.42) pour homogénéiser le
   // contraste sous les cartes désormais plus opaques.
+  // [P4] Sans image de fond, on remplace le linear-gradient plat par 3
+  // taches radiales très légèrement animées ("mesh gradient") — plus de
+  // profondeur façon page pro, tout en gardant la même palette de marque.
   useEffect(() => {
     if (!profile) return;
 
@@ -721,7 +847,25 @@ export default function PublicProfile() {
     } else {
       const { bg1, bg2 } = parseColors(profile.theme_color);
       bgCss = `
-        #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2}); }
+        #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2});overflow:hidden; }
+        #__bg_layer__::before, #__bg_layer__::after {
+          content:'';
+          position:absolute;
+          width:70%; height:70%;
+          border-radius:50%;
+          filter:blur(70px);
+          opacity:0.5;
+        }
+        #__bg_layer__::before {
+          top:-15%; left:-10%;
+          background:${bg2};
+          animation:pp-meshDrift 22s ease-in-out infinite;
+        }
+        #__bg_layer__::after {
+          bottom:-20%; right:-10%;
+          background:${bg1};
+          animation:pp-meshDrift 26s ease-in-out infinite reverse;
+        }
         #__bg_overlay__ { display:none; }
       `;
     }
@@ -780,7 +924,7 @@ export default function PublicProfile() {
 
   if (loading)  return <ProfileSkeleton />;
   if (notFound) return (
-    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white' }}>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white', fontFamily:FONT_STACK }}>
       <p>Profil introuvable.</p>
     </div>
   );
@@ -822,31 +966,49 @@ export default function PublicProfile() {
       <div style={{
         position:'relative', zIndex:1, minHeight:'100dvh',
         display:'flex', flexDirection:'column', alignItems:'center',
-        paddingTop:    'max(40px, env(safe-area-inset-top, 0px))',
+        paddingTop:    'max(24px, env(safe-area-inset-top, 0px))',
         paddingBottom: 'max(40px, env(safe-area-inset-bottom, 0px))',
         paddingLeft:   'max(16px, env(safe-area-inset-left, 0px))',
         paddingRight:  'max(16px, env(safe-area-inset-right, 0px))',
+        fontFamily: FONT_STACK,
       }}>
+
+        {/* [P2] Barre d'actions — partage, alignée à droite façon Linktree/Beacons */}
+        <div className="pp-content-col" style={{ display:'flex', justifyContent:'flex-end', marginBottom:'20px' }}>
+          <ShareBar profile={profile} />
+        </div>
 
         {/* Avatar */}
         <div style={{ position:'relative', marginBottom:'16px' }}>
-          <div style={{ padding:'3px', borderRadius:'28px', background:'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))', backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }}>
-            {profile.avatar_url
-              ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'112px', height:'112px', borderRadius:'24px', objectFit:'cover', display:'block' }} />
-              : <div style={{ width:'112px', height:'112px', borderRadius:'24px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
-            }
+          {/* [P3] Anneau tournant (story ring) pour les profils vérifiés,
+              anneau statique discret sinon */}
+          <div
+            className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
+            style={{
+              padding:'3px', borderRadius:'28px',
+              background: profile.is_verified ? undefined : 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))',
+              boxShadow:'0 8px 32px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div style={{ padding:'3px', borderRadius:'25px', background:'#0f0a1e' }}>
+              {profile.avatar_url
+                ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'106px', height:'106px', borderRadius:'22px', objectFit:'cover', display:'block' }} />
+                : <div style={{ width:'106px', height:'106px', borderRadius:'22px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
+              }
+            </div>
           </div>
           {profile.is_verified && (
             <div style={{ position:'absolute', bottom:'-8px', right:'-8px', width:'28px', height:'28px', borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', border:'3px solid rgba(255,255,255,0.9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'700', color:'white', boxShadow:'0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
           )}
         </div>
 
-        <h1 style={{ fontSize:'28px', fontWeight:'900', color:'white', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'4px', textAlign:'center' }}>
+        {/* [P7] Hiérarchie resserrée : tracking réduit, poids affiné */}
+        <h1 style={{ fontSize:'24px', fontWeight:'800', color:'white', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
           {profile.display_name}
           {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
         </h1>
 
-        {profile.bio   && <p style={{ color:'rgba(255,255,255,0.8)', fontSize:'14px', textAlign:'center', maxWidth:'300px', marginBottom:'12px' }}>{profile.bio}</p>}
+        {profile.bio   && <p style={{ color:'rgba(255,255,255,0.72)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
         {/* Événement */}
@@ -892,7 +1054,7 @@ export default function PublicProfile() {
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
                   <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
-                    <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1 }}>{String(v).padStart(2, '0')}</div>
+                    <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{String(v).padStart(2, '0')}</div>
                     <div style={{ fontWeight:'700', fontSize:'9px', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
                   </div>
                 ))}
@@ -975,7 +1137,7 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Liens — [O1] fond 0.12→0.20, bordure 0.15→0.24 */}
+        {/* Liens — [O1] fond 0.12→0.20, bordure 0.15→0.24 · [P5] focus visible + tap élévation */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = (link.platform || '').toLowerCase();
@@ -996,12 +1158,12 @@ export default function PublicProfile() {
                 <RippleButton
                   onClick={() => handleLinkClick(link)}
                   platformColor={platform.color || '#6366f1'}
-                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, ...CARD_BLUR, cursor:'pointer', textAlign:'left', boxShadow:CARD_SHADOW, transition:'background 0.15s,transform 0.1s' }}
+                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, borderTop:'1px solid rgba(255,255,255,0.22)', ...CARD_BLUR, cursor:'pointer', textAlign:'left', boxShadow:CARD_SHADOW, transition:'background 0.15s,transform 0.1s' }}
                 >
                   <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
                   </div>
-                  <span style={{ color:'white', fontWeight:'700', letterSpacing:'0.08em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
+                  <span style={{ color:'white', fontWeight:'700', letterSpacing:'0.02em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
                   <ExternalLink size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink:0 }} />
                 </RippleButton>
               </div>
@@ -1018,7 +1180,19 @@ export default function PublicProfile() {
         >
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>
-        <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'12px', textAlign:'center', marginTop:'20px' }}>Tous droits réservés par Socialapp.</p>
+
+        {/* [P6] Badge de marque discret, remplace la mention statique de
+            copyright — mécanique de croissance standard des outils
+            link-in-bio ("Créé avec ..."), cliquable vers la home. */}
+        <a
+          href="https://www.socialapp.work"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pp-brand-badge"
+          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'100px', padding:'7px 16px', color:'rgba(255,255,255,0.45)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
+        >
+          <Link2 size={12} /> Créé avec SocialApp
+        </a>
       </div>
 
       {/* [F5] Modales portées dans document.body — protection préventive

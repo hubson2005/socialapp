@@ -168,6 +168,10 @@ function clearLegacySettings() {
 }
 
 // ─── Styles injectés une seule fois : hover/focus/anim que l'inline ne peut pas exprimer.
+// [FIX THÈME] Ce composant était calqué sur l'ancien fond sombre du dashboard
+// (texte blanc, cartes rgba(255,255,255,x)). Le fond du contenu est
+// maintenant clair (#f4f5fa, cf. UserDashboard.jsx) : tout ce fichier est
+// repassé en thème clair (cartes blanches, texte foncé) pour rester lisible.
 function GlobalStyles() {
   return (
     <style>{`
@@ -176,35 +180,35 @@ function GlobalStyles() {
       @media (prefers-reduced-motion: reduce) { .sp-fade-in { animation: none; } }
 
       .sp-tab { transition: color .15s ease; }
-      .sp-tab[data-active="true"] { color: white; }
-      .sp-tab:not([data-active="true"]):hover { color: rgba(255,255,255,0.75); }
+      .sp-tab[data-active="true"] { color: #161a2e; }
+      .sp-tab:not([data-active="true"]):hover { color: #454b5a; }
 
       .sp-lang-btn { transition: transform .12s ease, border-color .12s ease, background .12s ease; }
-      .sp-lang-btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,0.22); }
+      .sp-lang-btn:hover { transform: translateY(-1px); border-color: rgba(99,102,241,0.35); }
 
-      .sp-row:hover { background: rgba(255,255,255,0.02); }
+      .sp-row:hover { background: #f9fafc; }
 
       .sp-input, .sp-btn, .sp-lang-btn, .sp-tab, .sp-icon-btn, .sp-slider { outline: none; }
       .sp-input:focus-visible, .sp-btn:focus-visible, .sp-lang-btn:focus-visible,
       .sp-tab:focus-visible, .sp-icon-btn:focus-visible, .sp-slider:focus-visible {
-        box-shadow: 0 0 0 2px rgba(139,92,246,0.55);
+        box-shadow: 0 0 0 2px rgba(139,92,246,0.45);
       }
-      .sp-input:focus { border-color: rgba(139,92,246,0.5) !important; background: rgba(255,255,255,0.08) !important; }
+      .sp-input:focus { border-color: #8b5cf6 !important; background: #ffffff !important; }
 
-      .sp-btn:not(:disabled):hover { filter: brightness(1.08); }
+      .sp-btn:not(:disabled):hover { filter: brightness(1.06); }
       .sp-btn:not(:disabled):active { transform: translateY(1px); }
 
       .sp-crit-enter { animation: sp-crit-in .2s ease both; }
       @keyframes sp-crit-in { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
 
-      .sp-slider { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 100px; background: rgba(255,255,255,0.1); }
+      .sp-slider { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 100px; background: #e6e8f0; }
       .sp-slider::-webkit-slider-thumb {
         -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
-        background: #a78bfa; border: 2px solid #0b0b14; cursor: pointer; margin-top: -6px;
-        box-shadow: 0 0 0 3px rgba(167,139,250,0.18), 0 2px 6px rgba(0,0,0,0.4);
+        background: #8b5cf6; border: 2px solid #ffffff; cursor: pointer; margin-top: -6px;
+        box-shadow: 0 0 0 3px rgba(139,92,246,0.16), 0 2px 6px rgba(15,23,42,0.18);
       }
-      .sp-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #a78bfa; border: 2px solid #0b0b14; cursor: pointer; }
-      .sp-slider::-moz-range-track { height: 4px; border-radius: 100px; background: rgba(255,255,255,0.1); }
+      .sp-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; border: 2px solid #ffffff; cursor: pointer; }
+      .sp-slider::-moz-range-track { height: 4px; border-radius: 100px; background: #e6e8f0; }
     `}</style>
   );
 }
@@ -215,7 +219,7 @@ function Toggle({ value, onChange, disabled }) {
       type="button" className="sp-icon-btn" onClick={() => !disabled && onChange(!value)} disabled={disabled} aria-pressed={value}
       style={{
         width: '42px', height: '24px', borderRadius: '100px',
-        background: value ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.1)',
+        background: value ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#e6e8f0',
         border: 'none', cursor: disabled ? 'default' : 'pointer', position: 'relative',
         transition: 'background 0.25s', flexShrink: 0, opacity: disabled ? 0.5 : 1,
       }}
@@ -223,7 +227,7 @@ function Toggle({ value, onChange, disabled }) {
       <div style={{
         width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute',
         top: '3px', left: value ? '21px' : '3px', transition: 'left 0.22s cubic-bezier(.4,0,.2,1)',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+        boxShadow: '0 1px 3px rgba(15,23,42,0.25)',
       }} />
     </button>
   );
@@ -231,14 +235,14 @@ function Toggle({ value, onChange, disabled }) {
 
 function Row({ icon: Icon, label, desc, right }) {
   return (
-    <div className="sp-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', transition: 'background .15s ease' }}>
+    <div className="sp-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid #eef0f5', transition: 'background .15s ease' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '13px', minWidth: 0, flex: 1 }}>
-        <div style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={14} color="rgba(255,255,255,0.4)" />
+        <div style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, background: '#f1f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={14} color="#8a90a2" />
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', fontWeight: 600, margin: 0, letterSpacing: '-0.01em' }}>{label}</p>
-          {desc && <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '11.5px', margin: '2px 0 0' }}>{desc}</p>}
+          <p style={{ color: '#2a2f42', fontSize: '13px', fontWeight: 600, margin: 0, letterSpacing: '-0.01em' }}>{label}</p>
+          {desc && <p style={{ color: '#9095a5', fontSize: '11.5px', margin: '2px 0 0' }}>{desc}</p>}
         </div>
       </div>
       <div style={{ flexShrink: 0, marginLeft: '12px' }}>{right}</div>
@@ -251,19 +255,19 @@ function Criterion({ met, label }) {
     <div className="sp-crit-enter" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       <div style={{
         width: '15px', height: '15px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: met ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.06)', transition: 'background .2s ease',
+        background: met ? 'rgba(34,197,94,0.16)' : '#eef0f5', transition: 'background .2s ease',
       }}>
-        {met ? <Check size={9} color="#22c55e" strokeWidth={3} /> : <X size={9} color="rgba(255,255,255,0.25)" strokeWidth={3} />}
+        {met ? <Check size={9} color="#16a34a" strokeWidth={3} /> : <X size={9} color="#a2a7b5" strokeWidth={3} />}
       </div>
-      <span style={{ fontSize: '11.5px', color: met ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)', transition: 'color .2s ease' }}>{label}</span>
+      <span style={{ fontSize: '11.5px', color: met ? '#3a3f52' : '#a2a7b5', transition: 'color .2s ease' }}>{label}</span>
     </div>
   );
 }
 
-const CARD_SHADOW = '0 12px 28px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.24)';
+const CARD_SHADOW = '0 12px 28px rgba(15,23,42,0.06), 0 2px 8px rgba(15,23,42,0.04)';
 const cardStyle = (isRtl) => ({
-  background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.022))',
-  border: '1px solid rgba(255,255,255,0.09)',
+  background: '#ffffff',
+  border: '1px solid #e6e8f0',
   borderRadius: '18px',
   boxShadow: CARD_SHADOW,
   overflow: 'hidden',
@@ -397,8 +401,8 @@ export default function SettingsPanel() {
 
   const inputStyle = {
     width: '100%', boxSizing: 'border-box', padding: '11px 13px',
-    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '10px', color: 'white', fontSize: '12.5px',
+    background: '#f6f7fb', border: '1px solid #e6e8f0',
+    borderRadius: '10px', color: '#161a2e', fontSize: '12.5px',
     transition: 'border-color .15s ease, background .15s ease',
   };
 
@@ -411,9 +415,10 @@ export default function SettingsPanel() {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '640px' }}>
-        <div style={{ height: '32px', width: '160px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)' }} />
-        <div style={{ height: '280px', borderRadius: '18px', background: 'linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.06), rgba(255,255,255,0.03))', backgroundSize: '200% 100%', border: '1px solid rgba(255,255,255,0.06)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '9px', color: 'rgba(255,255,255,0.35)', fontSize: '12px' }}>
+        <GlobalStyles />
+        <div style={{ height: '32px', width: '160px', borderRadius: '10px', background: '#eef0f5' }} />
+        <div style={{ height: '280px', borderRadius: '18px', background: 'linear-gradient(90deg, #eef0f5, #f6f7fb, #eef0f5)', backgroundSize: '200% 100%', border: '1px solid #e6e8f0' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px', color: '#8a90a2', fontSize: '12px' }}>
           <Loader2 size={14} className="animate-spin" /> {t('loading')}
         </div>
       </div>
@@ -427,19 +432,19 @@ export default function SettingsPanel() {
       {/* ── En-tête + statut ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <p style={{ color: '#a78bfa', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 6px' }}>{t('eyebrow')}</p>
-          <h2 style={{ color: 'white', fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>{t('title')}</h2>
+          <p style={{ color: '#7c3aed', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 6px' }}>{t('eyebrow')}</p>
+          <h2 style={{ color: '#161a2e', fontSize: '20px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>{t('title')}</h2>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 14px 5px 5px', borderRadius: '100px', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(34,197,94,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Check size={11} color="#22c55e" strokeWidth={3} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 14px 5px 5px', borderRadius: '100px', background: '#f6f7fb', border: '1px solid #e6e8f0' }}>
+          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(34,197,94,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Check size={11} color="#16a34a" strokeWidth={3} />
           </div>
-          <span style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>{t('session_secure')}</span>
+          <span style={{ fontSize: '11.5px', color: '#6b7280', fontWeight: 500 }}>{t('session_secure')}</span>
         </div>
       </div>
 
       {/* ── Onglets segmentés ── */}
-      <div role="tablist" style={{ display: 'flex', gap: '2px', padding: '4px', background: 'rgba(255,255,255,0.035)', borderRadius: '13px', width: 'fit-content', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div role="tablist" style={{ display: 'flex', gap: '2px', padding: '4px', background: '#f6f7fb', borderRadius: '13px', width: 'fit-content', border: '1px solid #e6e8f0' }}>
         {TABS.map(tab => {
           const active = activeTab === tab.key;
           return (
@@ -449,9 +454,9 @@ export default function SettingsPanel() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 15px', borderRadius: '10px',
                 border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
-                background: active ? 'rgba(255,255,255,0.09)' : 'transparent',
-                boxShadow: active ? '0 2px 8px rgba(0,0,0,0.3)' : 'none',
-                color: active ? 'white' : 'rgba(255,255,255,0.45)',
+                background: active ? '#ffffff' : 'transparent',
+                boxShadow: active ? '0 2px 8px rgba(15,23,42,0.08)' : 'none',
+                color: active ? '#161a2e' : '#8a90a2',
               }}
             >
               <tab.icon size={14} />
@@ -465,8 +470,8 @@ export default function SettingsPanel() {
       {activeTab === 'password' && (
         <div style={cardStyle(isRtl)} className="sp-fade-in">
           <div style={{ padding: '20px 22px 4px' }}>
-            <p style={{ color: 'white', fontSize: '15px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>{t('password_title')}</p>
-            <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: '12px', margin: '4px 0 0' }}>{t('password_hint')}</p>
+            <p style={{ color: '#161a2e', fontSize: '15px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>{t('password_title')}</p>
+            <p style={{ color: '#9095a5', fontSize: '12px', margin: '4px 0 0' }}>{t('password_hint')}</p>
           </div>
           <form
             autoComplete="off"
@@ -476,7 +481,7 @@ export default function SettingsPanel() {
             <input type="text" name="username-fake" autoComplete="username" style={{ display: 'none' }} readOnly tabIndex={-1} />
 
             <div style={{ position: 'relative' }}>
-              <Lock size={13} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRtl ? 'right' : 'left']: '13px', pointerEvents: 'none' }} />
+              <Lock size={13} color="#a2a7b5" style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRtl ? 'right' : 'left']: '13px', pointerEvents: 'none' }} />
               <input
                 className="sp-input" type={showPwd ? 'text' : 'password'} name="new-pwd" autoComplete="new-password"
                 value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder={t('password_new')}
@@ -487,7 +492,7 @@ export default function SettingsPanel() {
                 aria-label={showPwd ? 'Hide password' : 'Show password'}
                 style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRtl ? 'left' : 'right']: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}
               >
-                {showPwd ? <EyeOff size={14} color="rgba(255,255,255,0.4)" /> : <Eye size={14} color="rgba(255,255,255,0.4)" />}
+                {showPwd ? <EyeOff size={14} color="#8a90a2" /> : <Eye size={14} color="#8a90a2" />}
               </button>
             </div>
 
@@ -509,12 +514,12 @@ export default function SettingsPanel() {
               type="submit" className="sp-btn" disabled={pwdLoading || !newPwd || !confirmPwd}
               style={{
                 marginTop: '6px', padding: '11px', borderRadius: '10px', border: 'none',
-                background: newPwd && confirmPwd ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)',
-                color: newPwd && confirmPwd ? 'white' : 'rgba(255,255,255,0.3)',
+                background: newPwd && confirmPwd ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#eef0f5',
+                color: newPwd && confirmPwd ? 'white' : '#a2a7b5',
                 fontSize: '12.5px', fontWeight: 700, letterSpacing: '-0.01em',
                 cursor: newPwd && confirmPwd ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-                boxShadow: newPwd && confirmPwd ? '0 4px 14px rgba(99,102,241,0.35)' : 'none',
+                boxShadow: newPwd && confirmPwd ? '0 4px 14px rgba(99,102,241,0.28)' : 'none',
                 transition: 'filter .15s ease, transform .1s ease',
               }}
             >
@@ -529,8 +534,8 @@ export default function SettingsPanel() {
       {activeTab === 'language' && (
         <div style={cardStyle(isRtl)} className="sp-fade-in">
           <div style={{ padding: '20px 22px 4px' }}>
-            <p style={{ color: 'white', fontSize: '15px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>{t('lang_title')}</p>
-            <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: '12px', margin: '4px 0 0' }}>{t('lang_sub')}</p>
+            <p style={{ color: '#161a2e', fontSize: '15px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>{t('lang_title')}</p>
+            <p style={{ color: '#9095a5', fontSize: '12px', margin: '4px 0 0' }}>{t('lang_sub')}</p>
           </div>
           <div style={{ padding: '16px 22px 22px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '9px' }}>
             {LANGUAGES.map(lang => {
@@ -540,15 +545,15 @@ export default function SettingsPanel() {
                   key={lang.code} className="sp-lang-btn" onClick={() => handleLanguageChange(lang.code)}
                   style={{
                     position: 'relative', padding: '12px 13px', borderRadius: '12px',
-                    border: '1px solid ' + (active ? 'rgba(139,92,246,0.55)' : 'rgba(255,255,255,0.09)'),
-                    background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.14), rgba(139,92,246,0.1))' : 'rgba(255,255,255,0.03)',
-                    boxShadow: active ? '0 4px 14px rgba(99,102,241,0.2)' : 'none',
+                    border: '1px solid ' + (active ? 'rgba(139,92,246,0.5)' : '#e6e8f0'),
+                    background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06))' : '#f9fafc',
+                    boxShadow: active ? '0 4px 14px rgba(99,102,241,0.14)' : 'none',
                     display: 'flex', alignItems: 'center', gap: '9px', cursor: 'pointer', textAlign: 'left',
                   }}
                 >
                   <span style={{ fontSize: '17px', lineHeight: 1 }}>{lang.flag}</span>
-                  <span style={{ color: active ? '#c4b5fd' : 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: active ? 700 : 500 }}>{lang.label}</span>
-                  {active && <Check size={12} color="#c4b5fd" style={{ position: 'absolute', top: '9px', right: '9px' }} />}
+                  <span style={{ color: active ? '#6d28d9' : '#454b5a', fontSize: '12px', fontWeight: active ? 700 : 500 }}>{lang.label}</span>
+                  {active && <Check size={12} color="#6d28d9" style={{ position: 'absolute', top: '9px', right: '9px' }} />}
                 </button>
               );
             })}
@@ -561,8 +566,8 @@ export default function SettingsPanel() {
         <div style={cardStyle(isRtl)} className="sp-fade-in">
           <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
             <div>
-              <p style={{ color: 'white', fontSize: '15px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>{t('notif_title')}</p>
-              <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: '12px', margin: '4px 0 0' }}>{notifGranted ? t('notif_on') : t('notif_off')}</p>
+              <p style={{ color: '#161a2e', fontSize: '15px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>{t('notif_title')}</p>
+              <p style={{ color: '#9095a5', fontSize: '12px', margin: '4px 0 0' }}>{notifGranted ? t('notif_on') : t('notif_off')}</p>
             </div>
             {!notifGranted && (
               <button
@@ -572,7 +577,7 @@ export default function SettingsPanel() {
                   if (ok) toast.success(t('notif_enabled_success'));
                   else toast.error(t('pref_error') + 'abonnement push échoué');
                 }}
-                style={{ padding: '7px 13px', background: 'rgba(34,197,94,0.13)', border: '1px solid rgba(34,197,94,0.32)', borderRadius: '9px', color: '#22c55e', fontSize: '11px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                style={{ padding: '7px 13px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '9px', color: '#16a34a', fontSize: '11px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
               >
                 {t('notif_enable')}
               </button>
@@ -582,14 +587,14 @@ export default function SettingsPanel() {
           <Row icon={MousePointerClick} label={t('notif_click')}  desc={t('notif_click_desc')}  right={<Toggle value={notifClick}  onChange={v => saveNotifPref('notif_click',  v)} />} />
           <Row icon={CalendarClock}     label={t('notif_expiry')} desc={t('notif_expiry_desc')} right={<Toggle value={notifExpiry} onChange={v => saveNotifPref('notif_expiry', v)} />} />
 
-          <div style={{ padding: '17px 22px 22px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ padding: '17px 22px 22px', borderTop: '1px solid #eef0f5' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '13px', marginBottom: '14px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Activity size={14} color="rgba(255,255,255,0.4)" />
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, background: '#f1f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Activity size={14} color="#8a90a2" />
               </div>
               <div style={{ minWidth: 0 }}>
-                <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', fontWeight: 600, margin: 0 }}>{t('notif_threshold')}</p>
-                <p style={{ color: '#a78bfa', fontSize: '11.5px', margin: '2px 0 0', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                <p style={{ color: '#2a2f42', fontSize: '13px', fontWeight: 600, margin: 0 }}>{t('notif_threshold')}</p>
+                <p style={{ color: '#7c3aed', fontSize: '11.5px', margin: '2px 0 0', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                   {t('notif_threshold_every', { n: threshold })}
                 </p>
               </div>
@@ -603,7 +608,7 @@ export default function SettingsPanel() {
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
               {THRESHOLD_STEPS.map(n => (
-                <span key={n} style={{ fontSize: '10.5px', fontVariantNumeric: 'tabular-nums', color: n === threshold ? '#a78bfa' : 'rgba(255,255,255,0.28)', fontWeight: n === threshold ? 700 : 400 }}>
+                <span key={n} style={{ fontSize: '10.5px', fontVariantNumeric: 'tabular-nums', color: n === threshold ? '#7c3aed' : '#c3c8d6', fontWeight: n === threshold ? 700 : 400 }}>
                   {n}
                 </span>
               ))}

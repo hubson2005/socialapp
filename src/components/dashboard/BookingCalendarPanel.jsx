@@ -2,35 +2,42 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from "../../supabase";
 
 // ============================================================
-// THEME — dark, cohérent avec le reste du dashboard SocialApp
+// THEME — light, cohérent avec le reste du dashboard SocialApp
+// (cartes blanches #ffffff, bordures #e6e8f0, texte #161a2e —
+// mêmes tokens que UserDashboard.jsx / PlanModal / MiniStat)
 // ============================================================
 const COLORS = {
-  bg: '#060412',
-  panel: '#0c0d1a',
-  card: '#11101f',
-  cardAlt: '#161528',
-  border: 'rgba(167,139,250,0.14)',
-  borderStrong: 'rgba(167,139,250,0.28)',
-  accent: '#a78bfa',
-  accent2: '#6c63ff',
-  text: '#f5f3ff',
-  textMuted: '#8b87a0',
-  danger: '#f87171',
-  success: '#34d399',
-  warning: '#fbbf24',
-  blue: '#60a5fa',
+  bg: '#f4f5fa',
+  panel: '#ffffff',
+  card: '#ffffff',
+  cardAlt: '#f6f7fb',
+  border: '#e6e8f0',
+  borderStrong: '#c7cdfb',
+  // Sélecteur (onglets actifs, boutons principaux, focus, jour sélectionné
+  // du mini-calendrier) : même indigo/violet que les boutons primaires du
+  // reste du dashboard (UserDashboard.jsx : linear-gradient(135deg,#6366f1,#8b5cf6)),
+  // au lieu du violet clair #a78bfa/#6c63ff qui ne matchait aucune autre
+  // couleur de l'app.
+  accent: '#6366f1',
+  accent2: '#8b5cf6',
+  text: '#161a2e',
+  textMuted: '#6b7280',
+  danger: '#dc2626',
+  success: '#22c55e',
+  warning: '#b45309',
+  blue: '#2563eb',
 };
 
 const s = {
   wrap: {
-    background: COLORS.bg, color: COLORS.text, borderRadius: 16, padding: 20, fontFamily: 'inherit',
+    color: COLORS.text, borderRadius: 16, padding: 20, fontFamily: 'inherit',
     width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden',
   },
   headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
   btn: {
     background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})`, color: '#fff', border: 'none',
     borderRadius: 10, padding: '12px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer',
-    boxShadow: '0 8px 24px rgba(108,99,255,0.35)', display: 'flex', alignItems: 'center', gap: 8,
+    boxShadow: '0 8px 24px rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', gap: 8,
   },
   btnGhost: {
     background: 'transparent', color: COLORS.textMuted, border: `1px solid ${COLORS.border}`,
@@ -41,34 +48,31 @@ const s = {
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', fontSize: 14,
   },
-  // FIX — bouton "X" (danger) rendu 100% opaque : fond plein + texte blanc,
-  // au lieu du rgba(...,0.12) quasi transparent qui se fondait dans le fond
-  // sombre du panneau (cf. capture utilisateur, croix illisible).
+  // Bouton "X" (danger) rendu 100% opaque : fond plein + texte blanc, pour
+  // rester bien visible aussi bien sur fond blanc que sur fond gris clair.
   btnDanger: {
     background: COLORS.danger, color: '#fff', border: 'none',
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14,
   },
-  // FIX — bouton texte en rouge (ex: "Annuler", "Supprimer"), distinct de
-  // btnDanger qui est figé à 32x32 pour les icônes seules (X, 🗑). Réutiliser
-  // btnDanger pour du texte forçait "Annuler" à déborder de la boîte carrée
-  // et à se superposer au contenu voisin (cf. capture utilisateur).
-  // Style "cadre" (comme btnGhost) pour rester visuellement cohérent avec
-  // les boutons voisins "Marquer terminé" / "Absent", mais en rouge pour
+  // Bouton texte en rouge (ex: "Annuler", "Supprimer"), distinct de
+  // btnDanger qui est figé à 32x32 pour les icônes seules (X, 🗑). Style
+  // "cadre" (comme btnGhost) pour rester visuellement cohérent avec les
+  // boutons voisins "Marquer terminé" / "Absent", mais en rouge pour
   // signaler l'action destructive.
   btnDangerText: {
-    background: 'rgba(248,113,113,0.12)', color: COLORS.danger, border: `1px solid rgba(248,113,113,0.4)`,
+    background: 'rgba(220,38,38,0.08)', color: COLORS.danger, border: `1px solid rgba(220,38,38,0.35)`,
     borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
   },
   // Les propriétés responsive (colonnes, wrap, overflow) vivent dans les
   // classes CSS injectées (bcp-stats / bcp-main / bcp-tabs) plutôt qu'ici,
   // car un style inline a toujours priorité sur une media query CSS.
   statsGrid: { gap: 14, marginBottom: 20 },
-  statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0 },
+  statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0, boxShadow: '0 1px 2px rgba(15,23,42,.04)' },
   statIcon: (color) => ({
-    width: 48, height: 48, borderRadius: 12, background: `${color}22`, color,
+    width: 48, height: 48, borderRadius: 12, background: `${color}1a`, color,
     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
   }),
-  statValue: { fontSize: 26, fontWeight: 800, lineHeight: 1.1 },
+  statValue: { fontSize: 26, fontWeight: 800, lineHeight: 1.1, color: COLORS.text },
   statLabel: { fontSize: 13, fontWeight: 600, marginTop: 2 },
   statSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   mainGrid: { gap: 18, alignItems: 'start' },
@@ -79,7 +83,7 @@ const s = {
     color: active ? '#fff' : COLORS.textMuted, border: `1px solid ${active ? 'transparent' : COLORS.border}`,
     transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 6,
   }),
-  card: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 18, marginBottom: 14 },
+  card: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 18, marginBottom: 14, boxShadow: '0 1px 2px rgba(15,23,42,.04)' },
   row: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
   input: {
     background: COLORS.cardAlt, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '10px 12px',
@@ -88,10 +92,10 @@ const s = {
   label: { fontSize: 12, color: COLORS.textMuted, marginBottom: 4, display: 'block', fontWeight: 600 },
   badge: (color) => ({
     fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 999,
-    background: `${color}22`, color, textTransform: 'uppercase', letterSpacing: 0.3,
+    background: `${color}1a`, color, textTransform: 'uppercase', letterSpacing: 0.3,
   }),
   empty: { textAlign: 'center', padding: 40, color: COLORS.textMuted, fontSize: 14 },
-  sidebarCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 16, marginBottom: 16 },
+  sidebarCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 16, marginBottom: 16, boxShadow: '0 1px 2px rgba(15,23,42,.04)' },
 };
 
 const DAYS_MON_FIRST = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -111,21 +115,20 @@ const RESPONSIVE_CSS = `
 .bcp-wrap, .bcp-wrap *, .bcp-wrap *::before, .bcp-wrap *::after { box-sizing: border-box; }
 .bcp-wrap { overflow-x: hidden; max-width: 100%; }
 
-/* FIX — les icônes natives des <input type="time"> et <input type="date">
-   (horloge / calendrier) sont dessinées en noir par le navigateur et
-   restaient quasi invisibles sur le fond sombre du panneau (cf. capture
-   utilisateur, icônes entourées en violet illisibles). color-scheme: dark
-   indique au navigateur d'utiliser des contrôles natifs clairs, et le
-   filter inverse + éclaircit l'icône pour un rendu net dans notre thème. */
+/* Thème clair : les icônes natives des <input type="time"> et
+   <input type="date"> (horloge / calendrier) sont déjà dessinées en noir
+   par le navigateur, ce qui reste lisible sur nos champs à fond clair
+   (COLORS.cardAlt). Plus besoin d'inverser leurs couleurs comme sur
+   l'ancien thème sombre — on force juste color-scheme: light pour éviter
+   qu'un thème sombre système ne fasse malgré tout basculer l'icône. */
 .bcp-wrap input[type="time"],
 .bcp-wrap input[type="date"] {
-  color-scheme: dark;
+  color-scheme: light;
 }
 .bcp-wrap input[type="time"]::-webkit-calendar-picker-indicator,
 .bcp-wrap input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7) brightness(1.4);
   cursor: pointer;
-  opacity: 1;
+  opacity: 0.65;
 }
 
 .bcp-stats { display: grid; grid-template-columns: repeat(4, 1fr); min-width: 0; }
@@ -248,7 +251,7 @@ export default function BookingCalendarPanel({ profileId }) {
       {/* HEADER */}
       <div style={s.headerRow}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10, color: COLORS.text }}>
             📅 Calendrier de réservation
           </h2>
           <p style={{ margin: '4px 0 0', color: COLORS.textMuted, fontSize: 14 }}>
@@ -340,14 +343,15 @@ function StatCard({ icon, color, value, label, sub }) {
 // ============================================================
 // SELECT PERSONNALISÉ
 // ============================================================
-// FIX — Le <select> HTML natif utilisé pour "Service" déclenchait sur
-// Android/Chrome le picker natif de l'OS (plein écran, hors du thème dark
-// de l'app — cf. capture "Choisir…"). Ce picker natif est fourni par le
-// système d'exploitation dès l'ouverture du menu : impossible à styliser
-// en CSS une fois ouvert, quelle que soit la classe appliquée au <select>
-// lui-même. Remplacé par un dropdown 100% custom (même logique que les
-// menus du reste de l'app), qui reste toujours dans le thème sombre et ne
-// délègue jamais le rendu à l'UI native, sur mobile comme sur desktop.
+// Le <select> HTML natif utilisé pour "Service" déclenchait sur
+// Android/Chrome le picker natif de l'OS (plein écran, hors du thème de
+// l'app). Ce picker natif est fourni par le système d'exploitation dès
+// l'ouverture du menu : impossible à styliser en CSS une fois ouvert,
+// quelle que soit la classe appliquée au <select> lui-même. Remplacé par
+// un dropdown 100% custom (même logique que les menus du reste de
+// l'app), qui reste toujours dans le thème clair et ne délègue jamais le
+// rendu à l'UI native, sur mobile comme sur desktop. Couleur d'accent :
+// même indigo (#6366f1) que les boutons primaires du dashboard.
 function CustomSelect({ value, onChange, options, placeholder = 'Choisir…' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -378,14 +382,17 @@ function CustomSelect({ value, onChange, options, placeholder = 'Choisir…' }) 
           width: '100%', boxSizing: 'border-box', flex: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           cursor: 'pointer', userSelect: 'none',
+          borderColor: open ? COLORS.accent : COLORS.border,
+          boxShadow: open ? `0 0 0 3px rgba(99,102,241,0.14)` : 'none',
+          transition: 'border-color .15s, box-shadow .15s',
         }}
       >
         <span style={{ color: selected ? COLORS.text : COLORS.textMuted }}>
           {selected ? selected.label : placeholder}
         </span>
         <span style={{
-          color: COLORS.textMuted, fontSize: 11, marginLeft: 8,
-          transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s',
+          color: open ? COLORS.accent : COLORS.textMuted, fontSize: 11, marginLeft: 8,
+          transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s, color .15s',
         }}>
           ▼
         </span>
@@ -395,7 +402,7 @@ function CustomSelect({ value, onChange, options, placeholder = 'Choisir…' }) 
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 50,
           background: COLORS.panel, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 10,
-          boxShadow: '0 12px 32px rgba(0,0,0,0.5)', maxHeight: 220, overflowY: 'auto',
+          boxShadow: '0 12px 32px rgba(15,23,42,.14)', maxHeight: 220, overflowY: 'auto',
         }}>
           {options.length === 0 && (
             <div style={{ padding: '10px 12px', color: COLORS.textMuted, fontSize: 13 }}>Aucune option</div>
@@ -408,7 +415,7 @@ function CustomSelect({ value, onChange, options, placeholder = 'Choisir…' }) 
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 style={{
                   padding: '10px 12px', fontSize: 14, cursor: 'pointer',
-                  background: isSelected ? 'rgba(167,139,250,0.14)' : 'transparent',
+                  background: isSelected ? 'rgba(99,102,241,0.10)' : 'transparent',
                   color: isSelected ? COLORS.accent : COLORS.text,
                   fontWeight: isSelected ? 700 : 500,
                 }}
@@ -453,7 +460,7 @@ function MiniCalendar({ month, setMonth, selectedDate, setSelectedDate, bookings
   return (
     <div style={s.sidebarCard}>
       <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 14 }}>
-        <strong style={{ textTransform: 'capitalize', fontSize: 15 }}>{monthLabel}</strong>
+        <strong style={{ textTransform: 'capitalize', fontSize: 15, color: COLORS.text }}>{monthLabel}</strong>
         <div style={s.row}>
           <div style={s.btnIcon} onClick={() => setMonth(new Date(year, m - 1, 1))}>‹</div>
           <div style={s.btnIcon} onClick={() => setMonth(new Date(year, m + 1, 1))}>›</div>
@@ -476,7 +483,7 @@ function MiniCalendar({ month, setMonth, selectedDate, setSelectedDate, bookings
               onClick={() => setSelectedDate(c.date)}
               style={{
                 textAlign: 'center', padding: '7px 0', borderRadius: 8, cursor: 'pointer', fontSize: 13,
-                color: c.outside ? 'rgba(139,135,160,0.4)' : (isSelected ? '#fff' : COLORS.text),
+                color: c.outside ? 'rgba(22,26,46,0.28)' : (isSelected ? '#fff' : COLORS.text),
                 background: isSelected ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : (isToday ? COLORS.cardAlt : 'transparent'),
                 fontWeight: isToday || isSelected ? 700 : 500,
                 position: 'relative',
@@ -500,7 +507,7 @@ function MiniCalendar({ month, setMonth, selectedDate, setSelectedDate, bookings
 function AgendaPanel({ selectedDate, bookings, onSeeAll }) {
   return (
     <div style={s.sidebarCard}>
-      <strong style={{ display: 'block', marginBottom: 12, fontSize: 15 }}>
+      <strong style={{ display: 'block', marginBottom: 12, fontSize: 15, color: COLORS.text }}>
         Agenda du {fmtDateFr(selectedDate)}
       </strong>
       {bookings.length === 0 && <div style={{ ...s.empty, padding: 20 }}>Aucune réservation ce jour.</div>}
@@ -512,7 +519,7 @@ function AgendaPanel({ selectedDate, bookings, onSeeAll }) {
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, marginTop: 6, flexShrink: 0 }} />
             <div style={{ flex: '1 1 140px', minWidth: 0 }}>
               <div style={{ fontSize: 13, color: COLORS.textMuted }}>{b.start_time?.slice(0, 5)}{b.end_time ? `–${b.end_time.slice(0, 5)}` : ''}</div>
-              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'break-word' }}>{label}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'break-word', color: COLORS.text }}>{label}</div>
               <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'break-word' }}>{b.client_name}</div>
             </div>
             <span style={{ ...s.badge(STATUS_COLORS[b.status]), flexShrink: 0 }}>{STATUS_LABELS[b.status]}</span>
@@ -537,14 +544,14 @@ function RecentBookingsCard({ bookings, onSeeAll }) {
 
   return (
     <div style={s.card}>
-      <strong style={{ display: 'block', marginBottom: 12 }}>Réservations récentes</strong>
+      <strong style={{ display: 'block', marginBottom: 12, color: COLORS.text }}>Réservations récentes</strong>
       {recent.length === 0 && <div style={{ ...s.empty, padding: 20 }}>Aucune réservation pour l'instant.</div>}
       {recent.map((b) => {
         const label = b.booking_services?.name || b.booking_events?.title || 'Réservation';
         return (
           <div key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderTop: `1px solid ${COLORS.border}`, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'break-word' }}>{b.client_name}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'break-word', color: COLORS.text }}>{b.client_name}</div>
               <div style={{ fontSize: 12, color: COLORS.textMuted, overflowWrap: 'break-word' }}>{label}</div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -595,7 +602,7 @@ function ServicesTab({ profileId, onDataChanged }) {
       price: Number(form.price) || 0,
       buffer_before_minutes: Number(form.buffer_before_minutes) || 0,
       buffer_after_minutes: Number(form.buffer_after_minutes) || 0,
-      color: form.color || '#a78bfa',
+      color: form.color || COLORS.accent,
       is_active: form.is_active ?? true,
     };
     if (!payload.name) return alert('Le nom du service est requis.');
@@ -646,7 +653,7 @@ function ServicesTab({ profileId, onDataChanged }) {
     <div>
       <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 14 }}>
         <span style={{ color: COLORS.textMuted, fontSize: 13 }}>{services.length} service(s)</span>
-        <button style={s.btn} onClick={() => setForm({ is_active: true, color: '#a78bfa' })}>+ Nouveau service</button>
+        <button style={s.btn} onClick={() => setForm({ is_active: true, color: COLORS.accent })}>+ Nouveau service</button>
       </div>
 
       {form && (
@@ -682,7 +689,7 @@ function ServicesTab({ profileId, onDataChanged }) {
             </div>
             <div style={{ flex: '1 1 100px' }}>
               <label style={s.label}>Couleur</label>
-              <input style={{ ...s.input, padding: 4, height: 40 }} type="color" value={form.color || '#a78bfa'} onChange={(e) => setForm({ ...form, color: e.target.value })} />
+              <input style={{ ...s.input, padding: 4, height: 40 }} type="color" value={form.color || COLORS.accent} onChange={(e) => setForm({ ...form, color: e.target.value })} />
             </div>
           </div>
           <div style={{ ...s.row, marginTop: 14, justifyContent: 'flex-end' }}>
@@ -700,13 +707,13 @@ function ServicesTab({ profileId, onDataChanged }) {
             <div style={s.row}>
               <div style={{
                 width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                background: `${svc.color || SERVICE_ICON_COLORS[i % 4]}22`,
+                background: `${svc.color || SERVICE_ICON_COLORS[i % 4]}1a`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <span style={{ width: 12, height: 12, borderRadius: '50%', background: svc.color || SERVICE_ICON_COLORS[i % 4], display: 'inline-block' }} />
               </div>
               <div>
-                <strong>{svc.name}</strong>{' '}
+                <strong style={{ color: COLORS.text }}>{svc.name}</strong>{' '}
                 <span style={s.badge(svc.is_active ? COLORS.success : COLORS.textMuted)}>{svc.is_active ? 'Actif' : 'Inactif'}</span>
               </div>
             </div>
@@ -808,11 +815,11 @@ function AvailabilityTab({ profileId }) {
   return (
     <div>
       <div style={s.card}>
-        <strong style={{ display: 'block', marginBottom: 12 }}>Planning hebdomadaire récurrent</strong>
+        <strong style={{ display: 'block', marginBottom: 12, color: COLORS.text }}>Planning hebdomadaire récurrent</strong>
         {DAYS.map((label, day) => (
           <div key={day} style={{ borderTop: day > 0 ? `1px solid ${COLORS.border}` : 'none', padding: '10px 0' }}>
             <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontWeight: 600, width: 100 }}>{label}</span>
+              <span style={{ fontWeight: 600, width: 100, color: COLORS.text }}>{label}</span>
               <button style={s.btnGhost} onClick={() => addSlot(day)}>+ Ajouter un créneau</button>
             </div>
             {slotsByDay(day).length === 0 && <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Fermé</div>}
@@ -829,7 +836,7 @@ function AvailabilityTab({ profileId }) {
       </div>
 
       <div style={s.card}>
-        <strong style={{ display: 'block', marginBottom: 12 }}>Jours bloqués / congés</strong>
+        <strong style={{ display: 'block', marginBottom: 12, color: COLORS.text }}>Jours bloqués / congés</strong>
         <div style={s.row}>
           <input style={s.input} type="date" value={newBlock.blocked_date} onChange={(e) => setNewBlock({ ...newBlock, blocked_date: e.target.value })} />
           <input style={s.input} placeholder="Raison (optionnel)" value={newBlock.reason} onChange={(e) => setNewBlock({ ...newBlock, reason: e.target.value })} />
@@ -838,7 +845,7 @@ function AvailabilityTab({ profileId }) {
         {blocked.length === 0 && <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 10 }}>Aucun jour bloqué.</div>}
         {blocked.map((b) => (
           <div key={b.id} style={{ ...s.row, justifyContent: 'space-between', marginTop: 10 }}>
-            <span>{new Date(b.blocked_date).toLocaleDateString('fr-FR')} {b.reason ? `— ${b.reason}` : ''}</span>
+            <span style={{ color: COLORS.text }}>{new Date(b.blocked_date).toLocaleDateString('fr-FR')} {b.reason ? `— ${b.reason}` : ''}</span>
             <button style={s.btnDangerText} onClick={() => removeBlock(b.id)}>Supprimer</button>
           </div>
         ))}
@@ -959,7 +966,7 @@ function EventsTab({ profileId, onDataChanged }) {
       {events.map((ev) => (
         <div key={ev.id} style={s.card}>
           <div style={{ ...s.row, justifyContent: 'space-between' }}>
-            <strong>{ev.title}</strong>
+            <strong style={{ color: COLORS.text }}>{ev.title}</strong>
             <div style={s.row}>
               <div style={s.btnIcon} title="Modifier" onClick={() => setForm(ev)}>✎</div>
               <div style={s.btnDanger} title="Supprimer" onClick={() => remove(ev.id)}>🗑</div>
@@ -1049,7 +1056,7 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
     <div>
       {quickForm && (
         <div style={s.card}>
-          <strong style={{ display: 'block', marginBottom: 12 }}>Nouveau rendez-vous</strong>
+          <strong style={{ display: 'block', marginBottom: 12, color: COLORS.text }}>Nouveau rendez-vous</strong>
           <div style={s.row}>
             <div style={{ flex: '1 1 180px' }}>
               <label style={s.label}>Client *</label>
@@ -1057,9 +1064,9 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
             </div>
             <div style={{ flex: '1 1 180px' }}>
               <label style={s.label}>Service *</label>
-              {/* FIX — remplace le <select> natif par CustomSelect (voir
+              {/* Remplace le <select> natif par CustomSelect (voir
                   commentaire sur le composant) pour éviter le picker Android
-                  hors-thème visible sur les captures. */}
+                  hors-thème et garder l'accent indigo du reste de l'app. */}
               <CustomSelect
                 value={quickForm.service_id || ''}
                 onChange={(val) => setQuickForm({ ...quickForm, service_id: val })}
@@ -1107,7 +1114,7 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
         <div key={b.id} style={s.card}>
           <div style={{ ...s.row, justifyContent: 'space-between' }}>
             <div>
-              <strong>{b.client_name}</strong>{' '}
+              <strong style={{ color: COLORS.text }}>{b.client_name}</strong>{' '}
               <span style={s.badge(STATUS_COLORS[b.status])}>{STATUS_LABELS[b.status]}</span>
             </div>
             <span style={{ color: COLORS.textMuted, fontSize: 13 }}>
@@ -1162,11 +1169,11 @@ function StatsTab({ overview }) {
   return (
     <div>
       <div style={s.card}>
-        <strong style={{ display: 'block', marginBottom: 14 }}>Répartition par statut ({total} réservation(s) au total)</strong>
+        <strong style={{ display: 'block', marginBottom: 14, color: COLORS.text }}>Répartition par statut ({total} réservation(s) au total)</strong>
         {byStatus.map(({ st, count }) => (
           <div key={st} style={{ marginBottom: 10 }}>
             <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 13 }}>{STATUS_LABELS[st]}</span>
+              <span style={{ fontSize: 13, color: COLORS.text }}>{STATUS_LABELS[st]}</span>
               <span style={{ fontSize: 13, color: COLORS.textMuted }}>{count}</span>
             </div>
             <div style={{ height: 8, borderRadius: 999, background: COLORS.cardAlt, overflow: 'hidden' }}>
@@ -1180,12 +1187,12 @@ function StatsTab({ overview }) {
       </div>
 
       <div style={s.card}>
-        <strong style={{ display: 'block', marginBottom: 14 }}>Services les plus réservés</strong>
+        <strong style={{ display: 'block', marginBottom: 14, color: COLORS.text }}>Services les plus réservés</strong>
         {byService.length === 0 && <div style={s.empty}>Pas encore de données.</div>}
         {byService.map((sv) => (
           <div key={sv.name} style={{ marginBottom: 10 }}>
             <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 13 }}>{sv.name}</span>
+              <span style={{ fontSize: 13, color: COLORS.text }}>{sv.name}</span>
               <span style={{ fontSize: 13, color: COLORS.textMuted }}>{sv.count}</span>
             </div>
             <div style={{ height: 8, borderRadius: 999, background: COLORS.cardAlt, overflow: 'hidden' }}>

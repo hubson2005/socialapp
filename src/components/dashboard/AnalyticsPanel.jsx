@@ -5,19 +5,29 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../supabase';
 
-// [FIX] useTranslation importé mais jamais utilisé → supprimé
-
 const PLATFORMS = {
   youtube:   { label: 'YouTube',   icon: '📺', color: '#FF0000' },
-  tiktok:    { label: 'TikTok',    icon: '🎵', color: '#69C9D0' },
+  tiktok:    { label: 'TikTok',    icon: '🎵', color: '#0f172a' },
   instagram: { label: 'Instagram', icon: '📸', color: '#E1306C' },
   facebook:  { label: 'Facebook',  icon: '📘', color: '#1877F2' },
   linkedin:  { label: 'LinkedIn',  icon: '💼', color: '#0A66C2' },
   whatsapp:  { label: 'WhatsApp',  icon: '💬', color: '#25D366' },
   telegram:  { label: 'Telegram',  icon: '✈️', color: '#229ED9' },
-  snapchat:  { label: 'Snapchat',  icon: '👻', color: '#FFFC00' },
+  snapchat:  { label: 'Snapchat',  icon: '👻', color: '#EAB308' },
   pinterest: { label: 'Pinterest', icon: '📌', color: '#E60023' },
-  twitter:   { label: 'X',         icon: '𝕏',  color: '#ffffff' },
+  twitter:   { label: 'X',         icon: '𝕏',  color: '#0f172a' },
+};
+
+// ─── Palette (thème clair, cohérent avec le reste du dashboard) ─
+const T = {
+  bgCard:     '#ffffff',
+  bgCardAlt:  '#f8f9fc',
+  border:     '#e6e8f0',
+  track:      '#eef0f6',
+  textPrimary:   '#151329',
+  textSecondary: '#6b6f85',
+  textMuted:     '#9a9db0',
+  shadow: '0 1px 2px rgba(16,18,40,0.04), 0 1px 8px rgba(16,18,40,0.03)',
 };
 
 // ─── Hook : largeur de la fenêtre ─────────────────────────────
@@ -37,27 +47,27 @@ function useWindowWidth() {
 function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.05)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      background: T.bgCard,
+      border: `1px solid ${T.border}`,
+      boxShadow: T.shadow,
       borderRadius: '14px',
       padding: '12px',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px',
-      // [FIX] minWidth:0 évite le débordement en flexbox/grid sur Android
       minWidth: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
         <span style={{
-          color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 500,
-          // [FIX] empêche le label de déborder sur petits écrans
+          color: T.textMuted, fontSize: '10px', fontWeight: 600,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          textTransform: 'uppercase', letterSpacing: '0.02em',
         }}>
           {label}
         </span>
         <div style={{
           width: '26px', height: '26px', borderRadius: '7px',
-          background: color + '20',
+          background: color + '1a',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
         }}>
@@ -65,13 +75,13 @@ function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
-        <span style={{ color: 'white', fontSize: '20px', fontWeight: 800, lineHeight: 1 }}>
+        <span style={{ color: T.textPrimary, fontSize: '20px', fontWeight: 800, lineHeight: 1 }}>
           {value}
         </span>
         {trend != null && (
           <span style={{
             fontSize: '11px',
-            color: trendUp ? '#22c55e' : '#ef4444',
+            color: trendUp ? '#16a34a' : '#dc2626',
             fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: '2px',
             flexShrink: 0,
@@ -91,16 +101,11 @@ export default function AnalyticsPanel({ profileId }) {
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [geoData, setGeoData] = useState([]);
-  // [FIX-PAYS] Nombre total de pays distincts (non tronqué), découplé du
-  // Top 5 affiché dans le widget. `geoData` reste limité à 5 entrées pour
-  // garder le widget compact ; `totalCountries` reflète le vrai total pour
-  // la carte KPI "Pays" en haut de page.
   const [totalCountries, setTotalCountries] = useState(0);
   const [topLinks, setTopLinks] = useState([]);
   const [daily, setDaily]     = useState([]);
 
   const windowWidth = useWindowWidth();
-  // [FIX] breakpoints : mobile < 480, tablette 480-767, desktop ≥ 768
   const isMobile  = windowWidth < 480;
   const isTablet  = windowWidth >= 480 && windowWidth < 768;
   const isDesktop = windowWidth >= 768;
@@ -137,7 +142,6 @@ export default function AnalyticsPanel({ profileId }) {
       setStats({
         views:   views.length,
         clicks:  clicks.length,
-        // [FIX] évite la division par zéro si views.length === 0
         ctr:     views.length > 0 ? Math.round((clicks.length / views.length) * 100) : 0,
         trend,
         trendUp: trend !== null ? trend >= 0 : true,
@@ -150,8 +154,6 @@ export default function AnalyticsPanel({ profileId }) {
         geoMap[k] = { count: (geoMap[k]?.count || 0) + 1, code: r.country };
       });
       const geoEntries = Object.entries(geoMap).sort((a, b) => b[1].count - a[1].count);
-      // [FIX-PAYS] Total réel = tous les pays distincts rencontrés dans la
-      // période, pas seulement les 5 affichés dans le widget ci-dessous.
       setTotalCountries(geoEntries.length);
       setGeoData(geoEntries.slice(0, 5));
 
@@ -198,10 +200,8 @@ export default function AnalyticsPanel({ profileId }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: '16px',
-      // [FIX] scroll natif iOS dans le panel
       WebkitOverflowScrolling: 'touch',
       overscrollBehavior: 'contain',
-      // [FIX] empêche le débordement horizontal sur Android
       minWidth: 0, width: '100%',
     }}>
 
@@ -214,18 +214,18 @@ export default function AnalyticsPanel({ profileId }) {
         gap: '10px',
       }}>
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 800, margin: 0 }}>
+          <h2 style={{ color: T.textPrimary, fontSize: '18px', fontWeight: 800, margin: 0 }}>
             Analytics
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '4px 0 0' }}>
+          <p style={{ color: T.textSecondary, fontSize: '12px', margin: '4px 0 0' }}>
             Performance de votre profil
           </p>
         </div>
 
-        {/* Boutons de période — [FIX] touchAction + tap highlight supprimé */}
+        {/* Boutons de période */}
         <div style={{
           display: 'flex', gap: '4px',
-          background: 'rgba(255,255,255,0.06)',
+          background: T.track,
           borderRadius: '10px', padding: '3px',
           flexShrink: 0,
         }}>
@@ -235,14 +235,12 @@ export default function AnalyticsPanel({ profileId }) {
               onClick={() => setPeriod(p)}
               style={{
                 padding: '6px 12px',
-                // [FIX] zone de tap min 36px pour iOS/Android
                 minHeight: '36px',
                 borderRadius: '8px', border: 'none', cursor: 'pointer',
                 fontSize: '11px', fontWeight: 600,
                 transition: 'all 0.15s',
-                background: period === p ? 'rgba(99,102,241,0.3)' : 'transparent',
-                color:      period === p ? '#a78bfa' : 'rgba(255,255,255,0.4)',
-                // [FIX] supprime le délai 300ms sur Android/iOS + flash gris
+                background: period === p ? '#ede9fe' : 'transparent',
+                color:      period === p ? '#7c3aed' : T.textSecondary,
                 touchAction: 'manipulation',
                 WebkitTapHighlightColor: 'transparent',
               }}
@@ -255,13 +253,11 @@ export default function AnalyticsPanel({ profileId }) {
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
-          <Loader2 size={24} className="animate-spin" color="rgba(99,102,241,0.6)" />
+          <Loader2 size={24} className="animate-spin" color="#6366f1" />
         </div>
       ) : (
         <>
           {/* ── KPI Cards ── */}
-          {/* [FIX] Sur mobile < 480px : 2 colonnes mais avec fontSize réduit
-               Sur tablette/desktop : 4 colonnes */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: isDesktop
@@ -274,16 +270,14 @@ export default function AnalyticsPanel({ profileId }) {
             <MiniStat label="Vues"      value={stats?.views   || 0}        icon={Eye}               color="#6366f1" trend={stats?.trend} trendUp={stats?.trendUp} />
             <MiniStat label="Clics"     value={stats?.clicks  || 0}        icon={MousePointerClick}  color="#f59e0b" />
             <MiniStat label="CTR"       value={(stats?.ctr    || 0) + '%'} icon={TrendingUp}         color="#22c55e" />
-            {/* [FIX-PAYS] Utilise le total réel de pays distincts, pas
-                geoData.length qui était plafonné à 5 par le .slice() du
-                widget "Top pays" ci-dessous. */}
             <MiniStat label="Pays"      value={totalCountries}             icon={Globe}              color="#0ea5e9" />
           </div>
 
           {/* ── Bar chart ── */}
           <div style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: T.bgCard,
+            border: `1px solid ${T.border}`,
+            boxShadow: T.shadow,
             borderRadius: '18px',
             padding: isMobile ? '12px' : '16px',
           }}>
@@ -293,7 +287,7 @@ export default function AnalyticsPanel({ profileId }) {
               marginBottom: '14px',
               flexWrap: 'wrap', gap: '8px',
             }}>
-              <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>
+              <span style={{ color: T.textPrimary, fontSize: '13px', fontWeight: 700 }}>
                 Activité — 7 derniers jours
               </span>
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -301,7 +295,7 @@ export default function AnalyticsPanel({ profileId }) {
                   { color: '#e5683b', label: 'Vues' },
                   { color: '#22c55e', label: 'Clics' },
                 ].map(({ color, label }) => (
-                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: T.textSecondary, fontSize: '11px' }}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: color, display: 'inline-block', flexShrink: 0 }} />
                     {label}
                   </span>
@@ -309,14 +303,11 @@ export default function AnalyticsPanel({ profileId }) {
               </div>
             </div>
 
-            {/* [FIX] Hauteur adaptative : 64px mobile, 80px tablette/desktop */}
             <div style={{
               display: 'flex',
               alignItems: 'flex-end',
-              // [FIX] gap adaptatif — sur petits écrans les 7 colonnes ne doivent pas déborder
               gap: isMobile ? '3px' : '6px',
               height: isMobile ? '64px' : '80px',
-              // [FIX] overflow caché pour éviter tout débordement horizontal
               overflow: 'hidden',
             }}>
               {daily.map(d => (
@@ -325,7 +316,6 @@ export default function AnalyticsPanel({ profileId }) {
                   display: 'flex', flexDirection: 'column',
                   alignItems: 'center', gap: '3px',
                   height: '100%',
-                  // [FIX] minWidth:0 indispensable dans un flex pour éviter le débordement
                   minWidth: 0,
                 }}>
                   <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', gap: '1px' }}>
@@ -349,8 +339,7 @@ export default function AnalyticsPanel({ profileId }) {
                     }} />
                   </div>
                   <span style={{
-                    color: 'rgba(255,255,255,0.3)',
-                    // [FIX] fontSize réduit sur mobile pour ne pas couper les labels
+                    color: T.textMuted,
                     fontSize: isMobile ? '8px' : '9px',
                     lineHeight: 1,
                     userSelect: 'none',
@@ -363,8 +352,6 @@ export default function AnalyticsPanel({ profileId }) {
           </div>
 
           {/* ── Bottom row : Top pays + Top liens ── */}
-          {/* [FIX] Sur mobile, les deux blocs passent en colonne (plus de grid 1fr 1fr)
-               → évite le texte écrasé et les barres illisibles sur iPhone */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
@@ -373,27 +360,24 @@ export default function AnalyticsPanel({ profileId }) {
 
             {/* Top pays */}
             <div style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: T.bgCard,
+              border: `1px solid ${T.border}`,
+              boxShadow: T.shadow,
               borderRadius: '18px',
               padding: isMobile ? '12px' : '16px',
-              // [FIX] minWidth:0 pour éviter le débordement dans la grid
               minWidth: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Globe size={14} color="#a78bfa" />
-                <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Top pays</span>
-                {/* [FIX-PAYS] Indique explicitement qu'il s'agit d'un Top 5
-                    quand il y a plus de pays que ceux affichés, pour éviter
-                    toute confusion avec le total (visible dans la carte KPI). */}
+                <Globe size={14} color="#7c3aed" />
+                <span style={{ color: T.textPrimary, fontSize: '13px', fontWeight: 700 }}>Top pays</span>
                 {totalCountries > geoData.length && (
-                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: 500, marginLeft: 'auto' }}>
+                  <span style={{ color: T.textMuted, fontSize: '10px', fontWeight: 500, marginLeft: 'auto' }}>
                     Top {geoData.length} / {totalCountries}
                   </span>
                 )}
               </div>
               {geoData.length === 0 ? (
-                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>
+                <p style={{ color: T.textMuted, fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>
                   Pas encore de données
                 </p>
               ) : geoData.map(([country, { count, code }]) => (
@@ -404,17 +388,16 @@ export default function AnalyticsPanel({ profileId }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', gap: '4px' }}>
                       <span style={{
-                        color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 500,
-                        // [FIX] tronque les noms longs (ex: "Côte d'Ivoire") sur mobile
+                        color: T.textPrimary, fontSize: '11px', fontWeight: 500,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         {country}
                       </span>
-                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', flexShrink: 0 }}>
+                      <span style={{ color: T.textSecondary, fontSize: '11px', flexShrink: 0 }}>
                         {count}
                       </span>
                     </div>
-                    <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }}>
+                    <div style={{ height: '3px', background: T.track, borderRadius: '2px' }}>
                       <div style={{
                         width: Math.round((count / maxGeo) * 100) + '%',
                         height: '100%',
@@ -430,18 +413,19 @@ export default function AnalyticsPanel({ profileId }) {
 
             {/* Top liens */}
             <div style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: T.bgCard,
+              border: `1px solid ${T.border}`,
+              boxShadow: T.shadow,
               borderRadius: '18px',
               padding: isMobile ? '12px' : '16px',
               minWidth: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <MousePointerClick size={14} color="#f59e0b" />
-                <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>Top liens</span>
+                <span style={{ color: T.textPrimary, fontSize: '13px', fontWeight: 700 }}>Top liens</span>
               </div>
               {topLinks.length === 0 ? (
-                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>
+                <p style={{ color: T.textMuted, fontSize: '12px', textAlign: 'center', padding: '12px 0', margin: 0 }}>
                   Pas encore de données
                 </p>
               ) : topLinks.map(([platform, count]) => {
@@ -461,29 +445,28 @@ export default function AnalyticsPanel({ profileId }) {
                     }}>
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
-                        // [FIX] minWidth:0 + overflow pour éviter le débordement du label
                         minWidth: 0, flex: 1,
                       }}>
                         <div style={{
                           width: '28px', height: '28px', borderRadius: '8px',
-                          background: social.color + '20',
+                          background: social.color + '1a',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '13px', flexShrink: 0,
                         }}>
                           {social.icon}
                         </div>
                         <span style={{
-                          color: 'white', fontSize: '12px', fontWeight: 600,
+                          color: T.textPrimary, fontSize: '12px', fontWeight: 600,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           {social.label}
                         </span>
                       </div>
-                      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                      <span style={{ color: T.textSecondary, fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
                         {count}
                       </span>
                     </div>
-                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div style={{ height: '4px', background: T.track, borderRadius: '999px', overflow: 'hidden' }}>
                       <div style={{
                         width: `${Math.round((count / maxLink) * 100)}%`,
                         height: '100%',

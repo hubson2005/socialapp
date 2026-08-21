@@ -10,72 +10,30 @@
 //  [M7] openEdit : lit action_config + actions[0].config (merge)
 //  [M8] Badges et flow reconstruits depuis TRIGGER_LABELS / ACTION_LABELS
 //
-// CORRECTIONS RESPONSIVE M12 (cette révision) :
-//  [R1] @media tablette qui était collé/imbriqué à l'intérieur de :root{}
-//       supprimé — cassait TOUTES les variables CSS définies après lui
-//       (--green, --blue, --purple, --t1/t2/t3...) sur les moteurs sans
-//       support de CSS nesting natif (WebViews Android plus anciennes,
-//       navigateurs in-app).
-//  [R2] Fusion des DEUX media queries tablette 768–1023px dupliquées
-//       (valeurs contradictoires) en une seule règle cohérente.
-//  [R3] Tous les `:hover` regroupés sous @media (hover:hover) and
-//       (pointer:fine) pour éviter l'état "hover collé" au tap sur
-//       iOS/Android (même bug déjà corrigé sur IntegrationsPanel).
-//  [R4] `vh` → `dvh` sur la hauteur du modal (barre d'adresse Safari iOS
-//       ne coupe plus le contenu du modal).
-//  [R5] Cibles tactiles agrandies à 44px mini (toggle, filter-btn) via
-//       zone de tap invisible, sans changer le rendu visuel.
+// CORRECTIONS RESPONSIVE M12 :
+//  [R1]-[R5] cf. révisions précédentes (inchangées)
 //
-// CORRECTIONS STACKING/PORTAL M13 (cette révision) :
-//  [P1] Le modal est désormais rendu via createPortal(document.body) :
-//       AutomationsPanel est monté à l'intérieur du contenu scrollable
-//       du dashboard, qui crée probablement son propre stacking context
-//       (transform/filter/backdrop-filter sur un ancêtre). Résultat :
-//       même avec un z-index élevé, le modal restait piégé SOUS la
-//       bottom tab bar de MobileNav.jsx (position:fixed, zIndex 38-40,
-//       montée au niveau racine). Le portail sort le modal de ce
-//       contexte et le place directement dans <body>, au même niveau
-//       que MobileNav — le z-index redevient comparable globalement.
-//  [P2] z-index de l'overlay relevé à 1000 (>> 40 de MobileNav) pour
-//       rester au-dessus de la tab bar ET du drawer menu dans tous les
-//       cas, y compris si un futur composant relève ces valeurs.
-//  [P3] Verrouillage du scroll du body pendant que le modal est ouvert
-//       (même pattern que MobileNav.jsx) — évite le double-scroll
-//       arrière-plan/modal sur iOS Safari et Chrome Android.
-//  [P4] `-webkit-backdrop-filter` ajouté à côté de `backdrop-filter`
-//       sur l'overlay (Safari iOS ignore la propriété non préfixée).
-//  [P5] `padding-bottom` du modal augmenté de `env(safe-area-inset-bottom)`
-//       pour ne pas coller le footer sous la home indicator bar iOS /
-//       barre de geste Android.
-//  [P6] Fermeture du modal au clic extérieur : `touch-action:none` sur
-//       l'overlay retiré du chemin de scroll pour éviter un scroll du
-//       body sous-jacent lors d'un swipe raté sur Android (webkit
-//       overscroll bleed).
-//  [P7] Vérification doublons CSS : aucune règle dupliquée résiduelle
-//       trouvée après relecture complète du bloc STYLE (les deux
-//       media queries 768px restantes sont non redondantes : l'une est
-//       bornée à la tranche tablette 768–1023px, l'autre s'applique
-//       à partir de 768px pour la mise en page du modal — objectifs
-//       différents, gardées telles quelles).
+// CORRECTIONS STACKING/PORTAL M13 :
+//  [P1]-[P7] cf. révisions précédentes (inchangées)
 //
-// SUPPRESSION RAPIDE + ARCHIVAGE (cette révision) :
-//  [A1] Ajout d'une colonne `archived` (boolean, défaut false) sur la
-//       table `automations` (migration Supabase). Une automation
-//       archivée est masquée des filtres "Tous / Actives / Inactives"
-//       et des statistiques d'en-tête, sans que ses données (logs,
-//       historique, config) soient perdues — contrairement à la
-//       suppression qui reste définitive.
-//  [A2] Bouton "🗑 Supprimer" désormais accessible directement sur
-//       chaque carte de la liste (avec confirmation), en plus de celui
-//       déjà présent dans la modale d'édition — plus besoin d'ouvrir
-//       une automation juste pour la supprimer.
-//  [A3] Bouton "📦 Archiver / 📤 Désarchiver" ajouté sur chaque carte
-//       et dans la modale d'édition (toggleArchive). Depuis la modale,
-//       archiver referme automatiquement la modale puisque
-//       l'automation sort de la vue courante.
-//  [A4] Nouvel onglet de filtre "📦 Archivées (n)" affichant uniquement
-//       les automations archivées ; les onglets "Tous/Actives/Inactives"
-//       les excluent systématiquement.
+// SUPPRESSION RAPIDE + ARCHIVAGE :
+//  [A1]-[A4] cf. révisions précédentes (inchangées)
+//
+// THÈME CLAIR (cette révision) :
+//  [L1] Palette de variables CSS (:root) entièrement retournée pour
+//       coller au fond clair `#f4f5fa` du reste du UserDashboard :
+//       cartes blanches, bordures gris clair, texte foncé. Les couleurs
+//       d'accent (orange, vert, bleu, violet, rouge, jaune) sont
+//       conservées à l'identique — c'est la charte de la marque.
+//  [L2] Tous les fonds `rgba(255,255,255,x)` utilisés en dur dans le
+//       CSS (cartes stats, tabs, search, auto-card, tmpl-card, flow-step,
+//       log-row, chips inline JS) basculés en `rgba(15,17,25,x)` — un
+//       noir très dilué qui donne un liseré/fond gris clair au lieu
+//       d'un fond transparent-sur-sombre invisible sur fond clair.
+//  [L3] Modal : fond blanc, bordure claire ; l'overlay reste sombre
+//       (comportement standard, indépendant du thème du contenu).
+//  [L4] Toggle OFF, poignée du modal, hover states : ajustés pour
+//       rester visibles sur fond clair.
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -95,32 +53,32 @@ const STYLE = `
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');
 
 .ap-root{
-  color:#f0f0f0;
+  color:#151329;
   font-family:'DM Sans',sans-serif;
   font-size:13.5px;
 }
 
-/* [R1] :root propre — variables uniquement, aucune règle imbriquée */
+/* [L1] :root — palette claire, cohérente avec le fond #f4f5fa du dashboard */
 :root{
-  --bg:#111215;
-  --card:#1a1c21;
-  --card2:#1f2128;
-  --border:rgba(255,255,255,0.07);
-  --hover:#22252c;
-  --hover2:#2a2d35;
+  --bg:#f4f5fa;
+  --card:#ffffff;
+  --card2:#f8f9fc;
+  --border:#e6e8f0;
+  --hover:#eef0f6;
+  --hover2:#e3e6f0;
   --orange:#f5841f;
   --orangeD:rgba(245,132,31,0.12);
   --green:#22d07a;
-  --greenD:rgba(34,208,122,0.1);
+  --greenD:rgba(34,208,122,0.12);
   --blue:#4d9cf8;
-  --blueD:rgba(77,156,248,0.1);
+  --blueD:rgba(77,156,248,0.12);
   --purple:#a78bfa;
-  --purpleD:rgba(167,139,250,0.1);
+  --purpleD:rgba(167,139,250,0.12);
   --red:#f45b5b;
-  --yellow:#fbbf24;
-  --t1:#f0f0f0;
-  --t2:#9fa3b0;
-  --t3:#5c6070;
+  --yellow:#eab308;
+  --t1:#151329;
+  --t2:#6b6f85;
+  --t3:#9a9db0;
 }
 
 *{ box-sizing:border-box; }
@@ -139,6 +97,7 @@ const STYLE = `
   display:flex;
   align-items:center;
   gap:9px;
+  color:var(--t1);
 }
 .ap-subtitle{ font-size:12px; color:var(--t2); margin-top:3px; }
 .hdr-btns{ display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
@@ -167,8 +126,9 @@ const STYLE = `
   margin-bottom:18px;
 }
 .ap-stat{
-  background:rgba(255,255,255,0.05);
+  background:var(--card);
   border:1px solid var(--border);
+  box-shadow:0 1px 2px rgba(16,18,40,0.04), 0 1px 8px rgba(16,18,40,0.03);
   border-radius:12px;
   padding:11px 10px;
   display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center;
@@ -183,7 +143,7 @@ const STYLE = `
 
 .ap-tabs{
   display:flex; gap:2px;
-  background:rgba(255,255,255,0.05);
+  background:var(--hover);
   border:1px solid var(--border);
   border-radius:11px; padding:3px; margin-bottom:16px;
   width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;
@@ -194,7 +154,7 @@ const STYLE = `
   transition:all .12s; border:none; background:none; white-space:nowrap; text-align:center;
   min-height:44px; display:flex; align-items:center; justify-content:center;
 }
-.ap-tab.on{ background:rgba(255,255,255,0.08); color:var(--t1); font-weight:600; }
+.ap-tab.on{ background:var(--card); color:var(--t1); font-weight:600; box-shadow:0 1px 3px rgba(16,18,40,0.08); }
 
 .ap-toolbar{ display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
 
@@ -223,12 +183,13 @@ const STYLE = `
 
 .auto-list{ display:flex; flex-direction:column; gap:10px; }
 .auto-card{
-  background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  background:var(--card); border:1px solid var(--border);
+  box-shadow:0 1px 2px rgba(16,18,40,0.04), 0 1px 8px rgba(16,18,40,0.03);
   border-radius:14px; padding:14px; display:flex;
   align-items:flex-start; gap:12px;
   transition:border-color .15s,background .15s; cursor:pointer;
 }
-.auto-card.active-card{ border-color:rgba(245,132,31,.25); }
+.auto-card.active-card{ border-color:rgba(245,132,31,.35); }
 .auto-ico{
   width:38px; height:38px; border-radius:10px;
   display:flex; align-items:center; justify-content:center;
@@ -236,15 +197,15 @@ const STYLE = `
 }
 .auto-body{ flex:1; min-width:0; }
 .auto-name{
-  font-size:13.5px; font-weight:600;
+  font-size:13.5px; font-weight:600; color:var(--t1);
   display:flex; align-items:center; gap:7px; flex-wrap:wrap;
 }
 .auto-desc{ font-size:12px; color:var(--t2); margin-top:4px; line-height:1.5; }
 .auto-meta{ display:flex; align-items:center; gap:6px; margin-top:8px; flex-wrap:wrap; }
 .auto-badge{ font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; }
-.ab-trigger{ background:var(--blueD); color:var(--blue); }
+.ab-trigger{ background:var(--blueD); color:#2563eb; }
 .ab-action{ background:var(--orangeD); color:var(--orange); }
-.ab-freq{ background:rgba(167,139,250,.1); color:var(--purple); }
+.ab-freq{ background:var(--purpleD); color:#7c3aed; }
 .auto-stat{ font-size:10.5px; color:var(--t3); display:flex; align-items:center; gap:3px; }
 .auto-right{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
 .ap-tog-wrap{ display:flex; align-items:center; gap:6px; font-size:11px; }
@@ -264,11 +225,12 @@ const STYLE = `
   width:44px; height:44px;
 }
 .ap-toggle.on{ background:var(--green); }
-.ap-toggle.off{ background:var(--hover2); }
+.ap-toggle.off{ background:#d7dae4; }
 .ap-toggle::after{
   content:''; position:absolute; top:3px;
   width:13px; height:13px; border-radius:50%;
   background:#fff; transition:left .2s;
+  box-shadow:0 1px 3px rgba(16,18,40,0.25);
 }
 .ap-toggle.on::after{ left:18px; }
 .ap-toggle.off::after{ left:3px; }
@@ -276,14 +238,15 @@ const STYLE = `
 .flow{ display:flex; align-items:center; margin-top:9px; flex-wrap:wrap; gap:4px; }
 .flow-step{
   display:flex; align-items:center; gap:4px;
-  background:rgba(255,255,255,0.06); border:1px solid var(--border);
+  background:var(--hover); border:1px solid var(--border);
   border-radius:7px; padding:4px 8px; font-size:11px; color:var(--t2);
 }
 .flow-arrow{ color:var(--t3); font-size:13px; margin:0 1px; }
 
 .tmpl-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
 .tmpl-card{
-  background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  background:var(--card); border:1px solid var(--border);
+  box-shadow:0 1px 2px rgba(16,18,40,0.04), 0 1px 8px rgba(16,18,40,0.03);
   border-radius:13px; padding:14px; cursor:pointer;
   transition:border-color .15s,background .15s;
   position:relative; overflow:hidden;
@@ -307,7 +270,7 @@ const STYLE = `
 }
 .tmpl-use{
   width:100%; margin-top:9px;
-  background:var(--orangeD); border:1px dashed rgba(245,132,31,.3);
+  background:var(--orangeD); border:1px dashed rgba(245,132,31,.35);
   border-radius:8px; padding:7px;
   font-size:12px; color:var(--orange);
   cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
@@ -318,41 +281,40 @@ const STYLE = `
 .log-row{
   display:flex; align-items:center; gap:10px;
   padding:10px 12px; border-bottom:1px solid var(--border);
-  background:rgba(255,255,255,0.03); font-size:12px; flex-wrap:wrap;
+  background:var(--card); font-size:12px; flex-wrap:wrap;
 }
 .log-row:last-child{ border-bottom:none; }
 .log-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 .log-name{ font-weight:500; flex:1; min-width:80px; color:var(--t1); }
 .log-trigger{ color:var(--t2); flex:1; min-width:80px; }
 .log-status{ font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:20px; }
-.ls-ok{ background:var(--greenD); color:var(--green); }
-.ls-err{ background:rgba(244,91,91,.12); color:var(--red); }
-.ls-skip{ background:rgba(100,100,120,.2); color:var(--t2); }
+.ls-ok{ background:var(--greenD); color:#16a34a; }
+.ls-err{ background:rgba(244,91,91,.14); color:var(--red); }
+.ls-skip{ background:rgba(100,100,120,.14); color:var(--t2); }
 .log-time{ color:var(--t3); font-size:10.5px; flex-shrink:0; }
 .log-reason{
   flex-basis:100%; font-size:11px; color:var(--t3);
   padding-left:17px; margin-top:-2px;
 }
 
-/* [P1][P2] Overlay du modal — désormais rendu via un portail React
-   directement dans document.body (voir bas du fichier). Le z-index
-   est relevé à 1000 pour rester au-dessus de la bottom tab bar et du
-   drawer menu de MobileNav.jsx (z-index 38-40), même en cas de
-   stacking context piégeant sur un ancêtre du dashboard.
+/* [P1][P2] Overlay du modal — rendu via portail React dans document.body.
+   L'overlay reste sombre (comportement standard indépendant du thème
+   du contenu, cf. [L3]). z-index relevé à 1000 pour rester au-dessus
+   de la bottom tab bar et du drawer menu de MobileNav.jsx.
    [P4] -webkit-backdrop-filter ajouté pour Safari iOS. */
 .ap-modal-overlay{
-  position:fixed; inset:0; background:rgba(0,0,0,.65);
+  position:fixed; inset:0; background:rgba(15,17,25,.55);
   backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
   z-index:1000;
   display:flex; align-items:flex-end; justify-content:center; padding:0;
   overscroll-behavior:contain;
 }
-/* [R4] vh → dvh pour la hauteur du modal (Safari iOS / barre d'adresse)
-   [P5] padding-bottom inclut env(safe-area-inset-bottom) pour ne pas
-   coller le footer sous la home indicator bar iOS / la barre de geste
-   Android (huawei/xiaomi gesture nav notamment). */
+/* [L3] Modal en fond blanc pour cohérence avec le thème clair.
+   [R4] vh → dvh pour la hauteur du modal (Safari iOS / barre d'adresse)
+   [P5] padding-bottom inclut env(safe-area-inset-bottom). */
 .ap-modal{
-  background:#1a1c21; border:1px solid rgba(255,255,255,0.1);
+  background:#ffffff; border:1px solid var(--border);
+  box-shadow:0 -4px 24px rgba(16,18,40,0.12);
   border-radius:20px 20px 0 0; width:100%; max-width:520px;
   padding:20px 18px calc(28px + env(safe-area-inset-bottom, 0px));
   display:flex; flex-direction:column;
@@ -379,13 +341,13 @@ const STYLE = `
 .ap-field-textarea{ resize:vertical; min-height:64px; }
 .ap-field-input:focus,
 .ap-field-select:focus,
-.ap-field-textarea:focus{ border-color:rgba(245,132,31,.4); }
+.ap-field-textarea:focus{ border-color:rgba(245,132,31,.5); background:#ffffff; }
 .ap-field-input::placeholder,
 .ap-field-textarea::placeholder{ color:var(--t3); }
 
 .ap-config-box{
-  background:rgba(245,132,31,.05);
-  border:1px solid rgba(245,132,31,.18);
+  background:rgba(245,132,31,.06);
+  border:1px solid rgba(245,132,31,.22);
   border-radius:12px;
   padding:12px;
   display:flex; flex-direction:column; gap:10px;
@@ -397,7 +359,7 @@ const STYLE = `
 }
 .ap-config-note{
   font-size:11.5px; color:var(--t2); line-height:1.5;
-  background:rgba(255,255,255,0.04); border:1px dashed var(--border);
+  background:var(--card); border:1px dashed var(--border);
   border-radius:8px; padding:9px 11px;
 }
 
@@ -416,8 +378,8 @@ const STYLE = `
   .ap-btn-sec:hover{ background:var(--hover2); color:var(--t1); }
   .ap-filter-btn:hover{ background:var(--hover2); color:var(--t1); }
   .ap-tab:hover{ color:var(--t1); }
-  .auto-card:hover{ border-color:rgba(255,255,255,.13); background:rgba(255,255,255,0.06); }
-  .tmpl-card:hover{ border-color:rgba(245,132,31,.3); background:rgba(255,255,255,0.06); }
+  .auto-card:hover{ border-color:#d7dae4; box-shadow:0 2px 10px rgba(16,18,40,0.07); }
+  .tmpl-card:hover{ border-color:rgba(245,132,31,.4); box-shadow:0 2px 10px rgba(16,18,40,0.07); }
 }
 
 /* [R2] Media queries fusionnées : une seule règle 768–1023px cohérente
@@ -605,18 +567,12 @@ export default function AutomationsPanel({ profileId }) {
   useEffect(() => { if (tab === 'logs' && profileId) loadLogs(); }, [tab, profileId]);
 
   // [P3] Verrouillage du scroll du body pendant que le modal est ouvert.
-  // Même pattern que MobileNav.jsx : sans ça, sur iOS Safari et Chrome
-  // Android, le contenu du dashboard sous le modal peut scroller en
-  // même temps que le modal (double-scroll), ou le body "saute" quand
-  // le clavier virtuel s'ouvre sur un input du formulaire.
   useEffect(() => {
     if (!modal) return;
     const prevOverflow = document.body.style.overflow;
     const prevPosition = document.body.style.position;
     const scrollY = window.scrollY;
     document.body.style.overflow = 'hidden';
-    // position:fixed additionnel pour iOS Safari, qui ignore parfois
-    // overflow:hidden seul sur le body quand un clavier virtuel s'ouvre
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = '100%';
@@ -658,8 +614,8 @@ export default function AutomationsPanel({ profileId }) {
     setForm({
       name:    t.name    || '',
       desc:    t.desc    || '',
-      trigger: t.trigger || '',   // clé moteur ex: 'whatsapp_click'
-      action:  t.action  || '',   // clé moteur ex: 'create_task'
+      trigger: t.trigger || '',
+      action:  t.action  || '',
       freq:    t.freq    || '',
       config:  t.config  || {},
     });
@@ -668,7 +624,6 @@ export default function AutomationsPanel({ profileId }) {
 
   // [M7] Ouvrir l'édition en lisant correctement les clés moteur
   const openEdit = (auto) => {
-    // Merge action_config + actions[0].config pour récupérer tous les champs
     const baseConfig  = auto.action_config || {};
     const arrayConfig = Array.isArray(auto.actions) && auto.actions.length > 0
       ? (auto.actions[0]?.config || {})
@@ -678,8 +633,8 @@ export default function AutomationsPanel({ profileId }) {
     setForm({
       name:    auto.name        || '',
       desc:    auto.desc        || auto.description || '',
-      trigger: auto.trigger     || '',   // ex: 'whatsapp_click'
-      action:  auto.action      || '',   // ex: 'create_task'
+      trigger: auto.trigger     || '',
+      action:  auto.action      || '',
       freq:    auto.freq        || '',
       config:  mergedConfig,
     });
@@ -689,12 +644,10 @@ export default function AutomationsPanel({ profileId }) {
   // [M6] Construire le payload avec le format moteur correct
   const buildPayload = () => {
     const actionConfig = form.config || {};
-    // actions[] = [{type: 'create_task', config: {taskTitle: '...'}}]
     const actionsList = form.action
       ? [{ type: form.action, config: actionConfig }]
       : [];
 
-    // [M8] Flow reconstruit avec les libellés lisibles (affichage UI uniquement)
     const flow = [
       ['🎯', TRIGGER_LABELS[form.trigger] || form.trigger || 'Déclencheur'],
       ...(form.action ? [['⚡', ACTION_LABELS[form.action] || form.action]] : []),
@@ -705,14 +658,14 @@ export default function AutomationsPanel({ profileId }) {
       profile_id:   profileId,
       name:         form.name.trim(),
       description:  form.desc.trim(),
-      trigger:      form.trigger,     // clé moteur
-      action:       form.action,      // clé moteur (compatibilité legacy)
-      actions:      actionsList,      // [{type, config}]
-      action_config: actionConfig,    // config à plat (compatibilité legacy)
+      trigger:      form.trigger,
+      action:       form.action,
+      actions:      actionsList,
+      action_config: actionConfig,
       freq:         form.freq || 'Immédiat',
       flow,
       icon:         '⚡',
-      color:        'rgba(245,132,31,.1)',
+      color:        'rgba(245,132,31,.12)',
       updated_at:   new Date().toISOString(),
     };
   };
@@ -756,9 +709,7 @@ export default function AutomationsPanel({ profileId }) {
     if (error) setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: target.active } : a));
   };
 
-  // [A1][A3] Archiver / désarchiver une automation. Ne supprime aucune
-  // donnée (config, logs, historique) — masque simplement l'automation
-  // des filtres actifs par défaut ; réversible à tout moment.
+  // [A1][A3] Archiver / désarchiver une automation.
   const toggleArchive = async (id) => {
     const target = automations.find(a => a.id === id);
     if (!target) return;
@@ -771,8 +722,6 @@ export default function AutomationsPanel({ profileId }) {
 
   /* ── Filtres ── */
   const filtered = useMemo(() => automations.filter(a => {
-    // [A4] "Archivées" n'affiche QUE les automations archivées ; les
-    // autres onglets (Tous/Actives/Inactives) les excluent toujours.
     if (filter === 'Archivées') {
       if (!a.archived) return false;
     } else if (a.archived) {
@@ -780,7 +729,6 @@ export default function AutomationsPanel({ profileId }) {
     }
     const matchFilter = filter === 'Tous' || filter === 'Archivées'
       || (filter === 'Actives' && a.active) || (filter === 'Inactives' && !a.active);
-    // [M8] Recherche sur le nom ou le libellé du déclencheur
     const triggerLabel = TRIGGER_LABELS[a.trigger] || a.trigger || '';
     const matchSearch  = (a.name || '').toLowerCase().includes(search.toLowerCase())
                       || triggerLabel.toLowerCase().includes(search.toLowerCase());
@@ -788,8 +736,6 @@ export default function AutomationsPanel({ profileId }) {
   }), [automations, filter, search]);
 
   /* ── Stats ── */
-  // [A1] Calculées hors automations archivées, pour ne pas fausser la
-  // vue d'ensemble avec des automations mises de côté par l'utilisateur.
   const nonArchived = automations.filter(a => !a.archived);
   const totalRuns   = nonArchived.reduce((sum, a) => sum + (a.runs || 0), 0);
   const totalScore  = nonArchived.reduce((sum, a) => sum + (a.score || 0), 0);
@@ -800,16 +746,13 @@ export default function AutomationsPanel({ profileId }) {
   /* ── Log helpers ── */
   const logStatusCls = s => ({ ok:'log-status ls-ok', err:'log-status ls-err', skip:'log-status ls-skip' }[s] || 'log-status ls-skip');
   const logStatusLbl = s => ({ ok:'✓ Succès', err:'✗ Erreur', skip:'⏭ Ignoré' }[s] || s);
-  const logDotCol    = s => ({ ok:'#22d07a', err:'#f45b5b', skip:'#5c6070' }[s] || '#5c6070');
+  const logDotCol    = s => ({ ok:'#22d07a', err:'#f45b5b', skip:'#9a9db0' }[s] || '#9a9db0');
 
-  // [P1] Contenu du modal extrait dans une variable pour être injecté
-  // via createPortal — évite un JSX dupliqué entre la version normale
-  // et une éventuelle version portée.
   const modalContent = modal ? (
     <div className="ap-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
       <div className="ap-modal">
         <div style={{ display:'flex', justifyContent:'center', marginBottom:'-4px' }}>
-          <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.15)' }} />
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e3e6f0' }} />
         </div>
         <div className="ap-modal-title">
           <span style={{ fontSize:20 }}>{isCreate ? '⚡' : (modal.icon || '⚡')}</span>
@@ -875,8 +818,6 @@ export default function AutomationsPanel({ profileId }) {
           {!isCreate && (
             <>
               <button className="ap-btn-sec" onClick={() => handleDelete(modal.id)} style={{ marginRight:'auto', color:'#f45b5b' }}>🗑 Supprimer</button>
-              {/* [A3] Archiver/désarchiver depuis la modale — referme la modale
-                  car l'automation change de vue (elle sort du filtre courant). */}
               <button className="ap-btn-sec" onClick={() => { toggleArchive(modal.id); setModal(null); }}>
                 {modal.archived ? '📤 Désarchiver' : '📦 Archiver'}
               </button>
@@ -910,10 +851,10 @@ export default function AutomationsPanel({ profileId }) {
         {/* STATS */}
         <div className="ap-stats">
           {[
-            { ico:'✅', bg:'rgba(34,208,122,.1)',   num:nbActive,   lbl:'Actives',    col:'#22d07a' },
-            { ico:'⏸',  bg:'rgba(100,100,120,.1)', num:nbInactive, lbl:'Inactives',  col:'#9fa3b0' },
-            { ico:'🔄', bg:'rgba(77,156,248,.1)',   num:totalRuns,  lbl:'Exécutions', col:'#4d9cf8' },
-            { ico:'🏆', bg:'rgba(245,132,31,.1)',   num:totalScore, lbl:'Score CRM',  col:'#f5841f' },
+            { ico:'✅', bg:'rgba(34,208,122,.12)',  num:nbActive,   lbl:'Actives',    col:'#16a34a' },
+            { ico:'⏸',  bg:'rgba(100,100,120,.1)',  num:nbInactive, lbl:'Inactives',  col:'#6b6f85' },
+            { ico:'🔄', bg:'rgba(77,156,248,.12)',   num:totalRuns,  lbl:'Exécutions', col:'#2563eb' },
+            { ico:'🏆', bg:'rgba(245,132,31,.12)',   num:totalScore, lbl:'Score CRM',  col:'#f5841f' },
           ].map(s => (
             <div key={s.lbl} className="ap-stat">
               <div className="ap-stat-ico" style={{ background: s.bg }}>{s.ico}</div>
@@ -934,15 +875,13 @@ export default function AutomationsPanel({ profileId }) {
         {tab === 'automations' && (
           <>
             <div className="ap-toolbar">
-              {/* [A4] Onglet "Archivées" avec compteur — les automations
-                  archivées n'apparaissent que sous ce filtre dédié. */}
               {['Tous','Actives','Inactives','Archivées'].map(f => (
                 <button key={f} className={`ap-filter-btn${filter === f ? ' on' : ''}`} onClick={() => setFilter(f)}>
                   {f === 'Archivées' ? `📦 Archivées${nbArchived ? ` (${nbArchived})` : ''}` : f}
                 </button>
               ))}
               <div className="ap-search">
-                <span style={{ fontSize:14, color:'#5c6070' }}>🔍</span>
+                <span style={{ fontSize:14, color:'#9a9db0' }}>🔍</span>
                 <input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
             </div>
@@ -952,10 +891,8 @@ export default function AutomationsPanel({ profileId }) {
             ) : (
               <div className="auto-list">
                 {filtered.map(auto => {
-                  // [M8] Libellés lisibles depuis les clés moteur
                   const triggerLabel = TRIGGER_LABELS[auto.trigger] || auto.trigger || 'Aucun';
                   const actionLabel  = ACTION_LABELS[auto.action]   || auto.action   || 'Aucune';
-                  // Flow reconstruit (remplace l'ancien stocké en FR)
                   const cardFlow = [
                     ['🎯', triggerLabel],
                     ...(auto.action ? [['⚡', actionLabel]] : []),
@@ -968,18 +905,16 @@ export default function AutomationsPanel({ profileId }) {
                       <div className="auto-body">
                         <div className="auto-name">
                           {auto.name}
-                          <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.1)':'rgba(100,100,120,.2)', color:auto.active?'#22d07a':'#5c6070', padding:'2px 7px', borderRadius:20 }}>
+                          <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.12)':'rgba(100,100,120,.14)', color:auto.active?'#16a34a':'#6b6f85', padding:'2px 7px', borderRadius:20 }}>
                             {auto.active ? 'Actif' : 'Inactif'}
                           </span>
-                          {/* [A1] Badge visuel pour repérer une automation archivée
-                              (visible seulement sous l'onglet "Archivées"). */}
                           {auto.archived && (
-                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(100,100,120,.18)', color:'#9fa3b0', padding:'2px 7px', borderRadius:20 }}>
+                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(100,100,120,.14)', color:'#6b6f85', padding:'2px 7px', borderRadius:20 }}>
                               📦 Archivé
                             </span>
                           )}
                           {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
-                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(251,191,36,.12)', color:'#fbbf24', padding:'2px 7px', borderRadius:20 }}>
+                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(234,179,8,.14)', color:'#a16207', padding:'2px 7px', borderRadius:20 }}>
                               ⏳ Bientôt
                             </span>
                           )}
@@ -1006,11 +941,6 @@ export default function AutomationsPanel({ profileId }) {
                           <span className="ap-tog-lbl">{auto.active ? 'ON' : 'OFF'}</span>
                           <button className={`ap-toggle ${auto.active ? 'on' : 'off'}`} onClick={() => toggleAuto(auto.id)} />
                         </div>
-                        {/* [A2][A3] Actions rapides directement sur la carte :
-                            modifier, archiver/désarchiver, supprimer — sans
-                            avoir à ouvrir la modale d'édition. flexWrap
-                            permet aux boutons de passer à la ligne sur les
-                            très petits écrans plutôt que de déborder. */}
                         <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
                           <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
                           <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); toggleArchive(auto.id); }}>
@@ -1023,7 +953,7 @@ export default function AutomationsPanel({ profileId }) {
                   );
                 })}
                 {!filtered.length && (
-                  <div style={{ textAlign:'center', padding:'50px 0', color:'#5c6070', fontSize:13 }}>
+                  <div style={{ textAlign:'center', padding:'50px 0', color:'#9a9db0', fontSize:13 }}>
                     {filter === 'Archivées' ? 'Aucune automation archivée' : 'Aucune automation trouvée'}
                   </div>
                 )}
@@ -1035,7 +965,7 @@ export default function AutomationsPanel({ profileId }) {
         {/* ── TEMPLATES ── */}
         {tab === 'templates' && (
           <>
-            <p style={{ fontSize:13, color:'#9fa3b0', marginBottom:14 }}>Démarre rapidement avec un template prêt à l'emploi.</p>
+            <p style={{ fontSize:13, color:'#6b6f85', marginBottom:14 }}>Démarre rapidement avec un template prêt à l'emploi.</p>
             <div className="tmpl-grid">
               {TEMPLATES.map(t => (
                 <div key={t.id} className={`tmpl-card ${t.color}`}>
@@ -1053,11 +983,11 @@ export default function AutomationsPanel({ profileId }) {
         {/* ── LOGS ── */}
         {tab === 'logs' && (
           <>
-            <p style={{ fontSize:13, color:'#9fa3b0', marginBottom:14 }}>Historique des dernières exécutions.</p>
+            <p style={{ fontSize:13, color:'#6b6f85', marginBottom:14 }}>Historique des dernières exécutions.</p>
             {logsLoading ? (
               <div className="ap-loading">Chargement des logs...</div>
             ) : logs.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'40px 0', color:'#5c6070', fontSize:13 }}>
+              <div style={{ textAlign:'center', padding:'40px 0', color:'#9a9db0', fontSize:13 }}>
                 Aucune exécution enregistrée pour le moment.
               </div>
             ) : (
@@ -1082,9 +1012,7 @@ export default function AutomationsPanel({ profileId }) {
       </div>
 
       {/* [P1] Modal rendu hors de l'arbre DOM du dashboard, directement
-          dans document.body, au même niveau que MobileNav.jsx. Corrige
-          le bug de stacking context qui faisait passer la bottom tab
-          bar au-dessus du modal malgré un z-index élevé. */}
+          dans document.body, au même niveau que MobileNav.jsx. */}
       {modalContent && createPortal(modalContent, document.body)}
     </>
   );

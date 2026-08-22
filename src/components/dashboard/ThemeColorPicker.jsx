@@ -35,15 +35,19 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
 
   return (
     <div className="relative" ref={ref}>
+      {/* [FIX THÈME CLAIR] bg-white/10 + border-white/20 + icône blanche
+          étaient conçus pour un fond sombre : sur la topbar blanche du
+          dashboard, le bouton devenait quasi invisible (fond blanc sur
+          blanc). Basculé sur un gris clair opaque + icône foncée. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors"
       >
         <div
           className="w-4 h-4 rounded-full"
           style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}
         />
-        <Palette className="w-3.5 h-3.5 text-white" />
+        <Palette className="w-3.5 h-3.5 text-slate-600" />
       </button>
 
       {open && (
@@ -92,5 +96,3 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
     </div>
   );
 }
-
-

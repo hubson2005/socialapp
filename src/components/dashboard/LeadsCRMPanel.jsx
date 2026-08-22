@@ -40,11 +40,9 @@ import { triggerTaskCompleted }              from '../../lib/triggers/taskComple
 //  [FIX6] `whileHover` de Framer Motion sur les lignes de la liste
 //         désactivé sur appareils sans support du survol (tactile), pour
 //         éviter un état "survolé" qui reste collé après un tap.
-//  [FIX7] Couleur des champs (`inp`) — l'ancien gris plat #2f2f2f détonnait
-//         avec le reste du dashboard (fonds translucides + accent indigo).
-//         Remplacé par un fond sombre teinté indigo, cohérent avec le style
-//         déjà utilisé pour les <select> du panneau (#1a1a2e), + halo au
-//         focus dans la couleur d'accent de l'app.
+//  [FIX7] Couleur des champs (`inpDark`) — fond sombre teinté indigo,
+//         cohérent avec le style déjà utilisé pour les <select> du panneau
+//         (#1a1a2e), + halo au focus dans la couleur d'accent de l'app.
 //  [FIX8] Refonte visuelle de la vue Pipeline : les colonnes vides étaient
 //         invisibles (aucun fond, juste "Aucun lead" flottant), donnant
 //         l'impression d'un board cassé/inachevé dès qu'une colonne était
@@ -76,6 +74,19 @@ import { triggerTaskCompleted }              from '../../lib/triggers/taskComple
 //       (même effet que pour la sélection), et un garde-fou (`useEffect`)
 //       ramène `page` sur la dernière page valide si des leads sont
 //       supprimés entre-temps.
+//
+// ─── THÈME (cette révision) ───────────────────────────────────────────────────
+//  [T1] [FIX THÈME] Le panneau principal (header, barre de recherche,
+//       filtres, tags, barre d'actions groupées, vue Pipeline, vue Liste,
+//       pagination) était calqué sur l'ancien fond sombre du dashboard
+//       (rgba(255,255,255,0.0x) + texte blanc), posé directement sur le
+//       fond clair (#f4f5fa) désormais utilisé par le dashboard — d'où
+//       l'effet délavé. Repassé en thème clair. Les deux panneaux modaux
+//       (fiche lead LeadModal, "Nouveau lead") restent inchangés : overlay
+//       sombre plein écran avec fond opaque #0f0f1a, cohérent avec les
+//       autres modales de l'app (AddPlatformDialog, ProductModal…). Le
+//       style de champ `inp` est donc scindé en deux : `inpDark` (modales,
+//       inchangé) et `inp` (barre de recherche du panneau, thème clair).
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: UserPlus    },
@@ -143,22 +154,23 @@ function getPageNumbers(current, total) {
   return withDots;
 }
 
-// [G2] Barre de pagination réutilisée sous la grille de leads
+// [G2] Barre de pagination réutilisée sous la grille de leads — thème clair
+// (sur la page principale, pas dans une modale).
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
   const pages = getPageNumbers(page, totalPages);
   const btn = (active, disabled) => ({
     minWidth: 32, height: 32, padding: '0 8px', borderRadius: 8, cursor: disabled ? 'not-allowed' : 'pointer',
-    border: `1px solid ${active ? '#6366f1' : 'rgba(255,255,255,0.1)'}`,
-    background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
-    color: disabled ? 'rgba(255,255,255,0.2)' : active ? '#a78bfa' : 'rgba(255,255,255,0.55)',
+    border: `1px solid ${active ? '#6366f1' : '#e6e8f0'}`,
+    background: active ? 'rgba(99,102,241,0.14)' : '#f6f7fb',
+    color: disabled ? '#c3c8d6' : active ? '#4f46e5' : '#6b7280',
     fontSize: 12, fontWeight: 700,
   });
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
       <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={btn(false, page === 1)}>‹</button>
       {pages.map((p, i) => p === '…'
-        ? <span key={`dots-${i}`} style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, padding: '0 4px' }}>…</span>
+        ? <span key={`dots-${i}`} style={{ color: '#a2a7b5', fontSize: 12, padding: '0 4px' }}>…</span>
         : <button key={p} onClick={() => onChange(p)} style={btn(p === page, false)}>{p}</button>
       )}
       <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} style={btn(false, page === totalPages)}>›</button>
@@ -166,11 +178,20 @@ function Pagination({ page, totalPages, onChange }) {
   );
 }
 
-// [FIX7] Fond sombre légèrement teinté indigo (au lieu du gris plat #2f2f2f)
-// + classe "crm-field" pour le halo au focus (voir <style> global plus bas) —
-// cohérent avec l'accent violet/indigo utilisé partout ailleurs dans le
-// dashboard (boutons, badges, select des actions groupées).
+// [T1] Champ clair — utilisé uniquement pour la barre de recherche du
+// panneau principal (page claire).
 const inp = {
+  width: '100%', background: '#f6f7fb',
+  border: '1px solid #e6e8f0', borderRadius: '12px',
+  padding: '11px 13px', color: '#161a2e', outline: 'none',
+  fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit',
+  transition: 'border-color .15s, background .15s',
+};
+
+// [FIX7] Champ sombre — utilisé exclusivement dans les modales à fond
+// opaque (#0f0f1a) : fiche lead (LeadModal) et "Nouveau lead". Fond
+// légèrement teinté indigo, cohérent avec l'accent violet/indigo de l'app.
+const inpDark = {
   width: '100%', background: '#181830',
   border: '1px solid rgba(129,140,248,0.18)', borderRadius: '12px',
   padding: '11px 13px', color: 'white', outline: 'none',
@@ -192,7 +213,7 @@ function Checkbox({ checked, indeterminate, onChange, style = {} }) {
     >
       <div style={{
         width: 17, height: 17, borderRadius: 5, flexShrink: 0,
-        border: `1.5px solid ${checked || indeterminate ? '#6366f1' : 'rgba(255,255,255,0.2)'}`,
+        border: `1.5px solid ${checked || indeterminate ? '#6366f1' : '#c3c8d6'}`,
         background: checked ? '#6366f1' : indeterminate ? 'rgba(99,102,241,0.25)' : 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all .15s', ...style,
@@ -204,15 +225,17 @@ function Checkbox({ checked, indeterminate, onChange, style = {} }) {
   );
 }
 
-function ScoreBar({ score, onChange }) {
+// Utilisé dans LeadGridCard (page claire) ET dans LeadModal (modale sombre) —
+// le libellé "Score prospect" et le track de fond s'adaptent via `dark`.
+function ScoreBar({ score, onChange, dark = false }) {
   const { color, label, icon } = scoreLabel(score);
   return (
     <div style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Score prospect</span>
+        <span style={{ color: dark ? 'rgba(255,255,255,0.5)' : '#8a90a2', fontSize: 12 }}>Score prospect</span>
         <span style={{ color, fontWeight: 700, fontSize: 13 }}>{icon} {score} — {label}</span>
       </div>
-      <div style={{ position: 'relative', height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99 }}>
+      <div style={{ position: 'relative', height: 6, background: dark ? 'rgba(255,255,255,0.08)' : '#e6e8f0', borderRadius: 99 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${score}%`, background: color, borderRadius: 99, transition: 'width .3s, background .3s' }} />
       </div>
       {onChange && (
@@ -255,8 +278,11 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
   );
 }
 
-// [FIX5] Hauteur/largeur minimales relevées à 40px (compact et normal)
-function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
+// [FIX5] Hauteur/largeur minimales relevées à 40px (compact et normal).
+// Utilisé sur page claire (LeadGridCard, PipelineCard) ET dans LeadModal
+// (modale sombre) — les couleurs actives (vert WhatsApp) restent identiques
+// dans les deux contextes ; seul l'état désactivé (numéro manquant) diffère.
+function WhatsAppBtn({ phone, leadId, onContact, compact = false, dark = false }) {
   const hasPhone = !!phone?.trim();
   return (
     <button
@@ -274,8 +300,8 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 0 : 6,
         height: 40, width: compact ? 40 : 'auto', padding: compact ? 0 : '0 14px',
         borderRadius: 10, border: 'none', cursor: hasPhone ? 'pointer' : 'not-allowed',
-        background: hasPhone ? 'rgba(37,211,102,0.15)' : 'rgba(255,255,255,0.05)',
-        color: hasPhone ? '#25d366' : 'rgba(255,255,255,0.2)', fontWeight: 700, fontSize: 12, transition: 'all .2s',
+        background: hasPhone ? 'rgba(37,211,102,0.15)' : (dark ? 'rgba(255,255,255,0.05)' : '#eef0f5'),
+        color: hasPhone ? '#25d366' : (dark ? 'rgba(255,255,255,0.2)' : '#a2a7b5'), fontWeight: 700, fontSize: 12, transition: 'all .2s',
         flexShrink: 0,
       }}
     >
@@ -292,6 +318,7 @@ const actionBtn = (bg) => ({
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
 });
 
+// Utilisé uniquement dans LeadModal (modale sombre) — inchangé.
 function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 22 }}>
@@ -301,6 +328,7 @@ function Section({ title, children }) {
   );
 }
 
+// Utilisé uniquement dans LeadModal (modale sombre) — inchangé, utilise inpDark.
 function Field({ icon, label, value, editing, onChange, type, options, valueRaw }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -308,10 +336,10 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
       <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, width: 80, flexShrink: 0 }}>{label}</span>
       {editing ? (
         type === 'select'
-          ? <select value={valueRaw} onChange={e => onChange(e.target.value)} className="crm-field" style={{ ...inp, padding: '7px 10px' }}>
+          ? <select value={valueRaw} onChange={e => onChange(e.target.value)} className="crm-field-dark" style={{ ...inpDark, padding: '7px 10px' }}>
               {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
             </select>
-          : <input value={value || ''} onChange={e => onChange(e.target.value)} className="crm-field" style={{ ...inp, padding: '7px 10px' }} />
+          : <input value={value || ''} onChange={e => onChange(e.target.value)} className="crm-field-dark" style={{ ...inpDark, padding: '7px 10px' }} />
       ) : (
         <span style={{ color: value ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)', fontSize: 13 }}>{value || '—'}</span>
       )}
@@ -319,6 +347,7 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
   );
 }
 
+// ─── LeadModal — tiroir latéral, overlay sombre volontaire, inchangé ─────────
 function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
@@ -457,7 +486,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             </div>
             <div>
               {editing
-                ? <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="crm-field" style={{ ...inp, padding: '6px 10px', fontSize: 15, fontWeight: 700, width: 180 }} />
+                ? <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="crm-field-dark" style={{ ...inpDark, padding: '6px 10px', fontSize: 15, fontWeight: 700, width: 180 }} />
                 : <h3 style={{ margin: 0, color: 'white', fontSize: 16, fontWeight: 700 }}>{lead.name}</h3>
               }
               <StatusBadge status={current.status} />
@@ -474,7 +503,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <WhatsAppBtn phone={current.phone} leadId={lead.id} onContact={async (id) => {
+            <WhatsAppBtn phone={current.phone} leadId={lead.id} dark onContact={async (id) => {
               await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
               onContact && onContact();
               loadActivities();
@@ -513,27 +542,27 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
           <Section title="Tags">
             <TagChips tags={lead.tags || []} onRemove={removeTag} />
             <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
-              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field" style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
+              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field-dark" style={{ ...inpDark, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
               <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
             </div>
           </Section>
 
           <Section title="Score commercial">
-            <ScoreBar score={editing ? form.score : (lead.score ?? 0)} onChange={editing ? v => setForm(f => ({ ...f, score: v })) : null} />
+            <ScoreBar score={editing ? form.score : (lead.score ?? 0)} onChange={editing ? v => setForm(f => ({ ...f, score: v })) : null} dark />
           </Section>
 
           <Section title="Notes">
             {current.notes && (
               <p style={{ margin: '0 0 8px', color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.6 }}>
                 {editing
-                  ? <textarea value={form.notes} rows={3} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="crm-field" style={{ ...inp, resize: 'none' }} />
+                  ? <textarea value={form.notes} rows={3} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="crm-field-dark" style={{ ...inpDark, resize: 'none' }} />
                   : current.notes
                 }
               </p>
             )}
             {!editing && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." className="crm-field" style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
+                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." className="crm-field-dark" style={{ ...inpDark, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
                 <button onClick={addNote} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
               </div>
             )}
@@ -585,6 +614,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 // iOS/Android — contrairement à l'ancienne API HTML5 drag-and-drop native.
 // [FIX8] Poignée de drag visible (icône grip) — signale que la carte est
 // déplaçable au lieu de le laisser deviner par un curseur "grab" seul.
+// [T1] Carte blanche — la vue Pipeline vit dans le panneau principal (clair).
 function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDragEnd }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   const startRef = useRef({ x: 0, y: 0, dragging: false, pointerId: null });
@@ -632,7 +662,8 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       style={{
-        background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10,
+        background: '#ffffff', border: '1px solid #e6e8f0', borderRadius: 10,
+        boxShadow: '0 1px 2px rgba(15,23,42,0.05)',
         padding: '10px 11px', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', flexDirection: 'column', gap: 8,
         touchAction: 'none', userSelect: 'none',
         opacity: isDragging ? 0.45 : 1, transition: 'opacity .1s, border-color .15s',
@@ -642,17 +673,17 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
         <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `1.5px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: sc }}>
           {(lead.name || '?')[0].toUpperCase()}
         </div>
-        <span style={{ color: 'white', fontSize: 12.5, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</span>
-        <GripVertical size={13} color="rgba(255,255,255,0.22)" style={{ flexShrink: 0 }} />
+        <span style={{ color: '#161a2e', fontSize: 12.5, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</span>
+        <GripVertical size={13} color="#c3c8d6" style={{ flexShrink: 0 }} />
       </div>
       {(lead.phone || lead.company) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {lead.phone && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}</span>}
-          {lead.company && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={9} /> {lead.company}</span>}
+          {lead.phone && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}</span>}
+          {lead.company && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={9} /> {lead.company}</span>}
         </div>
       )}
       {!!lead.tags?.length && <TagChips tags={lead.tags} size="small" />}
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
+      <div style={{ height: 3, background: '#eef0f5', borderRadius: 99 }}>
         <div style={{ height: '100%', width: `${lead.score || 0}%`, background: sc, borderRadius: 99 }} />
       </div>
     </div>
@@ -664,6 +695,7 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
 // dédiée par statut dans l'état vide, et scroll interne par colonne (plutôt
 // que de laisser une colonne pleine étirer toute la page verticalement
 // pendant que les colonnes vides restent minuscules à côté).
+// [T1] Colonnes blanches — cohérentes avec le panneau principal clair.
 function PipelineView({ leads, onCardClick, onStatusChange }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [draggedId, setDraggedId] = useState(null);
@@ -706,16 +738,17 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
             data-status-col={status.id}
             style={{
               minWidth: columnWidth, width: columnWidth, flexShrink: 0,
-              background: isOver ? `${status.color}14` : 'rgba(255,255,255,0.025)',
-              border: `1px solid ${isOver ? status.color + '66' : 'rgba(255,255,255,0.07)'}`,
+              background: isOver ? `${status.color}14` : '#ffffff',
+              border: `1px solid ${isOver ? status.color + '66' : '#e6e8f0'}`,
               borderRadius: 14, padding: 8, transition: 'background .12s, border-color .12s',
               display: 'flex', flexDirection: 'column',
+              boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px 10px', flexShrink: 0 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.color, flexShrink: 0 }} />
               <span style={{ color: status.color, fontSize: 12, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{status.label}</span>
-              <span style={{ color: count > 0 ? status.color : 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 700, background: count > 0 ? `${status.color}22` : 'rgba(255,255,255,0.06)', borderRadius: 99, padding: '1px 7px', flexShrink: 0 }}>{count}</span>
+              <span style={{ color: count > 0 ? status.color : '#a2a7b5', fontSize: 11, fontWeight: 700, background: count > 0 ? `${status.color}22` : '#eef0f5', borderRadius: 99, padding: '1px 7px', flexShrink: 0 }}>{count}</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', maxHeight: 480, minHeight: 60, paddingRight: 2 }}>
@@ -732,8 +765,8 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
               ))}
               {count === 0 && (
                 <div style={{ textAlign: 'center', padding: '26px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <StatusIcon size={19} color="rgba(255,255,255,0.15)" />
-                  <span style={{ color: 'rgba(255,255,255,0.22)', fontSize: 11 }}>Aucun lead ici</span>
+                  <StatusIcon size={19} color="#c3c8d6" />
+                  <span style={{ color: '#a2a7b5', fontSize: 11 }}>Aucun lead ici</span>
                 </div>
               )}
             </div>
@@ -748,17 +781,19 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
 // Reprend les mêmes informations que l'ancienne ligne pleine largeur
 // (statut, contact, tags, score, WhatsApp), condensées verticalement pour
 // tenir dans une case de grille au lieu d'une ligne pleine largeur.
+// [T1] Carte blanche — vit dans le panneau principal clair.
 function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   return (
     <motion.div
       layout onClick={onOpen}
-      {...(canHover ? { whileHover: { background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.07)' } } : {})}
+      {...(canHover ? { whileHover: { background: isSelected ? 'rgba(99,102,241,0.1)' : '#f6f7fb' } } : {})}
       style={{
         display: 'flex', flexDirection: 'column', gap: 10, padding: 14,
-        background: isSelected ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${isSelected ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.08)'}`,
+        background: isSelected ? 'rgba(99,102,241,0.06)' : '#ffffff',
+        border: `1px solid ${isSelected ? 'rgba(99,102,241,0.35)' : '#e6e8f0'}`,
         borderRadius: 14, cursor: 'pointer', transition: 'border-color .15s, background .15s', minWidth: 0,
+        boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -767,15 +802,15 @@ function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
           {(lead.name || '?')[0].toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: 'white', fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
+          <div style={{ color: '#161a2e', fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
           <div style={{ marginTop: 4 }}><StatusBadge status={lead.status} /></div>
         </div>
       </div>
 
       {(lead.phone || lead.company) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.4)', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}</span>}
-          {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.4)', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Building2 size={10} /> {lead.company}</span>}
+          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}</span>}
+          {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Building2 size={10} /> {lead.company}</span>}
         </div>
       )}
 
@@ -962,34 +997,38 @@ export default function LeadsCRMPanel({ profileId }) {
   // n'existe plus, on retombe sur la dernière page valide.
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
+  if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: '#a2a7b5', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* [FIX4] classe crm-modal : max-height 90vh puis 90dvh (fallback CSS)
-          [FIX7] classe crm-field : halo indigo au focus pour tous les champs
-          utilisant le style `inp` (recherche, formulaires, tags, notes...). */}
+          [FIX7] crm-field-dark : halo indigo au focus pour les champs des
+          modales (fiche lead, nouveau lead, tags, notes...).
+          [T1] crm-field-light : même halo, adapté au thème clair, pour la
+          barre de recherche du panneau principal. */}
       <style>{`
         .crm-modal{max-height:90vh;max-height:90dvh;}
-        .crm-field:focus{border-color:rgba(129,140,248,0.6)!important;background:#1c1c38!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
-        .crm-field::placeholder{color:rgba(255,255,255,0.28);}
+        .crm-field-dark:focus{border-color:rgba(129,140,248,0.6)!important;background:#1c1c38!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
+        .crm-field-dark::placeholder{color:rgba(255,255,255,0.28);}
+        .crm-field-light:focus{border-color:#8b5cf6!important;background:#ffffff!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
+        .crm-field-light::placeholder{color:#a2a7b5;}
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>Leads CRM</h3>
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '4px 0 0' }}>{leads.length} lead{leads.length !== 1 ? 's' : ''} au total</p>
+          <h3 style={{ color: '#161a2e', fontSize: 16, fontWeight: 800, margin: 0 }}>Leads CRM</h3>
+          <p style={{ color: '#8a90a2', fontSize: 12, margin: '4px 0 0' }}>{leads.length} lead{leads.length !== 1 ? 's' : ''} au total</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 3 }}>
-            <button onClick={() => setView('list')} title="Vue liste" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'list' ? 'rgba(99,102,241,0.25)' : 'transparent', color: view === 'list' ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+          <div style={{ display: 'flex', background: '#f6f7fb', border: '1px solid #e6e8f0', borderRadius: 12, padding: 3 }}>
+            <button onClick={() => setView('list')} title="Vue liste" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'list' ? '#ffffff' : 'transparent', boxShadow: view === 'list' ? '0 1px 3px rgba(15,23,42,0.1)' : 'none', color: view === 'list' ? '#4f46e5' : '#8a90a2', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
               <List size={13} /> {(!isMobile || isTablet) && 'Liste'}
             </button>
-            <button onClick={() => setView('pipeline')} title="Vue pipeline" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'pipeline' ? 'rgba(99,102,241,0.25)' : 'transparent', color: view === 'pipeline' ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => setView('pipeline')} title="Vue pipeline" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'pipeline' ? '#ffffff' : 'transparent', boxShadow: view === 'pipeline' ? '0 1px 3px rgba(15,23,42,0.1)' : 'none', color: view === 'pipeline' ? '#4f46e5' : '#8a90a2', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
               <Columns3 size={13} /> {(!isMobile || isTablet) && 'Pipeline'}
             </button>
           </div>
-          <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', background: '#f6f7fb', border: '1px solid #e6e8f0', borderRadius: 12, color: '#454b5a', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             <Download size={13} /> {isMobile && !isTablet ? '' : 'Exporter CSV'}
           </button>
           <button onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
@@ -1000,19 +1039,19 @@ export default function LeadsCRMPanel({ profileId }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ position: 'relative' }}>
-          <Search size={14} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+          <Search size={14} color="#9095a5" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher un lead (nom, téléphone, email, entreprise, tag)..."
-            className="crm-field" style={{ ...inp, paddingLeft: 38 }} />
+            className="crm-field-light" style={{ ...inp, paddingLeft: 38 }} />
         </div>
 
         {view === 'list' && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <button onClick={() => setFilter('all')} style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === 'all' ? '#6366f1' : 'rgba(255,255,255,0.08)'}`, background: filter === 'all' ? 'rgba(99,102,241,0.15)' : 'transparent', color: filter === 'all' ? '#818cf8' : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600 }}>
+            <button onClick={() => setFilter('all')} style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === 'all' ? '#6366f1' : '#dde0ea'}`, background: filter === 'all' ? 'rgba(99,102,241,0.12)' : 'transparent', color: filter === 'all' ? '#4f46e5' : '#6b7280', fontSize: 12, fontWeight: 600 }}>
               Tous ({leads.length})
             </button>
             {STATUSES.map(s => (
-              <button key={s.id} onClick={() => setFilter(s.id)} style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === s.id ? s.color : 'rgba(255,255,255,0.08)'}`, background: filter === s.id ? s.bg : 'transparent', color: filter === s.id ? s.color : 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600 }}>
+              <button key={s.id} onClick={() => setFilter(s.id)} style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === s.id ? s.color : '#dde0ea'}`, background: filter === s.id ? s.bg : 'transparent', color: filter === s.id ? s.color : '#6b7280', fontSize: 12, fontWeight: 600 }}>
                 {s.label} ({statusCounts[s.id] || 0})
               </button>
             ))}
@@ -1021,9 +1060,9 @@ export default function LeadsCRMPanel({ profileId }) {
 
         {allTags.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}><TagIcon size={11} /> Tags :</span>
+            <span style={{ color: '#9095a5', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}><TagIcon size={11} /> Tags :</span>
             {allTags.map(tag => (
-              <button key={tag} onClick={() => setTagFilter(prev => prev === tag ? null : tag)} style={{ padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${tagFilter === tag ? tagColor(tag) : 'rgba(255,255,255,0.08)'}`, background: tagFilter === tag ? `${tagColor(tag)}22` : 'transparent', color: tagFilter === tag ? tagColor(tag) : 'rgba(255,255,255,0.4)', fontSize: 10.5, fontWeight: 600 }}>
+              <button key={tag} onClick={() => setTagFilter(prev => prev === tag ? null : tag)} style={{ padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${tagFilter === tag ? tagColor(tag) : '#dde0ea'}`, background: tagFilter === tag ? `${tagColor(tag)}22` : 'transparent', color: tagFilter === tag ? tagColor(tag) : '#8a90a2', fontSize: 10.5, fontWeight: 600 }}>
                 #{tag}
               </button>
             ))}
@@ -1034,21 +1073,21 @@ export default function LeadsCRMPanel({ profileId }) {
       <AnimatePresence>
         {selectedIds.size > 0 && view === 'list' && (
           <motion.div initial={{ opacity: 0, y: -6, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -6, height: 0 }} style={{ overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 16px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 14 }}>
-              <span style={{ background: 'rgba(99,102,241,0.25)', color: '#a78bfa', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 99 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 16px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 14 }}>
+              <span style={{ background: 'rgba(99,102,241,0.16)', color: '#4338ca', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 99 }}>
                 {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
               </span>
-              <button onClick={() => setSelectedIds(new Set())} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => setSelectedIds(new Set())} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                 <X size={11} /> Désélectionner
               </button>
-              <select value={bulkStatus} onChange={e => { setBulkStatus(e.target.value); bulkChangeStatus(e.target.value); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: '#1a1a2e', color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+              <select value={bulkStatus} onChange={e => { setBulkStatus(e.target.value); bulkChangeStatus(e.target.value); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#454b5a', fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
                 <option value="">Changer le statut…</option>
                 {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
-              <button onClick={exportSelectedCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={exportSelectedCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                 <Download size={11} /> CSV
               </button>
-              <button onClick={bulkDelete} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
+              <button onClick={bulkDelete} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
                 <Trash2 size={11} /> Supprimer
               </button>
             </div>
@@ -1058,27 +1097,27 @@ export default function LeadsCRMPanel({ profileId }) {
 
       {view === 'pipeline' && (
         loading
-          ? <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" /></div>
+          ? <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="#a2a7b5" className="animate-spin" /></div>
           : <PipelineView leads={filteredLeads} onCardClick={setSelectedLead} onStatusChange={handlePipelineStatusChange} />
       )}
 
       {view === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="rgba(255,255,255,0.3)" className="animate-spin" /></div>
+            <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="#a2a7b5" className="animate-spin" /></div>
           ) : filteredLeads.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: 40, color: '#a2a7b5', fontSize: 13 }}>
               {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
             </div>
           ) : (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 16px', color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 16px', color: '#8a90a2', fontSize: 11 }}>
                 <Checkbox checked={allSelected} indeterminate={someSelected && !allSelected} onChange={toggleSelectAll} />
                 <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={toggleSelectAll}>
                   {allSelected ? 'Tout désélectionner' : `Tout sélectionner (${filteredLeads.length})`}
                 </span>
                 {totalPages > 1 && (
-                  <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.25)' }}>
+                  <span style={{ marginLeft: 'auto', color: '#a2a7b5' }}>
                     Page {page}/{totalPages} — {filteredLeads.length} lead{filteredLeads.length > 1 ? 's' : ''}
                   </span>
                 )}
@@ -1128,18 +1167,18 @@ export default function LeadsCRMPanel({ profileId }) {
               ].map(f => (
                 <div key={f.key}>
                   <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} className="crm-field" style={inp} placeholder={f.ph} />
+                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} className="crm-field-dark" style={inpDark} placeholder={f.ph} />
                 </div>
               ))}
               <div>
                 <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Source</label>
-                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} className="crm-field" style={inp}>
+                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} className="crm-field-dark" style={inpDark}>
                   {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
-                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field" style={{ ...inp, resize: 'none' }} placeholder="Notes additionnelles..." />
+                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field-dark" style={{ ...inpDark, resize: 'none' }} placeholder="Notes additionnelles..." />
               </div>
               <button onClick={addLead} disabled={adding} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 13, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 12, color: 'white', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer', opacity: adding ? 0.7 : 1, marginTop: 4 }}>
                 {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}

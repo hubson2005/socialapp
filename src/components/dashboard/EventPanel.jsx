@@ -22,6 +22,10 @@ const isVideoUrl = (url) =>
   /\.(mp4|webm|ogg|mov|avi|mkv|quicktime)$/i.test(url || "");
 
 // ─── EventMediaCarousel ───────────────────────────────────────────────────────
+// Utilisé à la fois dans la zone d'édition (médias uploadés) et dans
+// EventPreviewCard (aperçu public) — reste en overlay sombre volontaire
+// (le média lui-même est souvent sombre/coloré, les contrôles doivent
+// rester lisibles dessus quelle que soit l'image).
 function EventMediaCarousel({ medias = [], onRemove, adminMode = false }) {
   const [current, setCurrent] = useState(0);
   const intervalRef = useRef(null);
@@ -132,6 +136,10 @@ const formatEventDate = (iso) => {
 // ─── EventPreviewCard ──────────────────────────────────────────────────────
 // Aperçu en direct de la carte événement telle qu'elle apparaîtra publiquement :
 // se met à jour instantanément à chaque frappe/upload, sans appel réseau.
+// [INCHANGÉ] Ce composant reproduit fidèlement la carte publique (dégradé
+// coloré + texte blanc) — c'est un aperçu, pas une zone de contenu du
+// dashboard : il doit rester tel qu'il apparaîtra sur le profil public,
+// pas basculer vers le thème clair du dashboard.
 function EventPreviewCard({ profile }) {
   const medias = Array.isArray(profile.event_images)
     ? profile.event_images
@@ -202,6 +210,12 @@ function EventPreviewCard({ profile }) {
 }
 
 // ─── EventPanel ───────────────────────────────────────────────────────────────
+// [FIX THÈME] La colonne d'édition (header, blocs infos/couleurs/médias,
+// champs de saisie) était calquée sur l'ancien fond sombre du dashboard
+// (rgba(255,255,255,0.0x) + texte blanc). Repassée en thème clair,
+// cohérent avec le fond #f4f5fa désormais utilisé par le dashboard.
+// EventPreviewCard (colonne de droite) reste inchangée — voir commentaire
+// sur ce composant.
 export default function EventPanel({ localProfile, updateLocal, isActivated }) {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const isMobile = useMediaQuery("(max-width: 640px)");
@@ -271,13 +285,13 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
 
   const inputStyle = {
     width: "100%", minWidth: 0, padding: "10px 12px",
-    background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "10px", color: "white", fontSize: "13px", outline: "none",
+    background: "#f6f7fb", border: "1px solid #e6e8f0",
+    borderRadius: "10px", color: "#161a2e", fontSize: "13px", outline: "none",
     boxSizing: "border-box",
   };
 
   const previewLabelStyle = {
-    color: "rgba(255,255,255,0.38)", fontSize: "10.5px", fontWeight: 700,
+    color: "#8a90a2", fontSize: "10.5px", fontWeight: 700,
     textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 9px",
     display: "flex", alignItems: "center", gap: "6px",
   };
@@ -285,7 +299,7 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
   const previewBlock = (
     <div style={{ width: "100%", minWidth: 0 }}>
       <p style={previewLabelStyle}>
-        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#34d399", flexShrink: 0 }} />
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#16a34a", flexShrink: 0 }} />
         Aperçu en direct
       </p>
       <EventPreviewCard profile={localProfile} />
@@ -305,8 +319,8 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
 
         {/* Header */}
         <div>
-          <h2 style={{ color: "white", fontSize: "18px", fontWeight: 800, margin: 0 }}>Mode Événement</h2>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "12px", margin: "4px 0 0" }}>
+          <h2 style={{ color: "#161a2e", fontSize: "18px", fontWeight: 800, margin: 0 }}>Mode Événement</h2>
+          <p style={{ color: "#8a90a2", fontSize: "12px", margin: "4px 0 0" }}>
             Ajoutez des images ou vidéos de votre événement
           </p>
         </div>
@@ -315,41 +329,42 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
         {isMobile && previewBlock}
 
         {/* Infos événement */}
-        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", display: "flex", flexDirection: "column", gap: "12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+        <div style={{ background: "#ffffff", border: "1px solid #e6e8f0", borderRadius: "18px", padding: isMobile ? "14px" : "16px", display: "flex", flexDirection: "column", gap: "12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box", boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
           <input type="text" value={localProfile.event_name || ""} onChange={(e) => updateLocal({ event_name: e.target.value })} placeholder="Nom de l'événement" style={inputStyle} />
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px", width: "100%", minWidth: 0 }}>
             <input type="datetime-local" value={localProfile.event_date || ""} onChange={(e) => updateLocal({ event_date: e.target.value })} style={inputStyle} />
 
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
-              <MapPin size={14} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
-              <input type="text" value={localProfile.event_location || ""} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu" style={{ background: "transparent", border: "none", color: "white", fontSize: "13px", outline: "none", flex: 1, width: "100%", minWidth: 0 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f6f7fb", border: "1px solid #e6e8f0", borderRadius: "10px", padding: "10px 12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+              <MapPin size={14} color="#9095a5" style={{ flexShrink: 0 }} />
+              <input type="text" value={localProfile.event_location || ""} onChange={(e) => updateLocal({ event_location: e.target.value })} placeholder="Lieu" style={{ background: "transparent", border: "none", color: "#161a2e", fontSize: "13px", outline: "none", flex: 1, width: "100%", minWidth: 0 }} />
             </div>
           </div>
 
          <textarea value={localProfile.event_description || ""} onChange={(e) => updateLocal({ event_description: e.target.value })} placeholder="Description..." rows={3} style={{ ...inputStyle, resize: "none" }} />
 
           {/* Lien de réservation externe (Calendly, Wave, formulaire, etc.) */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
-            <Calendar size={14} color="rgba(255,255,255,0.3)" style={{ flexShrink: 0 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f6f7fb", border: "1px solid #e6e8f0", borderRadius: "10px", padding: "10px 12px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+            <Calendar size={14} color="#9095a5" style={{ flexShrink: 0 }} />
             <input
               type="url"
               value={localProfile.event_booking_url || ""}
               onChange={(e) => updateLocal({ event_booking_url: e.target.value })}
               placeholder="Lien de réservation (https://...)"
-              style={{ background: "transparent", border: "none", color: "white", fontSize: "13px", outline: "none", flex: 1, width: "100%", minWidth: 0 }}
+              style={{ background: "transparent", border: "none", color: "#161a2e", fontSize: "13px", outline: "none", flex: 1, width: "100%", minWidth: 0 }}
             />
           </div>
         </div>
 
         {/* Couleurs */}
-        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+        <div style={{ background: "#ffffff", border: "1px solid #e6e8f0", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box", boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             {EVENT_COLOR_PRESETS.map((p, i) => (
               <button key={i} onClick={() => updateLocal({ event_color1: p.c1, event_color2: p.c2 })} style={{
                 width: "32px", height: "32px", borderRadius: "9px",
                 background: `linear-gradient(135deg,${p.c1},${p.c2})`,
-                border: localProfile.event_color1 === p.c1 ? "3px solid white" : "3px solid transparent",
+                border: localProfile.event_color1 === p.c1 ? "3px solid #6366f1" : "3px solid transparent",
+                boxShadow: localProfile.event_color1 === p.c1 ? "0 0 0 1px rgba(99,102,241,0.25)" : "none",
                 cursor: "pointer", flexShrink: 0,
               }} />
             ))}
@@ -357,20 +372,20 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
         </div>
 
         {/* ── Médias ── */}
-        <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
+        <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "18px", padding: isMobile ? "14px" : "16px", width: "100%", minWidth: 0, overflow: "hidden", boxSizing: "border-box" }}>
 
           {/* Header médias — bouton "+" toujours à droite */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-            <ImagePlus size={14} color="rgba(255,255,255,0.5)" />
-            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "12px", fontWeight: 600 }}>Médias</span>
+            <ImagePlus size={14} color="#6b7280" />
+            <span style={{ color: "#454b5a", fontSize: "12px", fontWeight: 600 }}>Médias</span>
 
             {imgCount > 0 && (
-              <span style={{ background: "rgba(255,255,255,0.12)", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
+              <span style={{ background: "#eef0f5", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "#454b5a", fontWeight: 600 }}>
                 🖼 {imgCount}
               </span>
             )}
             {videoCount > 0 && (
-              <span style={{ background: "rgba(99,102,241,0.3)", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "#a5b4fc", fontWeight: 600 }}>
+              <span style={{ background: "rgba(99,102,241,0.18)", borderRadius: "6px", padding: "1px 6px", fontSize: "10px", color: "#4338ca", fontWeight: 600 }}>
                 ▶ {videoCount}
               </span>
             )}
@@ -384,10 +399,10 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
                 marginLeft: "auto",
                 display: "flex", alignItems: "center", gap: "5px",
                 padding: "5px 10px",
-                background: "rgba(99,102,241,0.2)",
-                border: "1px solid rgba(99,102,241,0.4)",
+                background: "rgba(99,102,241,0.14)",
+                border: "1px solid rgba(99,102,241,0.35)",
                 borderRadius: "8px",
-                color: "#a5b4fc",
+                color: "#4338ca",
                 fontSize: "11px", fontWeight: 700,
                 cursor: uploadingMedia ? "wait" : "pointer",
                 opacity: uploadingMedia ? 0.6 : 1,
@@ -425,8 +440,8 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
               onClick={() => !uploadingMedia && fileInputRef.current?.click()}
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
-                background: "rgba(255,255,255,0.03)",
-                border: "2px dashed rgba(255,255,255,0.12)",
+                background: "#f9fafc",
+                border: "2px dashed #dde0ea",
                 borderRadius: "14px",
                 padding: isMobile ? "20px" : "28px",
                 cursor: uploadingMedia ? "wait" : "pointer",
@@ -435,11 +450,11 @@ export default function EventPanel({ localProfile, updateLocal, isActivated }) {
               }}
             >
               {uploadingMedia ? (
-                <Loader2 size={20} color="rgba(99,102,241,0.8)" className="animate-spin" />
+                <Loader2 size={20} color="#6366f1" className="animate-spin" />
               ) : (
                 <>
-                  <ImagePlus size={18} color="rgba(255,255,255,0.3)" />
-                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "12px", margin: 0, textAlign: "center" }}>
+                  <ImagePlus size={18} color="#a2a7b5" />
+                  <p style={{ color: "#8a90a2", fontSize: "12px", margin: 0, textAlign: "center" }}>
                     Cliquez ou utilisez le bouton Ajouter
                   </p>
                 </>

@@ -2,6 +2,14 @@
 // ─────────────────────────────────────────────────────────────────
 // Exporte 3 composants IA :
 //   import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels"
+//
+// [THÈME CLAIR — cette révision] Les design tokens partagés (objet C)
+// étaient calés sur un fond quasi-noir (#0c0d1a / #141525) avec texte
+// blanc. Repassés en thème clair cohérent avec le reste du dashboard :
+// cartes blanches, bordures #e6e8f0, texte #151329/#6b6f85. Les couleurs
+// d'accent (violet IA, vert WhatsApp, orange) sont conservées, juste
+// éclaircies/assombries ponctuellement là où le contraste sur fond blanc
+// l'exigeait (ex: texte violet clair illisible sur fond blanc).
 // ─────────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
@@ -12,21 +20,21 @@ import {
   Plus, CheckCircle, TrendingUp,
 } from 'lucide-react'
 
-// ─── Design tokens partagés ───────────────────────────────────────
+// ─── Design tokens partagés (thème clair) ──────────────────────────
 const C = {
-  bg:         '#0c0d1a',
-  card:       '#141525',
-  border:     'rgba(255,255,255,0.07)',
-  purple:     '#6c63ff',
-  purpleL:    '#8b84ff',
-  purpleDim:  'rgba(108,99,255,0.15)',
-  green:      '#25D366',
+  bg:         '#f8f9fc',
+  card:       '#ffffff',
+  border:     '#e6e8f0',
+  purple:     '#6366f1',
+  purpleL:    '#4f46e5',
+  purpleDim:  'rgba(99,102,241,0.1)',
+  green:      '#16a34a',
   greenDim:   'rgba(37,211,102,0.12)',
-  orange:     '#ff9500',
+  orange:     '#b45309',
   orangeDim:  'rgba(255,149,0,0.12)',
-  text:       '#ffffff',
-  sub:        '#8b8fa8',
-  mute:       '#4a4e6a',
+  text:       '#151329',
+  sub:        '#6b6f85',
+  mute:       '#9a9db0',
 }
 
 // ─── Styles partagés ──────────────────────────────────────────────
@@ -51,13 +59,14 @@ const lbl = {
   fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px',
 }
 const resultCard = {
-  background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`,
+  background: C.bg, border: `1px solid ${C.border}`,
   borderRadius: 10, padding: '12px 14px', marginBottom: 8,
   display: 'flex', alignItems: 'flex-start', gap: 10,
 }
 const panelWrap = (accent) => ({
   background: C.card,
   border: `1px solid ${accent}`,
+  boxShadow: '0 1px 2px rgba(16,18,40,0.04), 0 4px 16px rgba(16,18,40,0.05)',
   borderRadius: 14, padding: '18px', marginBottom: 14,
 })
 const panelHeader = (icon, title, onClose, iconColor) => (
@@ -148,7 +157,7 @@ Réponds UNIQUEMENT en JSON valide :
   )
 
   return (
-    <div style={panelWrap('rgba(108,99,255,0.3)')}>
+    <div style={panelWrap('rgba(99,102,241,0.3)')}>
       {panelHeader(<Sparkles size={15} color={C.purpleL} />, 'Générateur de bio IA', () => setOpen(false))}
 
       <div style={{ marginBottom: 12 }}>
@@ -219,7 +228,7 @@ Réponds UNIQUEMENT en JSON valide :
         {results.hashtags && <>
           <p style={{ ...lbl, margin: '12px 0 8px' }}>Hashtags</p>
           <div style={{ ...resultCard, alignItems: 'center' }}>
-            <p style={{ flex: 1, color: C.purple, fontSize: 12, margin: 0, lineHeight: 1.7 }}>{results.hashtags}</p>
+            <p style={{ flex: 1, color: C.purpleL, fontSize: 12, margin: 0, lineHeight: 1.7 }}>{results.hashtags}</p>
             <button onClick={() => copy(results.hashtags, 'hash')} style={{ ...btn('ghost'), padding: '4px 9px', fontSize: 11 }}>
               {copied === 'hash' ? <Check size={11} /> : <Copy size={11} />}
             </button>
@@ -294,7 +303,7 @@ Réponds UNIQUEMENT en JSON valide :
   )
 
   return (
-    <div style={panelWrap('rgba(37,211,102,0.25)')}>
+    <div style={panelWrap('rgba(37,211,102,0.3)')}>
       {panelHeader(<Sparkles size={15} color={C.green} />, 'Campagne WhatsApp IA', () => setOpen(false))}
 
       <div style={{ marginBottom: 12 }}>
@@ -302,7 +311,7 @@ Réponds UNIQUEMENT en JSON valide :
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: 6 }}>
           {TYPES_CAM.map(t => (
             <button key={t.id} onClick={() => setType(t.id)}
-              style={{ padding: '8px 10px', borderRadius: 9, border: `1px solid ${type === t.id ? C.green : C.border}`, background: type === t.id ? C.greenDim : 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+              style={{ padding: '8px 10px', borderRadius: 9, border: `1px solid ${type === t.id ? C.green : C.border}`, background: type === t.id ? C.greenDim : C.bg, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
               <p style={{ color: C.text, fontSize: 12, fontWeight: 700, margin: '0 0 2px' }}>{t.label}</p>
               <p style={{ color: C.sub, fontSize: 10, margin: 0 }}>{t.desc}</p>
             </button>
@@ -345,7 +354,7 @@ Réponds UNIQUEMENT en JSON valide :
         <p style={{ ...lbl, margin: '0 0 10px' }}>Messages générés — choisissez le meilleur</p>
         {results.map((msg, i) => (
           <div key={i} onClick={() => setSelected(i)}
-            style={{ background: selected === i ? 'rgba(37,211,102,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${selected === i ? C.green : C.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 8, cursor: 'pointer', transition: 'all .15s' }}>
+            style={{ background: selected === i ? 'rgba(37,211,102,0.08)' : C.bg, border: `1px solid ${selected === i ? C.green : C.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 8, cursor: 'pointer', transition: 'all .15s' }}>
             <p style={{ color: C.text, fontSize: 13, margin: '0 0 10px', lineHeight: 1.6 }}>{msg}</p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ color: C.sub, fontSize: 10 }}>{msg.length} caractères</span>
@@ -377,9 +386,9 @@ Réponds UNIQUEMENT en JSON valide :
 //   <PlatformAISuggestions profile={localProfile} onAdd={(key) => handleAddPlatform(key)} />
 
 const PRIORITY_COLOR = {
-  haute:   { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.3)',  color: '#f87171', label: 'Priorité haute'   },
-  moyenne: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', color: '#fbbf24', label: 'Priorité moyenne' },
-  faible:  { bg: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.25)', color: '#4ade80', label: 'Optionnel'        },
+  haute:   { bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',  color: '#dc2626', label: 'Priorité haute'   },
+  moyenne: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', color: '#b45309', label: 'Priorité moyenne' },
+  faible:  { bg: 'rgba(34,197,94,0.1)',   border: 'rgba(34,197,94,0.25)', color: '#16a34a', label: 'Optionnel'        },
 }
 
 const PLATFORM_EMOJI = {
@@ -432,7 +441,7 @@ Réponds UNIQUEMENT en JSON valide :
   )
 
   return (
-    <div style={panelWrap(C.purpleDim)}>
+    <div style={panelWrap('rgba(99,102,241,0.3)')}>
       {panelHeader(<TrendingUp size={15} color={C.purpleL} />, 'Plateformes recommandées par IA', () => setOpen(false))}
 
       <div style={{ marginBottom: 10 }}>
@@ -464,7 +473,7 @@ Réponds UNIQUEMENT en JSON valide :
           const prio    = PRIORITY_COLOR[item.priorite] || PRIORITY_COLOR.faible
           const isAdded = added.includes(item.platform) || existingPlatforms.includes(item.platform)
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
               <div style={{ width: 38, height: 38, borderRadius: 10, background: C.purpleDim, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                 {PLATFORM_EMOJI[item.platform] || '🔗'}
               </div>
@@ -479,7 +488,7 @@ Réponds UNIQUEMENT en JSON valide :
               </div>
               <div style={{ flexShrink: 0 }}>
                 {isAdded
-                  ? <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#4ade80', fontSize: 12 }}>
+                  ? <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#16a34a', fontSize: 12 }}>
                       <CheckCircle size={14} /> Ajouté
                     </div>
                   : <button onClick={() => handleAdd(item.platform, item.label)}

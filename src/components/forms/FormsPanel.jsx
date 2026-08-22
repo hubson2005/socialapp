@@ -9,10 +9,14 @@ import { supabase } from '../../supabase';
 import FormBuilder from './FormBuilder';
 import FormPreview from './FormPreview';
 
+// [T1] [FIX THÈME] Ce panneau était entièrement en thème sombre (pas de
+// modale ici — tout est posé directement dans le contenu du dashboard, qui
+// est désormais clair #f4f5fa). Converti en thème clair : liste de
+// formulaires, éditeur à onglets, constructeur, paramètres et réponses.
 const STATUS_STYLES = {
-  actif:     { bg: 'rgba(52,211,153,0.12)',  border: 'rgba(52,211,153,0.28)', color: '#34d399', dot: '#34d399' },
-  inactif:   { bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.24)', color: '#f87171', dot: '#f87171' },
-  brouillon: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)',  color: 'rgba(255,255,255,0.5)', dot: 'rgba(255,255,255,0.35)' },
+  actif:     { bg: 'rgba(22,163,74,0.1)',   border: 'rgba(22,163,74,0.25)',  color: '#16a34a', dot: '#16a34a' },
+  inactif:   { bg: 'rgba(220,38,38,0.08)',  border: 'rgba(220,38,38,0.22)',  color: '#dc2626', dot: '#dc2626' },
+  brouillon: { bg: '#eef0f5',               border: '#e6e8f0',               color: '#6b7280', dot: '#a2a7b5' },
 };
 
 const BG_COLORS = ['#F97316', '#3B82F6', '#10B981', '#8B5CF6', '#EF4444', '#EC4899', '#F59E0B', '#6366F1'];
@@ -137,19 +141,19 @@ const db = {
   },
 };
 
-// ─── Shared input style ───────────────────────────────────────────────────
+// ─── Shared input style — thème clair ──────────────────────────────────────
 const fieldStyle = {
   width: '100%', boxSizing: 'border-box',
   padding: '10px 13px',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.09)',
-  borderRadius: '10px', color: 'white',
+  background: '#f6f7fb',
+  border: '1px solid #e6e8f0',
+  borderRadius: '10px', color: '#161a2e',
   fontSize: '13px', outline: 'none',
   transition: 'border-color 0.15s ease, background 0.15s ease',
 };
 
 const labelStyle = {
-  color: 'rgba(255,255,255,0.38)',
+  color: '#8a90a2',
   fontSize: '10.5px',
   fontWeight: 700,
   textTransform: 'uppercase',
@@ -158,7 +162,7 @@ const labelStyle = {
   marginBottom: '7px',
 };
 
-const cardShadow = '0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 28px -12px rgba(0,0,0,0.5)';
+const cardShadow = '0 1px 2px rgba(15,23,42,0.05), 0 8px 20px -14px rgba(15,23,42,0.25)';
 
 // ─── Main component ───────────────────────────────────────────────────────
 export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
@@ -296,7 +300,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
   const publicUrl = (id) => `${window.location.origin}/form/${id}`;
 
   const inputFocusStyle = (key) => focusedField === key
-    ? { borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.06)' }
+    ? { borderColor: 'rgba(139,92,246,0.55)', background: '#ffffff' }
     : {};
 
   const fieldLabelById = (id) => formData.fields.find(f => f.id === id)?.label || id;
@@ -316,11 +320,11 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           Mobile breakpoints for the 2-col grid and iOS input zoom-on-focus fix. */}
       <style>{`
         @media (hover: hover) and (pointer: fine) {
-          .fp-panel .fp-card:not(.fp-card-selected):hover { border-color: rgba(255,255,255,0.14) !important; }
+          .fp-panel .fp-card:not(.fp-card-selected):hover { border-color: #c9cddb !important; }
           .fp-panel .fp-btn-primary:hover { transform: translateY(-1px); }
-          .fp-panel .fp-icon-delete:hover { background: rgba(239,68,68,0.16) !important; }
+          .fp-panel .fp-icon-delete:hover { background: rgba(220,38,38,0.14) !important; }
           .fp-panel .fp-swatch:hover { transform: scale(1.12); }
-          .fp-panel .fp-refresh:hover { border-color: rgba(255,255,255,0.22) !important; }
+          .fp-panel .fp-refresh:hover { border-color: #c9cddb !important; }
           .fp-panel .fp-banner-drop:hover { border-color: rgba(139,92,246,0.4) !important; background: rgba(139,92,246,0.04) !important; }
         }
         @media (max-width: 860px) {
@@ -359,7 +363,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           width: 100%;
           order: 2;
           justify-content: flex-end;
-          border-top: 1px solid rgba(255,255,255,0.07);
+          border-top: 1px solid #eef0f5;
           padding-top: 9px !important;
         }
         /* Cibles tactiles agrandies sur tout écran tactile (tablette incluse, pas que mobile) */
@@ -373,10 +377,10 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <h2 style={{ color: 'white', fontSize: '19px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
+          <h2 style={{ color: '#161a2e', fontSize: '19px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
             Formulaires
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.34)', fontSize: '12px', margin: '5px 0 0', fontVariantNumeric: 'tabular-nums' }}>
+          <p style={{ color: '#8a90a2', fontSize: '12px', margin: '5px 0 0', fontVariantNumeric: 'tabular-nums' }}>
             {forms.length} / {maxForms === Infinity ? '∞' : maxForms} formulaire(s) utilisé(s)
           </p>
         </div>
@@ -387,12 +391,12 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           style={{
             display: 'flex', alignItems: 'center', gap: '7px',
             padding: '9px 16px',
-            background: atLimit ? 'rgba(255,255,255,0.05)' : ACCENT_GRADIENT,
+            background: atLimit ? '#eef0f5' : ACCENT_GRADIENT,
             border: 'none', borderRadius: '11px',
-            color: atLimit ? 'rgba(255,255,255,0.28)' : 'white',
+            color: atLimit ? '#a2a7b5' : 'white',
             fontSize: '12.5px', fontWeight: 700,
             cursor: atLimit ? 'not-allowed' : 'pointer',
-            boxShadow: atLimit ? 'none' : '0 1px 0 rgba(255,255,255,0.2) inset, 0 8px 20px -6px rgba(139,92,246,0.55)',
+            boxShadow: atLimit ? 'none' : '0 1px 0 rgba(255,255,255,0.2) inset, 0 8px 20px -6px rgba(139,92,246,0.45)',
             transition: 'transform 0.12s ease, box-shadow 0.12s ease',
           }}
         >
@@ -403,16 +407,16 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
       {/* Limit banner */}
       {atLimit && (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.04))',
-          border: '1px solid rgba(239,68,68,0.22)', borderRadius: '13px', padding: '11px 15px',
+          background: 'linear-gradient(135deg, rgba(220,38,38,0.08), rgba(220,38,38,0.03))',
+          border: '1px solid rgba(220,38,38,0.2)', borderRadius: '13px', padding: '11px 15px',
           display: 'flex', alignItems: 'center', gap: '9px',
         }}>
-          <AlertCircle size={14} color="#f87171" style={{ flexShrink: 0 }} />
-          <span style={{ color: '#f87171', fontSize: '12px', flex: 1 }}>
+          <AlertCircle size={14} color="#dc2626" style={{ flexShrink: 0 }} />
+          <span style={{ color: '#dc2626', fontSize: '12px', flex: 1 }}>
             Limite atteinte — {maxForms} formulaire(s) max pour votre offre actuelle
           </span>
           {onUpgrade && (
-            <button onClick={onUpgrade} style={{ background: 'none', border: 'none', color: '#ff8c00', fontSize: '11px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <button onClick={onUpgrade} style={{ background: 'none', border: 'none', color: '#d9591f', fontSize: '11px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
               Upgrader →
             </button>
           )}
@@ -425,21 +429,21 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
           {isLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '28px' }}>
-              <Loader2 size={18} className="animate-spin" color="rgba(167,139,250,0.7)" />
+              <Loader2 size={18} className="animate-spin" color="#8b5cf6" />
             </div>
           ) : forms.length === 0 ? (
             <div style={{
-              background: 'rgba(255,255,255,0.025)', border: '1.5px dashed rgba(255,255,255,0.1)',
+              background: '#f9fafc', border: '1.5px dashed #dde0ea',
               borderRadius: '16px', padding: '30px 16px', textAlign: 'center',
             }}>
               <div style={{
                 width: '38px', height: '38px', borderRadius: '11px', margin: '0 auto 10px',
                 background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <FileText size={17} color="rgba(167,139,250,0.6)" />
+                <FileText size={17} color="#7c3aed" />
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12.5px', fontWeight: 600, margin: 0 }}>Aucun formulaire</p>
-              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', margin: '4px 0 0' }}>Créez-en un pour commencer</p>
+              <p style={{ color: '#454b5a', fontSize: '12.5px', fontWeight: 600, margin: 0 }}>Aucun formulaire</p>
+              <p style={{ color: '#a2a7b5', fontSize: '11px', margin: '4px 0 0' }}>Créez-en un pour commencer</p>
             </div>
           ) : (
             forms.map(form => {
@@ -453,12 +457,12 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                   style={{
                     position: 'relative',
                     background: isSelected
-                      ? 'linear-gradient(135deg, rgba(99,102,241,0.14), rgba(139,92,246,0.08))'
-                      : 'rgba(255,255,255,0.035)',
-                    border: '1px solid ' + (isSelected ? 'rgba(139,92,246,0.45)' : 'rgba(255,255,255,0.07)'),
+                      ? 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.06))'
+                      : '#ffffff',
+                    border: '1px solid ' + (isSelected ? 'rgba(139,92,246,0.4)' : '#e6e8f0'),
                     borderRadius: '15px', padding: '13px', cursor: 'pointer',
                     boxShadow: isSelected
-                      ? '0 0 0 3px rgba(139,92,246,0.1), 0 10px 24px -12px rgba(139,92,246,0.4)'
+                      ? '0 0 0 3px rgba(139,92,246,0.08), 0 10px 24px -14px rgba(139,92,246,0.35)'
                       : cardShadow,
                     transition: 'border-color 0.15s ease, background 0.15s ease, transform 0.12s ease',
                   }}
@@ -471,10 +475,10 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                         boxShadow: `0 0 0 3px ${form.bg_color || '#F97316'}22`,
                       }} />
                       <div style={{ minWidth: 0 }}>
-                        <p style={{ color: 'white', fontSize: '13.5px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <p style={{ color: '#161a2e', fontSize: '13.5px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {form.title || 'Sans titre'}
                         </p>
-                        <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '10.5px', margin: '3px 0 0' }}>
+                        <p style={{ color: '#8a90a2', fontSize: '10.5px', margin: '3px 0 0' }}>
                           {(form.fields || []).length} champ(s)
                         </p>
                       </div>
@@ -490,7 +494,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                     </span>
                   </div>
                   {(form.submissions_count > 0) && (
-                    <p style={{ color: '#a78bfa', fontSize: '10.5px', fontWeight: 600, margin: '8px 0 0' }}>
+                    <p style={{ color: '#7c3aed', fontSize: '10.5px', fontWeight: 600, margin: '8px 0 0' }}>
                       {form.submissions_count} réponse(s)
                     </p>
                   )}
@@ -502,15 +506,15 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
 
         {/* ── Editor ── */}
         <div style={{
-          background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)',
+          background: '#ffffff', border: '1px solid #e6e8f0',
           borderRadius: '20px', overflow: 'hidden', boxShadow: cardShadow,
         }}>
 
           {/* Tab bar */}
           <div style={{
             display: 'flex', alignItems: 'center',
-            borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 16px',
-            background: 'rgba(255,255,255,0.015)',
+            borderBottom: '1px solid #eef0f5', padding: '0 16px',
+            background: '#f9fafc',
           }} className="fp-tabbar">
             <div className="fp-tabbar-scroll">
               {[
@@ -528,7 +532,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                     border: 'none', whiteSpace: 'nowrap',
                     borderBottom: '2px solid ' + (tab === key ? '#8b5cf6' : 'transparent'),
                     background: 'transparent',
-                    color: tab === key ? 'white' : 'rgba(255,255,255,0.38)',
+                    color: tab === key ? '#161a2e' : '#8a90a2',
                     cursor: 'pointer',
                     transition: 'color 0.15s ease',
                   }}
@@ -536,7 +540,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                   <Icon size={13} /> {label}
                   {key === 'responses' && submissions.length > 0 && (
                     <span style={{
-                      background: 'rgba(139,92,246,0.18)', color: '#c4b5fd', borderRadius: '100px',
+                      background: 'rgba(139,92,246,0.14)', color: '#7c3aed', borderRadius: '100px',
                       fontSize: '10px', fontWeight: 700, padding: '1px 6px', lineHeight: 1.5,
                     }}>
                       {submissions.length}
@@ -556,8 +560,8 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                   className="fp-icon-delete"
                   style={{
                     width: '31px', height: '31px', borderRadius: '9px',
-                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)',
-                    color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)',
+                    color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: deleteMutation.isPending ? 'wait' : 'pointer',
                     opacity: deleteMutation.isPending ? 0.6 : 1,
                     transition: 'background 0.15s ease',
@@ -576,12 +580,12 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '7px',
                   padding: '8px 16px',
-                  background: canSave ? ACCENT_GRADIENT : 'rgba(255,255,255,0.05)',
+                  background: canSave ? ACCENT_GRADIENT : '#eef0f5',
                   border: 'none', borderRadius: '10px',
-                  color: canSave ? 'white' : 'rgba(255,255,255,0.28)',
+                  color: canSave ? 'white' : '#a2a7b5',
                   fontSize: '11.5px', fontWeight: 700,
                   cursor: canSave ? 'pointer' : 'not-allowed',
-                  boxShadow: canSave ? '0 1px 0 rgba(255,255,255,0.2) inset, 0 6px 16px -6px rgba(139,92,246,0.5)' : 'none',
+                  boxShadow: canSave ? '0 1px 0 rgba(255,255,255,0.2) inset, 0 6px 16px -8px rgba(139,92,246,0.5)' : 'none',
                   transition: 'background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
                 }}
               >
@@ -621,7 +625,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                           style={{
                             width: '24px', height: '24px', borderRadius: '50%', background: c,
                             border: formData.bg_color === c ? '2px solid white' : '2px solid transparent',
-                            boxShadow: formData.bg_color === c ? `0 0 0 3px ${c}33` : 'none',
+                            boxShadow: formData.bg_color === c ? `0 0 0 3px ${c}55` : '0 0 0 1px #e6e8f0',
                             cursor: 'pointer',
                             transition: 'transform 0.12s ease',
                           }}
@@ -647,14 +651,14 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                 {/* Bannière façon Google Forms, affichée en haut du formulaire public */}
                 <div>
                   <label style={labelStyle}>Bannière (image d'en-tête)</label>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10.5px', margin: '0 0 9px' }}>
+                  <p style={{ color: '#9095a5', fontSize: '10.5px', margin: '0 0 9px' }}>
                     Affichée en haut du formulaire. Format recommandé : 1600 × 400px (ratio 4:1).
                   </p>
                   {formData.banner_url ? (
                     <div style={{
                       position: 'relative', borderRadius: '13px', overflow: 'hidden',
-                      border: '1px solid rgba(255,255,255,0.09)', aspectRatio: BANNER_RATIO,
-                      background: 'rgba(0,0,0,0.2)',
+                      border: '1px solid #e6e8f0', aspectRatio: BANNER_RATIO,
+                      background: '#f1f2f7',
                     }}>
                       <img
                         src={formData.banner_url}
@@ -682,12 +686,12 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         gap: '7px', aspectRatio: BANNER_RATIO,
-                        background: 'rgba(255,255,255,0.025)', border: '1.5px dashed rgba(255,255,255,0.14)',
-                        borderRadius: '13px', cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
+                        background: '#f9fafc', border: '1.5px dashed #dde0ea',
+                        borderRadius: '13px', cursor: 'pointer', color: '#8a90a2',
                         transition: 'border-color 0.15s ease, background 0.15s ease',
                       }}
                     >
-                      <ImagePlus size={18} color="rgba(167,139,250,0.6)" />
+                      <ImagePlus size={18} color="#7c3aed" />
                       <span style={{ fontSize: '11.5px', fontWeight: 600 }}>Ajouter une bannière</span>
                       <input
                         id="fp-banner-upload"
@@ -700,8 +704,8 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                   )}
                 </div>
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px' }}>
-                  <p style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: '0 0 11px', letterSpacing: '-0.005em' }}>
+                <div style={{ borderTop: '1px solid #eef0f5', paddingTop: '16px' }}>
+                  <p style={{ color: '#161a2e', fontSize: '13px', fontWeight: 700, margin: '0 0 11px', letterSpacing: '-0.005em' }}>
                     Champs du formulaire
                   </p>
                   <FormBuilder fields={formData.fields} onChange={fields => setFormData({ ...formData, fields })} />
@@ -712,7 +716,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
             {/* ── Preview ── */}
             {tab === 'preview' && (
               <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-                <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '11.5px', marginBottom: '16px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <p style={{ color: '#8a90a2', fontSize: '11.5px', marginBottom: '16px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Aperçu du formulaire
                 </p>
                 <FormPreview form={formData} mode="preview" />
@@ -744,10 +748,10 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                           style={{
                             display: 'flex', alignItems: 'center', gap: '6px',
                             padding: '9px 16px',
-                            background: active ? style.color : 'rgba(255,255,255,0.05)',
-                            border: '1px solid ' + (active ? style.color : 'rgba(255,255,255,0.1)'),
+                            background: active ? style.color : '#eef0f5',
+                            border: '1px solid ' + (active ? style.color : '#e6e8f0'),
                             borderRadius: '100px',
-                            color: active ? '#08110c' : 'rgba(255,255,255,0.45)',
+                            color: active ? '#ffffff' : '#6b7280',
                             fontSize: '12px', fontWeight: 700,
                             cursor: active ? 'default' : 'pointer',
                             transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
@@ -759,7 +763,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                       );
                     })}
                   </div>
-                  <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '10.5px', margin: '8px 0 0' }}>
+                  <p style={{ color: '#9095a5', fontSize: '10.5px', margin: '8px 0 0' }}>
                     {formData.status === 'actif' ? 'Le lien public est accessible.' : 'Le lien public est désactivé.'}
                   </p>
                 </div>
@@ -792,25 +796,27 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
 
                 {selectedForm && (
                   <div style={{
-                    background: 'linear-gradient(135deg, rgba(139,92,246,0.07), rgba(255,255,255,0.02))',
+                    background: 'linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0))',
                     border: '1px solid rgba(139,92,246,0.18)', borderRadius: '13px', padding: '13px',
                   }}>
-                    <p style={{ color: 'white', fontSize: '11.5px', fontWeight: 700, margin: '0 0 9px' }}>
+                    <p style={{ color: '#161a2e', fontSize: '11.5px', fontWeight: 700, margin: '0 0 9px' }}>
                       Lien de partage public
                     </p>
                     {selectedForm.status !== 'actif' && (
-                      <p style={{ color: '#fbbf24', fontSize: '10.5px', margin: '0 0 9px' }}>
+                      <p style={{ color: '#b45309', fontSize: '10.5px', margin: '0 0 9px' }}>
                         ⚠️ Passez le statut à « actif » pour rendre ce lien accessible publiquement.
                       </p>
                     )}
+                    {/* Puce de lien : fond sombre volontaire, façon bloc de code —
+                        contraste maximal pour l'URL quel que soit le thème de la page. */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <code
                         onClick={selectAllText}
                         title="Cliquer pour sélectionner le lien"
                         style={{
-                          flex: 1, fontSize: '11px', color: '#c4b5fd', background: 'rgba(0,0,0,0.35)',
+                          flex: 1, fontSize: '11px', color: '#c4b5fd', background: '#181830',
                           padding: '8px 11px', borderRadius: '9px', overflow: 'hidden', textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.05)', cursor: 'text',
+                          whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.06)', cursor: 'text',
                           userSelect: 'all',
                         }}
                       >
@@ -819,7 +825,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                       <button
                         onClick={() => copyToClipboard(publicUrl(selectedForm.id))}
                         title="Copier le lien"
-                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
+                        style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
                       >
                         <Copy size={14} />
                       </button>
@@ -828,7 +834,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         title="Ouvrir dans un nouvel onglet"
-                        style={{ color: 'rgba(255,255,255,0.5)', display: 'flex', flexShrink: 0 }}
+                        style={{ color: '#6b7280', display: 'flex', flexShrink: 0 }}
                       >
                         <ExternalLink size={14} />
                       </a>
@@ -850,7 +856,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                 ) : (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: '11.5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+                      <p style={{ color: '#8a90a2', fontSize: '11.5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
                         {submissions.length} réponse{submissions.length !== 1 ? 's' : ''}
                       </p>
                       <button
@@ -859,8 +865,8 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                         title="Actualiser"
                         style={{
                           width: '27px', height: '27px', borderRadius: '8px',
-                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
-                          color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: '#f6f7fb', border: '1px solid #e6e8f0',
+                          color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: 'pointer', transition: 'border-color 0.15s ease',
                         }}
                       >
@@ -870,7 +876,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
 
                     {submissionsLoading ? (
                       <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-                        <Loader2 size={18} className="animate-spin" color="rgba(167,139,250,0.7)" />
+                        <Loader2 size={18} className="animate-spin" color="#8b5cf6" />
                       </div>
                     ) : submissions.length === 0 ? (
                       <EmptyState
@@ -884,23 +890,24 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                           <div
                             key={sub.id}
                             style={{
-                              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                              background: '#ffffff', border: '1px solid #e6e8f0',
                               borderRadius: '14px', padding: '14px 16px',
+                              boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                              <Clock3 size={11} color="rgba(255,255,255,0.3)" />
-                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10.5px', fontVariantNumeric: 'tabular-nums' }}>
+                              <Clock3 size={11} color="#a2a7b5" />
+                              <span style={{ color: '#8a90a2', fontSize: '10.5px', fontVariantNumeric: 'tabular-nums' }}>
                                 {formatDate(sub.created_at)}
                               </span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
                               {Object.entries(sub.data || {}).map(([fieldId, val]) => (
                                 <div key={fieldId}>
-                                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 3px' }}>
+                                  <p style={{ color: '#8a90a2', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 3px' }}>
                                     {fieldLabelById(fieldId)}
                                   </p>
-                                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12.5px', margin: 0, wordBreak: 'break-word' }}>
+                                  <p style={{ color: '#161a2e', fontSize: '12.5px', margin: 0, wordBreak: 'break-word' }}>
                                     {Array.isArray(val) ? val.join(', ') : String(val ?? '—')}
                                   </p>
                                 </div>
@@ -930,10 +937,10 @@ function EmptyState({ icon: Icon, title, subtitle }) {
         width: '42px', height: '42px', borderRadius: '12px', margin: '0 auto 12px',
         background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <Icon size={19} color="rgba(167,139,250,0.6)" />
+        <Icon size={19} color="#7c3aed" />
       </div>
-      <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', fontWeight: 600, margin: 0 }}>{title}</p>
-      {subtitle && <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '11.5px', margin: '4px 0 0' }}>{subtitle}</p>}
+      <p style={{ color: '#454b5a', fontSize: '13px', fontWeight: 600, margin: 0 }}>{title}</p>
+      {subtitle && <p style={{ color: '#9095a5', fontSize: '11.5px', margin: '4px 0 0' }}>{subtitle}</p>}
     </div>
   );
 }

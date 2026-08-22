@@ -695,6 +695,15 @@ export default function UserDashboard() {
   // le blanc de la zone de contenu pour un rendu "SaaS pro" cohérent —
   // plus de rupture violet/rose entre topbar et sidebar.
   const TOPBAR_BG = '#ffffff';
+  // [T1] Couleur de la sidebar réutilisée comme fond de secours pour le
+  // html/body : sur certains navigateurs/OS, la zone au-dessus du contenu
+  // (safe-area / arrondi de fenêtre en PWA installée, ou tout simplement
+  // le body avant que React ne monte) laisse voir le fond du <body> — qui
+  // n'était jusqu'ici pas défini ici et retombait sur le noir par défaut
+  // du navigateur. On le fixe explicitement au bleu nuit de la sidebar
+  // (UserSidebar.jsx) pour qu'un éventuel liseré résiduel s'accorde avec
+  // le reste du dashboard au lieu de trancher en noir.
+  const SIDEBAR_NAVY = '#161a2e';
 
   return (
     <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
@@ -725,34 +734,43 @@ export default function UserDashboard() {
       <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
 
         {/* Topbar — blanc, alignée sur la zone de contenu claire.
-            Le paddingTop additionnel via env(safe-area-inset-top) évite que
-            le contenu passe sous l'encoche/la barre de statut sur iOS
+            [T2] paddingTop remplacé par un fond peint jusque dans la
+            safe-area (env(safe-area-inset-top)) : avant, seul du padding
+            transparent occupait cette zone, laissant voir le fond du
+            <body> (noir par défaut) sous l'encoche/la barre de statut iOS
+            au lieu du blanc de la topbar. Le fond blanc de .ap-modal-…
+            n'a pas besoin de changer ; c'est bien ce bloc, en haut de
+            l'écran, qui correspond à la "barre" mentionnée. On étend
+            désormais le fond blanc TOPBAR_BG au-dessus du padding via un
+            wrapper englobant plutôt que de compter sur le seul padding
             (nécessite <meta name="viewport" content="viewport-fit=cover">
             dans index.html pour être pris en compte). */}
-        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_BG, borderBottom:'1px solid #e6e8f0', boxShadow:'0 1px 2px rgba(15,23,42,.04)', padding:isMobile?'calc(10px + env(safe-area-inset-top)) 14px 10px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
-            {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
-            <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Dashboard'}</h2>
-            <AnimatePresence>
-              {hasChanges && (
-                <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
-                  style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600, flexShrink:0 }}>
-                  ● {t('unsaved')}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
-            <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
-            <NotificationBell />
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || updateMutation.isPending}
-              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'#eef0f5', border:'1px solid '+(hasChanges?'transparent':'#dde0ea'), borderRadius:'9px', color:hasChanges?'white':'#a2a7b5', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
-            >
-              {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              {!isMobile && t('save')}
-            </button>
+        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_BG, borderBottom:'1px solid #e6e8f0', boxShadow:'0 1px 2px rgba(15,23,42,.04)', paddingTop:'env(safe-area-inset-top)' }}>
+          <div style={{ padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
+              {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
+              <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Dashboard'}</h2>
+              <AnimatePresence>
+                {hasChanges && (
+                  <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
+                    style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600, flexShrink:0 }}>
+                    ● {t('unsaved')}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
+              <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
+              <NotificationBell />
+              <button
+                onClick={handleSave}
+                disabled={!hasChanges || updateMutation.isPending}
+                style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'#eef0f5', border:'1px solid '+(hasChanges?'transparent':'#dde0ea'), borderRadius:'9px', color:hasChanges?'white':'#a2a7b5', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
+              >
+                {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                {!isMobile && t('save')}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -822,6 +840,17 @@ export default function UserDashboard() {
         *::-webkit-scrollbar{width:5px;height:5px}
         *::-webkit-scrollbar-track{background:transparent}
         *::-webkit-scrollbar-thumb{background:#c9cddb;border-radius:10px}
+
+        /* [T1] html/body peints en bleu nuit (couleur de la sidebar) au
+           lieu du noir par défaut du navigateur : couvre toute bande
+           résiduelle visible avant le montage de React ou dans la
+           safe-area d'une PWA installée, en cohérence avec le reste du
+           dashboard plutôt qu'un noir qui tranche. */
+        html, body {
+          background:${SIDEBAR_NAVY};
+          margin:0;
+        }
+        #root { background:${SIDEBAR_NAVY}; }
 
         /* FIX iOS/Android — cibles tactiles ≥44x44px (Apple HIG / Material)
            sur les petits boutons icône (fermer, flèches de carrousel, etc.)

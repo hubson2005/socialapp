@@ -1,269 +1,1134 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Check, CheckCheck, Info, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import {
+  Search, Plus, Trash2, Mail, Phone, UserPlus,
+  Loader2, Download, X,
+  MessageCircle, Building2, Tag as TagIcon,
+  Pencil, Check,
+  Globe, List, Columns3,
+  GripVertical, Flame, Snowflake, CheckCircle2, Ban,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../supabase';
+import { supabase } from '../../supabase';
+// [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
+import { triggerNewLead }                    from '../../lib/triggers/newLead';
+import { useBreakpoint }                     from '../../hooks/useBreakpoint';
+import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus';     // [A7]
+import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
+import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
+import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
 
-// ─── Icône + couleur selon le type de notification ────────────────────────────
-const TYPE_CONFIG = {
-  info:    { icon: Info,         color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' },
-  success: { icon: CheckCircle2, color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  },
-  warning: { icon: AlertTriangle,color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  error:   { icon: XCircle,      color: '#ef4444', bg: 'rgba(239,68,68,0.12)'  },
+
+// ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
+//  [FIX1]-[FIX8] cf. révisions précédentes (inchangées)
+//  [G1]-[G5] Grille + pagination vue liste (inchangées)
+//
+// ─── THÈME CLAIR (cette révision) ────────────────────────────────────────────
+//  [L1] Palette entièrement retournée pour le fond clair du dashboard :
+//       cartes blanches (#ffffff), bordures #e6e8f0, texte #151329 (fort) /
+//       #6b6f85 (secondaire) / #9a9db0 (muet). Les couleurs de statut
+//       (STATUSES), les accents indigo/violet et les icônes colorées par
+//       type sont conservés à l'identique.
+//  [L2] `inp` (champs de formulaire) : fond sombre #181830 → gris très
+//       clair #f8f9fc avec bordure #e6e8f0 ; texte blanc → #151329.
+//  [L3] `actionBtn('rgba(255,255,255,0.15)')` (boutons icône neutres :
+//       fermer, etc.) produisait un fond blanc translucide + icône blanche
+//       → invisible sur fond clair. La branche "neutre" de actionBtn est
+//       réécrite pour donner un gris clair opaque + icône foncée, tandis
+//       que la branche couleur (hex + '22') reste inchangée pour les
+//       boutons d'accent (vert, indigo, rouge).
+//  [L4] Le drawer LeadModal et la modale "Nouveau lead" passent en fond
+//       blanc ; l'overlay reste sombre (comportement standard de modale,
+//       indépendant du thème du contenu).
+
+const STATUSES = [
+  { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: UserPlus    },
+  { id: 'chaud',    label: '🔥 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)', icon: Flame       },
+  { id: 'client',   label: '✅ Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)',  icon: CheckCircle2 },
+  { id: 'froid',    label: '❄️ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',  icon: Snowflake   },
+  { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.15)', icon: Ban        },
+];
+
+const SOURCES = [
+  { id: 'manuel',         label: 'Manuel'              },
+  { id: 'qrcode',         label: 'QR Code'             },
+  { id: 'socialapp',      label: 'Profil SocialApp'    },
+  { id: 'rsvp',           label: 'RSVP'                },
+  { id: 'marketplace',    label: 'Marketplace'         },
+  { id: 'formulaire',     label: 'Formulaire'          },
+  { id: 'automatisation', label: '🤖 Automatisation'   },
+  { id: 'calendrier',     label: '📅 Calendly / RDV'   },
+];
+
+const ACTIVITY_ICONS = {
+  created:  '🆕',
+  edited:   '✏️',
+  note:     '📝',
+  whatsapp: '💬',
+  status:   '🔄',
 };
 
-function formatTime(isoDate) {
-  const d = new Date(isoDate);
-  const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (diffMin < 1)  return 'À l\'instant';
-  if (diffMin < 60) return `il y a ${diffMin} min`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24)   return `il y a ${diffH}h`;
-  const diffD = Math.floor(diffH / 24);
-  if (diffD < 7)    return `il y a ${diffD}j`;
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const normalizePhone = (phone = '') => phone.replace(/\D/g, '');
+
+const EMPTY_LEAD = {
+  name: '', phone: '', email: '', company: '',
+  status: 'prospect', source: 'manuel', notes: '', score: 0,
+};
+
+// [G1] Pagination de la vue liste : 16 leads par page (4 colonnes x 4 lignes)
+const LEADS_PAGE_SIZE = 16;
+
+const scoreLabel = (s) =>
+  s <= 30  ? { label: 'Froid',    color: '#0891b2', icon: '❄️'  } :
+  s <= 60  ? { label: 'Tiède',    color: '#d97706', icon: '🌡️'  } :
+  s <= 80  ? { label: 'Chaud',    color: '#ea580c', icon: '🔥'  } :
+             { label: 'Brûlant',  color: '#dc2626', icon: '🚀'  };
+
+const TAG_PALETTE = ['#7c3aed', '#0891b2', '#db2777', '#d97706', '#059669', '#e11d48', '#4f46e5'];
+const tagColor = (tag) => {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
+};
+
+// [G2] Génère une liste compacte de numéros de page avec "…" si besoin
+// (évite d'afficher des dizaines de boutons quand il y a beaucoup de pages)
+function getPageNumbers(current, total) {
+  const delta = 1;
+  const range = [];
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+    range.push(i);
+  }
+  const withDots = [];
+  if (current - delta > 2) withDots.push(1, '…'); else withDots.push(1);
+  withDots.push(...range);
+  if (current + delta < total - 1) withDots.push('…', total);
+  else if (total > 1) withDots.push(total);
+  return withDots;
 }
 
-function NotificationRow({ notif, onMarkRead }) {
-  const cfg = TYPE_CONFIG[notif.type] || TYPE_CONFIG.info;
-  const Icon = cfg.icon;
+// [G2] Barre de pagination réutilisée sous la grille de leads
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null;
+  const pages = getPageNumbers(page, totalPages);
+  const btn = (active, disabled) => ({
+    minWidth: 32, height: 32, padding: '0 8px', borderRadius: 8, cursor: disabled ? 'not-allowed' : 'pointer',
+    border: `1px solid ${active ? '#6366f1' : '#e6e8f0'}`,
+    background: active ? 'rgba(99,102,241,0.12)' : '#f8f9fc',
+    color: disabled ? '#c7cdfb' : active ? '#4f46e5' : '#6b6f85',
+    fontSize: 12, fontWeight: 700,
+  });
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={btn(false, page === 1)}>‹</button>
+      {pages.map((p, i) => p === '…'
+        ? <span key={`dots-${i}`} style={{ color: '#9a9db0', fontSize: 12, padding: '0 4px' }}>…</span>
+        : <button key={p} onClick={() => onChange(p)} style={btn(p === page, false)}>{p}</button>
+      )}
+      <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} style={btn(false, page === totalPages)}>›</button>
+    </div>
+  );
+}
 
-  const content = (
+// [L2] Fond clair légèrement teinté (au lieu du fond nuit #181830) —
+// cohérent avec le style de champ déjà utilisé dans AutomationsPanel.jsx
+// (thème clair) : fond quasi-blanc, bordure grise, halo indigo au focus.
+const inp = {
+  width: '100%', background: '#f8f9fc',
+  border: '1px solid #e6e8f0', borderRadius: '12px',
+  padding: '11px 13px', color: '#151329', outline: 'none',
+  fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit',
+  transition: 'border-color .15s, background .15s',
+};
+
+// [FIX5] Zone de tap agrandie (padding + marge négative) sans changer
+// l'apparence visuelle de la case à cocher (17x17).
+function Checkbox({ checked, indeterminate, onChange, style = {} }) {
+  return (
     <div
-      onClick={() => !notif.is_read && onMarkRead(notif.id)}
+      onClick={e => { e.stopPropagation(); onChange(); }}
       style={{
-        display: 'flex', gap: '10px', padding: '11px 12px',
-        background: notif.is_read ? 'transparent' : 'rgba(99,102,241,0.06)',
-        borderRadius: '12px', cursor: notif.is_read ? 'default' : 'pointer',
-        transition: 'background 0.15s',
+        padding: 7, margin: -7,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', flexShrink: 0,
       }}
     >
       <div style={{
-        width: '30px', height: '30px', borderRadius: '9px', background: cfg.bg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        width: 17, height: 17, borderRadius: 5, flexShrink: 0,
+        border: `1.5px solid ${checked || indeterminate ? '#6366f1' : '#d7dae4'}`,
+        background: checked ? '#6366f1' : indeterminate ? 'rgba(99,102,241,0.2)' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all .15s', ...style,
       }}>
-        <Icon size={14} color={cfg.color} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-          <p style={{ color: notif.is_read ? 'rgba(255,255,255,0.55)' : 'white', fontSize: '12.5px', fontWeight: notif.is_read ? 500 : 700, margin: 0, lineHeight: 1.4 }}>
-            {notif.title}
-          </p>
-          {!notif.is_read && (
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6366f1', flexShrink: 0, marginTop: '4px' }} />
-          )}
-        </div>
-        {notif.message && (
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11.5px', margin: '3px 0 0', lineHeight: 1.5 }}>
-            {notif.message}
-          </p>
-        )}
-        <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10.5px', margin: '5px 0 0' }}>
-          {formatTime(notif.created_at)}
-        </p>
+        {checked && <Check size={10} color="white" strokeWidth={3} />}
+        {!checked && indeterminate && <div style={{ width: 7, height: 2, background: '#6366f1', borderRadius: 1 }} />}
       </div>
     </div>
   );
-
-  if (notif.link) {
-    return <a href={notif.link} style={{ textDecoration: 'none', display: 'block' }}>{content}</a>;
-  }
-  return content;
 }
 
-export default function NotificationBell() {
-  const [userId, setUserId] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [notifGranted, setNotifGranted] = useState(
-    () => typeof Notification !== 'undefined' && Notification.permission === 'granted'
+function ScoreBar({ score, onChange }) {
+  const { color, label, icon } = scoreLabel(score);
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <span style={{ color: '#6b6f85', fontSize: 12 }}>Score prospect</span>
+        <span style={{ color, fontWeight: 700, fontSize: 13 }}>{icon} {score} — {label}</span>
+      </div>
+      <div style={{ position: 'relative', height: 6, background: '#eef0f6', borderRadius: 99 }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${score}%`, background: color, borderRadius: 99, transition: 'width .3s, background .3s' }} />
+      </div>
+      {onChange && (
+        <input type="range" min={0} max={100} value={score}
+          onChange={e => onChange(Number(e.target.value))}
+          style={{ width: '100%', marginTop: 6, accentColor: color, cursor: 'pointer' }} />
+      )}
+    </div>
   );
-  const panelRef = useRef(null);
-  const bellRef = useRef(null);
+}
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+function StatusBadge({ status }) {
+  const s = STATUSES.find(x => x.id === status) || STATUSES[0];
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 99,
+      background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+      border: `1px solid ${s.color}44`,
+    }}>{s.label}</span>
+  );
+}
 
-  // ── Chargement initial + identification de l'utilisateur ──────────────────
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (cancelled || !user) { setLoading(false); return; }
-      setUserId(user.id);
-      await loadNotifications(user.id);
-      if (!cancelled) setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, []);
+function TagChips({ tags = [], onRemove, size = 'normal' }) {
+  if (!tags.length) return null;
+  const isSmall = size === 'small';
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {tags.map(tag => (
+        <span key={tag} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: isSmall ? '1px 6px' : '2px 8px', borderRadius: 99,
+          background: `${tagColor(tag)}1a`, border: `1px solid ${tagColor(tag)}44`,
+          color: tagColor(tag), fontSize: isSmall ? 9.5 : 10.5, fontWeight: 700,
+        }}>
+          #{tag}
+          {onRemove && <X size={isSmall ? 9 : 10} style={{ cursor: 'pointer' }} onClick={e => { e.stopPropagation(); onRemove(tag); }} />}
+        </span>
+      ))}
+    </div>
+  );
+}
 
-  const loadNotifications = async (uid) => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', uid)
-      .order('created_at', { ascending: false })
-      .limit(30);
-    if (!error) setNotifications(data || []);
+// [FIX5] Hauteur/largeur minimales relevées à 40px (compact et normal)
+function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
+  const hasPhone = !!phone?.trim();
+  return (
+    <button
+      disabled={!hasPhone}
+      onClick={e => {
+        e.stopPropagation();
+        if (!hasPhone) return;
+        const cleanPhone = normalizePhone(phone);
+        if (cleanPhone.length < 8) { toast.error('Numéro invalide'); return; }
+        window.open(`https://wa.me/${cleanPhone}`, '_blank', 'noopener,noreferrer');
+        onContact && onContact(leadId);
+      }}
+      title={hasPhone ? `WhatsApp: ${phone}` : 'Numéro manquant'}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 0 : 6,
+        height: 40, width: compact ? 40 : 'auto', padding: compact ? 0 : '0 14px',
+        borderRadius: 10, border: 'none', cursor: hasPhone ? 'pointer' : 'not-allowed',
+        background: hasPhone ? 'rgba(37,211,102,0.15)' : '#f1f2f7',
+        color: hasPhone ? '#16a34a' : '#c3c8d6', fontWeight: 700, fontSize: 12, transition: 'all .2s',
+        flexShrink: 0,
+      }}
+    >
+      <MessageCircle size={14} />
+      {!compact && 'WhatsApp'}
+    </button>
+  );
+}
+
+// [L3] Branche "neutre" réécrite : l'ancien fallback `bg` tel quel
+// (rgba(255,255,255,0.15) + texte blanc) était pensé pour un fond sombre
+// et devenait invisible sur fond clair. Détecté ici et remplacé par un
+// gris clair opaque + icône foncée ; la branche couleur (hex + '22')
+// reste inchangée pour les boutons d'accent (vert, indigo, rouge).
+const actionBtn = (bg) => {
+  const isHex = typeof bg === 'string' && bg.startsWith('#');
+  return {
+    width: 36, height: 36, borderRadius: 10, border: 'none',
+    background: isHex ? bg + '1f' : '#eef0f6',
+    color: isHex ? bg : '#6b6f85',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
+};
+
+function Section({ title, children }) {
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <h4 style={{ color: '#9a9db0', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function Field({ icon, label, value, editing, onChange, type, options, valueRaw }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+      <span style={{ color: '#9a9db0', flexShrink: 0 }}>{icon}</span>
+      <span style={{ color: '#6b6f85', fontSize: 12, width: 80, flexShrink: 0 }}>{label}</span>
+      {editing ? (
+        type === 'select'
+          ? <select value={valueRaw} onChange={e => onChange(e.target.value)} className="crm-field" style={{ ...inp, padding: '7px 10px' }}>
+              {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          : <input value={value || ''} onChange={e => onChange(e.target.value)} className="crm-field" style={{ ...inp, padding: '7px 10px' }} />
+      ) : (
+        <span style={{ color: value ? '#151329' : '#c7cdfb', fontSize: 13 }}>{value || '—'}</span>
+      )}
+    </div>
+  );
+}
+
+function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
+  const { isTablet } = useBreakpoint(); // [tablet]
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(() => ({ ...lead, score: lead?.score ?? 50 }));
+  const [note, setNote] = useState('');
+  const [newTag, setNewTag] = useState('');
+  const [activities, setActivities]   = useState([]);
+  const [loadingAct, setLoadingAct]   = useState(true);
+  const [doneTasks, setDoneTasks]      = useState(new Set()); // [A10] IDs des tâches marquées faites
+
+  useEffect(() => { loadActivities(); }, [lead.id]);
+
+  const loadActivities = async () => {
+    setLoadingAct(true);
+    const { data } = await supabase.from('lead_activities').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
+    setActivities(data || []);
+    setLoadingAct(false);
   };
 
-  // ── Temps réel : nouvelle notification → ajout instantané + petit toast ───
-  useEffect(() => {
-    if (!userId) return;
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'notifications',
-        filter: `user_id=eq.${userId}`,
-      }, (payload) => {
-        setNotifications(prev => [payload.new, ...prev]);
-        toast(payload.new.title, { description: payload.new.message || undefined });
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'notifications',
-        filter: `user_id=eq.${userId}`,
-      }, (payload) => {
-        setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [userId]);
+  // [A10] Marquer une tâche comme terminée
+  const markTaskDone = async (activity) => {
+    if (doneTasks.has(activity.id)) return;
+    setDoneTasks(prev => new Set([...prev, activity.id]));
+    await supabase.from('lead_activities').insert([{
+      lead_id:     lead.id,
+      type:        'task_done',
+      description: `✅ Terminée : ${activity.description}`,
+    }]);
+    loadActivities();
+    if (profileId) triggerTaskCompleted(profileId, {
+      leadId:          lead.id,
+      leadName:        lead.name,
+      taskDescription: activity.description,
+    });
+  };
 
-  // ── Fermeture au clic extérieur ─────────────────────────────────────────
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target) && bellRef.current && !bellRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
+  const saveEdit = async () => {
+    const { error } = await supabase.from('leads').update({
+      name: form.name, phone: form.phone, email: form.email,
+      company: form.company, status: form.status, source: form.source,
+      notes: form.notes, score: form.score, updated_at: new Date().toISOString(),
+    }).eq('id', lead.id);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'edited', description: 'Fiche modifiée' }]);
+    onUpdate({ ...lead, ...form });
+    setEditing(false);
+    toast.success('Lead mis à jour');
+    loadActivities();
 
-  const markAsRead = useCallback(async (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-    if (error) {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
+    // [A9] Déclencher lead_score_reached si un seuil est franchi
+    if (profileId && form.score !== (lead.score ?? 0)) {
+      triggerLeadScoreReachedIfThreshold(profileId, {
+        leadId:   lead.id,
+        leadName: lead.name,
+        oldScore: lead.score ?? 0,
+        newScore: form.score,
+      });
     }
-  }, []);
+  };
 
-  const markAllAsRead = useCallback(async () => {
-    if (!userId || unreadCount === 0) return;
-    const previous = notifications;
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
-    if (error) {
-      setNotifications(previous);
-      toast.error('Erreur : ' + error.message);
+  const addNote = async () => {
+    if (!note.trim()) return;
+    await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'note', description: note.trim() }]);
+    setNote('');
+    loadActivities();
+    toast.success('Note ajoutée');
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', lead.id);
+    await supabase.from('lead_activities').insert([{
+      lead_id: lead.id, type: 'status',
+      description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
+    }]);
+    onUpdate({ ...lead, status: newStatus });
+    setForm(f => ({ ...f, status: newStatus }));
+    loadActivities();
+
+    // [A7] Déclencher lead_status_changed
+    if (profileId) triggerLeadStatusChanged(profileId, {
+      leadId:    lead.id,
+      leadName:  lead.name,
+      oldStatus: lead.status,
+      newStatus,
+    });
+  };
+
+  const addTag = async () => {
+    const tag = newTag.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!tag) return;
+    const currentTags = lead.tags || [];
+    if (currentTags.includes(tag)) { setNewTag(''); return; }
+    const updatedTags = [...currentTags, tag];
+    const { error } = await supabase.from('leads').update({ tags: updatedTags }).eq('id', lead.id);
+    if (error) { toast.error(error.message); return; }
+    onUpdate({ ...lead, tags: updatedTags });
+    setNewTag('');
+
+    // [A8] Déclencher lead_tagged
+    if (profileId) triggerLeadTagged(profileId, {
+      leadId:   lead.id,
+      leadName: lead.name,
+      tag,
+    });
+  };
+
+  const removeTag = async (tag) => {
+    const updatedTags = (lead.tags || []).filter(t => t !== tag);
+    const { error } = await supabase.from('leads').update({ tags: updatedTags }).eq('id', lead.id);
+    if (error) { toast.error(error.message); return; }
+    onUpdate({ ...lead, tags: updatedTags });
+  };
+
+  const current = editing ? form : lead;
+  const { color: sc } = scoreLabel(current.score || 0);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,17,25,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
+    >
+      {/* [FIX3] classe crm-drawer : hauteur 100vh puis 100dvh (fallback CSS) */}
+      <style>{`.crm-drawer{height:100vh;height:100dvh;}`}</style>
+      <motion.div
+        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        onClick={e => e.stopPropagation()}
+        className="crm-drawer"
+        style={{ width: '100%', maxWidth: isTablet ? 580 : 460, background: '#ffffff', borderLeft: '1px solid #e6e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '-8px 0 32px rgba(15,23,42,0.1)' }}
+      >
+        <div style={{ padding: '20px 24px 18px', borderBottom: '1px solid #e6e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fc' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 46, height: 46, borderRadius: '50%', background: `linear-gradient(135deg, ${sc}33, ${sc}18)`, border: `2px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: sc }}>
+              {(current.name || '?')[0].toUpperCase()}
+            </div>
+            <div>
+              {editing
+                ? <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="crm-field" style={{ ...inp, padding: '6px 10px', fontSize: 15, fontWeight: 700, width: 180 }} />
+                : <h3 style={{ margin: 0, color: '#151329', fontSize: 16, fontWeight: 700 }}>{lead.name}</h3>
+              }
+              <StatusBadge status={current.status} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {editing
+              ? <button onClick={saveEdit} style={actionBtn('#22c55e')}><Check size={14} /></button>
+              : <button onClick={() => setEditing(true)} style={actionBtn('#6366f1')}><Pencil size={14} /></button>
+            }
+            <button onClick={onClose} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            <WhatsAppBtn phone={current.phone} leadId={lead.id} onContact={async (id) => {
+              await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
+              onContact && onContact();
+              loadActivities();
+            }} />
+            {current.email && (
+              <a href={`mailto:${current.email}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 14px', borderRadius: 10, textDecoration: 'none', background: 'rgba(99,102,241,0.1)', color: '#4f46e5', fontWeight: 700, fontSize: 12, border: 'none' }}>
+                <Mail size={14} /> Email
+              </a>
+            )}
+            <button onClick={() => { if (window.confirm('Supprimer ce lead ?')) { onDelete(lead.id); onClose(); } }} style={{ ...actionBtn('#ef4444'), marginLeft: 'auto' }}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+
+          <Section title="Informations">
+            <Field icon={<Phone size={13} />} label="Téléphone" value={current.phone} editing={editing} onChange={v => setForm(f => ({ ...f, phone: v }))} />
+            <Field icon={<Mail size={13} />} label="Email" value={current.email} editing={editing} onChange={v => setForm(f => ({ ...f, email: v }))} />
+            <Field icon={<Building2 size={13} />} label="Entreprise" value={current.company} editing={editing} onChange={v => setForm(f => ({ ...f, company: v }))} />
+            <Field icon={<Globe size={13} />} label="Source" value={SOURCES.find(s => s.id === current.source)?.label || current.source} valueRaw={current.source} editing={editing} type="select" options={SOURCES} onChange={v => setForm(f => ({ ...f, source: v }))} />
+          </Section>
+
+          <Section title="Statut">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {STATUSES.map(s => (
+                <button key={s.id} onClick={() => editing ? setForm(f => ({ ...f, status: s.id })) : handleStatusChange(s.id)} style={{
+                  padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+                  border: `1px solid ${(editing ? form : lead).status === s.id ? s.color : '#e6e8f0'}`,
+                  background: (editing ? form : lead).status === s.id ? s.bg : 'transparent',
+                  color: (editing ? form : lead).status === s.id ? s.color : '#6b6f85',
+                  fontSize: 12, fontWeight: 600,
+                }}>{s.label}</button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Tags">
+            <TagChips tags={lead.tags || []} onRemove={removeTag} />
+            <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
+              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field" style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
+              <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
+            </div>
+          </Section>
+
+          <Section title="Score commercial">
+            <ScoreBar score={editing ? form.score : (lead.score ?? 0)} onChange={editing ? v => setForm(f => ({ ...f, score: v })) : null} />
+          </Section>
+
+          <Section title="Notes">
+            {current.notes && (
+              <p style={{ margin: '0 0 8px', color: '#6b6f85', fontSize: 13, lineHeight: 1.6 }}>
+                {editing
+                  ? <textarea value={form.notes} rows={3} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="crm-field" style={{ ...inp, resize: 'none' }} />
+                  : current.notes
+                }
+              </p>
+            )}
+            {!editing && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." className="crm-field" style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
+                <button onClick={addNote} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
+              </div>
+            )}
+          </Section>
+
+          <Section title="Historique">
+            {loadingAct
+              ? <div style={{ textAlign: 'center', padding: 20 }}><Loader2 size={16} color="#9a9db0" className="animate-spin" /></div>
+              : activities.length === 0
+              ? <p style={{ color: '#c7cdfb', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activité</p>
+              : activities.map(a => (
+                <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid #f1f2f7' }}>
+                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || '📌'}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <p style={{ margin: 0, color: '#151329', fontSize: 13, flex: 1 }}>{a.description}</p>
+                      {/* [A10] Bouton "Fait" uniquement sur les tâches non terminées */}
+                      {a.type === 'task' && !doneTasks.has(a.id) && (
+                        <button
+                          onClick={() => markTaskDone(a)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.1)', color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          ✓ Fait
+                        </button>
+                      )}
+                      {a.type === 'task' && doneTasks.has(a.id) && (
+                        <span style={{ fontSize: 11, color: '#16a34a', opacity: 0.7 }}>✓ Terminée</span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: '#9a9db0' }}>
+                      {new Date(a.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                    </span>
+                  </div>
+                </div>
+              ))
+            }
+          </Section>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// [tablet] useIsMobile remplacé par useBreakpoint (voir src/hooks/useBreakpoint.js)
+
+// [FIX2] Carte pipeline pilotée par Pointer Events (souris + tactile unifiés).
+// Un simple tap ouvre la fiche ; un déplacement au-delà d'un petit seuil
+// démarre un drag, qui fonctionne aussi bien à la souris qu'au doigt sur
+// iOS/Android — contrairement à l'ancienne API HTML5 drag-and-drop native.
+// [FIX8] Poignée de drag visible (icône grip) — signale que la carte est
+// déplaçable au lieu de le laisser deviner par un curseur "grab" seul.
+function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDragEnd }) {
+  const { color: sc } = scoreLabel(lead.score || 0);
+  const startRef = useRef({ x: 0, y: 0, dragging: false, pointerId: null });
+
+  const handlePointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return; // clic gauche uniquement
+    startRef.current = { x: e.clientX, y: e.clientY, dragging: false, pointerId: e.pointerId };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    const s = startRef.current;
+    if (s.pointerId !== e.pointerId) return;
+    if (!s.dragging) {
+      const dx = e.clientX - s.x;
+      const dy = e.clientY - s.y;
+      if (Math.hypot(dx, dy) < 6) return;
+      s.dragging = true;
+      onDragStart(lead.id);
     }
-  }, [userId, unreadCount, notifications]);
+    e.preventDefault();
+    onDragMove(e.clientX, e.clientY);
+  };
 
-  const requestPushPermission = async () => {
-    if (typeof Notification === 'undefined') return;
-    const p = await Notification.requestPermission();
-    setNotifGranted(p === 'granted');
-    if (p === 'granted') toast.success('Notifications navigateur activées !');
-    else if (p === 'denied') toast.error('Permission refusée par le navigateur');
+  const handlePointerUp = (e) => {
+    const s = startRef.current;
+    if (s.pointerId !== e.pointerId) return;
+    if (s.dragging) {
+      onDragEnd(e.clientX, e.clientY);
+    } else {
+      onOpen();
+    }
+    startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
+  };
+
+  const handlePointerCancel = (e) => {
+    if (startRef.current.dragging) onDragEnd(null, null);
+    startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
   };
 
   return (
-    <div style={{ position: 'relative' }}>
-      <button
-        ref={bellRef}
-        onClick={() => setOpen(v => !v)}
-        style={{
-          position: 'relative', width: '38px', height: '38px', borderRadius: '11px',
-          background: open ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
-          border: '1px solid ' + (open ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.1)'),
-          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          transition: 'all 0.15s',
-        }}
-      >
-        <Bell size={16} color={open ? '#a78bfa' : 'rgba(255,255,255,0.6)'} />
-        {unreadCount > 0 && (
-          <div style={{
-            position: 'absolute', top: '-4px', right: '-4px', minWidth: '17px', height: '17px',
-            borderRadius: '9px', background: '#ef4444', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', padding: '0 4px', border: '2px solid #0a0817',
-          }}>
-            <span style={{ color: 'white', fontSize: '9px', fontWeight: 700, lineHeight: 1 }}>
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          </div>
-        )}
-      </button>
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      style={{
+        background: '#ffffff', border: '1px solid #e6e8f0', borderRadius: 10,
+        boxShadow: '0 1px 2px rgba(16,18,40,0.04)',
+        padding: '10px 11px', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', flexDirection: 'column', gap: 8,
+        touchAction: 'none', userSelect: 'none',
+        opacity: isDragging ? 0.45 : 1, transition: 'opacity .1s, border-color .15s',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${sc}33, ${sc}18)`, border: `1.5px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: sc }}>
+          {(lead.name || '?')[0].toUpperCase()}
+        </div>
+        <span style={{ color: '#151329', fontSize: 12.5, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</span>
+        <GripVertical size={13} color="#c7cdfb" style={{ flexShrink: 0 }} />
+      </div>
+      {(lead.phone || lead.company) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {lead.phone && <span style={{ color: '#6b6f85', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}</span>}
+          {lead.company && <span style={{ color: '#6b6f85', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={9} /> {lead.company}</span>}
+        </div>
+      )}
+      {!!lead.tags?.length && <TagChips tags={lead.tags} size="small" />}
+      <div style={{ height: 3, background: '#eef0f6', borderRadius: 99 }}>
+        <div style={{ height: '100%', width: `${lead.score || 0}%`, background: sc, borderRadius: 99 }} />
+      </div>
+    </div>
+  );
+}
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            ref={panelRef}
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ duration: 0.15 }}
+// [FIX8] Colonnes toujours visibles (fond permanent, pas seulement au survol
+// de drag), point de couleur + badge de comptage dans le header, icône
+// dédiée par statut dans l'état vide, et scroll interne par colonne (plutôt
+// que de laisser une colonne pleine étirer toute la page verticalement
+// pendant que les colonnes vides restent minuscules à côté).
+function PipelineView({ leads, onCardClick, onStatusChange }) {
+  const { isTablet } = useBreakpoint(); // [tablet]
+  const [draggedId, setDraggedId] = useState(null);
+  const [overColumn, setOverColumn] = useState(null);
+  const grouped = useMemo(() => {
+    const map = {};
+    STATUSES.forEach(s => { map[s.id] = []; });
+    leads.forEach(l => { if (map[l.status]) map[l.status].push(l); });
+    return map;
+  }, [leads]);
+
+  // [FIX2] Détecte la colonne survolée via elementFromPoint — fonctionne
+  // identiquement pour un pointeur souris ou un doigt.
+  const findColumnAt = (x, y) => {
+    if (x == null || y == null) return null;
+    const el = document.elementFromPoint(x, y);
+    const col = el && el.closest('[data-status-col]');
+    return col ? col.getAttribute('data-status-col') : null;
+  };
+
+  const handleDragStart = (id) => setDraggedId(id);
+  const handleDragMove = (x, y) => setOverColumn(findColumnAt(x, y));
+  const handleDragEnd = (x, y) => {
+    const target = findColumnAt(x, y);
+    if (target && draggedId) onStatusChange(draggedId, target);
+    setDraggedId(null);
+    setOverColumn(null);
+  };
+
+  const columnWidth = isTablet ? 260 : 230;
+
+  return (
+    <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
+      {STATUSES.map(status => {
+        const count = grouped[status.id].length;
+        const isOver = overColumn === status.id;
+        const StatusIcon = status.icon;
+        return (
+          <div key={status.id}
+            data-status-col={status.id}
             style={{
-              position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-              background: 'rgba(10,8,25,0.97)', backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px',
-              width: '340px', maxWidth: '90vw', zIndex: 50,
-              boxShadow: '0 16px 48px rgba(0,0,0,0.6)', overflow: 'hidden',
+              minWidth: columnWidth, width: columnWidth, flexShrink: 0,
+              background: isOver ? `${status.color}12` : '#f8f9fc',
+              border: `1px solid ${isOver ? status.color + '66' : '#e6e8f0'}`,
+              borderRadius: 14, padding: 8, transition: 'background .12s, border-color .12s',
+              display: 'flex', flexDirection: 'column',
             }}
           >
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 14px 10px' }}>
-              <span style={{ color: 'white', fontSize: '13px', fontWeight: 700 }}>
-                Notifications {unreadCount > 0 && <span style={{ color: '#a78bfa' }}>({unreadCount})</span>}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {unreadCount > 0 && (
-                  <button onClick={markAllAsRead} title="Tout marquer comme lu"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '26px', height: '26px', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CheckCheck size={13} />
-                  </button>
-                )}
-                <button onClick={() => setOpen(false)}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', width: '26px', height: '26px', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <X size={13} />
-                </button>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px 10px', flexShrink: 0 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.color, flexShrink: 0 }} />
+              <span style={{ color: status.color, fontSize: 12, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{status.label}</span>
+              <span style={{ color: count > 0 ? status.color : '#9a9db0', fontSize: 11, fontWeight: 700, background: count > 0 ? `${status.color}1a` : '#eef0f6', borderRadius: 99, padding: '1px 7px', flexShrink: 0 }}>{count}</span>
             </div>
 
-            {/* Liste */}
-            <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '0 8px 8px' }}>
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '30px 0', color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
-                  Chargement…
-                </div>
-              ) : notifications.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '30px 16px', color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
-                  <Bell size={22} color="rgba(255,255,255,0.15)" style={{ marginBottom: '8px' }} />
-                  <p style={{ margin: 0 }}>Aucune notification pour le moment</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {notifications.map(n => (
-                    <NotificationRow key={n.id} notif={n} onMarkRead={markAsRead} />
-                  ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', maxHeight: 480, minHeight: 60, paddingRight: 2 }}>
+              {grouped[status.id].map(lead => (
+                <PipelineCard
+                  key={lead.id}
+                  lead={lead}
+                  isDragging={draggedId === lead.id}
+                  onOpen={() => onCardClick(lead)}
+                  onDragStart={handleDragStart}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                />
+              ))}
+              {count === 0 && (
+                <div style={{ textAlign: 'center', padding: '26px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <StatusIcon size={19} color="#c7cdfb" />
+                  <span style={{ color: '#9a9db0', fontSize: 11 }}>Aucun lead ici</span>
                 </div>
               )}
             </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-            {/* Footer : activer les notifications navigateur (optionnel) */}
-            {!notifGranted && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '10px 14px' }}>
-                <button onClick={requestPushPermission} style={{
-                  width: '100%', padding: '9px', background: 'rgba(99,102,241,0.1)',
-                  border: '1px dashed rgba(99,102,241,0.3)', borderRadius: '10px',
-                  color: '#a78bfa', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                }}>
-                  <Bell size={12} /> Activer les alertes navigateur
-                </button>
-              </div>
-            )}
+// [G3] Carte compacte pour la vue liste en grille (4 colonnes desktop).
+// Reprend les mêmes informations que l'ancienne ligne pleine largeur
+// (statut, contact, tags, score, WhatsApp), condensées verticalement pour
+// tenir dans une case de grille au lieu d'une ligne pleine largeur.
+function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
+  const { color: sc } = scoreLabel(lead.score || 0);
+  return (
+    <motion.div
+      layout onClick={onOpen}
+      {...(canHover ? { whileHover: { background: isSelected ? 'rgba(99,102,241,0.1)' : '#f8f9fc' } } : {})}
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 10, padding: 14,
+        background: isSelected ? 'rgba(99,102,241,0.06)' : '#ffffff',
+        border: `1px solid ${isSelected ? 'rgba(99,102,241,0.4)' : '#e6e8f0'}`,
+        boxShadow: '0 1px 2px rgba(16,18,40,0.04)',
+        borderRadius: 14, cursor: 'pointer', transition: 'border-color .15s, background .15s', minWidth: 0,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <Checkbox checked={isSelected} onChange={onToggleSelect} />
+        <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: `linear-gradient(135deg, ${sc}33, ${sc}18)`, border: `2px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: sc }}>
+          {(lead.name || '?')[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#151329', fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
+          <div style={{ marginTop: 4 }}><StatusBadge status={lead.status} /></div>
+        </div>
+      </div>
+
+      {(lead.phone || lead.company) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6b6f85', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}</span>}
+          {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6b6f85', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Building2 size={10} /> {lead.company}</span>}
+        </div>
+      )}
+
+      {!!lead.tags?.length && <TagChips tags={lead.tags} size="small" />}
+
+      <ScoreBar score={lead.score || 0} />
+
+      <div onClick={e => e.stopPropagation()}>
+        <WhatsAppBtn phone={lead.phone} leadId={lead.id}
+          onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]); }} />
+      </div>
+    </motion.div>
+  );
+}
+
+export default function LeadsCRMPanel({ profileId }) {
+  const { isMobile, isTablet } = useBreakpoint(); // [tablet]
+  const [leads, setLeads]               = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [view, setView]                 = useState('list');
+  const [filter, setFilter]             = useState('all');
+  const [tagFilter, setTagFilter]       = useState(null);
+  const [search, setSearch]             = useState('');
+  const [showAdd, setShowAdd]           = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [newLead, setNewLead]           = useState({ ...EMPTY_LEAD });
+  const [adding, setAdding]             = useState(false);
+  const [selectedIds, setSelectedIds]   = useState(new Set());
+  const [bulkStatus, setBulkStatus]     = useState('');
+  const [page, setPage]                 = useState(1); // [G1] page courante de la vue liste
+  // [FIX6] Détecté une seule fois : évite un état "survolé" collé après un
+  // tap sur les lignes de la liste, sur les appareils tactiles.
+  const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
+
+  useEffect(() => {
+    if (!profileId) return;
+    loadLeads();
+    const channel = supabase
+      .channel(`leads-${profileId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `profile_id=eq.${profileId}` }, () => loadLeads())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profileId]);
+
+  // [G5] Réinitialise aussi la page courante quand la vue/le filtre/le tag/
+  // la recherche changent (même logique que pour la sélection existante).
+  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setPage(1); }, [view, filter, tagFilter, search]);
+
+  const loadLeads = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('leads').select('*').eq('profile_id', profileId).order('created_at', { ascending: false });
+    if (error) { toast.error(error.message); setLoading(false); return; }
+    setLeads(data || []);
+    setLoading(false);
+  };
+
+  // ── [A4] Ajout d'un lead avec déclencheur automatisation ─────────
+  const addLead = async () => {
+    if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
+    setAdding(true);
+    const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
+    if (exists) { toast.error('Ce numéro existe déjà'); setAdding(false); return; }
+    const { data, error } = await supabase
+      .from('leads')
+      .insert([{ ...newLead, profile_id: profileId, score: 0 }])
+      .select()
+      .maybeSingle();
+    if (error) { toast.error(error.message); setAdding(false); return; }
+    await supabase.from('lead_activities').insert([{ lead_id: data.id, type: 'created', description: 'Lead créé' }]);
+
+    // [A4] Déclencher les automatisations new_lead (fire-and-forget — ne bloque pas l'UI)
+    triggerNewLead(profileId, {
+      leadId: data.id,    // évite qu'une action create_lead crée un doublon
+      name:   data.name,
+      email:  data.email,
+      phone:  data.phone,
+      source: data.source,
+    });
+
+    setLeads(p => [data, ...p]);
+    setNewLead({ ...EMPTY_LEAD });
+    setShowAdd(false);
+    setAdding(false);
+    toast.success('Lead ajouté ✅');
+  };
+
+  const deleteLead = async (id) => {
+    const { error } = await supabase.from('leads').delete().eq('id', id);
+    if (error) { toast.error(error.message); return; }
+    setLeads(prev => prev.filter(l => l.id !== id));
+    toast.success('Lead supprimé');
+  };
+
+  const updateLeadLocal = (updated) => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l));
+
+  const handlePipelineStatusChange = async (leadId, newStatus) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead || lead.status === newStatus) return;
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+    const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', leadId);
+    if (error) { toast.error(error.message); setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: lead.status } : l)); return; }
+    await supabase.from('lead_activities').insert([{ lead_id: leadId, type: 'status', description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus} (glissé-déposé)` }]);
+    toast.success(`${lead.name} → ${STATUSES.find(s => s.id === newStatus)?.label}`);
+
+    // [A7] Déclencher lead_status_changed (pipeline drag-and-drop)
+    triggerLeadStatusChanged(profileId, {
+      leadId:    leadId,
+      leadName:  lead.name,
+      oldStatus: lead.status,
+      newStatus,
+    });
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  };
+
+  const bulkChangeStatus = async (newStatus) => {
+    if (!newStatus) return;
+    const ids = [...selectedIds];
+    setLeads(prev => prev.map(l => selectedIds.has(l.id) ? { ...l, status: newStatus } : l));
+    const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).in('id', ids);
+    if (error) { toast.error(error.message); loadLeads(); return; }
+    await supabase.from('lead_activities').insert(ids.map(id => ({ lead_id: id, type: 'status', description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label} (action groupée)` })));
+    setSelectedIds(new Set());
+    setBulkStatus('');
+    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} mis à jour`);
+  };
+
+  const bulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (!window.confirm(`Supprimer définitivement ${ids.length} lead${ids.length > 1 ? 's' : ''} ?`)) return;
+    const { error } = await supabase.from('leads').delete().in('id', ids);
+    if (error) { toast.error(error.message); return; }
+    setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
+    setSelectedIds(new Set());
+    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} supprimé${ids.length > 1 ? 's' : ''}`);
+  };
+
+  const buildCSV = (rows) => {
+    const headers = ['Nom', 'Téléphone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Tags', 'Notes', 'Créé le'];
+    const data = rows.map(l => [
+      l.name || '', l.phone || '', l.email || '', l.company || '',
+      STATUSES.find(s => s.id === l.status)?.label || l.status,
+      SOURCES.find(s => s.id === l.source)?.label || l.source,
+      l.score ?? '', (l.tags || []).join('; '), (l.notes || '').replace(/\n/g, ' '),
+      l.created_at ? new Date(l.created_at).toLocaleDateString('fr-FR') : '',
+    ]);
+    return [headers, ...data].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  };
+
+  const exportCSV = () => {
+    if (!leads.length) { toast.error('Aucun lead à exporter'); return; }
+    const blob = new Blob(['\uFEFF' + buildCSV(leads)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `leads-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const exportSelectedCSV = () => {
+    const selected = leads.filter(l => selectedIds.has(l.id)); if (!selected.length) return;
+    const blob = new Blob(['\uFEFF' + buildCSV(selected)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `leads-selection-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const allTags = useMemo(() => { const set = new Set(); leads.forEach(l => (l.tags || []).forEach(t => set.add(t))); return Array.from(set).sort(); }, [leads]);
+
+  const filteredLeads = leads.filter(l => {
+    const matchesFilter = filter === 'all' || l.status === filter;
+    const matchesTag = !tagFilter || (l.tags || []).includes(tagFilter);
+    const q = search.trim().toLowerCase();
+    const matchesSearch = !q || l.name?.toLowerCase().includes(q) || l.phone?.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q) || l.company?.toLowerCase().includes(q) || (l.tags || []).some(t => t.toLowerCase().includes(q));
+    return matchesFilter && matchesTag && matchesSearch;
+  });
+
+  const statusCounts = STATUSES.reduce((acc, s) => { acc[s.id] = leads.filter(l => l.status === s.id).length; return acc; }, {});
+  const allSelected  = filteredLeads.length > 0 && filteredLeads.every(l => selectedIds.has(l.id));
+  const someSelected = filteredLeads.some(l => selectedIds.has(l.id));
+  const toggleSelectAll = () => { if (allSelected) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(filteredLeads.map(l => l.id))); } };
+
+  // [G1] Pagination : 16 leads (4x4) par page pour la vue liste
+  const totalPages     = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PAGE_SIZE));
+  const paginatedLeads  = filteredLeads.slice((page - 1) * LEADS_PAGE_SIZE, page * LEADS_PAGE_SIZE);
+
+  // [G5] Garde-fou : si des leads sont supprimés et que la page courante
+  // n'existe plus, on retombe sur la dernière page valide.
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: '#9a9db0', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* [FIX4] classe crm-modal : max-height 90vh puis 90dvh (fallback CSS)
+          [FIX7][L2] classe crm-field : halo indigo au focus pour tous les
+          champs utilisant le style `inp` (recherche, formulaires, tags,
+          notes...) — fond passé en blanc pur au focus (thème clair). */}
+      <style>{`
+        .crm-modal{max-height:90vh;max-height:90dvh;}
+        .crm-field:focus{border-color:rgba(99,102,241,0.5)!important;background:#ffffff!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
+        .crm-field::placeholder{color:#9a9db0;}
+      `}</style>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h3 style={{ color: '#151329', fontSize: 16, fontWeight: 800, margin: 0 }}>Leads CRM</h3>
+          <p style={{ color: '#6b6f85', fontSize: 12, margin: '4px 0 0' }}>{leads.length} lead{leads.length !== 1 ? 's' : ''} au total</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: '#eef0f6', border: '1px solid #e6e8f0', borderRadius: 12, padding: 3 }}>
+            <button onClick={() => setView('list')} title="Vue liste" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'list' ? '#ffffff' : 'transparent', boxShadow: view === 'list' ? '0 1px 3px rgba(16,18,40,0.1)' : 'none', color: view === 'list' ? '#4f46e5' : '#6b6f85', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              <List size={13} /> {(!isMobile || isTablet) && 'Liste'}
+            </button>
+            <button onClick={() => setView('pipeline')} title="Vue pipeline" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9, border: 'none', background: view === 'pipeline' ? '#ffffff' : 'transparent', boxShadow: view === 'pipeline' ? '0 1px 3px rgba(16,18,40,0.1)' : 'none', color: view === 'pipeline' ? '#4f46e5' : '#6b6f85', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              <Columns3 size={13} /> {(!isMobile || isTablet) && 'Pipeline'}
+            </button>
+          </div>
+          <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', background: '#eef0f6', border: '1px solid #e6e8f0', borderRadius: 12, color: '#6b6f85', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            <Download size={13} /> {isMobile && !isTablet ? '' : 'Exporter CSV'}
+          </button>
+          <button onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            <UserPlus size={13} /> {isMobile ? 'Ajouter' : 'Ajouter un lead'}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={14} color="#9a9db0" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher un lead (nom, téléphone, email, entreprise, tag)..."
+            className="crm-field" style={{ ...inp, paddingLeft: 38 }} />
+        </div>
+
+        {view === 'list' && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button onClick={() => setFilter('all')} style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === 'all' ? '#6366f1' : '#e6e8f0'}`, background: filter === 'all' ? 'rgba(99,102,241,0.1)' : 'transparent', color: filter === 'all' ? '#4f46e5' : '#6b6f85', fontSize: 12, fontWeight: 600 }}>
+              Tous ({leads.length})
+            </button>
+            {STATUSES.map(s => (
+              <button key={s.id} onClick={() => setFilter(s.id)} style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === s.id ? s.color : '#e6e8f0'}`, background: filter === s.id ? s.bg : 'transparent', color: filter === s.id ? s.color : '#6b6f85', fontSize: 12, fontWeight: 600 }}>
+                {s.label} ({statusCounts[s.id] || 0})
+              </button>
+            ))}
+          </div>
+        )}
+
+        {allTags.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ color: '#9a9db0', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}><TagIcon size={11} /> Tags :</span>
+            {allTags.map(tag => (
+              <button key={tag} onClick={() => setTagFilter(prev => prev === tag ? null : tag)} style={{ padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${tagFilter === tag ? tagColor(tag) : '#e6e8f0'}`, background: tagFilter === tag ? `${tagColor(tag)}1a` : 'transparent', color: tagFilter === tag ? tagColor(tag) : '#6b6f85', fontSize: 10.5, fontWeight: 600 }}>
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {selectedIds.size > 0 && view === 'list' && (
+          <motion.div initial={{ opacity: 0, y: -6, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -6, height: 0 }} style={{ overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 16px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 14 }}>
+              <span style={{ background: 'rgba(99,102,241,0.18)', color: '#4f46e5', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 99 }}>
+                {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+              </span>
+              <button onClick={() => setSelectedIds(new Set())} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#6b6f85', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                <X size={11} /> Désélectionner
+              </button>
+              <select value={bulkStatus} onChange={e => { setBulkStatus(e.target.value); bulkChangeStatus(e.target.value); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#151329', fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <option value="">Changer le statut…</option>
+                {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <button onClick={exportSelectedCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#6b6f85', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                <Download size={11} /> CSV
+              </button>
+              <button onClick={bulkDelete} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
+                <Trash2 size={11} /> Supprimer
+              </button>
+            </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {view === 'pipeline' && (
+        loading
+          ? <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="#9a9db0" className="animate-spin" /></div>
+          : <PipelineView leads={filteredLeads} onCardClick={setSelectedLead} onStatusChange={handlePipelineStatusChange} />
+      )}
+
+      {view === 'list' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="#9a9db0" className="animate-spin" /></div>
+          ) : filteredLeads.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: '#9a9db0', fontSize: 13 }}>
+              {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 16px', color: '#9a9db0', fontSize: 11 }}>
+                <Checkbox checked={allSelected} indeterminate={someSelected && !allSelected} onChange={toggleSelectAll} />
+                <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={toggleSelectAll}>
+                  {allSelected ? 'Tout désélectionner' : `Tout sélectionner (${filteredLeads.length})`}
+                </span>
+                {totalPages > 1 && (
+                  <span style={{ marginLeft: 'auto', color: '#9a9db0' }}>
+                    Page {page}/{totalPages} — {filteredLeads.length} lead{filteredLeads.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* [G1][G3][G4] Grille de cartes — 4 colonnes sur desktop/tablette
+                  large (4x4 = 16 leads/page), qui se réduit à 2 ou 1 colonne(s)
+                  sur écrans plus étroits via auto-fill/minmax plutôt que de
+                  forcer 4 colonnes illisibles sur mobile. La pagination reste
+                  fixée à 16 leads/page quel que soit le nombre de colonnes
+                  réellement affichées. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                {paginatedLeads.map(lead => (
+                  <LeadGridCard
+                    key={lead.id}
+                    lead={lead}
+                    isSelected={selectedIds.has(lead.id)}
+                    onToggleSelect={() => toggleSelect(lead.id)}
+                    onOpen={() => setSelectedLead(lead)}
+                    canHover={canHover}
+                  />
+                ))}
+              </div>
+
+              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+            </>
+          )}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showAdd && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAdd(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,17,25,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
+              className="crm-modal"
+              style={{ width: '100%', maxWidth: isTablet ? 540 : 420, background: '#ffffff', border: '1px solid #e6e8f0', boxShadow: '0 24px 60px rgba(15,23,42,0.2)', borderRadius: 20, padding: isTablet ? 28 : 24, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ color: '#151329', fontSize: 16, fontWeight: 800, margin: 0 }}>Nouveau lead</h3>
+                <button onClick={() => setShowAdd(false)} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>
+              </div>
+              {[
+                { key: 'name',    label: 'Nom *',      ph: 'Nom complet'         },
+                { key: 'phone',   label: 'Téléphone',  ph: 'Ex: 0700000000'      },
+                { key: 'email',   label: 'Email',       ph: 'email@exemple.com'   },
+                { key: 'company', label: 'Entreprise',  ph: "Nom de l'entreprise" },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ color: '#6b6f85', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>{f.label}</label>
+                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} className="crm-field" style={inp} placeholder={f.ph} />
+                </div>
+              ))}
+              <div>
+                <label style={{ color: '#6b6f85', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Source</label>
+                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} className="crm-field" style={inp}>
+                  {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ color: '#6b6f85', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
+                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field" style={{ ...inp, resize: 'none' }} placeholder="Notes additionnelles..." />
+              </div>
+              <button onClick={addLead} disabled={adding} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 13, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 12, color: 'white', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer', opacity: adding ? 0.7 : 1, marginTop: 4 }}>
+                {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                Ajouter le lead
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedLead && (
+          <LeadModal lead={selectedLead} profileId={profileId} onClose={() => setSelectedLead(null)}
+            onUpdate={updated => { updateLeadLocal(updated); setSelectedLead(updated); }}
+            onDelete={deleteLead} />
         )}
       </AnimatePresence>
     </div>

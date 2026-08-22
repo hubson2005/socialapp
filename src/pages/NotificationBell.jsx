@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+﻿import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Trash2, Mail, Phone, UserPlus,
@@ -9,43 +9,43 @@ import {
   GripVertical, Flame, Snowflake, CheckCircle2, Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../../supabase';
-// [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
-import { triggerNewLead }                    from '../../lib/triggers/newLead';
-import { useBreakpoint }                     from '../../hooks/useBreakpoint';
-import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus';     // [A7]
-import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
-import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
-import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
+import { supabase } from '../supabase';
+// [A4][A7][A8][A9][A10] Moteur d'automatisation â€” dÃ©clencheurs CRM
+import { triggerNewLead }                    from '../lib/triggers/newLead';
+import { useBreakpoint }                     from '../hooks/useBreakpoint';
+import { triggerLeadStatusChanged }          from '../lib/triggers/leadStatus';     // [A7]
+import { triggerLeadTagged }                 from '../lib/triggers/leadTagged';     // [A8]
+import { triggerLeadScoreReachedIfThreshold } from '../lib/triggers/leadScore';     // [A9]
+import { triggerTaskCompleted }              from '../lib/triggers/taskCompleted';  // [A10]
 
 
-// ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
-//  [FIX1]-[FIX8] cf. révisions précédentes (inchangées)
-//  [G1]-[G5] Grille + pagination vue liste (inchangées)
+// â”€â”€â”€ CORRECTIONS RESPONSIVE / BUGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  [FIX1]-[FIX8] cf. rÃ©visions prÃ©cÃ©dentes (inchangÃ©es)
+//  [G1]-[G5] Grille + pagination vue liste (inchangÃ©es)
 //
-// ─── THÈME CLAIR (cette révision) ────────────────────────────────────────────
-//  [L1] Palette entièrement retournée pour le fond clair du dashboard :
+// â”€â”€â”€ THÃˆME CLAIR (cette rÃ©vision) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  [L1] Palette entiÃ¨rement retournÃ©e pour le fond clair du dashboard :
 //       cartes blanches (#ffffff), bordures #e6e8f0, texte #151329 (fort) /
 //       #6b6f85 (secondaire) / #9a9db0 (muet). Les couleurs de statut
-//       (STATUSES), les accents indigo/violet et les icônes colorées par
-//       type sont conservés à l'identique.
-//  [L2] `inp` (champs de formulaire) : fond sombre #181830 → gris très
-//       clair #f8f9fc avec bordure #e6e8f0 ; texte blanc → #151329.
-//  [L3] `actionBtn('rgba(255,255,255,0.15)')` (boutons icône neutres :
-//       fermer, etc.) produisait un fond blanc translucide + icône blanche
-//       → invisible sur fond clair. La branche "neutre" de actionBtn est
-//       réécrite pour donner un gris clair opaque + icône foncée, tandis
-//       que la branche couleur (hex + '22') reste inchangée pour les
+//       (STATUSES), les accents indigo/violet et les icÃ´nes colorÃ©es par
+//       type sont conservÃ©s Ã  l'identique.
+//  [L2] `inp` (champs de formulaire) : fond sombre #181830 â†’ gris trÃ¨s
+//       clair #f8f9fc avec bordure #e6e8f0 ; texte blanc â†’ #151329.
+//  [L3] `actionBtn('rgba(255,255,255,0.15)')` (boutons icÃ´ne neutres :
+//       fermer, etc.) produisait un fond blanc translucide + icÃ´ne blanche
+//       â†’ invisible sur fond clair. La branche "neutre" de actionBtn est
+//       rÃ©Ã©crite pour donner un gris clair opaque + icÃ´ne foncÃ©e, tandis
+//       que la branche couleur (hex + '22') reste inchangÃ©e pour les
 //       boutons d'accent (vert, indigo, rouge).
 //  [L4] Le drawer LeadModal et la modale "Nouveau lead" passent en fond
 //       blanc ; l'overlay reste sombre (comportement standard de modale,
-//       indépendant du thème du contenu).
+//       indÃ©pendant du thÃ¨me du contenu).
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: UserPlus    },
-  { id: 'chaud',    label: '🔥 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)', icon: Flame       },
-  { id: 'client',   label: '✅ Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)',  icon: CheckCircle2 },
-  { id: 'froid',    label: '❄️ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',  icon: Snowflake   },
+  { id: 'chaud',    label: 'ðŸ”¥ Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)', icon: Flame       },
+  { id: 'client',   label: 'âœ… Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)',  icon: CheckCircle2 },
+  { id: 'froid',    label: 'â„ï¸ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',  icon: Snowflake   },
   { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.15)', icon: Ban        },
 ];
 
@@ -56,16 +56,16 @@ const SOURCES = [
   { id: 'rsvp',           label: 'RSVP'                },
   { id: 'marketplace',    label: 'Marketplace'         },
   { id: 'formulaire',     label: 'Formulaire'          },
-  { id: 'automatisation', label: '🤖 Automatisation'   },
-  { id: 'calendrier',     label: '📅 Calendly / RDV'   },
+  { id: 'automatisation', label: 'ðŸ¤– Automatisation'   },
+  { id: 'calendrier',     label: 'ðŸ“… Calendly / RDV'   },
 ];
 
 const ACTIVITY_ICONS = {
-  created:  '🆕',
-  edited:   '✏️',
-  note:     '📝',
-  whatsapp: '💬',
-  status:   '🔄',
+  created:  'ðŸ†•',
+  edited:   'âœï¸',
+  note:     'ðŸ“',
+  whatsapp: 'ðŸ’¬',
+  status:   'ðŸ”„',
 };
 
 const normalizePhone = (phone = '') => phone.replace(/\D/g, '');
@@ -79,10 +79,10 @@ const EMPTY_LEAD = {
 const LEADS_PAGE_SIZE = 16;
 
 const scoreLabel = (s) =>
-  s <= 30  ? { label: 'Froid',    color: '#0891b2', icon: '❄️'  } :
-  s <= 60  ? { label: 'Tiède',    color: '#d97706', icon: '🌡️'  } :
-  s <= 80  ? { label: 'Chaud',    color: '#ea580c', icon: '🔥'  } :
-             { label: 'Brûlant',  color: '#dc2626', icon: '🚀'  };
+  s <= 30  ? { label: 'Froid',    color: '#0891b2', icon: 'â„ï¸'  } :
+  s <= 60  ? { label: 'TiÃ¨de',    color: '#d97706', icon: 'ðŸŒ¡ï¸'  } :
+  s <= 80  ? { label: 'Chaud',    color: '#ea580c', icon: 'ðŸ”¥'  } :
+             { label: 'BrÃ»lant',  color: '#dc2626', icon: 'ðŸš€'  };
 
 const TAG_PALETTE = ['#7c3aed', '#0891b2', '#db2777', '#d97706', '#059669', '#e11d48', '#4f46e5'];
 const tagColor = (tag) => {
@@ -91,8 +91,8 @@ const tagColor = (tag) => {
   return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
 };
 
-// [G2] Génère une liste compacte de numéros de page avec "…" si besoin
-// (évite d'afficher des dizaines de boutons quand il y a beaucoup de pages)
+// [G2] GÃ©nÃ¨re une liste compacte de numÃ©ros de page avec "â€¦" si besoin
+// (Ã©vite d'afficher des dizaines de boutons quand il y a beaucoup de pages)
 function getPageNumbers(current, total) {
   const delta = 1;
   const range = [];
@@ -100,14 +100,14 @@ function getPageNumbers(current, total) {
     range.push(i);
   }
   const withDots = [];
-  if (current - delta > 2) withDots.push(1, '…'); else withDots.push(1);
+  if (current - delta > 2) withDots.push(1, 'â€¦'); else withDots.push(1);
   withDots.push(...range);
-  if (current + delta < total - 1) withDots.push('…', total);
+  if (current + delta < total - 1) withDots.push('â€¦', total);
   else if (total > 1) withDots.push(total);
   return withDots;
 }
 
-// [G2] Barre de pagination réutilisée sous la grille de leads
+// [G2] Barre de pagination rÃ©utilisÃ©e sous la grille de leads
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
   const pages = getPageNumbers(page, totalPages);
@@ -120,19 +120,19 @@ function Pagination({ page, totalPages, onChange }) {
   });
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={btn(false, page === 1)}>‹</button>
-      {pages.map((p, i) => p === '…'
-        ? <span key={`dots-${i}`} style={{ color: '#9a9db0', fontSize: 12, padding: '0 4px' }}>…</span>
+      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={btn(false, page === 1)}>â€¹</button>
+      {pages.map((p, i) => p === 'â€¦'
+        ? <span key={`dots-${i}`} style={{ color: '#9a9db0', fontSize: 12, padding: '0 4px' }}>â€¦</span>
         : <button key={p} onClick={() => onChange(p)} style={btn(p === page, false)}>{p}</button>
       )}
-      <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} style={btn(false, page === totalPages)}>›</button>
+      <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} style={btn(false, page === totalPages)}>â€º</button>
     </div>
   );
 }
 
-// [L2] Fond clair légèrement teinté (au lieu du fond nuit #181830) —
-// cohérent avec le style de champ déjà utilisé dans AutomationsPanel.jsx
-// (thème clair) : fond quasi-blanc, bordure grise, halo indigo au focus.
+// [L2] Fond clair lÃ©gÃ¨rement teintÃ© (au lieu du fond nuit #181830) â€”
+// cohÃ©rent avec le style de champ dÃ©jÃ  utilisÃ© dans AutomationsPanel.jsx
+// (thÃ¨me clair) : fond quasi-blanc, bordure grise, halo indigo au focus.
 const inp = {
   width: '100%', background: '#f8f9fc',
   border: '1px solid #e6e8f0', borderRadius: '12px',
@@ -141,8 +141,8 @@ const inp = {
   transition: 'border-color .15s, background .15s',
 };
 
-// [FIX5] Zone de tap agrandie (padding + marge négative) sans changer
-// l'apparence visuelle de la case à cocher (17x17).
+// [FIX5] Zone de tap agrandie (padding + marge nÃ©gative) sans changer
+// l'apparence visuelle de la case Ã  cocher (17x17).
 function Checkbox({ checked, indeterminate, onChange, style = {} }) {
   return (
     <div
@@ -173,7 +173,7 @@ function ScoreBar({ score, onChange }) {
     <div style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span style={{ color: '#6b6f85', fontSize: 12 }}>Score prospect</span>
-        <span style={{ color, fontWeight: 700, fontSize: 13 }}>{icon} {score} — {label}</span>
+        <span style={{ color, fontWeight: 700, fontSize: 13 }}>{icon} {score} â€” {label}</span>
       </div>
       <div style={{ position: 'relative', height: 6, background: '#eef0f6', borderRadius: 99 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${score}%`, background: color, borderRadius: 99, transition: 'width .3s, background .3s' }} />
@@ -218,7 +218,7 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
   );
 }
 
-// [FIX5] Hauteur/largeur minimales relevées à 40px (compact et normal)
+// [FIX5] Hauteur/largeur minimales relevÃ©es Ã  40px (compact et normal)
 function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
   const hasPhone = !!phone?.trim();
   return (
@@ -228,11 +228,11 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
         e.stopPropagation();
         if (!hasPhone) return;
         const cleanPhone = normalizePhone(phone);
-        if (cleanPhone.length < 8) { toast.error('Numéro invalide'); return; }
+        if (cleanPhone.length < 8) { toast.error('NumÃ©ro invalide'); return; }
         window.open(`https://wa.me/${cleanPhone}`, '_blank', 'noopener,noreferrer');
         onContact && onContact(leadId);
       }}
-      title={hasPhone ? `WhatsApp: ${phone}` : 'Numéro manquant'}
+      title={hasPhone ? `WhatsApp: ${phone}` : 'NumÃ©ro manquant'}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 0 : 6,
         height: 40, width: compact ? 40 : 'auto', padding: compact ? 0 : '0 14px',
@@ -248,11 +248,11 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
   );
 }
 
-// [L3] Branche "neutre" réécrite : l'ancien fallback `bg` tel quel
-// (rgba(255,255,255,0.15) + texte blanc) était pensé pour un fond sombre
-// et devenait invisible sur fond clair. Détecté ici et remplacé par un
-// gris clair opaque + icône foncée ; la branche couleur (hex + '22')
-// reste inchangée pour les boutons d'accent (vert, indigo, rouge).
+// [L3] Branche "neutre" rÃ©Ã©crite : l'ancien fallback `bg` tel quel
+// (rgba(255,255,255,0.15) + texte blanc) Ã©tait pensÃ© pour un fond sombre
+// et devenait invisible sur fond clair. DÃ©tectÃ© ici et remplacÃ© par un
+// gris clair opaque + icÃ´ne foncÃ©e ; la branche couleur (hex + '22')
+// reste inchangÃ©e pour les boutons d'accent (vert, indigo, rouge).
 const actionBtn = (bg) => {
   const isHex = typeof bg === 'string' && bg.startsWith('#');
   return {
@@ -284,7 +284,7 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
             </select>
           : <input value={value || ''} onChange={e => onChange(e.target.value)} className="crm-field" style={{ ...inp, padding: '7px 10px' }} />
       ) : (
-        <span style={{ color: value ? '#151329' : '#c7cdfb', fontSize: 13 }}>{value || '—'}</span>
+        <span style={{ color: value ? '#151329' : '#c7cdfb', fontSize: 13 }}>{value || 'â€”'}</span>
       )}
     </div>
   );
@@ -298,7 +298,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
   const [newTag, setNewTag] = useState('');
   const [activities, setActivities]   = useState([]);
   const [loadingAct, setLoadingAct]   = useState(true);
-  const [doneTasks, setDoneTasks]      = useState(new Set()); // [A10] IDs des tâches marquées faites
+  const [doneTasks, setDoneTasks]      = useState(new Set()); // [A10] IDs des tÃ¢ches marquÃ©es faites
 
   useEffect(() => { loadActivities(); }, [lead.id]);
 
@@ -309,14 +309,14 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     setLoadingAct(false);
   };
 
-  // [A10] Marquer une tâche comme terminée
+  // [A10] Marquer une tÃ¢che comme terminÃ©e
   const markTaskDone = async (activity) => {
     if (doneTasks.has(activity.id)) return;
     setDoneTasks(prev => new Set([...prev, activity.id]));
     await supabase.from('lead_activities').insert([{
       lead_id:     lead.id,
       type:        'task_done',
-      description: `✅ Terminée : ${activity.description}`,
+      description: `âœ… TerminÃ©e : ${activity.description}`,
     }]);
     loadActivities();
     if (profileId) triggerTaskCompleted(profileId, {
@@ -333,13 +333,13 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
       notes: form.notes, score: form.score, updated_at: new Date().toISOString(),
     }).eq('id', lead.id);
     if (error) { toast.error(error.message); return; }
-    await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'edited', description: 'Fiche modifiée' }]);
+    await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'edited', description: 'Fiche modifiÃ©e' }]);
     onUpdate({ ...lead, ...form });
     setEditing(false);
-    toast.success('Lead mis à jour');
+    toast.success('Lead mis Ã  jour');
     loadActivities();
 
-    // [A9] Déclencher lead_score_reached si un seuil est franchi
+    // [A9] DÃ©clencher lead_score_reached si un seuil est franchi
     if (profileId && form.score !== (lead.score ?? 0)) {
       triggerLeadScoreReachedIfThreshold(profileId, {
         leadId:   lead.id,
@@ -355,20 +355,20 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'note', description: note.trim() }]);
     setNote('');
     loadActivities();
-    toast.success('Note ajoutée');
+    toast.success('Note ajoutÃ©e');
   };
 
   const handleStatusChange = async (newStatus) => {
     await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', lead.id);
     await supabase.from('lead_activities').insert([{
       lead_id: lead.id, type: 'status',
-      description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
+      description: `Statut â†’ ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
     }]);
     onUpdate({ ...lead, status: newStatus });
     setForm(f => ({ ...f, status: newStatus }));
     loadActivities();
 
-    // [A7] Déclencher lead_status_changed
+    // [A7] DÃ©clencher lead_status_changed
     if (profileId) triggerLeadStatusChanged(profileId, {
       leadId:    lead.id,
       leadName:  lead.name,
@@ -388,7 +388,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     onUpdate({ ...lead, tags: updatedTags });
     setNewTag('');
 
-    // [A8] Déclencher lead_tagged
+    // [A8] DÃ©clencher lead_tagged
     if (profileId) triggerLeadTagged(profileId, {
       leadId:   lead.id,
       leadName: lead.name,
@@ -446,7 +446,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             <WhatsAppBtn phone={current.phone} leadId={lead.id} onContact={async (id) => {
-              await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
+              await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectuÃ©' }]);
               onContact && onContact();
               loadActivities();
             }} />
@@ -461,7 +461,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
           </div>
 
           <Section title="Informations">
-            <Field icon={<Phone size={13} />} label="Téléphone" value={current.phone} editing={editing} onChange={v => setForm(f => ({ ...f, phone: v }))} />
+            <Field icon={<Phone size={13} />} label="TÃ©lÃ©phone" value={current.phone} editing={editing} onChange={v => setForm(f => ({ ...f, phone: v }))} />
             <Field icon={<Mail size={13} />} label="Email" value={current.email} editing={editing} onChange={v => setForm(f => ({ ...f, email: v }))} />
             <Field icon={<Building2 size={13} />} label="Entreprise" value={current.company} editing={editing} onChange={v => setForm(f => ({ ...f, company: v }))} />
             <Field icon={<Globe size={13} />} label="Source" value={SOURCES.find(s => s.id === current.source)?.label || current.source} valueRaw={current.source} editing={editing} type="select" options={SOURCES} onChange={v => setForm(f => ({ ...f, source: v }))} />
@@ -514,24 +514,24 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             {loadingAct
               ? <div style={{ textAlign: 'center', padding: 20 }}><Loader2 size={16} color="#9a9db0" className="animate-spin" /></div>
               : activities.length === 0
-              ? <p style={{ color: '#c7cdfb', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activité</p>
+              ? <p style={{ color: '#c7cdfb', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activitÃ©</p>
               : activities.map(a => (
                 <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid #f1f2f7' }}>
-                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || '📌'}</span>
+                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || 'ðŸ“Œ'}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <p style={{ margin: 0, color: '#151329', fontSize: 13, flex: 1 }}>{a.description}</p>
-                      {/* [A10] Bouton "Fait" uniquement sur les tâches non terminées */}
+                      {/* [A10] Bouton "Fait" uniquement sur les tÃ¢ches non terminÃ©es */}
                       {a.type === 'task' && !doneTasks.has(a.id) && (
                         <button
                           onClick={() => markTaskDone(a)}
                           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.1)', color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
                         >
-                          ✓ Fait
+                          âœ“ Fait
                         </button>
                       )}
                       {a.type === 'task' && doneTasks.has(a.id) && (
-                        <span style={{ fontSize: 11, color: '#16a34a', opacity: 0.7 }}>✓ Terminée</span>
+                        <span style={{ fontSize: 11, color: '#16a34a', opacity: 0.7 }}>âœ“ TerminÃ©e</span>
                       )}
                     </div>
                     <span style={{ fontSize: 11, color: '#9a9db0' }}>
@@ -548,14 +548,14 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
   );
 }
 
-// [tablet] useIsMobile remplacé par useBreakpoint (voir src/hooks/useBreakpoint.js)
+// [tablet] useIsMobile remplacÃ© par useBreakpoint (voir src/hooks/useBreakpoint.js)
 
-// [FIX2] Carte pipeline pilotée par Pointer Events (souris + tactile unifiés).
-// Un simple tap ouvre la fiche ; un déplacement au-delà d'un petit seuil
-// démarre un drag, qui fonctionne aussi bien à la souris qu'au doigt sur
-// iOS/Android — contrairement à l'ancienne API HTML5 drag-and-drop native.
-// [FIX8] Poignée de drag visible (icône grip) — signale que la carte est
-// déplaçable au lieu de le laisser deviner par un curseur "grab" seul.
+// [FIX2] Carte pipeline pilotÃ©e par Pointer Events (souris + tactile unifiÃ©s).
+// Un simple tap ouvre la fiche ; un dÃ©placement au-delÃ  d'un petit seuil
+// dÃ©marre un drag, qui fonctionne aussi bien Ã  la souris qu'au doigt sur
+// iOS/Android â€” contrairement Ã  l'ancienne API HTML5 drag-and-drop native.
+// [FIX8] PoignÃ©e de drag visible (icÃ´ne grip) â€” signale que la carte est
+// dÃ©plaÃ§able au lieu de le laisser deviner par un curseur "grab" seul.
 function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDragEnd }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   const startRef = useRef({ x: 0, y: 0, dragging: false, pointerId: null });
@@ -632,10 +632,10 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
 }
 
 // [FIX8] Colonnes toujours visibles (fond permanent, pas seulement au survol
-// de drag), point de couleur + badge de comptage dans le header, icône
-// dédiée par statut dans l'état vide, et scroll interne par colonne (plutôt
-// que de laisser une colonne pleine étirer toute la page verticalement
-// pendant que les colonnes vides restent minuscules à côté).
+// de drag), point de couleur + badge de comptage dans le header, icÃ´ne
+// dÃ©diÃ©e par statut dans l'Ã©tat vide, et scroll interne par colonne (plutÃ´t
+// que de laisser une colonne pleine Ã©tirer toute la page verticalement
+// pendant que les colonnes vides restent minuscules Ã  cÃ´tÃ©).
 function PipelineView({ leads, onCardClick, onStatusChange }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [draggedId, setDraggedId] = useState(null);
@@ -647,7 +647,7 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
     return map;
   }, [leads]);
 
-  // [FIX2] Détecte la colonne survolée via elementFromPoint — fonctionne
+  // [FIX2] DÃ©tecte la colonne survolÃ©e via elementFromPoint â€” fonctionne
   // identiquement pour un pointeur souris ou un doigt.
   const findColumnAt = (x, y) => {
     if (x == null || y == null) return null;
@@ -717,8 +717,8 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
 }
 
 // [G3] Carte compacte pour la vue liste en grille (4 colonnes desktop).
-// Reprend les mêmes informations que l'ancienne ligne pleine largeur
-// (statut, contact, tags, score, WhatsApp), condensées verticalement pour
+// Reprend les mÃªmes informations que l'ancienne ligne pleine largeur
+// (statut, contact, tags, score, WhatsApp), condensÃ©es verticalement pour
 // tenir dans une case de grille au lieu d'une ligne pleine largeur.
 function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
   const { color: sc } = scoreLabel(lead.score || 0);
@@ -758,7 +758,7 @@ function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
 
       <div onClick={e => e.stopPropagation()}>
         <WhatsAppBtn phone={lead.phone} leadId={lead.id}
-          onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]); }} />
+          onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectuÃ©' }]); }} />
       </div>
     </motion.div>
   );
@@ -779,7 +779,7 @@ export default function LeadsCRMPanel({ profileId }) {
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [bulkStatus, setBulkStatus]     = useState('');
   const [page, setPage]                 = useState(1); // [G1] page courante de la vue liste
-  // [FIX6] Détecté une seule fois : évite un état "survolé" collé après un
+  // [FIX6] DÃ©tectÃ© une seule fois : Ã©vite un Ã©tat "survolÃ©" collÃ© aprÃ¨s un
   // tap sur les lignes de la liste, sur les appareils tactiles.
   const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
 
@@ -793,8 +793,8 @@ export default function LeadsCRMPanel({ profileId }) {
     return () => { supabase.removeChannel(channel); };
   }, [profileId]);
 
-  // [G5] Réinitialise aussi la page courante quand la vue/le filtre/le tag/
-  // la recherche changent (même logique que pour la sélection existante).
+  // [G5] RÃ©initialise aussi la page courante quand la vue/le filtre/le tag/
+  // la recherche changent (mÃªme logique que pour la sÃ©lection existante).
   useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setPage(1); }, [view, filter, tagFilter, search]);
 
   const loadLeads = async () => {
@@ -805,23 +805,23 @@ export default function LeadsCRMPanel({ profileId }) {
     setLoading(false);
   };
 
-  // ── [A4] Ajout d'un lead avec déclencheur automatisation ─────────
+  // â”€â”€ [A4] Ajout d'un lead avec dÃ©clencheur automatisation â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const addLead = async () => {
     if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
     setAdding(true);
     const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
-    if (exists) { toast.error('Ce numéro existe déjà'); setAdding(false); return; }
+    if (exists) { toast.error('Ce numÃ©ro existe dÃ©jÃ '); setAdding(false); return; }
     const { data, error } = await supabase
       .from('leads')
       .insert([{ ...newLead, profile_id: profileId, score: 0 }])
       .select()
       .maybeSingle();
     if (error) { toast.error(error.message); setAdding(false); return; }
-    await supabase.from('lead_activities').insert([{ lead_id: data.id, type: 'created', description: 'Lead créé' }]);
+    await supabase.from('lead_activities').insert([{ lead_id: data.id, type: 'created', description: 'Lead crÃ©Ã©' }]);
 
-    // [A4] Déclencher les automatisations new_lead (fire-and-forget — ne bloque pas l'UI)
+    // [A4] DÃ©clencher les automatisations new_lead (fire-and-forget â€” ne bloque pas l'UI)
     triggerNewLead(profileId, {
-      leadId: data.id,    // évite qu'une action create_lead crée un doublon
+      leadId: data.id,    // Ã©vite qu'une action create_lead crÃ©e un doublon
       name:   data.name,
       email:  data.email,
       phone:  data.phone,
@@ -832,14 +832,14 @@ export default function LeadsCRMPanel({ profileId }) {
     setNewLead({ ...EMPTY_LEAD });
     setShowAdd(false);
     setAdding(false);
-    toast.success('Lead ajouté ✅');
+    toast.success('Lead ajoutÃ© âœ…');
   };
 
   const deleteLead = async (id) => {
     const { error } = await supabase.from('leads').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     setLeads(prev => prev.filter(l => l.id !== id));
-    toast.success('Lead supprimé');
+    toast.success('Lead supprimÃ©');
   };
 
   const updateLeadLocal = (updated) => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l));
@@ -850,10 +850,10 @@ export default function LeadsCRMPanel({ profileId }) {
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
     const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', leadId);
     if (error) { toast.error(error.message); setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: lead.status } : l)); return; }
-    await supabase.from('lead_activities').insert([{ lead_id: leadId, type: 'status', description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus} (glissé-déposé)` }]);
-    toast.success(`${lead.name} → ${STATUSES.find(s => s.id === newStatus)?.label}`);
+    await supabase.from('lead_activities').insert([{ lead_id: leadId, type: 'status', description: `Statut â†’ ${STATUSES.find(s => s.id === newStatus)?.label || newStatus} (glissÃ©-dÃ©posÃ©)` }]);
+    toast.success(`${lead.name} â†’ ${STATUSES.find(s => s.id === newStatus)?.label}`);
 
-    // [A7] Déclencher lead_status_changed (pipeline drag-and-drop)
+    // [A7] DÃ©clencher lead_status_changed (pipeline drag-and-drop)
     triggerLeadStatusChanged(profileId, {
       leadId:    leadId,
       leadName:  lead.name,
@@ -872,24 +872,24 @@ export default function LeadsCRMPanel({ profileId }) {
     setLeads(prev => prev.map(l => selectedIds.has(l.id) ? { ...l, status: newStatus } : l));
     const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).in('id', ids);
     if (error) { toast.error(error.message); loadLeads(); return; }
-    await supabase.from('lead_activities').insert(ids.map(id => ({ lead_id: id, type: 'status', description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label} (action groupée)` })));
+    await supabase.from('lead_activities').insert(ids.map(id => ({ lead_id: id, type: 'status', description: `Statut â†’ ${STATUSES.find(s => s.id === newStatus)?.label} (action groupÃ©e)` })));
     setSelectedIds(new Set());
     setBulkStatus('');
-    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} mis à jour`);
+    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} mis Ã  jour`);
   };
 
   const bulkDelete = async () => {
     const ids = [...selectedIds];
-    if (!window.confirm(`Supprimer définitivement ${ids.length} lead${ids.length > 1 ? 's' : ''} ?`)) return;
+    if (!window.confirm(`Supprimer dÃ©finitivement ${ids.length} lead${ids.length > 1 ? 's' : ''} ?`)) return;
     const { error } = await supabase.from('leads').delete().in('id', ids);
     if (error) { toast.error(error.message); return; }
     setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
     setSelectedIds(new Set());
-    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} supprimé${ids.length > 1 ? 's' : ''}`);
+    toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} supprimÃ©${ids.length > 1 ? 's' : ''}`);
   };
 
   const buildCSV = (rows) => {
-    const headers = ['Nom', 'Téléphone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Tags', 'Notes', 'Créé le'];
+    const headers = ['Nom', 'TÃ©lÃ©phone', 'Email', 'Entreprise', 'Statut', 'Source', 'Score', 'Tags', 'Notes', 'CrÃ©Ã© le'];
     const data = rows.map(l => [
       l.name || '', l.phone || '', l.email || '', l.company || '',
       STATUSES.find(s => s.id === l.status)?.label || l.status,
@@ -901,7 +901,7 @@ export default function LeadsCRMPanel({ profileId }) {
   };
 
   const exportCSV = () => {
-    if (!leads.length) { toast.error('Aucun lead à exporter'); return; }
+    if (!leads.length) { toast.error('Aucun lead Ã  exporter'); return; }
     const blob = new Blob(['\uFEFF' + buildCSV(leads)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `leads-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
   };
@@ -931,18 +931,18 @@ export default function LeadsCRMPanel({ profileId }) {
   const totalPages     = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PAGE_SIZE));
   const paginatedLeads  = filteredLeads.slice((page - 1) * LEADS_PAGE_SIZE, page * LEADS_PAGE_SIZE);
 
-  // [G5] Garde-fou : si des leads sont supprimés et que la page courante
-  // n'existe plus, on retombe sur la dernière page valide.
+  // [G5] Garde-fou : si des leads sont supprimÃ©s et que la page courante
+  // n'existe plus, on retombe sur la derniÃ¨re page valide.
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: '#9a9db0', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
+  if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: '#9a9db0', fontSize: 13 }}>SÃ©lectionnez un profil pour gÃ©rer vos leads.</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* [FIX4] classe crm-modal : max-height 90vh puis 90dvh (fallback CSS)
           [FIX7][L2] classe crm-field : halo indigo au focus pour tous les
           champs utilisant le style `inp` (recherche, formulaires, tags,
-          notes...) — fond passé en blanc pur au focus (thème clair). */}
+          notes...) â€” fond passÃ© en blanc pur au focus (thÃ¨me clair). */}
       <style>{`
         .crm-modal{max-height:90vh;max-height:90dvh;}
         .crm-field:focus{border-color:rgba(99,102,241,0.5)!important;background:#ffffff!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
@@ -976,7 +976,7 @@ export default function LeadsCRMPanel({ profileId }) {
         <div style={{ position: 'relative' }}>
           <Search size={14} color="#9a9db0" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher un lead (nom, téléphone, email, entreprise, tag)..."
+            placeholder="Rechercher un lead (nom, tÃ©lÃ©phone, email, entreprise, tag)..."
             className="crm-field" style={{ ...inp, paddingLeft: 38 }} />
         </div>
 
@@ -1010,13 +1010,13 @@ export default function LeadsCRMPanel({ profileId }) {
           <motion.div initial={{ opacity: 0, y: -6, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -6, height: 0 }} style={{ overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 16px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 14 }}>
               <span style={{ background: 'rgba(99,102,241,0.18)', color: '#4f46e5', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 99 }}>
-                {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                {selectedIds.size} sÃ©lectionnÃ©{selectedIds.size > 1 ? 's' : ''}
               </span>
               <button onClick={() => setSelectedIds(new Set())} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#6b6f85', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                <X size={11} /> Désélectionner
+                <X size={11} /> DÃ©sÃ©lectionner
               </button>
               <select value={bulkStatus} onChange={e => { setBulkStatus(e.target.value); bulkChangeStatus(e.target.value); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#151329', fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
-                <option value="">Changer le statut…</option>
+                <option value="">Changer le statutâ€¦</option>
                 {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
               <button onClick={exportSelectedCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#6b6f85', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
@@ -1042,28 +1042,28 @@ export default function LeadsCRMPanel({ profileId }) {
             <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={20} color="#9a9db0" className="animate-spin" /></div>
           ) : filteredLeads.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: '#9a9db0', fontSize: 13 }}>
-              {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond à votre recherche.'}
+              {leads.length === 0 ? 'Aucun lead pour le moment.' : 'Aucun lead ne correspond Ã  votre recherche.'}
             </div>
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 16px', color: '#9a9db0', fontSize: 11 }}>
                 <Checkbox checked={allSelected} indeterminate={someSelected && !allSelected} onChange={toggleSelectAll} />
                 <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={toggleSelectAll}>
-                  {allSelected ? 'Tout désélectionner' : `Tout sélectionner (${filteredLeads.length})`}
+                  {allSelected ? 'Tout dÃ©sÃ©lectionner' : `Tout sÃ©lectionner (${filteredLeads.length})`}
                 </span>
                 {totalPages > 1 && (
                   <span style={{ marginLeft: 'auto', color: '#9a9db0' }}>
-                    Page {page}/{totalPages} — {filteredLeads.length} lead{filteredLeads.length > 1 ? 's' : ''}
+                    Page {page}/{totalPages} â€” {filteredLeads.length} lead{filteredLeads.length > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
 
-              {/* [G1][G3][G4] Grille de cartes — 4 colonnes sur desktop/tablette
-                  large (4x4 = 16 leads/page), qui se réduit à 2 ou 1 colonne(s)
-                  sur écrans plus étroits via auto-fill/minmax plutôt que de
+              {/* [G1][G3][G4] Grille de cartes â€” 4 colonnes sur desktop/tablette
+                  large (4x4 = 16 leads/page), qui se rÃ©duit Ã  2 ou 1 colonne(s)
+                  sur Ã©crans plus Ã©troits via auto-fill/minmax plutÃ´t que de
                   forcer 4 colonnes illisibles sur mobile. La pagination reste
-                  fixée à 16 leads/page quel que soit le nombre de colonnes
-                  réellement affichées. */}
+                  fixÃ©e Ã  16 leads/page quel que soit le nombre de colonnes
+                  rÃ©ellement affichÃ©es. */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
                 {paginatedLeads.map(lead => (
                   <LeadGridCard
@@ -1096,7 +1096,7 @@ export default function LeadsCRMPanel({ profileId }) {
               </div>
               {[
                 { key: 'name',    label: 'Nom *',      ph: 'Nom complet'         },
-                { key: 'phone',   label: 'Téléphone',  ph: 'Ex: 0700000000'      },
+                { key: 'phone',   label: 'TÃ©lÃ©phone',  ph: 'Ex: 0700000000'      },
                 { key: 'email',   label: 'Email',       ph: 'email@exemple.com'   },
                 { key: 'company', label: 'Entreprise',  ph: "Nom de l'entreprise" },
               ].map(f => (
@@ -1134,3 +1134,5 @@ export default function LeadsCRMPanel({ profileId }) {
     </div>
   );
 }
+
+

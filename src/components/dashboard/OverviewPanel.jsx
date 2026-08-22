@@ -41,19 +41,19 @@ export default function OverviewPanel({
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
       <div>
-        <h2 style={{ color:'white', fontSize:'20px', fontWeight:800, margin:0 }}>Dashboard</h2>
-        <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'13px', margin:'4px 0 0' }}>
+        <h2 style={{ color:'#0f1222', fontSize:'20px', fontWeight:800, margin:0 }}>Dashboard</h2>
+        <p style={{ color:'rgba(15,18,34,0.45)', fontSize:'13px', margin:'4px 0 0' }}>
           Bienvenue sur votre espace SocialApp
         </p>
       </div>
 
       {/* Activation banner */}
       {!isActivated && (
-        <div style={{ background:'rgba(0,87,255,0.1)', border:'1px solid rgba(0,87,255,0.3)', borderRadius:'14px', padding:'12px 16px', display:'flex', alignItems:'flex-start', gap:'10px' }}>
-          <AlertCircle size={16} color="#60a5fa" style={{ flexShrink:0, marginTop:'1px' }}/>
+        <div style={{ background:'rgba(59,75,240,0.06)', border:'1px solid rgba(59,75,240,0.2)', borderRadius:'14px', padding:'12px 16px', display:'flex', alignItems:'flex-start', gap:'10px' }}>
+          <AlertCircle size={16} color="#3b4bf0" style={{ flexShrink:0, marginTop:'1px' }}/>
           <div>
-            <p style={{ color:'#93c5fd', fontSize:'13px', fontWeight:600, margin:'0 0 2px' }}>Compte en attente d'activation</p>
-            <p style={{ color:'rgba(147,197,253,0.6)', fontSize:'11px', margin:0 }}>
+            <p style={{ color:'#2c3aa8', fontSize:'13px', fontWeight:600, margin:'0 0 2px' }}>Compte en attente d'activation</p>
+            <p style={{ color:'rgba(44,58,168,0.65)', fontSize:'11px', margin:0 }}>
               Certaines fonctionnalités sont verrouillées. Envoyez votre paiement via Wave CI au numéro : +225 05 76 03 12 12 pour l'activer
             </p>
           </div>
@@ -67,8 +67,11 @@ export default function OverviewPanel({
       {/* Top 3-column grid */}
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr':'repeat(3,1fr)', gap:'16px', alignItems:'start' }}>
 
-        {/* Profile card — fond bleu nuit foncé opaque, cohérent avec la charte midnight blue */}
-        <div style={{ background:'linear-gradient(180deg,#0d1330,#0a0f24)', border:'1px solid rgba(99,102,241,0.25)', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 20px rgba(0,0,0,0.35)' }}>
+        {/* Profile card — la carte profil garde son fond bleu nuit foncé
+            (comme sur la capture), c'est un bloc d'accent volontairement
+            sombre au sein d'un dashboard clair, pas un reste de l'ancien
+            thème. Tout le reste du panneau passe en thème clair. */}
+        <div style={{ background:'linear-gradient(180deg,#0d1330,#0a0f24)', border:'1px solid rgba(99,102,241,0.25)', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 20px rgba(15,18,34,0.12)' }}>
           <ProfileHeader profile={profile} onUpdate={onUpdate}/>
 
           {/* Bloc méta compact — username + badge sur une ligne, expiry + statut sur l'autre */}
@@ -129,15 +132,6 @@ export default function OverviewPanel({
         </div>
 
         {/* QR Code */}
-        {/* [FIX Q-ACTIVATION] isActivated transmis à QRCodeDisplay : tant que
-            le compte n'est pas activé (verrou anti-squattage de username
-            avant paiement), le username local n'est pas encore celui stocké
-            en base — générer le QR ici encoderait un lien qui répond
-            "Profil introuvable" une fois scanné. QRCodeDisplay affiche
-            désormais un état "en attente d'activation" dans ce cas plutôt
-            que de rendre un QR mort. userLogo/onNavigate ajoutés au passage
-            pour que le logo du profil et la redirection vers "Configurer
-            mon profil" (cas username manquant) fonctionnent aussi ici. */}
         <div>
           <QRCodeDisplay
             profileId={profile?.id}
@@ -148,18 +142,18 @@ export default function OverviewPanel({
           />
         </div>
 
-        {/* Stats */}
+        {/* Stats — carte claire, cohérente avec le fond blanc du dashboard */}
         <div>
           {limits.hasStats ? (
             <StatsCard profileId={profile?.id}/>
           ) : (
-            <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'18px', padding:'24px 16px', textAlign:'center' }}>
-              <BarChart2 size={28} color="rgba(255,255,255,0.2)" style={{ margin:'0 auto 10px' }}/>
-              <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'13px', fontWeight:600, margin:'0 0 4px' }}>Statistiques</p>
-              <p style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px', margin:'0 0 6px' }}>Disponible avec l'offre PRO</p>
-              <p style={{ color:'rgba(255,255,255,0.2)', fontSize:'10px', margin:'0 0 14px' }}>15 000 FCFA / an</p>
+            <div style={{ background:'#ffffff', border:'1px solid rgba(15,18,34,0.08)', borderRadius:'18px', padding:'24px 16px', textAlign:'center', boxShadow:'0 2px 10px rgba(15,18,34,0.05)' }}>
+              <BarChart2 size={28} color="rgba(15,18,34,0.2)" style={{ margin:'0 auto 10px' }}/>
+              <p style={{ color:'rgba(15,18,34,0.55)', fontSize:'13px', fontWeight:600, margin:'0 0 4px' }}>Statistiques</p>
+              <p style={{ color:'rgba(15,18,34,0.35)', fontSize:'11px', margin:'0 0 6px' }}>Disponible avec l'offre PRO</p>
+              <p style={{ color:'rgba(15,18,34,0.3)', fontSize:'10px', margin:'0 0 14px' }}>15 000 FCFA / an</p>
               <button type="button" onClick={()=>onUpgrade?.('Statistiques','pro')}
-                style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,140,0,0.15)', border:'1px solid rgba(255,140,0,0.3)', borderRadius:'10px', padding:'7px 14px', color:'#ff8c00', fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,140,0,0.1)', border:'1px solid rgba(255,140,0,0.35)', borderRadius:'10px', padding:'7px 14px', color:'#d97600', fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 <Crown size={12}/> Upgrader → PRO
               </button>
             </div>
@@ -167,34 +161,28 @@ export default function OverviewPanel({
         </div>
       </div>
 
-      {/* FIX OPACITÉ — les cartes utilisaient un fond quasi transparent
-          (a.color+'14' = ~8% d'opacité, bordure +'33' = ~20%), ce qui les
-          rendait trop translucides sur le fond sombre du dashboard. On
-          garde exactement les mêmes couleurs (a.color) mais avec des
-          canaux alpha bien plus élevés pour un rendu "opaque" :
-          fond ~78% (+'c8'), bordure ~55% (+'8c'), hover ~88% (+'e0').
-          Le texte reste blanc/blanc-atténué, toujours lisible sur ces
-          fonds plus denses. Les cartes verrouillées gardent leur style
-          gris neutre inchangé. */}
+      {/* Quick actions — cartes en couleur pleine (identique à la capture :
+          bloc bleu "Plateformes" bien saturé), les verrouillées passent en
+          gris clair sur fond blanc au lieu du gris translucide sombre. */}
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr 1fr':'repeat(3,1fr)', gap:'10px' }}>
         {quickActions.map(a => (
           <button key={a.section} onClick={()=>onNavigate(a.section)}
-            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.locked?'rgba(255,255,255,0.06)':a.color+'c8', border:'1px solid '+(a.locked?'rgba(255,255,255,0.1)':a.color+'8c'), borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', opacity:a.locked?0.55:1 }}
-            onMouseEnter={e=>{ if(!a.locked){e.currentTarget.style.background=a.color+'e0';e.currentTarget.style.transform='translateY(-2px)';}}}
-            onMouseLeave={e=>{ e.currentTarget.style.background=a.locked?'rgba(255,255,255,0.06)':a.color+'c8';e.currentTarget.style.transform='translateY(0)';}}>
+            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.locked?'#f4f5f9':a.color, border:'1px solid '+(a.locked?'rgba(15,18,34,0.08)':a.color), borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', opacity:a.locked?0.75:1, boxShadow:a.locked?'none':'0 2px 10px '+a.color+'40' }}
+            onMouseEnter={e=>{ if(!a.locked){e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-2px)';}}}
+            onMouseLeave={e=>{ e.currentTarget.style.filter='brightness(1)';e.currentTarget.style.transform='translateY(0)';}}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'rgba(0,0,0,0.22)', border:'1px solid rgba(255,255,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                {a.locked ? <Lock size={15} color="rgba(255,255,255,0.35)"/> : <a.icon size={16} color="white"/>}
+              <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:a.locked?'rgba(15,18,34,0.06)':'rgba(255,255,255,0.22)', border:'1px solid '+(a.locked?'rgba(15,18,34,0.08)':'rgba(255,255,255,0.3)'), display:'flex', alignItems:'center', justifyContent:'center' }}>
+                {a.locked ? <Lock size={15} color="rgba(15,18,34,0.3)"/> : <a.icon size={16} color="white"/>}
               </div>
               {a.locked && (
-                <span style={{ background:'rgba(255,140,0,0.12)', border:'1px solid rgba(255,140,0,0.3)', borderRadius:'5px', padding:'2px 6px', fontSize:'8.5px', color:'#ff8c00', fontWeight:700 }}>
+                <span style={{ background:'rgba(255,140,0,0.1)', border:'1px solid rgba(255,140,0,0.35)', borderRadius:'5px', padding:'2px 6px', fontSize:'8.5px', color:'#d97600', fontWeight:700 }}>
                   {a.desc.includes('BUSINESS')?'💼 BIZ':'🚀 PRO'}
                 </span>
               )}
             </div>
             <div>
-              <p style={{ color:'white', fontSize:'12px', fontWeight:700, margin:'0 0 2px' }}>{a.label}</p>
-              <p style={{ color:a.locked?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.8)', fontSize:'10px', margin:0 }}>{a.desc}</p>
+              <p style={{ color:a.locked?'#0f1222':'white', fontSize:'12px', fontWeight:700, margin:'0 0 2px' }}>{a.label}</p>
+              <p style={{ color:a.locked?'rgba(15,18,34,0.4)':'rgba(255,255,255,0.85)', fontSize:'10px', margin:0 }}>{a.desc}</p>
             </div>
           </button>
         ))}

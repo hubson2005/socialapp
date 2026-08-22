@@ -18,6 +18,12 @@
  *        grille adaptative, cibles tactiles, safe-area, overlay image tap-friendly)
  *  [R2]  DESKTOP UNIQUEMENT : le panel occupe une largeur plus généreuse sur grand écran
  *        (breakpoint 1400px choisi pour exclure l'iPad Pro 12.9" paysage, ~1366px)
+ *  [T1]  [FIX THÈME] Le panneau principal (hors modales) était calqué sur l'ancien
+ *        fond sombre du dashboard (rgba(15,10,30,x) + texte blanc). Le contenu du
+ *        dashboard est maintenant clair (#f4f5fa) : header, barre de progression,
+ *        état vide, pagination et footer repassés en thème clair. Les modales
+ *        (ProductModal, ConfirmModal) restent en overlay sombre plein écran —
+ *        cohérent car elles ont leur propre fond flouté, comme AddPlatformDialog.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -39,9 +45,6 @@ const formatPrice = (price) =>
   price ? Number(price).toLocaleString('fr-FR') + ' F' : '';
 
 // ─── Hook : injection unique du CSS global (keyframe + responsive) ──
-// [C3] Remplace les deux <style> inline dupliqués
-// [R1] Étendu pour porter les règles responsive (grille, safe-area, overlay tactile)
-// [R2] Étendu pour la largeur desktop
 function useSpinKeyframe() {
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_ID)) {
@@ -50,19 +53,11 @@ function useSpinKeyframe() {
       s.textContent = `
 @keyframes mp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* ══════════════════════════════════════════════════════════
-   [R1] RESPONSIVE — Tablette (iPad) / iOS / Android
-   ══════════════════════════════════════════════════════════ */
-
-/* Grille produits adaptative : 2 col (phone) → 3 (tablette portrait)
-   → 4 (tablette landscape) → 5 (grands écrans) */
 .mp-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
 @media (min-width:480px){ .mp-grid{ grid-template-columns:repeat(3,1fr); } }
 @media (min-width:760px){ .mp-grid{ grid-template-columns:repeat(4,1fr); gap:14px; } }
 @media (min-width:1100px){ .mp-grid{ grid-template-columns:repeat(5,1fr); } }
 
-/* Overlay "Changer / Supprimer" de la photo produit :
-   au survol sur souris/trackpad, tactile toujours visible (pas de hover sur iOS/Android) */
 .mp-img-overlay{ opacity:0; transition:opacity .2s; }
 @media (hover:hover) and (pointer:fine){
   .mp-img-wrap:hover .mp-img-overlay{ opacity:1; }
@@ -76,26 +71,18 @@ function useSpinKeyframe() {
   }
 }
 
-/* Zone de dépôt photo (état vide) : le survol décoratif reste desktop-only */
 .mp-upload-label{ transition:all .2s; }
 @media (hover:hover) and (pointer:fine){
   .mp-upload-label:hover{ background:rgba(255,107,53,0.06); border-color:rgba(255,107,53,0.35); }
 }
 
-/* Cibles tactiles + suppression du halo de tap Android/iOS */
 button, a, input, select, textarea, label{ -webkit-tap-highlight-color:transparent; }
 .mp-icon-btn, button{ touch-action:manipulation; }
 
-/* Respect des préférences de mouvement réduit */
 @media (prefers-reduced-motion: reduce){
   *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
 }
 
-/* ══════════════════════════════════════════════════════════
-   [R2] DESKTOP UNIQUEMENT — largeur généreuse au-delà de 1400px.
-   Seuil volontairement au-dessus de l'iPad Pro 12.9" paysage (~1366px)
-   pour ne PAS toucher l'affichage tablette.
-   ══════════════════════════════════════════════════════════ */
 @media (min-width:1400px){
   .mp-container{ max-width:1600px; margin:0 auto; }
 }
@@ -109,7 +96,7 @@ button, a, input, select, textarea, label{ -webkit-tap-highlight-color:transpare
 }
 
 // ─── Modale de confirmation ───────────────────────────────────
-// [C11] Remplace window.confirm() — non bloquant, stylisable, compatible mobile
+// Overlay sombre volontaire (portal plein écran) — cohérent avec ProductModal.
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return createPortal(
     <div
@@ -154,8 +141,9 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 }
 
 // ─── Modal ajout / édition produit ───────────────────────────
+// Overlay sombre volontaire (portal plein écran) — cohérent avec AddPlatformDialog.
 function ProductModal({ product, profileId, onClose, onSaved }) {
-  useSpinKeyframe(); // [C3]
+  useSpinKeyframe();
 
   const isEdit = !!product?.id;
   const [form, setForm] = useState({
@@ -168,7 +156,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
   });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving]       = useState(false);
-  const fileInputRef = useRef(null); // pour reset après sélection
+  const fileInputRef = useRef(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -185,7 +173,6 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
     }
     setUploading(true);
     try {
-      // [C1] `ext` supprimée — utilisée directement dans le template
       const fileName = `market-${profileId}-${Date.now()}.${file.name.split('.').pop()}`;
       const { error: upErr } = await supabase.storage
         .from('avatars')
@@ -198,7 +185,6 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
       toast.error('Upload échoué : ' + err.message);
     } finally {
       setUploading(false);
-      // Reset input pour permettre de re-sélectionner le même fichier
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -214,7 +200,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
     setSaving(true);
     try {
       const payload = {
-        profile_id:     profileId, // [C9] déjà normalisé en Number par le parent
+        profile_id:     profileId,
         title:          form.title.trim(),
         price:          Number(form.price),
         original_price: form.original_price ? Number(form.original_price) : null,
@@ -238,7 +224,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
     }
   };
 
-  return createPortal( // [C5] createPortal nommé
+  return createPortal(
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)',
@@ -421,7 +407,7 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      style={{ background: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', position: 'relative', cursor: 'pointer' }}
+      style={{ background: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(15,23,42,0.1)', border: '1px solid #eef0f5', position: 'relative', cursor: 'pointer' }}
     >
       {/* Image */}
       <div style={{ position: 'relative', aspectRatio: '4/3', background: '#f0f0f0', overflow: 'hidden' }}>
@@ -433,19 +419,16 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
           </div>
         )}
 
-        {/* [C8] Badge réduction avec le préfixe '-' (cohérence avec PublicProfile) */}
         {discount > 0 && (
           <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#22c55e', borderRadius: '8px', padding: '3px 8px', fontSize: '12px', fontWeight: 700, color: 'white' }}>-{discount}%</div>
         )}
 
-        {/* Overlay indisponible */}
         {!product.is_available && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ background: 'rgba(0,0,0,0.7)', color: 'white', fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '20px', letterSpacing: '0.05em' }}>INDISPONIBLE</span>
           </div>
         )}
 
-        {/* Bouton favoris — cible tactile agrandie (38px) */}
         <button
           onClick={e => { e.stopPropagation(); onToggleFav(product.id); }}
           aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
@@ -455,7 +438,6 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
           <Heart size={16} fill={isFav ? '#ef4444' : 'none'} color={isFav ? '#ef4444' : '#999'} />
         </button>
 
-        {/* Actions admin — cibles tactiles agrandies (34px) */}
         <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '6px' }}>
           <button
             onClick={e => { e.stopPropagation(); onEdit(product); }}
@@ -497,17 +479,16 @@ function ProductCard({ product, onEdit, onDelete, onToggleFav, isFav }) {
 
 // ─── Panel principal Marketplace ──────────────────────────────
 export default function MarketplacePanel({ profileId }) {
-  useSpinKeyframe(); // [C3] keyframe + CSS responsive injectés une seule fois
+  useSpinKeyframe();
 
   const queryClient = useQueryClient();
-  // [C9] Normalisation de profileId une seule fois
   const numProfileId = Number(profileId);
 
   const [showModal, setShowModal]         = useState(false);
   const [editProduct, setEditProduct]     = useState(null);
   const [favs, setFavs]                   = useState({});
   const [currentPage, setCurrentPage]     = useState(1);
-  const [confirmDelete, setConfirmDelete] = useState(null); // [C11] produit en attente de confirmation
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['marketplace', numProfileId],
@@ -517,13 +498,12 @@ export default function MarketplacePanel({ profileId }) {
         .select('*')
         .eq('profile_id', numProfileId)
         .order('created_at', { ascending: false });
-      if (error) throw error; // [C10] console.error doublon supprimé
+      if (error) throw error;
       return data;
     },
     enabled: !!numProfileId,
   });
 
-  // [C6] Correction page courante si products diminue (ex: après suppression)
   const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE) || 1;
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -541,7 +521,6 @@ export default function MarketplacePanel({ profileId }) {
     onError: (e) => toast.error('Erreur : ' + e.message),
   });
 
-  // [C11] Ouvre la modale de confirmation au lieu de window.confirm()
   const handleDelete = (product) => setConfirmDelete(product);
 
   const confirmDeleteAction = () => {
@@ -564,13 +543,10 @@ export default function MarketplacePanel({ profileId }) {
     setShowModal(true);
   };
 
-  // [C2] handleSaved : pas de calcul fragile sur products.length — on va à la dernière page
-  //      après invalidation (React Query recalcule automatiquement)
   const handleSaved = () => {
     setShowModal(false);
     setEditProduct(null);
     queryClient.invalidateQueries({ queryKey: ['marketplace', numProfileId] }).then(() => {
-      // Aller à la dernière page une fois la query rafraîchie
       setCurrentPage(Math.ceil((products.length + 1) / PRODUCTS_PER_PAGE));
     });
   };
@@ -588,19 +564,18 @@ export default function MarketplacePanel({ profileId }) {
 
   return (
     <>
-      {/* ── Bloc principal ── */}
-      {/* [R2] className="mp-container" : largeur généreuse à partir de 1400px (desktop uniquement) */}
-      <div className="mp-container" style={{ background: 'rgba(15,10,30,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '22px', overflow: 'hidden' }}>
+      {/* ── Bloc principal — thème clair, cohérent avec le fond #f4f5fa du dashboard ── */}
+      <div className="mp-container" style={{ background: '#ffffff', border: '1px solid #e6e8f0', borderRadius: '22px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
 
         {/* Header */}
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid #eef0f5', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <ShoppingBag size={16} color="white" />
             </div>
             <div>
-              <h3 style={{ color: 'white', fontSize: '14px', fontWeight: 700, margin: 0 }}>Marketplace</h3>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', margin: 0 }}>
+              <h3 style={{ color: '#161a2e', fontSize: '14px', fontWeight: 700, margin: 0 }}>Marketplace</h3>
+              <p style={{ color: '#8a90a2', fontSize: '10px', margin: 0 }}>
                 {products.length} / {MAX_PRODUCTS} produits
               </p>
             </div>
@@ -610,19 +585,19 @@ export default function MarketplacePanel({ profileId }) {
             disabled={atLimit}
             aria-label="Ajouter un produit"
             className="mp-icon-btn"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', minHeight: '38px', background: atLimit ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', border: atLimit ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: '10px', color: atLimit ? 'rgba(255,255,255,0.3)' : 'white', fontSize: '12px', fontWeight: 700, cursor: atLimit ? 'not-allowed' : 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', minHeight: '38px', background: atLimit ? '#eef0f5' : 'linear-gradient(135deg,#ff6b35,#f7c948)', border: atLimit ? '1px solid #e6e8f0' : 'none', borderRadius: '10px', color: atLimit ? '#a2a7b5' : 'white', fontSize: '12px', fontWeight: 700, cursor: atLimit ? 'not-allowed' : 'pointer' }}
           >
             <Plus size={13} /> Ajouter
           </button>
         </div>
 
         {/* Barre de progression */}
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '8px 16px', borderBottom: '1px solid #eef0f5', background: '#f9fafc' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px' }}>Produits utilisés</span>
-            <span style={{ color: atLimit ? '#f97316' : 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: 600 }}>{products.length} / {MAX_PRODUCTS}</span>
+            <span style={{ color: '#9095a5', fontSize: '10px' }}>Produits utilisés</span>
+            <span style={{ color: atLimit ? '#ea580c' : '#6b7280', fontSize: '10px', fontWeight: 600 }}>{products.length} / {MAX_PRODUCTS}</span>
           </div>
-          <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }}>
+          <div style={{ height: '4px', background: '#e6e8f0', borderRadius: '2px' }}>
             <div style={{ height: '100%', width: (products.length / MAX_PRODUCTS * 100) + '%', background: atLimit ? 'linear-gradient(90deg,#f97316,#ef4444)' : 'linear-gradient(90deg,#ff6b35,#f7c948)', borderRadius: '2px', transition: 'width 0.5s ease' }} />
           </div>
         </div>
@@ -631,15 +606,15 @@ export default function MarketplacePanel({ profileId }) {
         <div style={{ padding: '14px' }}>
           {isLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
-              <Loader2 size={20} color="rgba(255,107,53,0.6)" style={{ animation: 'mp-spin 1s linear infinite' }} />
+              <Loader2 size={20} color="rgba(255,107,53,0.7)" style={{ animation: 'mp-spin 1s linear infinite' }} />
             </div>
           ) : products.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 16px' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(255,107,53,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                <PackageOpen size={24} color="rgba(255,107,53,0.6)" />
+                <PackageOpen size={24} color="#ea580c" />
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 600, margin: '0 0 6px' }}>Aucun produit</p>
-              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>
+              <p style={{ color: '#454b5a', fontSize: '14px', fontWeight: 600, margin: '0 0 6px' }}>Aucun produit</p>
+              <p style={{ color: '#a2a7b5', fontSize: '12px', margin: '0 0 16px', lineHeight: 1.5 }}>
                 Ajoutez vos premiers produits<br />pour les afficher sur votre profil
               </p>
               <button
@@ -674,18 +649,18 @@ export default function MarketplacePanel({ profileId }) {
                     onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
                     className="mp-icon-btn"
-                    style={{ padding: '10px 16px', minHeight: '40px', borderRadius: '10px', border: 'none', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', background: currentPage === 1 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
+                    style={{ padding: '10px 16px', minHeight: '40px', borderRadius: '10px', border: 'none', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', background: currentPage === 1 ? '#eef0f5' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: currentPage === 1 ? '#a2a7b5' : 'white', fontSize: '12px', fontWeight: 700 }}
                   >
                     Précédent
                   </button>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: 600 }}>
+                  <span style={{ color: '#6b7280', fontSize: '12px', fontWeight: 600 }}>
                     Page {currentPage} / {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                     disabled={currentPage === totalPages}
                     className="mp-icon-btn"
-                    style={{ padding: '10px 16px', minHeight: '40px', borderRadius: '10px', border: 'none', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', background: currentPage === totalPages ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: 'white', fontSize: '12px', fontWeight: 700 }}
+                    style={{ padding: '10px 16px', minHeight: '40px', borderRadius: '10px', border: 'none', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', background: currentPage === totalPages ? '#eef0f5' : 'linear-gradient(135deg,#ff6b35,#f7c948)', color: currentPage === totalPages ? '#a2a7b5' : 'white', fontSize: '12px', fontWeight: 700 }}
                   >
                     Suivant
                   </button>
@@ -697,9 +672,9 @@ export default function MarketplacePanel({ profileId }) {
 
         {/* Footer */}
         {products.length > 0 && (
-          <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Tag size={11} color="rgba(255,255,255,0.3)" />
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px' }}>Les produits s'affichent sur votre profil public</span>
+          <div style={{ padding: '10px 16px', borderTop: '1px solid #eef0f5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Tag size={11} color="#a2a7b5" />
+            <span style={{ color: '#9095a5', fontSize: '11px' }}>Les produits s'affichent sur votre profil public</span>
           </div>
         )}
       </div>
@@ -716,7 +691,6 @@ export default function MarketplacePanel({ profileId }) {
         )}
       </AnimatePresence>
 
-      {/* [C11] Modale de confirmation suppression */}
       {confirmDelete && (
         <ConfirmModal
           message={`Supprimer "${confirmDelete.title}" ? Cette action est irréversible.`}

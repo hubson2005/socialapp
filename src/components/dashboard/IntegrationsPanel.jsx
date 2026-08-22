@@ -238,40 +238,57 @@ const CATEGORIES_CONFIG = [
 ];
 
 const INTEGRATIONS = [
-  { id: 'zapier', name: 'Zapier', desc: 'Automatisez plus de 6 000 apps sans coder', category: 'Automatisation', color: '#FF4A00', bg: 'rgba(255,74,0,0.12)', LogoComponent: ZapierLogo, docsUrl: 'https://zapier.com', hasWebhook: true, fields: [] },
-  { id: 'make', name: 'Make (Integromat)', desc: 'Créez des scénarios automation visuels', category: 'Automatisation', color: '#6D00CC', bg: 'rgba(109,0,204,0.12)', LogoComponent: MakeLogo, docsUrl: 'https://make.com', hasWebhook: true, fields: [] },
-  { id: 'hubspot', name: 'HubSpot', desc: 'CRM tout-en-un pour gérer vos leads', category: 'CRM', color: '#FF7A59', bg: 'rgba(255,122,89,0.12)', LogoComponent: HubSpotLogo, docsUrl: 'https://hubspot.com', hasWebhook: true, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', type: 'password' }, { key: 'portal_id', label: 'Portal ID', placeholder: '12345678', type: 'text' }] },
-  { id: 'salesforce', name: 'Salesforce', desc: 'CRM enterprise leader du marché', category: 'CRM', color: '#00A1E0', bg: 'rgba(0,161,224,0.12)', LogoComponent: SalesforceLogo, docsUrl: 'https://salesforce.com', hasWebhook: true, fields: [{ key: 'instance_url', label: 'Instance URL', placeholder: 'https://yourinstance.salesforce.com', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'pipedrive', name: 'Pipedrive', desc: 'Pipeline de ventes visuel et intuitif', category: 'CRM', color: '#00C85A', bg: 'rgba(0,200,90,0.12)', LogoComponent: PipedriveLogo, docsUrl: 'https://pipedrive.com', hasWebhook: true, fields: [{ key: 'api_token', label: 'API Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'notion', name: 'Notion', desc: 'Synchronisez vos leads dans votre workspace', category: 'CRM', color: '#ffffff', bg: 'rgba(255,255,255,0.08)', LogoComponent: NotionLogo, docsUrl: 'https://notion.so', hasWebhook: true, fields: [{ key: 'database_id', label: 'Database ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }] },
-  { id: 'airtable', name: 'Airtable', desc: 'Exportez automatiquement vos contacts', category: 'CRM', color: '#18BFFF', bg: 'rgba(24,191,255,0.12)', LogoComponent: AirtableLogo, docsUrl: 'https://airtable.com', hasWebhook: true, fields: [{ key: 'base_id', label: 'Base ID', placeholder: 'appXXXXXXXXXXXXXX', type: 'text' }, { key: 'table_name', label: 'Table', placeholder: 'Leads', type: 'text' }] },
-  { id: 'mailchimp', name: 'Mailchimp', desc: 'Ajoutez vos contacts à vos listes email', category: 'Email', color: '#FFE01B', bg: 'rgba(255,224,27,0.10)', LogoComponent: MailchimpLogo, docsUrl: 'https://mailchimp.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1', type: 'password' }, { key: 'list_id', label: 'Audience ID', placeholder: 'xxxxxxxxxx', type: 'text' }] },
-  { id: 'brevo', name: 'Brevo', desc: 'Email marketing populaire en France', category: 'Email', color: '#0B996E', bg: 'rgba(11,153,110,0.12)', LogoComponent: BrevoLogo, docsUrl: 'https://brevo.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xkeysib-xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'list_id', label: 'List ID', placeholder: '12', type: 'text' }] },
-  { id: 'activecampaign', name: 'ActiveCampaign', desc: 'Email marketing & automation avancée', category: 'Email', color: '#356AE6', bg: 'rgba(53,106,230,0.12)', LogoComponent: ActiveCampaignLogo, docsUrl: 'https://activecampaign.com', hasWebhook: false, fields: [{ key: 'api_url', label: 'API URL', placeholder: 'https://youraccountname.api-us1.com', type: 'text' }, { key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'convertkit', name: 'ConvertKit', desc: 'Email marketing pour créateurs de contenu', category: 'Email', color: '#FB6970', bg: 'rgba(251,105,112,0.12)', LogoComponent: ConvertKitLogo, docsUrl: 'https://convertkit.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'form_id', label: 'Form ID', placeholder: '1234567', type: 'text' }] },
-  { id: 'stripe', name: 'Stripe', desc: 'Suivez paiements & abonnements en temps réel', category: 'Paiements', color: '#635BFF', bg: 'rgba(99,91,255,0.12)', LogoComponent: StripeLogo, docsUrl: 'https://stripe.com', hasWebhook: true, fields: [{ key: 'secret_key', label: 'Secret Key', placeholder: 'sk_live_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'webhook_secret', label: 'Webhook Secret', placeholder: 'whsec_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'paypal', name: 'PayPal', desc: 'Notifications de transactions PayPal', category: 'Paiements', color: '#003087', bg: 'rgba(0,48,135,0.12)', LogoComponent: PayPalLogo, docsUrl: 'https://paypal.com', hasWebhook: true, fields: [{ key: 'client_id', label: 'Client ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }, { key: 'client_secret', label: 'Client Secret', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Messages entrants → leads + notifications automatiques', category: 'Messagerie', color: '#25D366', bg: 'rgba(37,211,102,0.12)', LogoComponent: WhatsAppLogo, docsUrl: 'https://business.whatsapp.com', hasWebhook: true, fields: [{ key: 'phone_id', label: 'Phone Number ID', placeholder: '123456789012345', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'EAAxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'notification_phone', label: 'Votre numéro (notifications)', placeholder: '2250700000000', type: 'text' }, { key: 'verify_token', label: 'Token de vérification webhook', placeholder: 'mon_token_secret', type: 'text' }] },
-  { id: 'telegram', name: 'Telegram', desc: 'Bot notifications vers vos canaux Telegram', category: 'Messagerie', color: '#2CA5E0', bg: 'rgba(44,165,224,0.12)', LogoComponent: TelegramLogo, docsUrl: 'https://telegram.org', hasWebhook: true, fields: [{ key: 'bot_token', label: 'Bot Token', placeholder: '123456789:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'chat_id', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' }] },
-  { id: 'slack', name: 'Slack', desc: 'Recevez des notifications en temps réel', category: 'Messagerie', color: '#E01E5A', bg: 'rgba(74,21,75,0.15)', LogoComponent: SlackLogo, docsUrl: 'https://slack.com', hasWebhook: true, fields: [{ key: 'webhook_url', label: 'Webhook URL Slack', placeholder: 'https://hooks.slack.com/services/...', type: 'text' }] },
-  { id: 'intercom', name: 'Intercom', desc: 'Support client & messaging en temps réel', category: 'Messagerie', color: '#1F8DED', bg: 'rgba(31,141,237,0.12)', LogoComponent: IntercomLogo, docsUrl: 'https://intercom.com', hasWebhook: true, fields: [{ key: 'access_token', label: 'Access Token', placeholder: 'dG9rxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'workspace_id', label: 'Workspace ID', placeholder: 'xxxxxxxx', type: 'text' }] },
-  { id: 'crisp', name: 'Crisp', desc: 'Support client made in France 🇫🇷', category: 'Messagerie', color: '#1972F5', bg: 'rgba(25,114,245,0.12)', LogoComponent: CrispLogo, docsUrl: 'https://crisp.chat', hasWebhook: true, fields: [{ key: 'website_id', label: 'Website ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', type: 'text' }, { key: 'token', label: 'Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'calendly', name: 'Calendly', desc: 'Suivi automatique de vos bookings', category: 'Calendrier', color: '#006BFF', bg: 'rgba(0,107,255,0.12)', LogoComponent: CalendlyLogo, docsUrl: 'https://calendly.com', hasWebhook: true, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'eyJhbGxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'google_calendar', name: 'Google Calendar', desc: 'Synchronisez vos événements automatiquement', category: 'Calendrier', color: '#4285F4', bg: 'rgba(66,133,244,0.12)', LogoComponent: GoogleCalendarLogo, docsUrl: 'https://calendar.google.com', hasWebhook: false, fields: [{ key: 'calendar_id', label: 'Calendar ID', placeholder: 'xxxxxxxxxxxx@group.calendar.google.com', type: 'text' }] },
-  { id: 'google_analytics', name: 'Google Analytics', desc: 'Suivez vos visiteurs et conversions en détail', category: 'Analytics', color: '#E37400', bg: 'rgba(227,116,0,0.12)', LogoComponent: GoogleAnalyticsLogo, docsUrl: 'https://analytics.google.com', hasWebhook: false, fields: [{ key: 'measurement_id', label: 'Measurement ID', placeholder: 'G-XXXXXXXXXX', type: 'text' }] },
-  { id: 'meta_pixel', name: 'Meta Pixel', desc: 'Trackez les conversions Facebook & Instagram', category: 'Analytics', color: '#0082FB', bg: 'rgba(0,130,251,0.12)', LogoComponent: MetaLogo, docsUrl: 'https://business.facebook.com', hasWebhook: false, fields: [{ key: 'pixel_id', label: 'Pixel ID', placeholder: '123456789012345', type: 'text' }] },
-  { id: 'mixpanel', name: 'Mixpanel', desc: 'Analytics produit avancée & funnels', category: 'Analytics', color: '#7856FF', bg: 'rgba(120,86,255,0.12)', LogoComponent: MixpanelLogo, docsUrl: 'https://mixpanel.com', hasWebhook: false, fields: [{ key: 'project_token', label: 'Project Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }] },
-  { id: 'hotjar', name: 'Hotjar', desc: 'Heatmaps & enregistrements de sessions', category: 'Analytics', color: '#FF3C00', bg: 'rgba(255,60,0,0.12)', LogoComponent: HotjarLogo, docsUrl: 'https://hotjar.com', hasWebhook: false, fields: [{ key: 'site_id', label: 'Site ID', placeholder: '1234567', type: 'text' }] },
-  { id: 'shopify', name: 'Shopify', desc: 'Synchronisez commandes & clients Shopify', category: 'Ecommerce', color: '#96BF48', bg: 'rgba(150,191,72,0.12)', LogoComponent: ShopifyLogo, docsUrl: 'https://shopify.com', hasWebhook: true, fields: [{ key: 'shop_domain', label: 'Shop Domain', placeholder: 'yourstore.myshopify.com', type: 'text' }, { key: 'access_token', label: 'Admin API Token', placeholder: 'shpat_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'woocommerce', name: 'WooCommerce', desc: 'Sync automatique pour boutiques WordPress', category: 'Ecommerce', color: '#7F54B3', bg: 'rgba(127,84,179,0.12)', LogoComponent: WooCommerceLogo, docsUrl: 'https://woocommerce.com', hasWebhook: true, fields: [{ key: 'store_url', label: 'Store URL', placeholder: 'https://yourstore.com', type: 'text' }, { key: 'consumer_key', label: 'Consumer Key', placeholder: 'ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'consumer_secret', label: 'Consumer Secret', placeholder: 'cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'google_sheets', name: 'Google Sheets', desc: 'Export automatique de vos données en tableur', category: 'Données', color: '#23A566', bg: 'rgba(35,165,102,0.12)', LogoComponent: GoogleSheetsLogo, docsUrl: 'https://sheets.google.com', hasWebhook: false, fields: [{ key: 'spreadsheet_id', label: 'Spreadsheet ID', placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms', type: 'text' }, { key: 'sheet_name', label: 'Sheet Name', placeholder: 'Leads', type: 'text' }] },
-  { id: 'supabase', name: 'Supabase', desc: 'Base de données PostgreSQL open source', category: 'Données', color: '#3ECF8E', bg: 'rgba(62,207,142,0.12)', LogoComponent: SupabaseLogo, docsUrl: 'https://supabase.com', hasWebhook: false, fields: [{ key: 'project_url', label: 'Project URL', placeholder: 'https://xxxxxxxxxxxx.supabase.co', type: 'text' }, { key: 'anon_key', label: 'Anon Key', placeholder: 'eyJhbGxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  { id: 'postgres', name: 'PostgreSQL', desc: 'Connexion directe à votre base de données', category: 'Données', color: '#336791', bg: 'rgba(51,103,145,0.12)', LogoComponent: PostgresLogo, docsUrl: 'https://postgresql.org', hasWebhook: false, fields: [{ key: 'connection_string', label: 'Connection String', placeholder: 'postgresql://user:password@host:5432/db', type: 'password' }] },
+  { id: 'zapier', name: 'Zapier', desc: 'Automatisez plus de 6 000 apps sans coder', category: 'Automatisation', color: '#FF4A00', bg: 'rgba(255,74,0,0.10)', LogoComponent: ZapierLogo, docsUrl: 'https://zapier.com', hasWebhook: true, fields: [] },
+  { id: 'make', name: 'Make (Integromat)', desc: 'Créez des scénarios automation visuels', category: 'Automatisation', color: '#6D00CC', bg: 'rgba(109,0,204,0.10)', LogoComponent: MakeLogo, docsUrl: 'https://make.com', hasWebhook: true, fields: [] },
+  { id: 'hubspot', name: 'HubSpot', desc: 'CRM tout-en-un pour gérer vos leads', category: 'CRM', color: '#FF7A59', bg: 'rgba(255,122,89,0.10)', LogoComponent: HubSpotLogo, docsUrl: 'https://hubspot.com', hasWebhook: true, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', type: 'password' }, { key: 'portal_id', label: 'Portal ID', placeholder: '12345678', type: 'text' }] },
+  { id: 'salesforce', name: 'Salesforce', desc: 'CRM enterprise leader du marché', category: 'CRM', color: '#00A1E0', bg: 'rgba(0,161,224,0.10)', LogoComponent: SalesforceLogo, docsUrl: 'https://salesforce.com', hasWebhook: true, fields: [{ key: 'instance_url', label: 'Instance URL', placeholder: 'https://yourinstance.salesforce.com', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'pipedrive', name: 'Pipedrive', desc: 'Pipeline de ventes visuel et intuitif', category: 'CRM', color: '#00C85A', bg: 'rgba(0,200,90,0.10)', LogoComponent: PipedriveLogo, docsUrl: 'https://pipedrive.com', hasWebhook: true, fields: [{ key: 'api_token', label: 'API Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  // Notion : le logo est un carré blanc avec le "N" noir — repli spécifique
+  // color/bg (gris neutre) pour la vignette, au lieu du blanc translucide
+  // pensé pour l'ancien fond sombre (devenait invisible sur carte blanche).
+  { id: 'notion', name: 'Notion', desc: 'Synchronisez vos leads dans votre workspace', category: 'CRM', color: '#37352F', bg: 'rgba(55,53,47,0.06)', LogoComponent: NotionLogo, docsUrl: 'https://notion.so', hasWebhook: true, fields: [{ key: 'database_id', label: 'Database ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }] },
+  { id: 'airtable', name: 'Airtable', desc: 'Exportez automatiquement vos contacts', category: 'CRM', color: '#18BFFF', bg: 'rgba(24,191,255,0.10)', LogoComponent: AirtableLogo, docsUrl: 'https://airtable.com', hasWebhook: true, fields: [{ key: 'base_id', label: 'Base ID', placeholder: 'appXXXXXXXXXXXXXX', type: 'text' }, { key: 'table_name', label: 'Table', placeholder: 'Leads', type: 'text' }] },
+  { id: 'mailchimp', name: 'Mailchimp', desc: 'Ajoutez vos contacts à vos listes email', category: 'Email', color: '#E4A700', bg: 'rgba(228,167,0,0.10)', LogoComponent: MailchimpLogo, docsUrl: 'https://mailchimp.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1', type: 'password' }, { key: 'list_id', label: 'Audience ID', placeholder: 'xxxxxxxxxx', type: 'text' }] },
+  { id: 'brevo', name: 'Brevo', desc: 'Email marketing populaire en France', category: 'Email', color: '#0B996E', bg: 'rgba(11,153,110,0.10)', LogoComponent: BrevoLogo, docsUrl: 'https://brevo.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xkeysib-xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'list_id', label: 'List ID', placeholder: '12', type: 'text' }] },
+  { id: 'activecampaign', name: 'ActiveCampaign', desc: 'Email marketing & automation avancée', category: 'Email', color: '#356AE6', bg: 'rgba(53,106,230,0.10)', LogoComponent: ActiveCampaignLogo, docsUrl: 'https://activecampaign.com', hasWebhook: false, fields: [{ key: 'api_url', label: 'API URL', placeholder: 'https://youraccountname.api-us1.com', type: 'text' }, { key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'convertkit', name: 'ConvertKit', desc: 'Email marketing pour créateurs de contenu', category: 'Email', color: '#FB6970', bg: 'rgba(251,105,112,0.10)', LogoComponent: ConvertKitLogo, docsUrl: 'https://convertkit.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'form_id', label: 'Form ID', placeholder: '1234567', type: 'text' }] },
+  { id: 'stripe', name: 'Stripe', desc: 'Suivez paiements & abonnements en temps réel', category: 'Paiements', color: '#635BFF', bg: 'rgba(99,91,255,0.10)', LogoComponent: StripeLogo, docsUrl: 'https://stripe.com', hasWebhook: true, fields: [{ key: 'secret_key', label: 'Secret Key', placeholder: 'sk_live_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'webhook_secret', label: 'Webhook Secret', placeholder: 'whsec_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'paypal', name: 'PayPal', desc: 'Notifications de transactions PayPal', category: 'Paiements', color: '#003087', bg: 'rgba(0,48,135,0.10)', LogoComponent: PayPalLogo, docsUrl: 'https://paypal.com', hasWebhook: true, fields: [{ key: 'client_id', label: 'Client ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }, { key: 'client_secret', label: 'Client Secret', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Messages entrants → leads + notifications automatiques', category: 'Messagerie', color: '#25D366', bg: 'rgba(37,211,102,0.10)', LogoComponent: WhatsAppLogo, docsUrl: 'https://business.whatsapp.com', hasWebhook: true, fields: [{ key: 'phone_id', label: 'Phone Number ID', placeholder: '123456789012345', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'EAAxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'notification_phone', label: 'Votre numéro (notifications)', placeholder: '2250700000000', type: 'text' }, { key: 'verify_token', label: 'Token de vérification webhook', placeholder: 'mon_token_secret', type: 'text' }] },
+  { id: 'telegram', name: 'Telegram', desc: 'Bot notifications vers vos canaux Telegram', category: 'Messagerie', color: '#2CA5E0', bg: 'rgba(44,165,224,0.10)', LogoComponent: TelegramLogo, docsUrl: 'https://telegram.org', hasWebhook: true, fields: [{ key: 'bot_token', label: 'Bot Token', placeholder: '123456789:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'chat_id', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' }] },
+  { id: 'slack', name: 'Slack', desc: 'Recevez des notifications en temps réel', category: 'Messagerie', color: '#E01E5A', bg: 'rgba(224,30,90,0.10)', LogoComponent: SlackLogo, docsUrl: 'https://slack.com', hasWebhook: true, fields: [{ key: 'webhook_url', label: 'Webhook URL Slack', placeholder: 'https://hooks.slack.com/services/...', type: 'text' }] },
+  { id: 'intercom', name: 'Intercom', desc: 'Support client & messaging en temps réel', category: 'Messagerie', color: '#1F8DED', bg: 'rgba(31,141,237,0.10)', LogoComponent: IntercomLogo, docsUrl: 'https://intercom.com', hasWebhook: true, fields: [{ key: 'access_token', label: 'Access Token', placeholder: 'dG9rxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'workspace_id', label: 'Workspace ID', placeholder: 'xxxxxxxx', type: 'text' }] },
+  { id: 'crisp', name: 'Crisp', desc: 'Support client made in France 🇫🇷', category: 'Messagerie', color: '#1972F5', bg: 'rgba(25,114,245,0.10)', LogoComponent: CrispLogo, docsUrl: 'https://crisp.chat', hasWebhook: true, fields: [{ key: 'website_id', label: 'Website ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', type: 'text' }, { key: 'token', label: 'Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'calendly', name: 'Calendly', desc: 'Suivi automatique de vos bookings', category: 'Calendrier', color: '#006BFF', bg: 'rgba(0,107,255,0.10)', LogoComponent: CalendlyLogo, docsUrl: 'https://calendly.com', hasWebhook: true, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'eyJhbGxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'google_calendar', name: 'Google Calendar', desc: 'Synchronisez vos événements automatiquement', category: 'Calendrier', color: '#4285F4', bg: 'rgba(66,133,244,0.10)', LogoComponent: GoogleCalendarLogo, docsUrl: 'https://calendar.google.com', hasWebhook: false, fields: [{ key: 'calendar_id', label: 'Calendar ID', placeholder: 'xxxxxxxxxxxx@group.calendar.google.com', type: 'text' }] },
+  { id: 'google_analytics', name: 'Google Analytics', desc: 'Suivez vos visiteurs et conversions en détail', category: 'Analytics', color: '#E37400', bg: 'rgba(227,116,0,0.10)', LogoComponent: GoogleAnalyticsLogo, docsUrl: 'https://analytics.google.com', hasWebhook: false, fields: [{ key: 'measurement_id', label: 'Measurement ID', placeholder: 'G-XXXXXXXXXX', type: 'text' }] },
+  { id: 'meta_pixel', name: 'Meta Pixel', desc: 'Trackez les conversions Facebook & Instagram', category: 'Analytics', color: '#0082FB', bg: 'rgba(0,130,251,0.10)', LogoComponent: MetaLogo, docsUrl: 'https://business.facebook.com', hasWebhook: false, fields: [{ key: 'pixel_id', label: 'Pixel ID', placeholder: '123456789012345', type: 'text' }] },
+  { id: 'mixpanel', name: 'Mixpanel', desc: 'Analytics produit avancée & funnels', category: 'Analytics', color: '#7856FF', bg: 'rgba(120,86,255,0.10)', LogoComponent: MixpanelLogo, docsUrl: 'https://mixpanel.com', hasWebhook: false, fields: [{ key: 'project_token', label: 'Project Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }] },
+  { id: 'hotjar', name: 'Hotjar', desc: 'Heatmaps & enregistrements de sessions', category: 'Analytics', color: '#FF3C00', bg: 'rgba(255,60,0,0.10)', LogoComponent: HotjarLogo, docsUrl: 'https://hotjar.com', hasWebhook: false, fields: [{ key: 'site_id', label: 'Site ID', placeholder: '1234567', type: 'text' }] },
+  { id: 'shopify', name: 'Shopify', desc: 'Synchronisez commandes & clients Shopify', category: 'Ecommerce', color: '#96BF48', bg: 'rgba(150,191,72,0.10)', LogoComponent: ShopifyLogo, docsUrl: 'https://shopify.com', hasWebhook: true, fields: [{ key: 'shop_domain', label: 'Shop Domain', placeholder: 'yourstore.myshopify.com', type: 'text' }, { key: 'access_token', label: 'Admin API Token', placeholder: 'shpat_xxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'woocommerce', name: 'WooCommerce', desc: 'Sync automatique pour boutiques WordPress', category: 'Ecommerce', color: '#7F54B3', bg: 'rgba(127,84,179,0.10)', LogoComponent: WooCommerceLogo, docsUrl: 'https://woocommerce.com', hasWebhook: true, fields: [{ key: 'store_url', label: 'Store URL', placeholder: 'https://yourstore.com', type: 'text' }, { key: 'consumer_key', label: 'Consumer Key', placeholder: 'ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }, { key: 'consumer_secret', label: 'Consumer Secret', placeholder: 'cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'google_sheets', name: 'Google Sheets', desc: 'Export automatique de vos données en tableur', category: 'Données', color: '#23A566', bg: 'rgba(35,165,102,0.10)', LogoComponent: GoogleSheetsLogo, docsUrl: 'https://sheets.google.com', hasWebhook: false, fields: [{ key: 'spreadsheet_id', label: 'Spreadsheet ID', placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms', type: 'text' }, { key: 'sheet_name', label: 'Sheet Name', placeholder: 'Leads', type: 'text' }] },
+  { id: 'supabase', name: 'Supabase', desc: 'Base de données PostgreSQL open source', category: 'Données', color: '#3ECF8E', bg: 'rgba(62,207,142,0.10)', LogoComponent: SupabaseLogo, docsUrl: 'https://supabase.com', hasWebhook: false, fields: [{ key: 'project_url', label: 'Project URL', placeholder: 'https://xxxxxxxxxxxx.supabase.co', type: 'text' }, { key: 'anon_key', label: 'Anon Key', placeholder: 'eyJhbGxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
+  { id: 'postgres', name: 'PostgreSQL', desc: 'Connexion directe à votre base de données', category: 'Données', color: '#336791', bg: 'rgba(51,103,145,0.10)', LogoComponent: PostgresLogo, docsUrl: 'https://postgresql.org', hasWebhook: false, fields: [{ key: 'connection_string', label: 'Connection String', placeholder: 'postgresql://user:password@host:5432/db', type: 'password' }] },
 ];
 
 function generateWebhookUrl(profileId, integrationId) {
   return `https://admin.socialapp.work/webhooks/${profileId}/${integrationId}`;
 }
+
+// ─── Thème clair — cohérent avec le reste du dashboard (cartes blanches
+// #ffffff, bordures #e6e8f0, texte #161a2e, mêmes tokens que
+// UserDashboard.jsx / MiniStat / PlanModal) ─────────────────────────────
+const T = {
+  card: '#ffffff',
+  border: '#e6e8f0',
+  borderConnected: 'rgba(34,197,94,0.35)',
+  text: '#161a2e',
+  muted: '#6b7280',
+  faint: '#9095a5',
+  surfaceAlt: '#f6f7fb',
+  accent: '#6366f1',
+};
 
 // ─── Carte intégration ────────────────────────────────────────────────────────
 function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }) {
@@ -319,12 +336,13 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.04)',
-      border: `1px solid ${isConnected ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)'}`,
+      background: T.card,
+      border: `1px solid ${isConnected ? T.borderConnected : T.border}`,
       borderRadius: '16px',
       overflow: 'hidden',
       transition: 'border-color 0.2s',
       minWidth: 0,
+      boxShadow: '0 1px 2px rgba(15,23,42,.04)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', minWidth: 0 }}>
 
@@ -349,16 +367,16 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
           </div>
           <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-              <span style={{ color: 'white', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: T.text, fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {integration.name}
               </span>
               {isConnected && (
-                <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', letterSpacing: '0.05em', flexShrink: 0 }}>
+                <span style={{ background: 'rgba(34,197,94,0.14)', color: '#16a34a', fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', letterSpacing: '0.05em', flexShrink: 0 }}>
                   ✓ CONNECTÉ
                 </span>
               )}
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ color: T.faint, fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {integration.desc}
             </p>
           </div>
@@ -367,7 +385,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
         {isConnected && (
           <button
             onClick={e => { e.stopPropagation(); handleDisconnect(); }}
-            style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+            style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             <X size={11} />
           </button>
@@ -375,7 +393,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
         {hasContent && (
           <button
             onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
-            style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+            style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '7px', background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
@@ -383,18 +401,18 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
       </div>
 
       {expanded && hasContent && (
-        <div style={{ padding: '12px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ padding: '12px 14px 14px', borderTop: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {integration.hasWebhook && (
             <div>
-              <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+              <label style={{ color: T.muted, fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                 Webhook URL
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '8px 12px', minWidth: 0 }}>
-                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '8px 12px', minWidth: 0 }}>
+                <span style={{ color: T.text, fontSize: '11px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
                   {webhookUrl}
                 </span>
-                <button onClick={() => handleCopy(webhookUrl)} style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '8px', background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {copied ? <Check size={10} color="#22c55e" /> : <Copy size={10} color="rgba(255,255,255,0.5)" />}
+                <button onClick={() => handleCopy(webhookUrl)} style={{ width: tapBtnSize, height: tapBtnSize, borderRadius: '8px', background: copied ? 'rgba(34,197,94,0.16)' : T.surfaceAlt, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {copied ? <Check size={10} color="#16a34a" /> : <Copy size={10} color={T.muted} />}
                 </button>
               </div>
             </div>
@@ -402,7 +420,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
 
           {integration.fields.map(f => (
             <div key={f.key}>
-              <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+              <label style={{ color: T.muted, fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                 {f.label}
               </label>
               <div style={{ position: 'relative' }}>
@@ -411,13 +429,13 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
                   value={fields[f.key] || ''}
                   onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
-                  style={{ width: '100%', boxSizing: 'border-box', padding: f.type === 'password' ? '10px 40px 10px 12px' : '10px 12px', minHeight: '38px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'white', fontSize: '12px', outline: 'none', fontFamily: f.type === 'password' ? 'inherit' : 'monospace' }}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: f.type === 'password' ? '10px 40px 10px 12px' : '10px 12px', minHeight: '38px', background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: '10px', color: T.text, fontSize: '12px', outline: 'none', fontFamily: f.type === 'password' ? 'inherit' : 'monospace' }}
                 />
                 {f.type === 'password' && (
                   <button
                     type="button"
                     onClick={() => setShowSecret(prev => ({ ...prev, [f.key]: !prev[f.key] }))}
-                    style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: '36px', height: '36px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: '36px', height: '36px', background: 'none', border: 'none', cursor: 'pointer', color: T.faint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     {showSecret[f.key] ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
@@ -439,7 +457,7 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
               href={integration.docsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ width: tapBtnSize, height: tapBtnSize, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}
+              style={{ width: tapBtnSize, height: tapBtnSize, background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: T.muted, flexShrink: 0 }}
             >
               <ExternalLink size={12} />
             </a>
@@ -548,67 +566,67 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: 'white', fontSize: isTablet ? '20px' : '18px', fontWeight: 800, margin: 0 }}>Intégrations</h2>
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '4px 0 0' }}>
+          <h2 style={{ color: T.text, fontSize: isTablet ? '20px' : '18px', fontWeight: 800, margin: 0 }}>Intégrations</h2>
+          <p style={{ color: T.faint, fontSize: '12px', margin: '4px 0 0' }}>
             {connectedCount} active{connectedCount !== 1 ? 's' : ''} · {INTEGRATIONS.length} disponibles
           </p>
         </div>
-        <button onClick={loadConfigs} style={{ width: isTablet ? '44px' : '38px', height: isTablet ? '44px' : '38px', borderRadius: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-          <RefreshCw size={13} color="rgba(255,255,255,0.5)" />
+        <button onClick={loadConfigs} style={{ width: isTablet ? '44px' : '38px', height: isTablet ? '44px' : '38px', borderRadius: '9px', background: T.surfaceAlt, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+          <RefreshCw size={13} color={T.muted} />
         </button>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '10px', minWidth: 0 }}>
         {[
-          { label: 'Connectées', value: connectedCount, icon: Check, color: '#22c55e' },
-          { label: 'Disponibles', value: INTEGRATIONS.length, icon: Sparkles, color: '#6366f1' },
-          { label: 'Automations', value: INTEGRATIONS.filter(i => i.category === 'Automatisation' && configs[i.id]?.connected).length, icon: Zap, color: '#f59e0b' },
+          { label: 'Connectées', value: connectedCount, icon: Check, color: '#16a34a' },
+          { label: 'Disponibles', value: INTEGRATIONS.length, icon: Sparkles, color: T.accent },
+          { label: 'Automations', value: INTEGRATIONS.filter(i => i.category === 'Automatisation' && configs[i.id]?.connected).length, icon: Zap, color: '#d97706' },
         ].map(s => (
-          <div key={s.label} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: isTablet ? '16px' : '14px', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
+          <div key={s.label} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: '14px', padding: isTablet ? '16px' : '14px', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box', boxShadow: '0 1px 2px rgba(15,23,42,.04)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', minWidth: 0, gap: '6px' }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: isTablet ? '11px' : '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: T.muted, fontSize: isTablet ? '11px' : '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.label}
               </span>
-              <div style={{ width: isTablet ? '28px' : '24px', height: isTablet ? '28px' : '24px', borderRadius: '7px', background: s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: isTablet ? '28px' : '24px', height: isTablet ? '28px' : '24px', borderRadius: '7px', background: s.color + '1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <s.icon size={isTablet ? 14 : 12} color={s.color} />
               </div>
             </div>
-            <span style={{ color: 'white', fontSize: isTablet ? '28px' : '24px', fontWeight: 800 }}>{s.value}</span>
+            <span style={{ color: T.text, fontSize: isTablet ? '28px' : '24px', fontWeight: 800 }}>{s.value}</span>
           </div>
         ))}
       </div>
 
       {/* Webhook universel */}
-      <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Link2 size={16} color="#a78bfa" />
+      <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Link2 size={16} color={T.accent} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ color: 'white', fontSize: '12px', fontWeight: 700, margin: 0 }}>Webhook universel</p>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+          <p style={{ color: T.text, fontSize: '12px', fontWeight: 700, margin: 0 }}>Webhook universel</p>
+          <p style={{ color: T.faint, fontSize: '11px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
             {generateWebhookUrl(profileId, '{integration}')}
           </p>
         </div>
         <button
           onClick={() => { navigator.clipboard.writeText(generateWebhookUrl(profileId, 'universal')); toast.success('URL copiée !'); }}
-          style={{ width: isTablet ? '44px' : '38px', height: isTablet ? '44px' : '38px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          style={{ width: isTablet ? '44px' : '38px', height: isTablet ? '44px' : '38px', borderRadius: '8px', background: T.surfaceAlt, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
         >
-          <Copy size={13} color="rgba(255,255,255,0.5)" />
+          <Copy size={13} color={T.muted} />
         </button>
       </div>
 
       {/* Recherche */}
       <div style={{ position: 'relative', minWidth: 0 }}>
-        <Sparkles size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
+        <Sparkles size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: T.faint, pointerEvents: 'none' }} />
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Rechercher une intégration…"
-          style={{ width: '100%', boxSizing: 'border-box', padding: isTablet ? '13px 12px 13px 38px' : '10px 12px 10px 34px', minHeight: isTablet ? undefined : '40px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: isTablet ? '14px' : '13px', outline: 'none' }}
+          style={{ width: '100%', boxSizing: 'border-box', padding: isTablet ? '13px 12px 13px 38px' : '10px 12px 10px 34px', minHeight: isTablet ? undefined : '40px', background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: '12px', color: T.text, fontSize: isTablet ? '14px' : '13px', outline: 'none' }}
         />
         {search && (
-          <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: '28px', height: '28px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: '28px', height: '28px', background: 'none', border: 'none', cursor: 'pointer', color: T.faint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={13} />
           </button>
         )}
@@ -623,11 +641,11 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
             <button
               key={cat.id}
               onClick={() => setCategory(cat.id)}
-              style={{ padding: isTablet ? '8px 16px' : '5px 12px', minHeight: isTablet ? '40px' : '38px', borderRadius: '20px', border: '1px solid', borderColor: active ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.1)', background: active ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)', color: active ? '#a78bfa' : 'rgba(255,255,255,0.5)', fontSize: isTablet ? '12px' : '11px', fontWeight: active ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
+              style={{ padding: isTablet ? '8px 16px' : '5px 12px', minHeight: isTablet ? '40px' : '38px', borderRadius: '20px', border: '1px solid', borderColor: active ? 'rgba(99,102,241,0.55)' : T.border, background: active ? 'rgba(99,102,241,0.12)' : T.surfaceAlt, color: active ? T.accent : T.muted, fontSize: isTablet ? '12px' : '11px', fontWeight: active ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
             >
               <span>{cat.emoji}</span>
               <span>{cat.label}</span>
-              {cat.id !== 'Tous' && <span style={{ opacity: 0.5, marginLeft: '2px' }}>{count}</span>}
+              {cat.id !== 'Tous' && <span style={{ opacity: 0.6, marginLeft: '2px' }}>{count}</span>}
             </button>
           );
         })}
@@ -636,12 +654,12 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
       {/* Liste */}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-          <Loader2 size={24} color="rgba(99,102,241,0.6)" style={{ animation: 'spin 1s linear infinite' }} />
+          <Loader2 size={24} color={T.accent} style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
-          <Sparkles size={24} color="rgba(255,255,255,0.15)" style={{ margin: '0 auto 10px', display: 'block' }} />
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', margin: 0 }}>Aucune intégration trouvée</p>
+        <div style={{ textAlign: 'center', padding: '40px', background: '#f9fafc', border: '1px dashed #dde0ea', borderRadius: '16px' }}>
+          <Sparkles size={24} color="#c3c8d6" style={{ margin: '0 auto 10px', display: 'block' }} />
+          <p style={{ color: T.faint, fontSize: '13px', margin: 0 }}>Aucune intégration trouvée</p>
         </div>
       ) : category === 'Tous' && !search ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
@@ -649,7 +667,7 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>Actives</p>
+                <p style={{ color: T.muted, fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>Actives</p>
               </div>
               <div style={cardGridStyle}>
                 {INTEGRATIONS.filter(i => configs[i.id]?.connected).map(integration => (
@@ -662,8 +680,8 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
             <div key={cat.id} style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <span style={{ fontSize: '14px' }}>{cat.emoji}</span>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{cat.label}</p>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                <p style={{ color: T.muted, fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{cat.label}</p>
+                <div style={{ flex: 1, height: '1px', background: T.border }} />
               </div>
               <div style={cardGridStyle}>
                 {filtered.filter(i => i.category === cat.id && !configs[i.id]?.connected).map(integration => (

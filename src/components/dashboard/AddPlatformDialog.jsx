@@ -327,6 +327,15 @@ function PlatformIcon({ platform }) {
   return platform.icon;
 }
 
+// ─── Thème clair de la modale — cohérent avec le reste du dashboard
+// (cartes/fond blancs #ffffff, bordures #e6e8f0, texte #161a2e, mêmes
+// tokens que PlanModal / MiniStat dans UserDashboard.jsx) ───────────────
+const DIALOG_BG    = '#ffffff';
+const DIALOG_BORDER = '#e6e8f0';
+const TEXT_MAIN    = '#161a2e';
+const TEXT_MUTED   = '#9095a5';
+const SURFACE_ALT  = '#f6f7fb';
+
 export default function AddPlatformDialog({ open, onOpenChange, onSelect, existingPlatforms = [] }) {
   const [search, setSearch] = useState('');
 
@@ -350,31 +359,31 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,17,30,.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
       onClick={() => onOpenChange(false)}
     >
       <div
-        style={{ background: '#0f0a1e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px', width: '100%', maxWidth: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}
+        style={{ background: DIALOG_BG, border: `1px solid ${DIALOG_BORDER}`, borderRadius: '20px', width: '100%', maxWidth: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 80px rgba(15,23,42,.22)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ padding: '20px 20px 12px', borderBottom: `1px solid ${DIALOG_BORDER}` }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <h2 style={{ color: 'white', fontSize: '16px', fontWeight: 700, margin: 0 }}>Ajouter une plateforme</h2>
+            <h2 style={{ color: TEXT_MAIN, fontSize: '16px', fontWeight: 700, margin: 0 }}>Ajouter une plateforme</h2>
             <button
               onClick={() => onOpenChange(false)}
-              style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ background: '#f1f2f7', border: '1px solid #e2e4ee', cursor: 'pointer', color: '#6b7280', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <X size={15} />
             </button>
           </div>
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)' }} />
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: TEXT_MUTED }} />
             <input
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher..."
-              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '9px 12px 9px 34px', color: 'white', fontSize: '13px', outline: 'none' }}
+              style={{ width: '100%', boxSizing: 'border-box', background: SURFACE_ALT, border: `1px solid ${DIALOG_BORDER}`, borderRadius: '10px', padding: '9px 12px 9px 34px', color: TEXT_MAIN, fontSize: '13px', outline: 'none' }}
             />
           </div>
         </div>
@@ -382,7 +391,7 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
         <div style={{ overflowY: 'auto', flex: 1, padding: '12px 20px 20px' }}>
           {Object.entries(grouped).map(([cat, items]) => (
             <div key={cat} style={{ marginBottom: '16px' }}>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+              <p style={{ color: TEXT_MUTED, fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
                 {cat}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -391,15 +400,15 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
                     key={key}
                     onClick={() => { onSelect(key); onOpenChange(false); }}
                     style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'transparent', border: '1px solid transparent', borderRadius: '12px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.15s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = SURFACE_ALT; e.currentTarget.style.borderColor = DIALOG_BORDER; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <PlatformIcon platform={platform} />
                     </div>
                     <div>
-                      <p style={{ color: 'white', fontSize: '13px', fontWeight: 500, margin: 0 }}>{platform.label}</p>
-                      <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', margin: 0 }}>{platform.placeholder}</p>
+                      <p style={{ color: TEXT_MAIN, fontSize: '13px', fontWeight: 500, margin: 0 }}>{platform.label}</p>
+                      <p style={{ color: TEXT_MUTED, fontSize: '11px', margin: 0 }}>{platform.placeholder}</p>
                     </div>
                   </button>
                 ))}
@@ -407,7 +416,7 @@ export default function AddPlatformDialog({ open, onOpenChange, onSelect, existi
             </div>
           ))}
           {Object.keys(grouped).length === 0 && (
-            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '13px', paddingTop: '32px' }}>
+            <div style={{ textAlign: 'center', color: TEXT_MUTED, fontSize: '13px', paddingTop: '32px' }}>
               Aucun résultat pour « {search} »
             </div>
           )}

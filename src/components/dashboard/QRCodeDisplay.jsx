@@ -109,6 +109,14 @@ function isLight(hex) {
 // qui affiche "Profil introuvable" une fois scanné. On bloque désormais
 // l'affichage du QR dans ce cas précis, avec un message explicite, plutôt
 // que de laisser l'utilisateur partager un lien qui ne fonctionnera pas.
+//
+// [FIX THÈME] La carte principale et les deux états de garde (username
+// manquant / compte non activé) étaient calqués sur l'ancien fond sombre
+// du dashboard (rgba(255,255,255,0.0x) + texte blanc). Le contenu du
+// dashboard est maintenant clair (#f4f5fa) : repassés en cartes blanches
+// avec texte foncé. Les modales (personnalisation QR, sauvegarde mobile)
+// restent en overlay sombre plein écran — cohérent, elles ont leur propre
+// fond opaque (#1a1a2e / #0f0f1a) et backdrop flouté.
 export default function QRCodeDisplay({ profileId, username, userLogo, isActive, isActivated, onNavigate }) {
   const containerRef    = useRef(null);
   const qrInstanceRef   = useRef(null);
@@ -131,8 +139,8 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
     return (
       <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
         <div style={{
-          background:'rgba(255,255,255,0.05)',
-          border:'1px solid rgba(255,193,7,0.3)',
+          background:'#ffffff',
+          border:'1px solid rgba(245,158,11,0.35)',
           borderRadius:'20px',
           padding:'24px 18px',
           display:'flex',
@@ -140,20 +148,21 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
           alignItems:'center',
           gap:'14px',
           textAlign:'center',
+          boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
         }}>
           <div style={{
             width:'48px', height:'48px', borderRadius:'14px',
-            background:'rgba(255,193,7,0.12)',
-            border:'1px solid rgba(255,193,7,0.3)',
+            background:'rgba(245,158,11,0.1)',
+            border:'1px solid rgba(245,158,11,0.3)',
             display:'flex', alignItems:'center', justifyContent:'center',
           }}>
-            <AlertTriangle size={22} color="#fbbf24" />
+            <AlertTriangle size={22} color="#d97706" />
           </div>
           <div>
-            <p style={{ color:'white', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
+            <p style={{ color:'#161a2e', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
               Nom d'utilisateur requis
             </p>
-            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', margin:0, lineHeight:1.6 }}>
+            <p style={{ color:'#8a90a2', fontSize:'12px', margin:0, lineHeight:1.6 }}>
               Définissez un nom d'utilisateur pour générer votre QR code et partager votre profil public.
             </p>
           </div>
@@ -188,7 +197,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
     return (
       <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
         <div style={{
-          background:'rgba(255,255,255,0.05)',
+          background:'#ffffff',
           border:'1px solid rgba(239,68,68,0.3)',
           borderRadius:'20px',
           padding:'24px 18px',
@@ -197,20 +206,21 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
           alignItems:'center',
           gap:'14px',
           textAlign:'center',
+          boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
         }}>
           <div style={{
             width:'48px', height:'48px', borderRadius:'14px',
-            background:'rgba(239,68,68,0.12)',
+            background:'rgba(239,68,68,0.1)',
             border:'1px solid rgba(239,68,68,0.3)',
             display:'flex', alignItems:'center', justifyContent:'center',
           }}>
-            <AlertTriangle size={22} color="#f87171" />
+            <AlertTriangle size={22} color="#dc2626" />
           </div>
           <div>
-            <p style={{ color:'white', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
+            <p style={{ color:'#161a2e', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
               Compte en attente d'activation
             </p>
-            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', margin:0, lineHeight:1.6 }}>
+            <p style={{ color:'#8a90a2', fontSize:'12px', margin:0, lineHeight:1.6 }}>
               Votre QR code sera généré une fois le paiement confirmé et votre compte activé. Le nom d'utilisateur choisi est réservé jusque-là.
             </p>
           </div>
@@ -466,7 +476,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
   return (
     <div style={{ width:'100%', minWidth:0, boxSizing:'border-box', overflow:'hidden' }}>
 
-      {/* ── Modale mobile ── */}
+      {/* ── Modale mobile — overlay sombre volontaire, inchangée ── */}
       {showMobileModal && qrDataUrl && createPortal(
         <div
           style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(10px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px' }}
@@ -498,7 +508,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
         document.body
       )}
 
-      {/* ── Modale personnalisation ── */}
+      {/* ── Modale personnalisation — overlay sombre volontaire, inchangée ── */}
       {showCustomizer && createPortal(
         <div
           style={{ position:'fixed', inset:0, zIndex:9998, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'16px' }}
@@ -709,19 +719,19 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
         document.body
       )}
 
-      {/* ── Carte principale ──────────────────────────────────────────────── */}
-      <div style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px', padding:'18px', position:'relative', minWidth:0, overflow:'hidden', width:'100%', boxSizing:'border-box' }}>
+      {/* ── Carte principale — thème clair, cohérent avec le fond #f4f5fa du dashboard ── */}
+      <div style={{ background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'20px', padding:'18px', position:'relative', minWidth:0, overflow:'hidden', width:'100%', boxSizing:'border-box', boxShadow:'0 1px 2px rgba(15,23,42,0.04)' }}>
 
         {/* En-tête */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', marginBottom:'16px', minWidth:0 }}>
           <h3 style={{
-            color:'white', fontSize:'14px', fontWeight:700, margin:0,
+            color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0,
             overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
             flex:'1 1 0', minWidth:0,
           }}>Mon QR Code</h3>
-          <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0, background:active?'rgba(34,197,94,0.12)':'rgba(239,68,68,0.12)', border:`1px solid ${active?'rgba(34,197,94,0.35)':'rgba(239,68,68,0.35)'}`, borderRadius:'100px', padding:'4px 10px' }}>
-            <span style={{ width:'7px', height:'7px', borderRadius:'50%', background:active?'#22c55e':'#ef4444', display:'inline-block', boxShadow:active?'0 0 6px rgba(34,197,94,0.7)':'0 0 6px rgba(239,68,68,0.7)', animation:active?'qr-pulse 2s infinite':'none', flexShrink:0 }} />
-            <span style={{ color:active?'#22c55e':'#f87171', fontSize:'11px', fontWeight:700, whiteSpace:'nowrap' }}>{active?'Actif':'Inactif'}</span>
+          <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0, background:active?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', border:`1px solid ${active?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}`, borderRadius:'100px', padding:'4px 10px' }}>
+            <span style={{ width:'7px', height:'7px', borderRadius:'50%', background:active?'#22c55e':'#ef4444', display:'inline-block', boxShadow:active?'0 0 6px rgba(34,197,94,0.5)':'0 0 6px rgba(239,68,68,0.5)', animation:active?'qr-pulse 2s infinite':'none', flexShrink:0 }} />
+            <span style={{ color:active?'#16a34a':'#dc2626', fontSize:'11px', fontWeight:700, whiteSpace:'nowrap' }}>{active?'Actif':'Inactif'}</span>
           </div>
         </div>
 
@@ -732,9 +742,10 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
           <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center' }}>
             <div style={{
               background: 'white',
+              border: '1px solid #eef0f5',
               borderRadius: '16px',
               padding: '8px',
-              boxShadow: '0 6px 24px rgba(0,0,0,0.3)',
+              boxShadow: '0 6px 20px rgba(15,23,42,0.1)',
               width: '116px',
               height: '116px',
               flexShrink: 0,
@@ -764,7 +775,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
           <div style={{ flex:'1 1 0', minWidth:0, display:'flex', flexDirection:'column', gap:'8px', overflow:'hidden' }}>
             <ActionButton icon={<Download size={14}/>} label="Télécharger" sub="PNG HD" onClick={handleDownload} disabled={downloading||!qrLoaded} />
             <ActionButton
-              icon={copied?<Check size={14} color="#22c55e"/>:<Copy size={14}/>}
+              icon={copied?<Check size={14} color="#16a34a"/>:<Copy size={14}/>}
               label={copied?'Copié !':'Copier le lien'}
               sub={profileUrl.replace('https://','')}
               onClick={handleCopyLink}
@@ -782,7 +793,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
         </div>
 
         {/* Statistiques */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px', marginTop:'16px', borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:'14px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px', marginTop:'16px', borderTop:'1px solid #eef0f5', paddingTop:'14px' }}>
           <StatItem value={stats.scans}     label="Scans"       color="#f97316" />
           <StatItem value={stats.downloads} label="Téléchargés" color="#6366f1" />
           <StatItem value={stats.shares}    label="Partagés"    color="#22c55e" />
@@ -799,6 +810,10 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
 }
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
+// Les sous-composants ci-dessous (OptionGroup, ColorDot, ColorInputDot,
+// StyleChip, ToggleSwitch) ne sont utilisés que dans la modale de
+// personnalisation (fond sombre #0f0f1a) — leur texte clair y reste
+// correct et n'a pas été modifié.
 
 function OptionGroup({ label, children }) {
   return (
@@ -871,18 +886,19 @@ function ToggleSwitch({ value, onChange, label }) {
   );
 }
 
+// ActionButton et StatItem sont utilisés dans la carte principale (thème clair).
 function ActionButton({ icon, label, sub, onClick, disabled, accent, orange, rightIcon }) {
   const [hovered, setHovered] = useState(false);
   const bg = orange
-    ? hovered ? 'rgba(251,146,60,0.2)' : 'rgba(251,146,60,0.12)'
+    ? hovered ? 'rgba(251,146,60,0.16)' : 'rgba(251,146,60,0.1)'
     : accent
-      ? 'rgba(34,197,94,0.12)'
-      : hovered ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.06)';
+      ? 'rgba(34,197,94,0.1)'
+      : hovered ? '#eef0f5' : '#f6f7fb';
   const border = orange
-    ? '1px solid rgba(251,146,60,0.35)'
+    ? '1px solid rgba(251,146,60,0.3)'
     : accent
-      ? '1px solid rgba(34,197,94,0.35)'
-      : '1px solid rgba(255,255,255,0.08)';
+      ? '1px solid rgba(34,197,94,0.3)'
+      : '1px solid #e6e8f0';
   return (
     <button
       type="button" onClick={onClick} disabled={disabled}
@@ -897,12 +913,12 @@ function ActionButton({ icon, label, sub, onClick, disabled, accent, orange, rig
         boxSizing:'border-box', overflow:'hidden',
       }}
     >
-      <div style={{ color:orange?'#fb923c':accent?'#22c55e':'rgba(255,255,255,0.6)', flexShrink:0 }}>{icon}</div>
+      <div style={{ color:orange?'#ea580c':accent?'#16a34a':'#6b7280', flexShrink:0 }}>{icon}</div>
       <div style={{ minWidth:0, flex:'1 1 0', overflow:'hidden' }}>
-        <div style={{ color:orange?'#fb923c':accent?'#22c55e':'white', fontSize:'12px', fontWeight:700, lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{label}</div>
-        {sub && <div style={{ color:'rgba(255,255,255,0.3)', fontSize:'9px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:'1px' }}>{sub}</div>}
+        <div style={{ color:orange?'#ea580c':accent?'#16a34a':'#161a2e', fontSize:'12px', fontWeight:700, lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{label}</div>
+        {sub && <div style={{ color:'#9095a5', fontSize:'9px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:'1px' }}>{sub}</div>}
       </div>
-      {rightIcon && <div style={{ color:orange?'rgba(251,146,60,0.6)':'rgba(255,255,255,0.3)', flexShrink:0 }}>{rightIcon}</div>}
+      {rightIcon && <div style={{ color:orange?'rgba(234,88,12,0.6)':'#a2a7b5', flexShrink:0 }}>{rightIcon}</div>}
     </button>
   );
 }
@@ -911,7 +927,7 @@ function StatItem({ value, label, color }) {
   return (
     <div style={{ textAlign:'center' }}>
       <div style={{ fontSize:'22px', fontWeight:900, color, lineHeight:1, letterSpacing:'-0.5px' }}>{value}</div>
-      <div style={{ color:'rgba(255,255,255,0.35)', fontSize:'10px', fontWeight:500, marginTop:'3px' }}>{label}</div>
+      <div style={{ color:'#9095a5', fontSize:'10px', fontWeight:500, marginTop:'3px' }}>{label}</div>
     </div>
   );
 }

@@ -44,23 +44,25 @@ export default function ProfileHeader({ profile, onUpdate }) {
   };
 
   return (
-    <div className="bg-blue/10 backdrop-blur rounded-2xl border border-white/1 p-5 flex items-center gap-4">
+    // Thème clair, cohérent avec le reste du dashboard : carte blanche,
+    // bordure #e6e8f0, texte #161a2e (mêmes tokens que UserDashboard.jsx).
+    <div className="bg-white rounded-2xl border border-[#e6e8f0] shadow-sm p-5 flex items-center gap-4">
       <div className="relative shrink-0">
         <div
-          className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+          className="w-16 h-16 rounded-2xl bg-[#f6f7fb] border border-[#e6e8f0] flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => fileRef.current && fileRef.current.click()}
         >
           {uploading ? (
-            <Loader2 className="w-6 h-6 text-white animate-spin" />
+            <Loader2 className="w-6 h-6 text-[#6366f1] animate-spin" />
           ) : profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
-            <User className="w-7 h-7 text-white/60" />
+            <User className="w-7 h-7 text-[#9095a5]" />
           )}
         </div>
         <button
           onClick={() => fileRef.current && fileRef.current.click()}
-          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-primary flex items-center justify-center shadow-lg hover:opacity-80 transition-opacity"
+          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-[#6366f1] flex items-center justify-center shadow-lg hover:opacity-80 transition-opacity"
         >
           <Camera className="w-3 h-3 text-white" />
         </button>
@@ -79,17 +81,16 @@ export default function ProfileHeader({ profile, onUpdate }) {
           value={profile.display_name || ''}
           onChange={(e) => onUpdate({ display_name: e.target.value })}
           placeholder="Votre nom"
-          className="w-full bg-transparent text-white font-bold text-lg placeholder-white/40 focus:outline-none border-b border-transparent focus:border-white/30 transition-colors"
+          className="w-full bg-transparent text-[#161a2e] font-bold text-lg placeholder-[#9095a5] focus:outline-none border-b border-transparent focus:border-[#c7cdfb] transition-colors"
         />
         <input
           type="text"
           value={profile.bio || ''}
           onChange={(e) => onUpdate({ bio: e.target.value })}
           placeholder="Votre bio..."
-          className="w-full bg-transparent text-white/70 text-sm placeholder-white/30 focus:outline-none border-b border-transparent focus:border-white/20 transition-colors"
+          className="w-full bg-transparent text-[#6b7280] text-sm placeholder-[#9095a5] focus:outline-none border-b border-transparent focus:border-[#e6e8f0] transition-colors"
         />
       </div>
     </div>
   );
 }
-

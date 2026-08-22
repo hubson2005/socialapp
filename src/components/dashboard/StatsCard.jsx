@@ -13,6 +13,10 @@
  *  [C9]  Reset du state au changement de profileId (évite l'affichage des données précédentes)
  *  [C10] Valeurs affichées comme '—' pendant le loading (pas de faux zéros)
  *  [C11] Capitalisation de topPlatform isolée dans une fonction utilitaire
+ *  [T1]  [FIX THÈME] Carte calquée sur l'ancien fond sombre du dashboard
+ *        (rgba(255,255,255,0.0x) + texte blanc). Repassée en thème clair
+ *        (carte blanche, texte foncé) pour rester lisible sur le fond
+ *        #f4f5fa désormais utilisé par le dashboard.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -123,26 +127,27 @@ export default function StatsCard({ profileId }) {
   const topValue = loading ? '—' : capitalize(stats.topPlatform ?? null);
 
   const metrics = [
-    { icon: Eye,          label: 'Vues',     value: loading ? '—' : stats.views,  color: '#6366f1', bg: 'rgba(99,102,241,0.12)' },
-    { icon: MousePointer, label: 'Clics',    value: loading ? '—' : stats.clicks, color: '#ff6b35', bg: 'rgba(255,107,53,0.12)'  },
-    { icon: TrendingUp,   label: 'Taux',     value: rateValue,                     color: '#25D366', bg: 'rgba(37,211,102,0.12)'  },
-    { icon: Award,        label: 'Top lien', value: topValue,                      color: '#f7c948', bg: 'rgba(247,201,72,0.12)'  },
+    { icon: Eye,          label: 'Vues',     value: loading ? '—' : stats.views,  color: '#6366f1', bg: 'rgba(99,102,241,0.1)' },
+    { icon: MousePointer, label: 'Clics',    value: loading ? '—' : stats.clicks, color: '#ff6b35', bg: 'rgba(255,107,53,0.1)'  },
+    { icon: TrendingUp,   label: 'Taux',     value: rateValue,                     color: '#16a34a', bg: 'rgba(34,197,94,0.1)'  },
+    { icon: Award,        label: 'Top lien', value: topValue,                      color: '#b8860b', bg: 'rgba(247,201,72,0.16)'  },
   ];
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.06)',
-      border: '1px solid rgba(255,255,255,0.1)',
+      background: '#ffffff',
+      border: '1px solid #e6e8f0',
       borderRadius: '20px',
       padding: '16px',
+      boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
     }}>
       {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <h3 style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: 0 }}>Statistiques</h3>
+        <h3 style={{ color: '#161a2e', fontSize: '13px', fontWeight: 700, margin: 0 }}>Statistiques</h3>
         {loading && (
           <div style={{
             width: '12px', height: '12px',
-            border: '2px solid rgba(99,102,241,0.4)',
+            border: '2px solid rgba(99,102,241,0.25)',
             borderTopColor: '#6366f1',
             borderRadius: '50%',
             animation: 'statscard-spin 0.7s linear infinite', // [C3] nom préfixé
@@ -154,14 +159,14 @@ export default function StatsCard({ profileId }) {
       {error && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px',
-          background: 'rgba(239,68,68,0.1)',
+          background: 'rgba(239,68,68,0.08)',
           border: '1px solid rgba(239,68,68,0.25)',
           borderRadius: '10px',
           padding: '8px 12px',
           marginBottom: '12px',
         }}>
-          <AlertCircle size={13} color="#f87171" style={{ flexShrink: 0 }} />
-          <span style={{ color: '#f87171', fontSize: '11px' }}>{error}</span>
+          <AlertCircle size={13} color="#dc2626" style={{ flexShrink: 0 }} />
+          <span style={{ color: '#dc2626', fontSize: '11px' }}>{error}</span>
         </div>
       )}
 
@@ -171,7 +176,7 @@ export default function StatsCard({ profileId }) {
           <div key={label} style={{ background: bg, borderRadius: '12px', padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
               <Icon size={12} color={color} />
-              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+              <span style={{ fontSize: '11px', color: '#6b7280' }}>{label}</span>
             </div>
             <div style={{ fontSize: '20px', fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
           </div>
@@ -180,8 +185,8 @@ export default function StatsCard({ profileId }) {
 
       {/* Détail par plateforme */}
       {!loading && Object.keys(stats.clicksByPlatform).length > 0 && (
-        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', margin: '0 0 8px' }}>
+        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eef0f5' }}>
+          <p style={{ fontSize: '11px', color: '#8a90a2', margin: '0 0 8px' }}>
             Clics par plateforme
           </p>
           {Object.entries(stats.clicksByPlatform)
@@ -193,10 +198,10 @@ export default function StatsCard({ profileId }) {
               return (
                 <div key={platform} style={{ marginBottom: '6px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.7)', textTransform: 'capitalize' }}>{platform}</span>
-                    <span style={{ color: '#ff6b35', fontWeight: 700 }}>{count}</span>
+                    <span style={{ color: '#454b5a', textTransform: 'capitalize' }}>{platform}</span>
+                    <span style={{ color: '#ea580c', fontWeight: 700 }}>{count}</span>
                   </div>
-                  <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '100px', overflow: 'hidden' }}>
+                  <div style={{ height: '4px', background: '#e6e8f0', borderRadius: '100px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
                       width: pct + '%',
@@ -213,7 +218,7 @@ export default function StatsCard({ profileId }) {
 
       {/* État vide */}
       {!loading && !error && stats.views === 0 && (
-        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textAlign: 'center', marginTop: '12px', margin: '12px 0 0' }}>
+        <p style={{ fontSize: '11px', color: '#a2a7b5', textAlign: 'center', marginTop: '12px', margin: '12px 0 0' }}>
           Partagez votre profil pour voir les stats
         </p>
       )}

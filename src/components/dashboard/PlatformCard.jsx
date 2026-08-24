@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { Trash2, GripVertical, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { PLATFORMS } from './AddPlatformDialog';
 
+// [FIX THÈME] Carte calquée sur l'ancien fond sombre (rgba(255,255,255,0.25)
+// + texte blanc) — quasi invisible sur le fond clair du dashboard. Repassée
+// en carte blanche opaque, cohérente avec PlatformsPanel (dans
+// UserDashboard.jsx) qui l'englobe.
 export default function PlatformCard({ link, index, onUpdate, onRemove }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -21,11 +25,12 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
   return (
     <div
       style={{
-        background: 'rgba(255,255,255,0.25)',
+        background: '#ffffff',
         borderRadius: '16px',
-        border: '1px solid rgba(255,255,255,0.20)',
+        border: '1px solid #e6e8f0',
         borderLeft: '3px solid ' + meta.color,
         overflow: 'hidden',
+        boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
         transition: 'all 0.2s',
       }}
     >
@@ -33,7 +38,7 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px' }}>
 
         {/* Grip */}
-        <GripVertical style={{ width: '14px', height: '14px', color: 'rgba(255,255,255,0.3)', flexShrink: 0, cursor: 'grab' }} />
+        <GripVertical style={{ width: '14px', height: '14px', color: '#c3c8d6', flexShrink: 0, cursor: 'grab' }} />
 
         {/* Icône SVG de la plateforme */}
         <div style={{
@@ -46,7 +51,7 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
 
         {/* Label */}
         <span style={{
-          color: 'white', fontWeight: 600, fontSize: '13px',
+          color: '#161a2e', fontWeight: 600, fontSize: '13px',
           flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {link.label || meta.label}
@@ -57,7 +62,7 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
           onClick={() => onUpdate({ ...link, enabled: !link.enabled })}
           style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
-            color: link.enabled ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)',
+            color: link.enabled ? '#6b7280' : '#c3c8d6',
             display: 'flex', alignItems: 'center',
           }}
           title={link.enabled ? 'Masquer' : 'Afficher'}
@@ -73,7 +78,7 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
           onClick={() => setExpanded((v) => !v)}
           style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
-            color: 'rgba(255,255,255,0.4)',
+            color: '#9095a5',
             display: 'flex', alignItems: 'center',
           }}
         >
@@ -88,12 +93,12 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
           onClick={onRemove}
           style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
-            color: 'rgba(255,255,255,0.3)',
+            color: '#c3c8d6',
             display: 'flex', alignItems: 'center',
             transition: 'color 0.15s',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#f87171'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#c3c8d6'}
           title="Supprimer"
         >
           <Trash2 style={{ width: '14px', height: '14px' }} />
@@ -109,17 +114,17 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
           placeholder={meta.placeholder}
           style={{
             width: '100%', boxSizing: 'border-box',
-            background: 'rgba(0,0,0,0.25)',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: '#f6f7fb',
+            border: '1px solid #e6e8f0',
             borderRadius: '10px',
             padding: '7px 12px',
-            color: 'rgba(255,255,255,0.85)',
+            color: '#161a2e',
             fontSize: '12px',
             outline: 'none',
             transition: 'border-color 0.15s',
           }}
-          onFocus={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.35)'}
-          onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+          onFocus={(e) => e.target.style.borderColor = '#8b5cf6'}
+          onBlur={(e) => e.target.style.borderColor = '#e6e8f0'}
         />
       </div>
 
@@ -133,19 +138,19 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
             placeholder="Libellé personnalisé (optionnel)"
             style={{
               width: '100%', boxSizing: 'border-box',
-              background: 'rgba(0,0,0,0.25)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: '#f6f7fb',
+              border: '1px solid #e6e8f0',
               borderRadius: '10px',
               padding: '7px 12px',
-              color: 'rgba(255,255,255,0.85)',
+              color: '#161a2e',
               fontSize: '12px',
               outline: 'none',
               transition: 'border-color 0.15s',
             }}
-            onFocus={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.35)'}
-            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+            onFocus={(e) => e.target.style.borderColor = '#8b5cf6'}
+            onBlur={(e) => e.target.style.borderColor = '#e6e8f0'}
           />
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', margin: '5px 0 0', lineHeight: 1.4 }}>
+          <p style={{ color: '#9095a5', fontSize: '10px', margin: '5px 0 0', lineHeight: 1.4 }}>
             Ce texte remplace le nom de la plateforme sur votre profil public.
           </p>
         </div>
@@ -153,4 +158,3 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
     </div>
   );
 }
-

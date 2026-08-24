@@ -44,6 +44,31 @@ import BoostPanel from "@/components/dashboard/BoostPanel";
 import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
 import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
 
+// ============================================================
+// THEME — clair, cohérent avec UserDashboard.jsx (cartes blanches
+// #ffffff, bordures #e6e8f0, texte #161a2e / #6b7280, accent indigo
+// #6366f1→#8b5cf6). Remplace l'ancien thème sombre (fond #040210,
+// texte blanc translucide, sidebar nuit, topbar dégradé rose/orange)
+// qui n'était plus cohérent avec le reste de l'app et posait des
+// problèmes de lisibilité (texte blanc sur blanc une fois converti,
+// bordures blanches invisibles, etc.) — tous les éléments ci-dessous
+// ont été repassés en tokens clairs avec un contraste vérifié.
+// ============================================================
+const UI = {
+  bg:           '#f4f5fa',
+  panel:        '#ffffff',
+  border:       '#e6e8f0',
+  borderStrong: '#c7cdfb',
+  inputBg:      '#f6f7fb',
+  text:         '#161a2e',
+  textMuted:    '#6b7280',
+  textFaint:    '#9095a5',
+  textFainter:  '#a2a7b5',
+  accent:       '#6366f1',
+  accent2:      '#8b5cf6',
+  shadow:       '0 1px 2px rgba(15,23,42,.04)',
+};
+
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
   const [width, setWidth] = useState(() =>
@@ -150,6 +175,9 @@ const GROUPS = [
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+// NB — parseColors() alimente le fond de la page PUBLIQUE (thème choisi par
+// l'utilisateur pour son propre profil), pas le chrome du dashboard admin :
+// volontairement laissé tel quel, aucun rapport avec le thème clair ci-dessus.
 const parseColors = (themeColor) => {
   if (themeColor && themeColor.includes('|')) {
     const parts = themeColor.split('|');
@@ -181,8 +209,8 @@ function ComingSoon({ label }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'360px', gap:'12px', textAlign:'center', padding:'40px' }}>
       <div style={{ width:'64px', height:'64px', borderRadius:'18px', background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'28px' }}>🚧</div>
-      <p style={{ color:'white', fontSize:'18px', fontWeight:700, margin:0 }}>{label}</p>
-      <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'13px', margin:0 }}>Ce module sera bientôt disponible.</p>
+      <p style={{ color:UI.text, fontSize:'18px', fontWeight:700, margin:0 }}>{label}</p>
+      <p style={{ color:UI.textFaint, fontSize:'13px', margin:0 }}>Ce module sera bientôt disponible.</p>
     </div>
   );
 }
@@ -190,17 +218,17 @@ function ComingSoon({ label }) {
 // ─── MiniStat ─────────────────────────────────────────────────────────────────
 function MiniStat({ label, value, icon: Icon, color, trend, trendUp }) {
   return (
-    <div style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', padding:'14px 16px', display:'flex', flexDirection:'column', gap:'8px' }}>
+    <div style={{ background:UI.panel, border:`1px solid ${UI.border}`, borderRadius:'16px', padding:'14px 16px', display:'flex', flexDirection:'column', gap:'8px', boxShadow:UI.shadow }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <span style={{ color:'rgba(255,255,255,0.45)', fontSize:'11px', fontWeight:500 }}>{label}</span>
-        <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:color+'22', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <span style={{ color:UI.textMuted, fontSize:'11px', fontWeight:500 }}>{label}</span>
+        <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:color+'1a', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <Icon size={13} color={color}/>
         </div>
       </div>
       <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
-        <span style={{ color:'white', fontSize:'22px', fontWeight:800, lineHeight:1 }}>{value}</span>
+        <span style={{ color:UI.text, fontSize:'22px', fontWeight:800, lineHeight:1 }}>{value}</span>
         {trend && (
-          <div style={{ display:'flex', alignItems:'center', gap:'3px', color:trendUp?'#22c55e':'#ef4444', fontSize:'11px', fontWeight:600 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'3px', color:trendUp?'#16a34a':'#dc2626', fontSize:'11px', fontWeight:600 }}>
             {trendUp ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{trend}
           </div>
         )}
@@ -247,47 +275,47 @@ function AnalyticsPanel({ profileId }) {
     <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'10px'}}>
         <div>
-          <h2 style={{color:'white',fontSize:'18px',fontWeight:800,margin:0}}>Analytics</h2>
-          <p style={{color:'rgba(255,255,255,0.35)',fontSize:'12px',margin:'3px 0 0'}}>Vue d'ensemble des performances</p>
+          <h2 style={{color:UI.text,fontSize:'18px',fontWeight:800,margin:0}}>Analytics</h2>
+          <p style={{color:UI.textFaint,fontSize:'12px',margin:'3px 0 0'}}>Vue d'ensemble des performances</p>
         </div>
-        <div style={{display:'flex',gap:'4px',background:'rgba(255,255,255,0.06)',borderRadius:'12px',padding:'4px'}}>
+        <div style={{display:'flex',gap:'4px',background:UI.inputBg,borderRadius:'12px',padding:'4px',border:`1px solid ${UI.border}`}}>
           {['7d','30d','90d'].map(p=>(
-            <button key={p} onClick={()=>setPeriod(p)} style={{padding:'6px 14px',borderRadius:'8px',border:'none',background:period===p?'rgba(99,102,241,0.4)':'transparent',color:period===p?'white':'rgba(255,255,255,0.45)',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>{p}</button>
+            <button key={p} onClick={()=>setPeriod(p)} style={{padding:'6px 14px',borderRadius:'8px',border:'none',background:period===p?`linear-gradient(135deg,${UI.accent},${UI.accent2})`:'transparent',color:period===p?'white':UI.textMuted,fontSize:'12px',fontWeight:600,cursor:'pointer'}}>{p}</button>
           ))}
         </div>
       </div>
       {loading ? (
-        <div style={{display:'flex',justifyContent:'center',padding:'40px'}}><Loader2 size={24} className="animate-spin" color="rgba(99,102,241,0.6)"/></div>
+        <div style={{display:'flex',justifyContent:'center',padding:'40px'}}><Loader2 size={24} className="animate-spin" color={UI.accent}/></div>
       ) : (
         <>
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px'}}>
             <MiniStat label="Vues totales"  value={stats?.views||0}       icon={Eye}               color="#6366f1" trend={stats?.trend!==null?Math.abs(stats.trend)+'%':null} trendUp={stats?.trendUp}/>
             <MiniStat label="Clics liens"   value={stats?.clicks||0}      icon={MousePointerClick} color="#f59e0b"/>
-            <MiniStat label="Taux de clic"  value={(stats?.ctr||0)+'%'}   icon={TrendingUp}        color="#22c55e"/>
+            <MiniStat label="Taux de clic"  value={(stats?.ctr||0)+'%'}   icon={TrendingUp}        color="#16a34a"/>
             <MiniStat label="Pays atteints" value={geoData.length}        icon={Globe}             color="#0ea5e9"/>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
-            <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><Globe size={14} color="#0ea5e9"/><h3 style={{color:'white',fontSize:'13px',fontWeight:700,margin:0}}>Top pays</h3></div>
-              {geoData.length===0 ? <p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
+            <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'18px',padding:'16px',boxShadow:UI.shadow}}>
+              <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><Globe size={14} color="#0ea5e9"/><h3 style={{color:UI.text,fontSize:'13px',fontWeight:700,margin:0}}>Top pays</h3></div>
+              {geoData.length===0 ? <p style={{color:UI.textFainter,fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
               : geoData.map(([country,{count,code}])=>(
                 <div key={country} style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
                   <span style={{fontSize:'16px',width:'22px',flexShrink:0}}>{flagEmoji(code)}</span>
                   <div style={{flex:1}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:'4px'}}>
-                      <span style={{color:'rgba(255,255,255,0.8)',fontSize:'11px',fontWeight:500}}>{country}</span>
-                      <span style={{color:'rgba(255,255,255,0.4)',fontSize:'11px'}}>{count}</span>
+                      <span style={{color:'#374151',fontSize:'11px',fontWeight:500}}>{country}</span>
+                      <span style={{color:UI.textMuted,fontSize:'11px'}}>{count}</span>
                     </div>
-                    <div style={{height:'4px',background:'rgba(255,255,255,0.08)',borderRadius:'2px'}}>
+                    <div style={{height:'4px',background:UI.inputBg,borderRadius:'2px'}}>
                       <div style={{height:'100%',width:Math.round((count/maxGeo)*100)+'%',background:'linear-gradient(90deg,#0ea5e9,#6366f1)',borderRadius:'2px'}}/>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><MousePointerClick size={14} color="#f59e0b"/><h3 style={{color:'white',fontSize:'13px',fontWeight:700,margin:0}}>Liens les plus cliqués</h3></div>
-              {topLinks.length===0 ? <p style={{color:'rgba(255,255,255,0.25)',fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
+            <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'18px',padding:'16px',boxShadow:UI.shadow}}>
+              <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px'}}><MousePointerClick size={14} color="#f59e0b"/><h3 style={{color:UI.text,fontSize:'13px',fontWeight:700,margin:0}}>Liens les plus cliqués</h3></div>
+              {topLinks.length===0 ? <p style={{color:UI.textFainter,fontSize:'12px',textAlign:'center',padding:'16px 0'}}>Pas encore de données</p>
               : topLinks.map(([platform,count])=>{
                 const p=(PLATFORMS&&PLATFORMS[platform])||{label:platform,color:'#6366f1'};
                 return (
@@ -297,11 +325,11 @@ function AnalyticsPanel({ profileId }) {
                     </div>
                     <div style={{flex:1}}>
                       <div style={{display:'flex',justifyContent:'space-between',marginBottom:'4px'}}>
-                        <span style={{color:'rgba(255,255,255,0.8)',fontSize:'11px',fontWeight:500,textTransform:'capitalize'}}>{p.label||platform}</span>
-                        <span style={{color:'rgba(255,255,255,0.4)',fontSize:'11px'}}>{count}</span>
+                        <span style={{color:'#374151',fontSize:'11px',fontWeight:500,textTransform:'capitalize'}}>{p.label||platform}</span>
+                        <span style={{color:UI.textMuted,fontSize:'11px'}}>{count}</span>
                       </div>
-                      <div style={{height:'4px',background:'rgba(255,255,255,0.08)',borderRadius:'2px'}}>
-                        <div style={{height:'100%',width:Math.round((count/maxLink)*100)+'%',background:'linear-gradient(90deg,'+p.color+',rgba(255,255,255,0.3))',borderRadius:'2px'}}/>
+                      <div style={{height:'4px',background:UI.inputBg,borderRadius:'2px'}}>
+                        <div style={{height:'100%',width:Math.round((count/maxLink)*100)+'%',background:'linear-gradient(90deg,'+p.color+',rgba(99,102,241,0.35))',borderRadius:'2px'}}/>
                       </div>
                     </div>
                   </div>
@@ -320,44 +348,44 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
   const windowWidth = useWindowWidth();
   const isMob = windowWidth < 768;
   const navCards = [
-    { section:'platforms',   label:'Plateformes', icon:Link2,       color:'#818cf8', bg:'rgba(99,102,241,0.18)',  sub:(profile?.links?.length||0)+' lien(s)' },
-    { section:'event',       label:'Événement',   icon:CalendarDays,color:'#facc15', bg:'rgba(234,179,8,0.18)',  sub:profile?.is_event?'Activé':'Désactivé' },
-    { section:'analytics',   label:'Analytics',   icon:BarChart3,   color:'#c084fc', bg:'rgba(139,92,246,0.18)', sub:'Actifs' },
-    { section:'marketplace', label:'Marketplace', icon:ShoppingBag, color:'#4ade80', bg:'rgba(34,197,94,0.18)',  sub:'∞ produits max' },
-    { section:'leads',       label:'CRM',         icon:UserPlus,    color:'#f472b6', bg:'rgba(236,72,153,0.18)', sub:'Actif' },
-    { section:'documents',   label:'Documents',   icon:FileText,    color:'#9ca3af', bg:'rgba(107,114,128,0.25)',sub:'10 doc(s) max' },
+    { section:'platforms',   label:'Plateformes', icon:Link2,       color:'#6366f1', bg:'rgba(99,102,241,0.12)',  sub:(profile?.links?.length||0)+' lien(s)' },
+    { section:'event',       label:'Événement',   icon:CalendarDays,color:'#d97706', bg:'rgba(217,119,6,0.12)',  sub:profile?.is_event?'Activé':'Désactivé' },
+    { section:'analytics',   label:'Analytics',   icon:BarChart3,   color:'#7c3aed', bg:'rgba(124,58,237,0.12)', sub:'Actifs' },
+    { section:'marketplace', label:'Marketplace', icon:ShoppingBag, color:'#16a34a', bg:'rgba(22,163,74,0.12)',  sub:'∞ produits max' },
+    { section:'leads',       label:'CRM',         icon:UserPlus,    color:'#db2777', bg:'rgba(219,39,119,0.12)', sub:'Actif' },
+    { section:'documents',   label:'Documents',   icon:FileText,    color:'#6b7280', bg:'rgba(107,114,128,0.14)',sub:'10 doc(s) max' },
   ];
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
       <div>
-        <h2 style={{color:'white',fontSize:'20px',fontWeight:800,margin:0}}>Dashboard</h2>
-        <p style={{color:'rgba(255,255,255,0.35)',fontSize:'13px',margin:'4px 0 0'}}>Bienvenue sur votre dashboard SocialApp</p>
+        <h2 style={{color:UI.text,fontSize:'20px',fontWeight:800,margin:0}}>Dashboard</h2>
+        <p style={{color:UI.textFaint,fontSize:'13px',margin:'4px 0 0'}}>Bienvenue sur votre dashboard SocialApp</p>
       </div>
       <div style={{display:'grid',gridTemplateColumns:isMob?'1fr':'repeat(3,1fr)',gap:'16px',alignItems:'start'}}>
-        <div style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'20px',overflow:'hidden'}}>
+        <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'20px',overflow:'hidden',boxShadow:UI.shadow}}>
           <ProfileHeader profile={profile} onUpdate={onUpdate}/>
-          <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'11px 14px',display:'flex',alignItems:'center',gap:'10px'}}>
-            <AtSign size={13} color="rgba(255,255,255,0.4)"/>
-            <span style={{color:'rgba(255,255,255,0.45)',fontSize:'12px',flexShrink:0}}>@</span>
-            <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username" style={{background:'transparent',border:'none',color:'white',fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
+          <div style={{borderTop:`1px solid ${UI.border}`,padding:'11px 14px',display:'flex',alignItems:'center',gap:'10px'}}>
+            <AtSign size={13} color={UI.textMuted}/>
+            <span style={{color:UI.textMuted,fontSize:'12px',flexShrink:0}}>@</span>
+            <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username" style={{background:'transparent',border:'none',color:UI.text,fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
           </div>
-          <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'11px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{borderTop:`1px solid ${UI.border}`,padding:'11px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-              <BadgeCheck size={13} color="rgba(255,255,255,0.4)"/>
-              <span style={{color:'rgba(255,255,255,0.6)',fontSize:'12px'}}>Badge vérifié</span>
+              <BadgeCheck size={13} color={UI.textMuted}/>
+              <span style={{color:'#374151',fontSize:'12px'}}>Badge vérifié</span>
             </div>
-            <button onClick={()=>onUpdate({is_verified:!profile?.is_verified})} style={{width:'38px',height:'20px',borderRadius:'100px',background:profile?.is_verified?'#22c55e':'rgba(255,255,255,0.1)',border:'none',cursor:'pointer',position:'relative',transition:'background 0.3s',flexShrink:0}}>
-              <div style={{width:'14px',height:'14px',borderRadius:'50%',background:'white',position:'absolute',top:'3px',left:profile?.is_verified?'21px':'3px',transition:'left 0.3s'}}/>
+            <button onClick={()=>onUpdate({is_verified:!profile?.is_verified})} style={{width:'38px',height:'20px',borderRadius:'100px',background:profile?.is_verified?'#16a34a':UI.border,border:'none',cursor:'pointer',position:'relative',transition:'background 0.3s',flexShrink:0}}>
+              <div style={{width:'14px',height:'14px',borderRadius:'50%',background:'white',position:'absolute',top:'3px',left:profile?.is_verified?'21px':'3px',transition:'left 0.3s',boxShadow:'0 1px 2px rgba(15,23,42,.2)'}}/>
             </button>
           </div>
-          <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'11px 14px',display:'flex',alignItems:'center',gap:'8px'}}>
-            <CalendarClock size={13} color="rgba(255,255,255,0.4)"/>
-            <span style={{color:'rgba(255,255,255,0.45)',fontSize:'12px',flexShrink:0}}>Exp. :</span>
-            <input type="date" value={profile?.expiry_date||''} onChange={e=>onUpdate({expiry_date:e.target.value})} style={{background:'transparent',border:'none',color:'white',fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
+          <div style={{borderTop:`1px solid ${UI.border}`,padding:'11px 14px',display:'flex',alignItems:'center',gap:'8px'}}>
+            <CalendarClock size={13} color={UI.textMuted}/>
+            <span style={{color:UI.textMuted,fontSize:'12px',flexShrink:0}}>Exp. :</span>
+            <input type="date" value={profile?.expiry_date||''} onChange={e=>onUpdate({expiry_date:e.target.value})} style={{background:'transparent',border:'none',color:UI.text,fontSize:'12px',outline:'none',flex:1,minWidth:0}}/>
           </div>
           {hasChanges && (
-            <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',padding:'10px 14px'}}>
-              <button onClick={onSave} disabled={saving} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',width:'100%',padding:'8px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
+            <div style={{borderTop:`1px solid ${UI.border}`,padding:'10px 14px'}}>
+              <button onClick={onSave} disabled={saving} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',width:'100%',padding:'8px',background:`linear-gradient(135deg,${UI.accent},${UI.accent2})`,border:'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
                 {saving?<Loader2 size={12} className="animate-spin"/>:<Save size={12}/>} Sauvegarder
               </button>
             </div>
@@ -369,15 +397,15 @@ function OverviewPanel({ profile, onNavigate, onUpdate, onSave, hasChanges, savi
       <div style={{display:'grid',gridTemplateColumns:isMob?'repeat(2,1fr)':'repeat(3,1fr)',gap:'12px'}}>
         {navCards.map(card=>(
           <button key={card.section} onClick={()=>onNavigate(card.section)}
-            style={{display:'flex',flexDirection:'column',gap:'14px',padding:'20px 18px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:'16px',cursor:'pointer',textAlign:'left',transition:'all 0.15s'}}
-            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.transform='translateY(-2px)';}}
-            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.transform='translateY(0)';}}>
+            style={{display:'flex',flexDirection:'column',gap:'14px',padding:'20px 18px',background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'16px',cursor:'pointer',textAlign:'left',transition:'all 0.15s',boxShadow:UI.shadow}}
+            onMouseEnter={e=>{e.currentTarget.style.background=UI.inputBg;e.currentTarget.style.transform='translateY(-2px)';}}
+            onMouseLeave={e=>{e.currentTarget.style.background=UI.panel;e.currentTarget.style.transform='translateY(0)';}}>
             <div style={{width:'40px',height:'40px',borderRadius:'11px',background:card.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
               <card.icon size={18} color={card.color}/>
             </div>
             <div>
-              <p style={{color:'white',fontSize:'14px',fontWeight:700,margin:0}}>{card.label}</p>
-              <p style={{color:'rgba(255,255,255,0.4)',fontSize:'12px',margin:'4px 0 0'}}>{card.sub}</p>
+              <p style={{color:UI.text,fontSize:'14px',fontWeight:700,margin:0}}>{card.label}</p>
+              <p style={{color:UI.textMuted,fontSize:'12px',margin:'4px 0 0'}}>{card.sub}</p>
             </div>
           </button>
         ))}
@@ -399,37 +427,37 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
 
   return (
     <>
-      {isMobile && !collapsed && <div onClick={onToggle} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',zIndex:19}}/>}
-      <div style={{...sidebarStyle,background:'rgba(6,4,18,0.97)',backdropFilter:'blur(24px)',borderRight:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:isMobile&&!collapsed?'8px 0 40px rgba(0,0,0,0.7)':'none'}}>
-        <div style={{padding:collapsed&&!isMobile?'18px 0':'16px',display:'flex',alignItems:'center',gap:'10px',borderBottom:'1px solid rgba(255,255,255,0.06)',justifyContent:collapsed&&!isMobile?'center':'space-between',flexShrink:0}}>
+      {isMobile && !collapsed && <div onClick={onToggle} style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.5)',backdropFilter:'blur(4px)',zIndex:19}}/>}
+      <div style={{...sidebarStyle,background:UI.panel,borderRight:`1px solid ${UI.border}`,display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:isMobile&&!collapsed?'8px 0 40px rgba(15,23,42,0.15)':'none'}}>
+        <div style={{padding:collapsed&&!isMobile?'18px 0':'16px',display:'flex',alignItems:'center',gap:'10px',borderBottom:`1px solid ${UI.border}`,justifyContent:collapsed&&!isMobile?'center':'space-between',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:'10px',overflow:'hidden'}}>
             <img src="/Logo_SocialApp.png" alt="" style={{width:'30px',height:'30px',borderRadius:'9px',objectFit:'cover',flexShrink:0}}/>
-            {(!collapsed||isMobile)&&<div style={{overflow:'hidden'}}><span style={{color:'white',fontSize:'14px',fontWeight:800,display:'block',lineHeight:1,whiteSpace:'nowrap'}}>SocialApp</span><span style={{color:'rgba(255,255,255,0.3)',fontSize:'9px',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase'}}>Admin</span></div>}
+            {(!collapsed||isMobile)&&<div style={{overflow:'hidden'}}><span style={{color:UI.text,fontSize:'14px',fontWeight:800,display:'block',lineHeight:1,whiteSpace:'nowrap'}}>SocialApp</span><span style={{color:UI.textFainter,fontSize:'9px',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase'}}>Admin</span></div>}
           </div>
-          <button onClick={onToggle} style={{width:'28px',height:'28px',borderRadius:'8px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            {collapsed&&!isMobile?<ChevronRight size={13} color="rgba(255,255,255,0.6)"/>:<ChevronLeft size={13} color="rgba(255,255,255,0.6)"/>}
+          <button onClick={onToggle} style={{width:'28px',height:'28px',borderRadius:'8px',background:UI.inputBg,border:`1px solid ${UI.border}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            {collapsed&&!isMobile?<ChevronRight size={13} color={UI.textMuted}/>:<ChevronLeft size={13} color={UI.textMuted}/>}
           </button>
         </div>
         {(!collapsed||isMobile)&&activeProfile&&(
-          <div style={{padding:'12px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
-            <div onClick={()=>handleNav('profiles')} style={{background:'rgba(255,255,255,0.06)',borderRadius:'12px',padding:'10px 12px',display:'flex',alignItems:'center',gap:'10px',cursor:'pointer'}}>
-              <div style={{width:'32px',height:'32px',borderRadius:'9px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0,overflow:'hidden'}}>
+          <div style={{padding:'12px 14px',borderBottom:`1px solid ${UI.border}`,flexShrink:0}}>
+            <div onClick={()=>handleNav('profiles')} style={{background:UI.inputBg,borderRadius:'12px',padding:'10px 12px',display:'flex',alignItems:'center',gap:'10px',cursor:'pointer'}}>
+              <div style={{width:'32px',height:'32px',borderRadius:'9px',background:`linear-gradient(135deg,${UI.accent},${UI.accent2})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0,overflow:'hidden'}}>
                 {activeProfile.avatar_url?<img src={activeProfile.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(activeProfile.display_name?.[0]?.toUpperCase()||'?')}
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <p style={{color:'white',fontSize:'12px',fontWeight:700,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{activeProfile.display_name||'Mon profil'}</p>
-                {activeProfile.username&&<p style={{color:'rgba(255,255,255,0.4)',fontSize:'10px',margin:0}}>@{activeProfile.username}</p>}
+                <p style={{color:UI.text,fontSize:'12px',fontWeight:700,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{activeProfile.display_name||'Mon profil'}</p>
+                {activeProfile.username&&<p style={{color:UI.textMuted,fontSize:'10px',margin:0}}>@{activeProfile.username}</p>}
               </div>
-              <ChevronRight size={13} color="rgba(255,255,255,0.3)"/>
+              <ChevronRight size={13} color={UI.textFainter}/>
             </div>
           </div>
         )}
         {(!collapsed||isMobile)&&(
-          <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
-            <div style={{display:'flex',alignItems:'center',gap:'8px',background:'rgba(255,255,255,0.06)',borderRadius:'9px',padding:'7px 10px',border:'1px solid rgba(255,255,255,0.08)'}}>
-              <Search size={12} color="rgba(255,255,255,0.3)"/>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher…" style={{background:'none',border:'none',outline:'none',color:'white',fontSize:'12px',flex:1,minWidth:0}}/>
-              {search&&<button onClick={()=>setSearch('')} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.3)',display:'flex',padding:0}}><X size={11}/></button>}
+          <div style={{padding:'10px 14px',borderBottom:`1px solid ${UI.border}`,flexShrink:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:'8px',background:UI.inputBg,borderRadius:'9px',padding:'7px 10px',border:`1px solid ${UI.border}`}}>
+              <Search size={12} color={UI.textFainter}/>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher…" style={{background:'none',border:'none',outline:'none',color:UI.text,fontSize:'12px',flex:1,minWidth:0}}/>
+              {search&&<button onClick={()=>setSearch('')} style={{background:'none',border:'none',cursor:'pointer',color:UI.textFainter,display:'flex',padding:0}}><X size={11}/></button>}
             </div>
           </div>
         )}
@@ -440,22 +468,22 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
             return (
               <div key={group.id} style={{marginBottom:'4px'}}>
                 {collapsed&&!isMobile
-                  ? <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'6px 4px 8px'}}/>
-                  : <p style={{color:'rgba(255,255,255,0.2)',fontSize:'9px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'8px 10px 4px',margin:0}}>{group.label}</p>
+                  ? <div style={{height:'1px',background:UI.border,margin:'6px 4px 8px'}}/>
+                  : <p style={{color:UI.textFainter,fontSize:'9px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'8px 10px 4px',margin:0}}>{group.label}</p>
                 }
                 {items.map(item=>{
                   const isActive=activeSection===item.id;
                   return (
                     <button key={item.id} onClick={()=>handleNav(item.id)} title={collapsed&&!isMobile?item.label:''}
-                      style={{width:'100%',display:'flex',alignItems:'center',gap:collapsed&&!isMobile?0:'10px',padding:collapsed&&!isMobile?'10px 0':'9px 10px',borderRadius:'11px',border:'none',background:isActive?'rgba(99,102,241,0.18)':'transparent',cursor:'pointer',transition:'background 0.12s',justifyContent:collapsed&&!isMobile?'center':'flex-start',position:'relative',marginBottom:'2px'}}>
-                      {isActive&&<div style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',width:'3px',height:'20px',background:'linear-gradient(180deg,#6366f1,#8b5cf6)',borderRadius:'0 3px 3px 0'}}/>}
-                      <div style={{width:'30px',height:'30px',borderRadius:'9px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:isActive?'rgba(99,102,241,0.25)':'transparent'}}>
-                        <item.icon size={15} color={isActive?'#a78bfa':'rgba(255,255,255,0.45)'}/>
+                      style={{width:'100%',display:'flex',alignItems:'center',gap:collapsed&&!isMobile?0:'10px',padding:collapsed&&!isMobile?'10px 0':'9px 10px',borderRadius:'11px',border:'none',background:isActive?'rgba(99,102,241,0.10)':'transparent',cursor:'pointer',transition:'background 0.12s',justifyContent:collapsed&&!isMobile?'center':'flex-start',position:'relative',marginBottom:'2px'}}>
+                      {isActive&&<div style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',width:'3px',height:'20px',background:`linear-gradient(180deg,${UI.accent},${UI.accent2})`,borderRadius:'0 3px 3px 0'}}/>}
+                      <div style={{width:'30px',height:'30px',borderRadius:'9px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:isActive?'rgba(99,102,241,0.16)':'transparent'}}>
+                        <item.icon size={15} color={isActive?UI.accent:UI.textMuted}/>
                       </div>
                       {(!collapsed||isMobile)&&(
                         <>
-                          <span style={{color:isActive?'white':'rgba(255,255,255,0.6)',fontSize:'12.5px',fontWeight:isActive?700:500,flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.label}</span>
-                          {item.badge&&<span style={{background:'#22c55e',borderRadius:'5px',padding:'1px 6px',fontSize:'9px',color:'white',fontWeight:700,flexShrink:0}}>{item.badge}</span>}
+                          <span style={{color:isActive?UI.text:'#4b5563',fontSize:'12.5px',fontWeight:isActive?700:500,flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.label}</span>
+                          {item.badge&&<span style={{background:'#16a34a',borderRadius:'5px',padding:'1px 6px',fontSize:'9px',color:'white',fontWeight:700,flexShrink:0}}>{item.badge}</span>}
                         </>
                       )}
                     </button>
@@ -466,10 +494,10 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
           })}
         </div>
         {(!collapsed||isMobile)&&(
-          <div style={{padding:'12px 16px',borderTop:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
+          <div style={{padding:'12px 16px',borderTop:`1px solid ${UI.border}`,flexShrink:0}}>
             <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-              <div style={{width:'7px',height:'7px',borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>
-              <span style={{color:'rgba(255,255,255,0.25)',fontSize:'10px'}}>SocialApp Admin · v2.0</span>
+              <div style={{width:'7px',height:'7px',borderRadius:'50%',background:'#16a34a',flexShrink:0}}/>
+              <span style={{color:UI.textFainter,fontSize:'10px'}}>SocialApp Admin · v2.0</span>
             </div>
           </div>
         )}
@@ -484,9 +512,9 @@ function Sidebar({ activeSection, onNavigate, profiles, activeProfileId, collaps
 // (activation, plan, suppression). Contrairement à `db.list()` (voir plus
 // haut), cette requête n'est pas un bug : elle est censée tout retourner.
 const PLAN_OPTIONS = [
-  { id: 'basic',    label: 'Basic',    color: '#9ca3af' },
-  { id: 'pro',      label: 'Pro',      color: '#f97316' },
-  { id: 'business', label: 'Business', color: '#a855f7' },
+  { id: 'basic',    label: 'Basic',    color: '#6b7280' },
+  { id: 'pro',      label: 'Pro',      color: '#d9591f' },
+  { id: 'business', label: 'Business', color: '#7c3aed' },
 ];
 
 function UserActivationPanel() {
@@ -559,52 +587,52 @@ function UserActivationPanel() {
     <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h2 style={{color:'white',fontSize:'18px',fontWeight:800,margin:0}}>Gestion des comptes</h2>
-          <p style={{color:'rgba(255,255,255,0.35)',fontSize:'12px',margin:'4px 0 0'}}>{allProfiles.length} profils · {pendingCount} en attente</p>
+          <h2 style={{color:UI.text,fontSize:'18px',fontWeight:800,margin:0}}>Gestion des comptes</h2>
+          <p style={{color:UI.textFaint,fontSize:'12px',margin:'4px 0 0'}}>{allProfiles.length} profils · {pendingCount} en attente</p>
         </div>
-        <button onClick={()=>refetch()} style={{width:'32px',height:'32px',borderRadius:'9px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
-          <RefreshCw size={13} color="rgba(255,255,255,0.5)" className={isFetching?'animate-spin':''}/>
+        <button onClick={()=>refetch()} style={{width:'32px',height:'32px',borderRadius:'9px',background:UI.inputBg,border:`1px solid ${UI.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+          <RefreshCw size={13} color={UI.textMuted} className={isFetching?'animate-spin':''}/>
         </button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'10px'}}>
-        <MiniStat label="Total"        value={allProfiles.length} icon={Users}       color="#a78bfa"/>
-        <MiniStat label="Activés"      value={activeCount}        icon={ShieldCheck} color="#22c55e"/>
-        <MiniStat label="En attente"   value={pendingCount}       icon={Clock}       color="#f97316"/>
-        <MiniStat label="Pro/Business" value={proCount}           icon={Crown}       color="#facc15"/>
+        <MiniStat label="Total"        value={allProfiles.length} icon={Users}       color="#7c3aed"/>
+        <MiniStat label="Activés"      value={activeCount}        icon={ShieldCheck} color="#16a34a"/>
+        <MiniStat label="En attente"   value={pendingCount}       icon={Clock}       color="#d9591f"/>
+        <MiniStat label="Pro/Business" value={proCount}           icon={Crown}       color="#b8860b"/>
       </div>
       <div style={{display:'flex',gap:'8px'}}>
         <div style={{position:'relative',flex:1}}>
-          <Search size={12} style={{position:'absolute',left:'10px',top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.3)',pointerEvents:'none'}}/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher..." style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'10px',padding:'8px 10px 8px 28px',color:'white',fontSize:'12px',outline:'none'}}/>
+          <Search size={12} style={{position:'absolute',left:'10px',top:'50%',transform:'translateY(-50%)',color:UI.textFainter,pointerEvents:'none'}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher..." style={{width:'100%',boxSizing:'border-box',background:UI.inputBg,border:`1px solid ${UI.border}`,borderRadius:'10px',padding:'8px 10px 8px 28px',color:UI.text,fontSize:'12px',outline:'none'}}/>
         </div>
         {[['pending','⏳ Attente'],['active','✓ Actifs'],['all','Tous']].map(([v,l])=>(
-          <button key={v} onClick={()=>setFilter(v)} style={{padding:'8px 12px',borderRadius:'10px',border:'1px solid '+(filter===v?'rgba(99,102,241,0.5)':'rgba(255,255,255,0.1)'),background:filter===v?'rgba(99,102,241,0.15)':'transparent',color:filter===v?'#a78bfa':'rgba(255,255,255,0.4)',fontSize:'11px',cursor:'pointer',fontWeight:filter===v?600:400,whiteSpace:'nowrap'}}>{l}</button>
+          <button key={v} onClick={()=>setFilter(v)} style={{padding:'8px 12px',borderRadius:'10px',border:'1px solid '+(filter===v?'rgba(99,102,241,0.5)':UI.border),background:filter===v?'rgba(99,102,241,0.12)':'transparent',color:filter===v?UI.accent:UI.textMuted,fontSize:'11px',cursor:'pointer',fontWeight:filter===v?600:400,whiteSpace:'nowrap'}}>{l}</button>
         ))}
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:'6px',maxHeight:'460px',overflowY:'auto'}}>
         {isLoading ? (
-          <div style={{textAlign:'center',padding:'24px'}}><Loader2 size={16} className="animate-spin" color="rgba(255,255,255,0.3)"/></div>
+          <div style={{textAlign:'center',padding:'24px'}}><Loader2 size={16} className="animate-spin" color={UI.textFainter}/></div>
         ) : filtered.length===0 ? (
-          <p style={{color:'rgba(255,255,255,0.3)',fontSize:'12px',textAlign:'center',padding:'24px'}}>{filter==='pending'?'🎉 Aucun compte en attente':'Aucun résultat'}</p>
+          <p style={{color:UI.textFainter,fontSize:'12px',textAlign:'center',padding:'24px'}}>{filter==='pending'?'🎉 Aucun compte en attente':'Aucun résultat'}</p>
         ) : filtered.map(p=>{
           const currentPlan = PLAN_OPTIONS.find(o=>o.id===p.plan) || PLAN_OPTIONS[0];
           return (
-            <div key={p.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',background:'rgba(255,255,255,0.04)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.07)',flexWrap:'wrap'}}>
-              <div style={{width:'34px',height:'34px',borderRadius:'9px',background:p.is_activated?'linear-gradient(135deg,#22c55e,#16a34a)':'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>{(p.display_name||'?')[0].toUpperCase()}</div>
+            <div key={p.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px',background:UI.panel,borderRadius:'12px',border:`1px solid ${UI.border}`,flexWrap:'wrap',boxShadow:UI.shadow}}>
+              <div style={{width:'34px',height:'34px',borderRadius:'9px',background:p.is_activated?'linear-gradient(135deg,#22c55e,#16a34a)':UI.inputBg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:p.is_activated?'white':UI.textMuted,flexShrink:0}}>{(p.display_name||'?')[0].toUpperCase()}</div>
               <div style={{flex:1,minWidth:'120px'}}>
-                <p style={{color:'white',fontSize:'12px',fontWeight:600,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.display_name||'Sans nom'}</p>
-                <p style={{color:'rgba(255,255,255,0.35)',fontSize:'10px',margin:0}}>{p.username?'@'+p.username:'Sans username'}</p>
+                <p style={{color:UI.text,fontSize:'12px',fontWeight:600,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.display_name||'Sans nom'}</p>
+                <p style={{color:UI.textFaint,fontSize:'10px',margin:0}}>{p.username?'@'+p.username:'Sans username'}</p>
               </div>
               <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
                 <Crown size={11} color={currentPlan.color}/>
                 <select value={p.plan||'basic'} onChange={e=>planMutation.mutate({id:p.id,plan:e.target.value})} disabled={planMutation.isPending}
-                  style={{padding:'5px 8px',borderRadius:'8px',border:'1px solid '+currentPlan.color+'55',background:currentPlan.color+'1a',color:currentPlan.color,fontSize:'11px',fontWeight:700,cursor:'pointer',outline:'none'}}>
-                  {PLAN_OPTIONS.map(o=><option key={o.id} value={o.id} style={{background:'#0a0817',color:'white'}}>{o.label}</option>)}
+                  style={{padding:'5px 8px',borderRadius:'8px',border:'1px solid '+currentPlan.color+'55',background:currentPlan.color+'14',color:currentPlan.color,fontSize:'11px',fontWeight:700,cursor:'pointer',outline:'none'}}>
+                  {PLAN_OPTIONS.map(o=><option key={o.id} value={o.id} style={{background:'#ffffff',color:UI.text}}>{o.label}</option>)}
                 </select>
               </div>
               {p.is_activated
-                ? <button onClick={()=>deactivateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.1)',color:'#f87171',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><X size={10}/>Désact.</button>
-                : <button onClick={()=>activateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(34,197,94,0.35)',background:'rgba(34,197,94,0.12)',color:'#22c55e',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><Check size={10}/>Activer</button>
+                ? <button onClick={()=>deactivateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.08)',color:'#dc2626',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><X size={10}/>Désact.</button>
+                : <button onClick={()=>activateMutation.mutate(p.id)} style={{padding:'5px 10px',borderRadius:'8px',border:'1px solid rgba(22,163,74,0.35)',background:'rgba(22,163,74,0.10)',color:'#16a34a',fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',flexShrink:0}}><Check size={10}/>Activer</button>
               }
               {/* [NEW] Suppression définitive — bouton distinct de Désact.,
                   volontairement rouge plein pour marquer l'irréversibilité,
@@ -613,7 +641,7 @@ function UserActivationPanel() {
                 onClick={()=>handleDeleteProfile(p)}
                 disabled={deleteProfileMutation.isPending}
                 title="Supprimer définitivement ce compte"
-                style={{width:'28px',height:'28px',borderRadius:'8px',border:'1px solid rgba(239,68,68,0.35)',background:'rgba(239,68,68,0.12)',color:'#f87171',display:'flex',alignItems:'center',justifyContent:'center',cursor:deleteProfileMutation.isPending?'not-allowed':'pointer',flexShrink:0,opacity:deleteProfileMutation.isPending?0.5:1}}
+                style={{width:'28px',height:'28px',borderRadius:'8px',border:'1px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.08)',color:'#dc2626',display:'flex',alignItems:'center',justifyContent:'center',cursor:deleteProfileMutation.isPending?'not-allowed':'pointer',flexShrink:0,opacity:deleteProfileMutation.isPending?0.5:1}}
               >
                 <Trash2 size={12}/>
               </button>
@@ -680,7 +708,7 @@ function DraggableLinkCard({ link, index, onUpdate, onRemove, isDragging, onDrag
       onPointerCancel={handlePointerCancel}
       style={{ position:'relative', touchAction:'none', opacity:isDragging?0.45:1, transition:'opacity .1s, transform .15s', cursor:'grab', borderRadius:'16px' }}
     >
-      {showHandle && <div style={{position:'absolute',top:'50%',left:'8px',transform:'translateY(-50%)',zIndex:2,color:'rgba(255,255,255,0.25)',pointerEvents:'none'}}><GripVertical size={14}/></div>}
+      {showHandle && <div style={{position:'absolute',top:'50%',left:'8px',transform:'translateY(-50%)',zIndex:2,color:UI.textFainter,pointerEvents:'none'}}><GripVertical size={14}/></div>}
       <PlatformCard link={link} index={index} onUpdate={onUpdate} onRemove={onRemove}/>
     </div>
   );
@@ -725,15 +753,15 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
     <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h2 style={{color:'white',fontSize:'18px',fontWeight:800,margin:0}}>Mes plateformes</h2>
-          <p style={{color:'rgba(255,255,255,0.35)',fontSize:'12px',margin:'4px 0 0'}}>{links.length} lien(s) configuré(s)</p>
+          <h2 style={{color:UI.text,fontSize:'18px',fontWeight:800,margin:0}}>Mes plateformes</h2>
+          <p style={{color:UI.textFaint,fontSize:'12px',margin:'4px 0 0'}}>{links.length} lien(s) configuré(s)</p>
         </div>
         <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs" onClick={()=>setShowAddDialog(true)}><Plus className="w-3.5 h-3.5"/> Ajouter</Button>
       </div>
       {links.length===0 ? (
-        <div style={{background:'rgba(255,255,255,0.03)',border:'2px dashed rgba(255,255,255,0.12)',borderRadius:'18px',padding:'48px 24px',textAlign:'center'}}>
-          <Link2 size={28} color="rgba(255,255,255,0.15)" style={{margin:'0 auto 10px'}}/>
-          <p style={{color:'rgba(255,255,255,0.4)',fontSize:'14px',margin:0}}>Aucune plateforme configurée</p>
+        <div style={{background:'#f9fafc',border:'2px dashed #dde0ea',borderRadius:'18px',padding:'48px 24px',textAlign:'center'}}>
+          <Link2 size={28} color="#c3c8d6" style={{margin:'0 auto 10px'}}/>
+          <p style={{color:UI.textMuted,fontSize:'14px',margin:0}}>Aucune plateforme configurée</p>
         </div>
       ) : (
         <>
@@ -754,9 +782,9 @@ function PlatformsPanel({ localProfile, updateLocal, showAddDialog, setShowAddDi
           </div>
           {totalLinkPages>1&&(
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'4px 0'}}>
-              <button disabled={linksPage===0} onClick={()=>setLinksPage(p=>p-1)} style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(255,255,255,0.1)',border:'none',color:'white',fontSize:'12px',cursor:'pointer',opacity:linksPage===0?0.3:1}}>Précédent</button>
-              <span style={{color:'rgba(255,255,255,0.4)',fontSize:'12px'}}>{linksPage+1} / {totalLinkPages}</span>
-              <button disabled={linksPage>=totalLinkPages-1} onClick={()=>setLinksPage(p=>p+1)} style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(255,255,255,0.1)',border:'none',color:'white',fontSize:'12px',cursor:'pointer',opacity:linksPage>=totalLinkPages-1?0.3:1}}>Suivant</button>
+              <button disabled={linksPage===0} onClick={()=>setLinksPage(p=>p-1)} style={{padding:'6px 12px',borderRadius:'8px',background:UI.inputBg,border:`1px solid ${UI.border}`,color:UI.text,fontSize:'12px',cursor:'pointer',opacity:linksPage===0?0.4:1}}>Précédent</button>
+              <span style={{color:UI.textMuted,fontSize:'12px'}}>{linksPage+1} / {totalLinkPages}</span>
+              <button disabled={linksPage>=totalLinkPages-1} onClick={()=>setLinksPage(p=>p+1)} style={{padding:'6px 12px',borderRadius:'8px',background:UI.inputBg,border:`1px solid ${UI.border}`,color:UI.text,fontSize:'12px',cursor:'pointer',opacity:linksPage>=totalLinkPages-1?0.4:1}}>Suivant</button>
             </div>
           )}
         </>
@@ -778,37 +806,37 @@ function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete
     <div style={{display:'flex',flexDirection:'column',gap:'16px',maxWidth:'640px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h2 style={{color:'white',fontSize:'18px',fontWeight:800,margin:0}}>Mes profils</h2>
-          <p style={{color:'rgba(255,255,255,0.35)',fontSize:'12px',margin:'4px 0 0'}}>{profiles.length} profil(s) créé(s)</p>
+          <h2 style={{color:UI.text,fontSize:'18px',fontWeight:800,margin:0}}>Mes profils</h2>
+          <p style={{color:UI.textFaint,fontSize:'12px',margin:'4px 0 0'}}>{profiles.length} profil(s) créé(s)</p>
         </div>
-        <button onClick={onCreate} style={{display:'flex',alignItems:'center',gap:'6px',padding:'8px 14px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
+        <button onClick={onCreate} style={{display:'flex',alignItems:'center',gap:'6px',padding:'8px 14px',background:`linear-gradient(135deg,${UI.accent},${UI.accent2})`,border:'none',borderRadius:'10px',color:'white',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
           <Plus size={13}/> Nouveau profil
         </button>
       </div>
       <div style={{position:'relative'}}>
-        <Search size={13} style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.3)',pointerEvents:'none'}}/>
-        <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un profil..." style={{width:'100%',boxSizing:'border-box',padding:'10px 12px 10px 32px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'12px',color:'white',fontSize:'12px',outline:'none'}}/>
+        <Search size={13} style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:UI.textFainter,pointerEvents:'none'}}/>
+        <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un profil..." style={{width:'100%',boxSizing:'border-box',padding:'10px 12px 10px 32px',background:UI.inputBg,border:`1px solid ${UI.border}`,borderRadius:'12px',color:UI.text,fontSize:'12px',outline:'none'}}/>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
         {paged.map(p=>{
           const isActive=p.id===activeProfileId;
           return (
-            <div key={p.id} onClick={()=>onSwitch(p)} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',background:isActive?'rgba(99,102,241,0.12)':'rgba(255,255,255,0.04)',border:'1px solid '+(isActive?'rgba(99,102,241,0.35)':'rgba(255,255,255,0.07)'),borderRadius:'14px',cursor:'pointer'}}>
-              <div style={{width:'38px',height:'38px',borderRadius:'10px',background:isActive?'linear-gradient(135deg,#6366f1,#8b5cf6)':'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,color:'white',flexShrink:0,overflow:'hidden'}}>
+            <div key={p.id} onClick={()=>onSwitch(p)} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',background:isActive?'rgba(99,102,241,0.08)':UI.panel,border:'1px solid '+(isActive?'rgba(99,102,241,0.35)':UI.border),borderRadius:'14px',cursor:'pointer',boxShadow:UI.shadow}}>
+              <div style={{width:'38px',height:'38px',borderRadius:'10px',background:isActive?`linear-gradient(135deg,${UI.accent},${UI.accent2})`:UI.inputBg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,color:isActive?'white':UI.textMuted,flexShrink:0,overflow:'hidden'}}>
                 {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(p.display_name?.[0]?.toUpperCase()||'?')}
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                  <span style={{color:'white',fontSize:'13px',fontWeight:isActive?700:500}}>{p.display_name||'Sans nom'}</span>
-                  {p.is_verified&&<span style={{color:'#22c55e',fontSize:'11px'}}>✓</span>}
-                  {p.is_activated&&<span style={{background:'rgba(34,197,94,0.15)',color:'#22c55e',padding:'1px 5px',borderRadius:'4px',fontSize:'9px',fontWeight:600}}>✅</span>}
+                  <span style={{color:UI.text,fontSize:'13px',fontWeight:isActive?700:500}}>{p.display_name||'Sans nom'}</span>
+                  {p.is_verified&&<span style={{color:'#16a34a',fontSize:'11px'}}>✓</span>}
+                  {p.is_activated&&<span style={{background:'rgba(22,163,74,0.12)',color:'#16a34a',padding:'1px 5px',borderRadius:'4px',fontSize:'9px',fontWeight:600}}>✅</span>}
                 </div>
-                {p.username&&<span style={{color:'rgba(255,255,255,0.35)',fontSize:'11px'}}>@{p.username}</span>}
+                {p.username&&<span style={{color:UI.textFaint,fontSize:'11px'}}>@{p.username}</span>}
               </div>
               <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
-                {isActive&&<Check size={14} color="#6366f1"/>}
+                {isActive&&<Check size={14} color={UI.accent}/>}
                 {profiles.length>1&&(
-                  <button onClick={e=>{e.stopPropagation();onDelete(p);}} style={{width:'28px',height:'28px',borderRadius:'8px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',color:'#f87171',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                  <button onClick={e=>{e.stopPropagation();onDelete(p);}} style={{width:'28px',height:'28px',borderRadius:'8px',background:'rgba(220,38,38,0.08)',border:'1px solid rgba(220,38,38,0.2)',color:'#dc2626',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
                     <Trash2 size={11}/>
                   </button>
                 )}
@@ -819,9 +847,9 @@ function ProfilesPanel({ profiles, activeProfileId, onSwitch, onCreate, onDelete
       </div>
       {totalPages>1&&(
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <button disabled={page===0} onClick={()=>setPage(p=>p-1)} style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(255,255,255,0.08)',border:'none',color:'white',fontSize:'12px',cursor:'pointer',opacity:page===0?0.3:1}}><ChevronLeft size={14}/></button>
-          <span style={{color:'rgba(255,255,255,0.35)',fontSize:'12px'}}>{page+1} / {totalPages}</span>
-          <button disabled={page>=totalPages-1} onClick={()=>setPage(p=>p+1)} style={{padding:'6px 12px',borderRadius:'8px',background:'rgba(255,255,255,0.08)',border:'none',color:'white',fontSize:'12px',cursor:'pointer',opacity:page>=totalPages-1?0.3:1}}><ChevronRight size={14}/></button>
+          <button disabled={page===0} onClick={()=>setPage(p=>p-1)} style={{padding:'6px 12px',borderRadius:'8px',background:UI.inputBg,border:`1px solid ${UI.border}`,color:UI.text,fontSize:'12px',cursor:'pointer',opacity:page===0?0.4:1}}><ChevronLeft size={14}/></button>
+          <span style={{color:UI.textFaint,fontSize:'12px'}}>{page+1} / {totalPages}</span>
+          <button disabled={page>=totalPages-1} onClick={()=>setPage(p=>p+1)} style={{padding:'6px 12px',borderRadius:'8px',background:UI.inputBg,border:`1px solid ${UI.border}`,color:UI.text,fontSize:'12px',cursor:'pointer',opacity:page>=totalPages-1?0.4:1}}><ChevronRight size={14}/></button>
         </div>
       )}
     </div>
@@ -865,56 +893,56 @@ function EventPanel({ localProfile, updateLocal }) {
     <div style={{display:'flex',flexDirection:'column',gap:'16px',maxWidth:'680px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div>
-          <h2 style={{color:'white',fontSize:'18px',fontWeight:800,margin:0}}>Mode Événement</h2>
-          <p style={{color:'rgba(255,255,255,0.35)',fontSize:'12px',margin:'4px 0 0'}}>Compte à rebours et détails de l'événement</p>
+          <h2 style={{color:UI.text,fontSize:'18px',fontWeight:800,margin:0}}>Mode Événement</h2>
+          <p style={{color:UI.textFaint,fontSize:'12px',margin:'4px 0 0'}}>Compte à rebours et détails de l'événement</p>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-          <span style={{color:localProfile.is_event?'#fbbf24':'rgba(255,255,255,0.4)',fontSize:'12px',fontWeight:600}}>{localProfile.is_event?'Activé':'Désactivé'}</span>
-          <button onClick={()=>updateLocal({is_event:!localProfile.is_event})} style={{width:'44px',height:'24px',borderRadius:'100px',background:localProfile.is_event?'linear-gradient(135deg,#ff6b35,#f7c948)':'rgba(255,255,255,0.1)',border:'none',cursor:'pointer',position:'relative',transition:'background 0.3s'}}>
-            <div style={{width:'18px',height:'18px',borderRadius:'50%',background:'white',position:'absolute',top:'3px',left:localProfile.is_event?'23px':'3px',transition:'left 0.3s'}}/>
+          <span style={{color:localProfile.is_event?'#d97706':UI.textMuted,fontSize:'12px',fontWeight:600}}>{localProfile.is_event?'Activé':'Désactivé'}</span>
+          <button onClick={()=>updateLocal({is_event:!localProfile.is_event})} style={{width:'44px',height:'24px',borderRadius:'100px',background:localProfile.is_event?'linear-gradient(135deg,#ff6b35,#f7c948)':UI.border,border:'none',cursor:'pointer',position:'relative',transition:'background 0.3s'}}>
+            <div style={{width:'18px',height:'18px',borderRadius:'50%',background:'white',position:'absolute',top:'3px',left:localProfile.is_event?'23px':'3px',transition:'left 0.3s',boxShadow:'0 1px 2px rgba(15,23,42,.2)'}}/>
           </button>
         </div>
       </div>
       {localProfile.is_event&&(
         <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-          <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px',display:'flex',flexDirection:'column',gap:'10px'}}>
-            <input type="text" value={localProfile.event_name||''} onChange={e=>updateLocal({event_name:e.target.value})} placeholder="Nom de l'événement" style={{padding:'10px 12px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'10px',color:'white',fontSize:'13px',outline:'none'}}/>
+          <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'18px',padding:'16px',display:'flex',flexDirection:'column',gap:'10px',boxShadow:UI.shadow}}>
+            <input type="text" value={localProfile.event_name||''} onChange={e=>updateLocal({event_name:e.target.value})} placeholder="Nom de l'événement" style={{padding:'10px 12px',background:UI.inputBg,border:`1px solid ${UI.border}`,borderRadius:'10px',color:UI.text,fontSize:'13px',outline:'none'}}/>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:'10px'}}>
-              <input type="datetime-local" value={localProfile.event_date||''} onChange={e=>updateLocal({event_date:e.target.value})} style={{padding:'10px 12px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'10px',color:'white',fontSize:'13px',outline:'none',width:'100%',boxSizing:'border-box'}}/>
-              <div style={{display:'flex',alignItems:'center',gap:'8px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'10px',padding:'10px 12px',minWidth:0}}>
-                <MapPin size={14} color="rgba(255,255,255,0.3)" style={{flexShrink:0}}/>
-                <input type="text" value={localProfile.event_location||''} onChange={e=>updateLocal({event_location:e.target.value})} placeholder="Lieu" style={{background:'transparent',border:'none',color:'white',fontSize:'13px',outline:'none',flex:1,minWidth:0}}/>
+              <input type="datetime-local" value={localProfile.event_date||''} onChange={e=>updateLocal({event_date:e.target.value})} style={{padding:'10px 12px',background:UI.inputBg,border:`1px solid ${UI.border}`,borderRadius:'10px',color:UI.text,fontSize:'13px',outline:'none',width:'100%',boxSizing:'border-box'}}/>
+              <div style={{display:'flex',alignItems:'center',gap:'8px',background:UI.inputBg,border:`1px solid ${UI.border}`,borderRadius:'10px',padding:'10px 12px',minWidth:0}}>
+                <MapPin size={14} color={UI.textFainter} style={{flexShrink:0}}/>
+                <input type="text" value={localProfile.event_location||''} onChange={e=>updateLocal({event_location:e.target.value})} placeholder="Lieu" style={{background:'transparent',border:'none',color:UI.text,fontSize:'13px',outline:'none',flex:1,minWidth:0}}/>
               </div>
             </div>
-            <textarea value={localProfile.event_description||''} onChange={e=>updateLocal({event_description:e.target.value})} placeholder="Description…" rows={3} style={{padding:'10px 12px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'10px',color:'white',fontSize:'13px',outline:'none',resize:'none'}}/>
-            <div style={{display:'flex',alignItems:'center',gap:'8px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'10px',padding:'10px 12px'}}>
+            <textarea value={localProfile.event_description||''} onChange={e=>updateLocal({event_description:e.target.value})} placeholder="Description…" rows={3} style={{padding:'10px 12px',background:UI.inputBg,border:`1px solid ${UI.border}`,borderRadius:'10px',color:UI.text,fontSize:'13px',outline:'none',resize:'none'}}/>
+            <div style={{display:'flex',alignItems:'center',gap:'8px',background:UI.inputBg,border:`1px solid ${UI.border}`,borderRadius:'10px',padding:'10px 12px'}}>
               <span style={{fontSize:'14px'}}>🎟️</span>
-              <input type="url" value={localProfile.event_booking_url||''} onChange={e=>updateLocal({event_booking_url:e.target.value})} placeholder="Lien réservation" style={{background:'transparent',border:'none',color:'white',fontSize:'13px',outline:'none',flex:1}}/>
+              <input type="url" value={localProfile.event_booking_url||''} onChange={e=>updateLocal({event_booking_url:e.target.value})} placeholder="Lien réservation" style={{background:'transparent',border:'none',color:UI.text,fontSize:'13px',outline:'none',flex:1}}/>
             </div>
           </div>
-          <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}><Palette size={14} color="rgba(255,255,255,0.4)"/><span style={{color:'rgba(255,255,255,0.6)',fontSize:'12px',fontWeight:600}}>Couleurs de l'événement</span></div>
+          <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'18px',padding:'16px',boxShadow:UI.shadow}}>
+            <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}><Palette size={14} color={UI.textMuted}/><span style={{color:'#374151',fontSize:'12px',fontWeight:600}}>Couleurs de l'événement</span></div>
             <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
               {EVENT_COLOR_PRESETS.map(preset=>(
                 <button key={preset.label} onClick={()=>updateLocal({event_color1:preset.c1,event_color2:preset.c2})} title={preset.label}
-                  style={{width:'32px',height:'32px',borderRadius:'9px',background:'linear-gradient(135deg,'+preset.c1+','+preset.c2+')',border:localProfile.event_color1===preset.c1?'3px solid white':'3px solid transparent',cursor:'pointer',flexShrink:0}}/>
+                  style={{width:'32px',height:'32px',borderRadius:'9px',background:'linear-gradient(135deg,'+preset.c1+','+preset.c2+')',border:localProfile.event_color1===preset.c1?`3px solid ${UI.text}`:'3px solid transparent',boxShadow:localProfile.event_color1===preset.c1?'0 0 0 2px #ffffff':'none',cursor:'pointer',flexShrink:0}}/>
               ))}
             </div>
           </div>
-          <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px'}}>
+          <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'18px',padding:'16px',boxShadow:UI.shadow}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'8px'}}><ImagePlus size={14} color="rgba(255,255,255,0.4)"/><span style={{color:'rgba(255,255,255,0.6)',fontSize:'12px',fontWeight:600}}>Images {eventImages.length>0&&'('+eventImages.length+')'}</span></div>
+              <div style={{display:'flex',alignItems:'center',gap:'8px'}}><ImagePlus size={14} color={UI.textMuted}/><span style={{color:'#374151',fontSize:'12px',fontWeight:600}}>Images {eventImages.length>0&&'('+eventImages.length+')'}</span></div>
               {eventImages.length>0&&(
-                <label style={{display:'flex',alignItems:'center',gap:'4px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.35)',borderRadius:'8px',padding:'5px 10px',cursor:'pointer',color:'#a78bfa',fontSize:'12px',fontWeight:600}}>
+                <label style={{display:'flex',alignItems:'center',gap:'4px',background:'rgba(99,102,241,0.10)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:'8px',padding:'5px 10px',cursor:'pointer',color:UI.accent,fontSize:'12px',fontWeight:600}}>
                   {uploadingEventImages?<Loader2 size={12} className="animate-spin"/>:<Plus size={12}/>} Ajouter
                   <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages}/>
                 </label>
               )}
             </div>
             {eventImages.length===0 ? (
-              <label style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',background:'rgba(255,255,255,0.04)',border:'2px dashed rgba(255,255,255,0.15)',borderRadius:'14px',padding:'28px',cursor:'pointer'}}>
-                {uploadingEventImages?<Loader2 size={20} color="rgba(99,102,241,0.8)" className="animate-spin"/>:<ImagePlus size={20} color="rgba(255,255,255,0.25)"/>}
-                <span style={{color:'rgba(255,255,255,0.4)',fontSize:'13px'}}>{uploadingEventImages?'Upload…':'Ajouter des images'}</span>
+              <label style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',background:'#f9fafc',border:'2px dashed #dde0ea',borderRadius:'14px',padding:'28px',cursor:'pointer'}}>
+                {uploadingEventImages?<Loader2 size={20} color={UI.accent} className="animate-spin"/>:<ImagePlus size={20} color="#c3c8d6"/>}
+                <span style={{color:UI.textMuted,fontSize:'13px'}}>{uploadingEventImages?'Upload…':'Ajouter des images'}</span>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleEventImagesUpload} disabled={uploadingEventImages}/>
               </label>
             ) : (
@@ -937,30 +965,30 @@ function EventPanel({ localProfile, updateLocal }) {
 // ─── TemplatesModal ───────────────────────────────────────────────────────────
 function TemplatesModal({ onClose, onApply }) {
   return (
-    <div style={{position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(10px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}} onClick={onClose}>
+    <div style={{position:'fixed',inset:0,zIndex:9999,background:'rgba(15,23,42,0.55)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}} onClick={onClose}>
       <motion.div initial={{opacity:0,scale:0.95,y:16}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.95}} transition={{duration:0.2}}
-        style={{background:'#0a0817',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'24px',width:'100%',maxWidth:'580px',maxHeight:'82vh',overflow:'hidden',display:'flex',flexDirection:'column',boxShadow:'0 32px 80px rgba(0,0,0,0.8)'}}
+        style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'24px',width:'100%',maxWidth:'580px',maxHeight:'82vh',overflow:'hidden',display:'flex',flexDirection:'column',boxShadow:'0 30px 80px rgba(15,23,42,.25)'}}
         onClick={e=>e.stopPropagation()}>
-        <div style={{padding:'22px 24px 14px',borderBottom:'1px solid rgba(255,255,255,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{padding:'22px 24px 14px',borderBottom:`1px solid ${UI.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div>
-            <h2 style={{color:'white',fontSize:'18px',fontWeight:800,margin:0}}>Templates</h2>
-            <p style={{color:'rgba(255,255,255,0.35)',fontSize:'12px',margin:'3px 0 0'}}>Configurez votre profil en un seul clic</p>
+            <h2 style={{color:UI.text,fontSize:'18px',fontWeight:800,margin:0}}>Templates</h2>
+            <p style={{color:UI.textFaint,fontSize:'12px',margin:'3px 0 0'}}>Configurez votre profil en un seul clic</p>
           </div>
-          <button onClick={onClose} style={{background:'rgba(255,255,255,0.07)',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.6)',width:'34px',height:'34px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={16}/></button>
+          <button onClick={onClose} style={{background:'#f1f2f7',border:'1px solid #e2e4ee',cursor:'pointer',color:UI.textMuted,width:'34px',height:'34px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={16}/></button>
         </div>
         <div style={{overflowY:'auto',padding:'16px 24px 24px',display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'12px'}}>
           {PROFILE_TEMPLATES.map(t=>{
             const [c1,c2]=t.theme_color.split('|');
             return (
-              <button key={t.id} onClick={()=>onApply(t)} style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'16px',textAlign:'left',cursor:'pointer',transition:'all 0.15s'}}>
+              <button key={t.id} onClick={()=>onApply(t)} style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'18px',padding:'16px',textAlign:'left',cursor:'pointer',transition:'all 0.15s',boxShadow:UI.shadow}}>
                 <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
                   <div style={{width:'44px',height:'44px',borderRadius:'13px',background:'linear-gradient(135deg,'+c1+','+c2+')',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',flexShrink:0}}>{t.emoji}</div>
                   <div>
-                    <p style={{color:'white',fontWeight:800,fontSize:'14px',margin:0}}>{t.label}</p>
-                    <p style={{color:'rgba(255,255,255,0.35)',fontSize:'10px',margin:0}}>{t.platformKeys.length} plateformes</p>
+                    <p style={{color:UI.text,fontWeight:800,fontSize:'14px',margin:0}}>{t.label}</p>
+                    <p style={{color:UI.textFaint,fontSize:'10px',margin:0}}>{t.platformKeys.length} plateformes</p>
                   </div>
                 </div>
-                <p style={{color:'rgba(255,255,255,0.4)',fontSize:'10px',margin:0}}>{t.desc}</p>
+                <p style={{color:UI.textMuted,fontSize:'10px',margin:0}}>{t.desc}</p>
               </button>
             );
           })}
@@ -1184,17 +1212,17 @@ export default function Dashboard() {
   };
 
   if (isLoading) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#040210' }}>
-      <Loader2 className="w-6 h-6 animate-spin" style={{ color:'#6366f1' }}/>
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:UI.bg }}>
+      <Loader2 className="w-6 h-6 animate-spin" style={{ color:UI.accent }}/>
     </div>
   );
 
   if (!profiles.length && !createMutation.isPending) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#040210', padding:'24px' }}>
-      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', maxWidth:'360px' }}>
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:UI.bg, padding:'24px' }}>
+      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', maxWidth:'360px', background:UI.panel, border:`1px solid ${UI.border}`, borderRadius:'24px', padding:'40px 32px', boxShadow:'0 20px 50px rgba(15,23,42,.08)' }}>
         <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width:'80px', height:'80px', borderRadius:'24px', objectFit:'cover', margin:'0 auto 24px', display:'block' }}/>
-        <h1 style={{ color:'white', fontSize:'24px', fontWeight:800, margin:'0 0 8px' }}>Bienvenue !</h1>
-        <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'14px', margin:'0 0 24px' }}>Créez votre page de liens unique et partagez-la via un seul QR code.</p>
+        <h1 style={{ color:UI.text, fontSize:'24px', fontWeight:800, margin:'0 0 8px' }}>Bienvenue !</h1>
+        <p style={{ color:UI.textMuted, fontSize:'14px', margin:'0 0 24px' }}>Créez votre page de liens unique et partagez-la via un seul QR code.</p>
         <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2"><Plus className="w-4 h-4"/> Créer mon profil</Button>
       </motion.div>
     </div>
@@ -1232,56 +1260,60 @@ export default function Dashboard() {
     }
   };
 
-  const TOPBAR_GRADIENT = 'linear-gradient(120deg, #ff1f6d 0%, #ff5e3a 55%, #ffab2e 100%)';
+  // Topbar — repassée en blanc, cohérente avec la topbar de UserDashboard.jsx
+  // (l'ancien dégradé rose/orange à texte blanc translucide ne fonctionnait
+  // plus une fois le reste de l'app en thème clair, et posait un vrai souci
+  // de cohérence/lisibilité).
+  const TOPBAR_BG = '#ffffff';
 
   return (
-    <div style={{ height:'100dvh', minHeight:'100dvh', display:'flex', position:'relative', overflowX:'hidden', background:'#040210' }}>
+    <div style={{ height:'100dvh', minHeight:'100dvh', display:'flex', position:'relative', overflowX:'hidden', background:UI.bg }}>
       <div style={{ position:'relative', zIndex:10, flexShrink:0, width:isMobile?0:undefined }}>
         <Sidebar activeSection={activeSection} onNavigate={setActiveSection} profiles={profiles} activeProfileId={activeProfileId} collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)} isMobile={isMobile}/>
       </div>
 
       <div style={{ flex:1, height:'100dvh', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1, overflowX:'hidden', overflowY:'hidden' }}>
-        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_GRADIENT, borderBottom:'1px solid rgba(255,255,255,0.15)', boxShadow:'0 4px 20px rgba(255,60,90,0.25)', padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_BG, borderBottom:`1px solid ${UI.border}`, boxShadow:UI.shadow, padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'28px', height:'28px', borderRadius:'8px', objectFit:'cover', flexShrink:0 }}/>}
-            <h2 style={{ color:'white', fontSize:'14px', fontWeight:700, margin:0 }}>{currentNav?.label||'Dashboard'}</h2>
-            {hasChanges && <span style={{ background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.35)', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#fff', fontWeight:600 }}>{t('unsaved')}</span>}
+            <h2 style={{ color:UI.text, fontSize:'14px', fontWeight:700, margin:0 }}>{currentNav?.label||'Dashboard'}</h2>
+            {hasChanges && <span style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600 }}>{t('unsaved')}</span>}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-            <button onClick={()=>setShowTemplates(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', color:'rgba(255,255,255,0.9)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
+            <button onClick={()=>setShowTemplates(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'#eef0ff', border:'1px solid #c7cdfb', borderRadius:'9px', color:'#4338ca', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Sparkles size={13}/>{!isMobile && 'Templates'}
             </button>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal}/>
-            <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', color:'rgba(255,255,255,0.9)', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
+            <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:UI.inputBg, border:`1px solid ${UI.border}`, borderRadius:'9px', color:'#374151', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
               <Eye size={13}/>{!isMobile && t('preview')}
             </button>
             <NotificationBell />
             <div ref={notifPanelRef} style={{ position:'relative' }}>
-              <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:notifGranted?'rgba(0,0,0,0.25)':'rgba(0,0,0,0.2)', border:'1px solid '+(notifGranted?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.3)'), borderRadius:'9px', cursor:'pointer' }}>
-                {notifGranted ? <Bell size={14} color="#fff"/> : <BellOff size={14} color="rgba(255,255,255,0.7)"/>}
+              <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:UI.inputBg, border:`1px solid ${UI.border}`, borderRadius:'9px', cursor:'pointer' }}>
+                {notifGranted ? <Bell size={14} color={UI.accent}/> : <BellOff size={14} color={UI.textFainter}/>}
               </button>
               <AnimatePresence>
                 {showNotifPanel && (
                   <motion.div initial={{ opacity:0, y:-8, scale:0.96 }} animate={{ opacity:1, y:0, scale:1 }} exit={{ opacity:0, y:-8 }} transition={{ duration:0.15 }}
-                    style={{ position:'absolute', top:'calc(100% + 10px)', right:0, background:'rgba(10,8,25,0.97)', backdropFilter:'blur(20px)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'18px', padding:'18px', minWidth:'260px', zIndex:50, boxShadow:'0 16px 48px rgba(0,0,0,0.6)' }}>
+                    style={{ position:'absolute', top:'calc(100% + 10px)', right:0, background:UI.panel, border:`1px solid ${UI.border}`, borderRadius:'18px', padding:'18px', minWidth:'260px', zIndex:50, boxShadow:'0 16px 48px rgba(15,23,42,.16)' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-                      <span style={{ color:'white', fontSize:'13px', fontWeight:600 }}>Notifications push</span>
-                      <button onClick={()=>setShowNotifPanel(false)} style={{ background:'rgba(255,255,255,0.08)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)', width:'24px', height:'24px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={13}/></button>
+                      <span style={{ color:UI.text, fontSize:'13px', fontWeight:600 }}>Notifications push</span>
+                      <button onClick={()=>setShowNotifPanel(false)} style={{ background:'#f1f2f7', border:'none', cursor:'pointer', color:UI.textMuted, width:'24px', height:'24px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={13}/></button>
                     </div>
                     {!notifGranted
-                      ? <button onClick={async()=>{ const ok=await subscribeToPush(localProfile?.id); if(ok){ toast.success('Notifications activées !'); setShowNotifPanel(false); } else { toast.error('Abonnement push échoué'); } }} style={{ width:'100%', padding:'10px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
-                      : <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'12px', margin:0, textAlign:'center' }}>✅ Notifications actives</p>
+                      ? <button onClick={async()=>{ const ok=await subscribeToPush(localProfile?.id); if(ok){ toast.success('Notifications activées !'); setShowNotifPanel(false); } else { toast.error('Abonnement push échoué'); } }} style={{ width:'100%', padding:'10px', background:`linear-gradient(135deg,${UI.accent},${UI.accent2})`, border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
+                      : <p style={{ color:UI.textMuted, fontSize:'12px', margin:0, textAlign:'center' }}>✅ Notifications actives</p>
                     }
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
             <button onClick={handleSave} disabled={!hasChanges||updateMutation.isPending}
-              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'rgba(0,0,0,0.28)':'rgba(255,255,255,0.15)', border:'1px solid '+(hasChanges?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.25)'), borderRadius:'9px', color:hasChanges?'white':'rgba(255,255,255,0.6)', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?`linear-gradient(135deg,${UI.accent},${UI.accent2})`:UI.inputBg, border:'1px solid '+(hasChanges?'transparent':UI.border), borderRadius:'9px', color:hasChanges?'white':UI.textFainter, fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin"/> : <Save size={13}/>}{!isMobile && t('save')}
             </button>
-            <button onClick={handleSignOut} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'9px', cursor:'pointer' }} title={user?.email}>
-              <LogOut size={14} color="rgba(255,255,255,0.85)"/>
+            <button onClick={handleSignOut} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:UI.inputBg, border:`1px solid ${UI.border}`, borderRadius:'9px', cursor:'pointer' }} title={user?.email}>
+              <LogOut size={14} color={UI.textMuted}/>
             </button>
           </div>
         </div>
@@ -1316,10 +1348,10 @@ export default function Dashboard() {
 
       <style>{`
         @keyframes pulse-dot { 0%,100%{opacity:1}50%{opacity:0.3} }
-        * { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.1) transparent; }
+        * { scrollbar-width:thin; scrollbar-color:#c9cddb transparent; }
         *::-webkit-scrollbar { width:5px; height:5px; }
         *::-webkit-scrollbar-track { background:transparent; }
-        *::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:10px; }
+        *::-webkit-scrollbar-thumb { background:#c9cddb; border-radius:10px; }
       `}</style>
     </div>
   );

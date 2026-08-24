@@ -18,9 +18,16 @@ const TEMPLATES = [
 const MAX_MSG = 1000
 
 // ── DESIGN TOKENS ────────────────────────────────────────────────
+// [T1] [FIX THÈME] `purpleL` était une teinte "claire" pensée uniquement pour
+// se détacher sur fond sombre (#8b84ff) — illisible sur fond blanc. Remplacée
+// par l'indigo signature de l'app (#6366f1), qui reste lisible aussi bien sur
+// les cartes claires de la page que sur les modales sombres (inchangées) —
+// un seul token, valable des deux côtés, plutôt que de dupliquer toute la
+// palette. Le reste de C (vert WhatsApp, orange, rouge, bleu, gris sombres
+// pour l'intérieur des modales) est conservé tel quel.
 const C = {
   bg:'#0c0d1a', card:'#141525', border:'rgba(255,255,255,0.07)', borderAct:'rgba(108,99,255,0.4)',
-  purple:'#6c63ff', purpleL:'#8b84ff', purpleDim:'rgba(108,99,255,0.15)',
+  purple:'#6c63ff', purpleL:'#6366f1', purpleDim:'rgba(108,99,255,0.15)',
   orange:'#ff9500', orangeDim:'rgba(255,149,0,0.15)',
   green:'#25D366', greenDim:'rgba(37,211,102,0.12)', greenDark:'#166834',
   blue:'#3b82f6', blueDim:'rgba(59,130,246,0.12)',
@@ -29,15 +36,15 @@ const C = {
   red:'#ef4444', redDim:'rgba(239,68,68,0.12)',
 }
 const TAG_C  = { Client:[C.purpleDim,C.purpleL], Prospect:[C.blueDim,C.blue], VIP:[C.orangeDim,C.orange] }
-const STA_C  = { actif:[C.greenDim,C.green], attente:[C.orangeDim,C.orange], inactif:['rgba(255,255,255,0.06)',C.textMute] }
-const CAM_C  = { envoyé:[C.greenDim,C.green], planifié:[C.blueDim,C.blue], brouillon:['rgba(255,255,255,0.06)',C.textMute] }
+const STA_C  = { actif:[C.greenDim,C.green], attente:[C.orangeDim,C.orange], inactif:['#eef0f5',C.textMute] }
+const CAM_C  = { envoyé:[C.greenDim,C.green], planifié:[C.blueDim,C.blue], brouillon:['#eef0f5',C.textMute] }
 const NOTIF_TYPE_C = {
-  boost_activated:['rgba(34,197,94,0.12)','#22c55e','🚀'],
-  boost_completed:['rgba(99,102,241,0.12)','#a78bfa','📊'],
-  new_lead:       ['rgba(245,158,11,0.12)','#f59e0b','🔥'],
-  view_milestone: ['rgba(59,130,246,0.12)','#3b82f6','👀'],
-  weekly_report:  ['rgba(16,185,129,0.12)','#10b981','📈'],
-  manual:         ['rgba(255,255,255,0.06)','#8b8fa8','💬'],
+  boost_activated:['rgba(34,197,94,0.12)','#16a34a','🚀'],
+  boost_completed:['rgba(99,102,241,0.12)','#4f46e5','📊'],
+  new_lead:       ['rgba(245,158,11,0.12)','#b45309','🔥'],
+  view_milestone: ['rgba(59,130,246,0.12)','#2563eb','👀'],
+  weekly_report:  ['rgba(16,185,129,0.12)','#059669','📈'],
+  manual:         ['#eef0f5','#6b7280','💬'],
 }
 const AVAT = [
   'linear-gradient(135deg,#6c63ff,#a78bfa)',
@@ -48,7 +55,11 @@ const AVAT = [
 ]
 
 // ── DÉGRADÉS "LOGO SOCIALAPP" (bleu → violet/magenta → rose/rouge → orange) ──
-// Repris du logo SocialApp fourni, en version tamisée pour fond de carte sombre.
+// [INCHANGÉ] Repris du logo SocialApp, en version tamisée. Ces tuiles KPI
+// restent volontairement sombres/opaques (elles transitionnent vers un fond
+// navy à 96-98% d'opacité) — ce sont des accents visuels intentionnels, pas
+// du texte blanc sur transparence : elles restent lisibles quel que soit le
+// thème de la page autour, donc non concernées par la conversion.
 const GRAD = {
   blue:   'linear-gradient(135deg, rgba(43,79,255,0.42) 0%, rgba(12,13,26,0.96) 68%)',
   purple: 'linear-gradient(135deg, rgba(151,42,247,0.42) 0%, rgba(12,13,26,0.96) 68%)',
@@ -56,53 +67,71 @@ const GRAD = {
   orange: 'linear-gradient(135deg, rgba(255,122,0,0.42) 0%, rgba(12,13,26,0.96) 68%)',
 }
 
+// [T1] Styles de PAGE (header, onglets, cartes, tableaux) passés en thème
+// clair ci-dessous. Les styles de MODALE (overlay, modal, mT, lbl, inp, ta,
+// sel, fg, toast, loading, errBox) restent inchangés — fond opaque sombre
+// #181930, cohérent avec les autres modales de l'app (AddPlatformDialog,
+// ProductModal, LeadModal…).
 const S = {
-  page:     { background:C.bg, minHeight:'100vh', color:C.text, fontFamily:"'Inter','DM Sans',system-ui,sans-serif" },
+  page:     { background:'transparent', minHeight:'auto', color:'#161a2e', fontFamily:"'Inter','DM Sans',system-ui,sans-serif" },
   header:   { padding:'18px 24px 0', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 },
-  hTitle:   { fontSize:22, fontWeight:700, letterSpacing:'-0.5px', color:C.text, display:'flex', alignItems:'center', gap:9 },
+  hTitle:   { fontSize:22, fontWeight:700, letterSpacing:'-0.5px', color:'#161a2e', display:'flex', alignItems:'center', gap:9 },
   proBadge: { fontSize:10, fontWeight:700, background:C.orangeDim, color:C.orange, padding:'3px 8px', borderRadius:6, letterSpacing:'0.5px', textTransform:'uppercase' },
   hSub:     { fontSize:13, color:C.textMute, marginTop:3 },
-  tabs:     { display:'flex', gap:2, padding:'0 24px', borderBottom:`1px solid ${C.border}`, marginBottom:24, overflowX:'auto' },
-  tab: (a) => ({ padding:'10px 14px', fontSize:13, fontWeight:a?600:400, color:a?C.purpleL:C.textSub, border:'none', background:'none', cursor:'pointer', borderBottom:a?`2px solid ${C.purple}`:'2px solid transparent', transition:'all .15s', whiteSpace:'nowrap', flexShrink:0 }),
+  tabs:     { display:'flex', gap:2, padding:'0 24px', borderBottom:'1px solid #e6e8f0', marginBottom:24, overflowX:'auto' },
+  tab: (a) => ({ padding:'10px 14px', fontSize:13, fontWeight:a?600:400, color:a?C.purpleL:'#6b7280', border:'none', background:'none', cursor:'pointer', borderBottom:a?`2px solid ${C.purple}`:'2px solid transparent', transition:'all .15s', whiteSpace:'nowrap', flexShrink:0 }),
   content:  { padding:'0 24px 32px' },
   g4:       { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 },
   g2:       { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 },
-  card:     { background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 18px' },
-  cardT:    { fontSize:13, fontWeight:600, color:C.text, marginBottom:14, display:'flex', alignItems:'center', gap:7 },
+  card:     { background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:12, padding:'16px 18px', boxShadow:'0 1px 2px rgba(15,23,42,0.04)' },
+  cardT:    { fontSize:13, fontWeight:600, color:'#161a2e', marginBottom:14, display:'flex', alignItems:'center', gap:7 },
   // ✅ FIX: statCard accepte maintenant un fond (dégradé coloré) en paramètre.
-  // Sans argument, retombe sur le fond sombre uni C.card (comportement d'origine).
-  statCard: (bg) => ({ background:bg||C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 18px', position:'relative', overflow:'hidden' }),
+  // Sans argument, retombe sur un fond clair (comportement d'origine adapté).
+  statCard: (bg) => ({ background:bg||'#ffffff', border:'1px solid #e6e8f0', borderRadius:12, padding:'16px 18px', position:'relative', overflow:'hidden' }),
   // ✅ FIX LISIBILITÉ : le chip d'icône était presque invisible sur les fonds
   // dégradés (rgba(255,255,255,0.15) sans bordure se fond dans le dégradé).
   // Fond plus opaque + bordure + icône plus grande pour qu'il se détache
   // clairement, quelle que soit la couleur du dégradé derrière.
   statIco:  () => ({ width:36, height:36, borderRadius:9, background:'rgba(255,255,255,0.24)', border:'1px solid rgba(255,255,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:19, marginBottom:10, boxShadow:'0 1px 3px rgba(0,0,0,0.25)' }),
-  statVal:  { fontSize:28, fontWeight:800, letterSpacing:'-1.5px', color:C.text, textShadow:'0 1px 4px rgba(0,0,0,0.35)' },
-  // ✅ FIX LISIBILITÉ : C.textMute (#4a4e6a) est un gris-violet sombre pensé
-  // pour un fond sombre uni — sur les dégradés colorés du haut de dashboard,
-  // le contraste tombe sous les seuils lisibles. Blanc semi-transparent à
-  // la place, qui reste lisible peu importe la teinte du dégradé derrière.
+  statVal:  { fontSize:28, fontWeight:800, letterSpacing:'-1.5px', color:'#ffffff', textShadow:'0 1px 4px rgba(0,0,0,0.35)' },
+  // Texte blanc conservé — cette étiquette vit exclusivement sur les tuiles
+  // KPI à dégradé sombre (voir GRAD ci-dessus), jamais directement sur la page.
   statLbl:  { fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:2, fontWeight:500 },
   statGlow: (c) => ({ position:'absolute', top:-20, right:-20, width:80, height:80, borderRadius:'50%', background:c, filter:'blur(30px)', opacity:0.25, pointerEvents:'none' }),
   tbl:      { width:'100%', borderCollapse:'collapse' },
-  th:       { textAlign:'left', fontSize:10, color:C.textMute, fontWeight:700, paddingBottom:9, borderBottom:`1px solid ${C.border}`, textTransform:'uppercase', letterSpacing:'0.8px' },
-  td:       { padding:'11px 0', borderBottom:`1px solid rgba(255,255,255,0.04)`, fontSize:13, color:'#c8cae0', verticalAlign:'middle' },
+  th:       { textAlign:'left', fontSize:10, color:C.textMute, fontWeight:700, paddingBottom:9, borderBottom:'1px solid #e6e8f0', textTransform:'uppercase', letterSpacing:'0.8px' },
+  td:       { padding:'11px 0', borderBottom:'1px solid #eef0f5', fontSize:13, color:'#3a3f52', verticalAlign:'middle' },
   badge:    (bg,c) => ({ display:'inline-flex', padding:'2px 8px', borderRadius:6, fontSize:10, fontWeight:700, background:bg, color:c, letterSpacing:'0.3px', textTransform:'uppercase' }),
   avat:     (g,sz=30) => ({ width:sz, height:sz, borderRadius:'50%', background:g, display:'flex', alignItems:'center', justifyContent:'center', fontSize:sz>30?14:11, fontWeight:700, color:'#fff', flexShrink:0 }),
-  btn:      (v='primary', loading=false) => ({
+  // [T1] `light` (3e argument, défaut false) : true pour les boutons posés
+  // directement sur la page claire, false (comportement d'origine intact)
+  // pour les boutons à l'intérieur des modales sombres.
+  btn:      (v='primary', loading=false, light=false) => ({
     display:'inline-flex', alignItems:'center', gap:6,
     padding: v==='sm'?'5px 12px':'9px 16px',
-    borderRadius:9, border:`1px solid ${v==='ghost'?C.border:v==='green'?C.green:v==='danger'?C.red:v==='primary'?C.purple:'transparent'}`,
+    borderRadius:9,
+    border:`1px solid ${
+      v==='ghost' ? (light?'#e6e8f0':C.border)
+      : v==='green' ? C.green
+      : v==='danger' ? C.red
+      : (light?'#c7d2fe':C.purple)
+    }`,
     cursor: loading?'wait':'pointer', fontSize:13, fontWeight:600, transition:'all .15s',
-    background: v==='green'?'rgba(37,211,102,0.15)':v==='danger'?C.redDim:v==='primary'?C.purpleDim:v==='ghost'?'transparent':C.purpleDim,
-    color:       v==='green'?C.green:v==='danger'?C.red:v==='primary'?C.purpleL:v==='ghost'?C.textSub:C.purpleL,
+    background: v==='green'? (light?'rgba(22,163,74,0.1)':'rgba(37,211,102,0.15)')
+      : v==='danger'? (light?'rgba(220,38,38,0.08)':C.redDim)
+      : v==='ghost'? 'transparent'
+      : (light?'rgba(99,102,241,0.1)':C.purpleDim),
+    color: v==='green'? (light?'#16a34a':C.green)
+      : v==='danger'? (light?'#dc2626':C.red)
+      : v==='ghost'? (light?'#6b7280':C.textSub)
+      : (light?'#4f46e5':C.purpleL),
     opacity: loading?0.7:1,
     boxShadow: v==='green'?'0 4px 14px rgba(37,211,102,0.2)':'none',
     fontFamily:'inherit',
   }),
   iconBtn:  (color=C.textSub) => ({
     display:'inline-flex', alignItems:'center', justifyContent:'center',
-    width:28, height:28, borderRadius:7, border:`1px solid ${C.border}`,
+    width:28, height:28, borderRadius:7, border:'1px solid #e6e8f0',
     background:'transparent', cursor:'pointer', color, fontSize:13, transition:'all .15s',
   }),
   overlay:  { position:'fixed', inset:0, background:'rgba(5,5,15,0.88)', backdropFilter:'blur(6px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 },
@@ -113,7 +142,7 @@ const S = {
   ta:       { width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, padding:'9px 12px', color:C.text, fontSize:13, outline:'none', resize:'vertical', minHeight:100, boxSizing:'border-box', fontFamily:'inherit' },
   sel:      { width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, padding:'9px 12px', color:C.text, fontSize:13, outline:'none', boxSizing:'border-box' },
   fg:       { marginBottom:14 },
-  quickBtn: { display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:9, border:`1px solid ${C.border}`, background:'transparent', cursor:'pointer', width:'100%', color:C.textSub, fontSize:13, fontWeight:500, transition:'all .15s', marginBottom:8, fontFamily:'inherit' },
+  quickBtn: { display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:9, border:'1px solid #e6e8f0', background:'transparent', cursor:'pointer', width:'100%', color:'#454b5a', fontSize:13, fontWeight:500, transition:'all .15s', marginBottom:8, fontFamily:'inherit' },
   toast:    (t) => ({ position:'fixed', bottom:22, right:22, background:t==='success'?'#0d3b26':'#3b1a1a', border:`1px solid ${t==='success'?C.green:'#ef4444'}`, borderRadius:9, padding:'11px 16px', color:t==='success'?C.green:'#ef4444', fontSize:13, fontWeight:600, zIndex:2000, display:'flex', alignItems:'center', gap:8 }),
   loading:  { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh', fontSize:14, color:C.purple },
   errBox:   { background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:9, padding:'12px 16px', color:'#ef4444', fontSize:13, margin:'24px' },
@@ -196,10 +225,14 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
           <div style={S.cardT}>🧪 Tester une notification</div>
           <div style={S.fg}>
             <label style={S.lbl}>Type de notification</label>
-            <select value={testType} onChange={e=>setTestType(e.target.value)} style={S.sel}>
-              {Object.entries(typeLabel).map(([k,v]) => <option key={k} value={k} style={{background:C.bg}}>{v}</option>)}
+            {/* [T1] Select posé sur carte claire — surchargé en clair (S.sel
+                est dark, réservé aux champs internes des modales). */}
+            <select value={testType} onChange={e=>setTestType(e.target.value)} style={{ ...S.sel, background:'#f6f7fb', border:'1px solid #e6e8f0', color:'#161a2e' }}>
+              {Object.entries(typeLabel).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
+          {/* Puce d'aperçu à fond sombre volontaire — façon bloc de code,
+              contraste garanti quel que soit le thème de la page. */}
           <div style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:9, padding:'12px', marginBottom:14, maxHeight:160, overflowY:'auto' }}>
             <div style={{ fontSize:10, color:C.textMute, fontWeight:600, marginBottom:6, textTransform:'uppercase' }}>APERÇU</div>
             <pre style={{ color:'rgba(255,255,255,0.7)', fontSize:11, lineHeight:1.6, margin:0, whiteSpace:'pre-wrap', fontFamily:'inherit' }}>{preview}</pre>
@@ -210,13 +243,13 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
             </span>
           </div>
           {!connected && (
-            <div style={{ padding:'9px 12px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, color:'#ef4444', fontSize:12, marginBottom:12 }}>
+            <div style={{ padding:'9px 12px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, color:'#dc2626', fontSize:12, marginBottom:12 }}>
               ⚠️ Configurez le webhook Make.com dans Paramètres
             </div>
           )}
           <button onClick={handleTest} disabled={sending||!connected||!profile?.whatsapp_phone}
-            style={{ ...S.btn('green',sending), width:'100%', justifyContent:'center', opacity:(sending||!connected||!profile?.whatsapp_phone)?0.5:1 }}>
-            {sending ? <><Spinner/> Envoi…</> : <><WaIcon size={14} color={C.green}/> Envoyer le test</>}
+            style={{ ...S.btn('green',sending,true), width:'100%', justifyContent:'center', opacity:(sending||!connected||!profile?.whatsapp_phone)?0.5:1 }}>
+            {sending ? <><Spinner/> Envoi…</> : <><WaIcon size={14} color="#16a34a"/> Envoyer le test</>}
           </button>
         </div>
         <div style={S.card}>
@@ -230,13 +263,13 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
             ['🔥','Nouveau lead','Quand un visiteur devient prospect',profile?.notify_new_lead],
             ['📈','Rapport hebdo','Chaque lundi avec les stats de la semaine',profile?.notify_weekly],
           ].map(([ico,label,desc,active]) => (
-            <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+            <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 0', borderBottom:'1px solid #eef0f5' }}>
               <span style={{ fontSize:16, flexShrink:0 }}>{ico}</span>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:active?C.text:'rgba(255,255,255,0.4)' }}>{label}</div>
+                <div style={{ fontSize:12, fontWeight:600, color:active?'#161a2e':'#a2a7b5' }}>{label}</div>
                 <div style={{ fontSize:11, color:C.textMute, marginTop:1 }}>{desc}</div>
               </div>
-              <div style={{ width:8, height:8, borderRadius:'50%', background:active?C.green:'rgba(255,255,255,0.15)', flexShrink:0, marginTop:4 }}/>
+              <div style={{ width:8, height:8, borderRadius:'50%', background:active?C.green:'#c3c8d6', flexShrink:0, marginTop:4 }}/>
             </div>
           ))}
         </div>
@@ -257,7 +290,7 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
                       <td style={S.td}>
                         <span style={S.badge(
                           n.status==='sent'?C.greenDim:n.status==='failed'?'rgba(239,68,68,0.12)':C.amberDim,
-                          n.status==='sent'?C.green:n.status==='failed'?'#ef4444':C.amber,
+                          n.status==='sent'?C.green:n.status==='failed'?'#dc2626':C.amber,
                         )}>{n.status}</span>
                       </td>
                       <td style={{ ...S.td, color:C.textMute, fontSize:12 }}>
@@ -274,7 +307,7 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
   )
 }
 
-// ── MODALS INLINE ─────────────────────────────────────────────────
+// ── MODALS INLINE — overlay sombre volontaire, inchangées ─────────
 function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
   return (
     <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
@@ -768,11 +801,13 @@ export default function WhatsAppCRM({ profile }) {
           <div style={S.hSub}>Gérez vos contacts, campagnes et notifications de boost WhatsApp</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <div style={{display:'flex',alignItems:'center',gap:6,padding:'5px 11px',borderRadius:99,background:connected?C.greenDim:'rgba(255,255,255,0.05)',border:`1px solid ${connected?'rgba(37,211,102,0.25)':C.border}`}}>
+          {/* [T1] Pastille "Non connecté" : fond/bordure translucides blancs
+              invisibles sur page claire — passés en gris clair. */}
+          <div style={{display:'flex',alignItems:'center',gap:6,padding:'5px 11px',borderRadius:99,background:connected?C.greenDim:'#f6f7fb',border:`1px solid ${connected?'rgba(37,211,102,0.25)':'#e6e8f0'}`}}>
             <div style={{width:7,height:7,borderRadius:'50%',background:connected?C.green:C.textMute}}/>
             <span style={{fontSize:12,color:connected?C.green:C.textMute,fontWeight:600}}>{connected?'Make.com connecté':'Non connecté'}</span>
           </div>
-          <button style={{...S.btn(),fontSize:12,padding:'6px 13px'}} onClick={()=>setTab('settings')}>⚙ Paramètres</button>
+          <button style={{...S.btn('primary',false,true),fontSize:12,padding:'6px 13px'}} onClick={()=>setTab('settings')}>⚙ Paramètres</button>
         </div>
       </div>
 
@@ -816,10 +851,10 @@ export default function WhatsAppCRM({ profile }) {
             <div style={S.card}>
               <div style={S.cardT}>👥 Contacts récents</div>
               {contacts.slice(0,5).map((c,i) => (
-                <div key={c.id} style={{display:'flex',alignItems:'center',gap:9,padding:'8px 0',borderBottom:i<4?'1px solid rgba(255,255,255,0.04)':'none'}}>
+                <div key={c.id} style={{display:'flex',alignItems:'center',gap:9,padding:'8px 0',borderBottom:i<4?'1px solid #eef0f5':'none'}}>
                   <div style={S.avat(AVAT[i%5])}>{c.name.slice(0,2).toUpperCase()}</div>
                   <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{c.name}</div><div style={{fontSize:11,color:C.textMute}}>{c.phone}</div></div>
-                  <span style={S.badge(...(TAG_C[c.tag]||['#1a1a2e',C.textMute]))}>{c.tag}</span>
+                  <span style={S.badge(...(TAG_C[c.tag]||['#eef0f5','#8a90a2']))}>{c.tag}</span>
                 </div>
               ))}
               {contacts.length===0 && <div style={{fontSize:12,color:C.textMute,textAlign:'center',padding:'16px 0'}}>Aucun contact encore</div>}
@@ -845,7 +880,7 @@ export default function WhatsAppCRM({ profile }) {
         {tab==='contacts' && <>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
             <div style={{fontSize:13,color:C.textMute}}>{contacts.length} contacts</div>
-            <button style={S.btn()} onClick={()=>setModal('contact')}>➕ Nouveau contact</button>
+            <button style={S.btn('primary',false,true)} onClick={()=>setModal('contact')}>➕ Nouveau contact</button>
           </div>
           <div style={S.card}>
             {contacts.length===0
@@ -858,12 +893,12 @@ export default function WhatsAppCRM({ profile }) {
                         <td style={S.td}><div style={{display:'flex',alignItems:'center',gap:9}}><div style={S.avat(AVAT[i%5])}>{(c.name||'?').slice(0,2).toUpperCase()}</div><span style={{fontWeight:600}}>{c.name}</span></div></td>
                         <td style={S.td}>{c.phone}</td>
                         <td style={{...S.td,color:C.textMute}}>{c.email||'—'}</td>
-                        <td style={S.td}><span style={S.badge(...(TAG_C[c.tag]||['#1a1a2e',C.textMute]))}>{c.tag}</span></td>
-                        <td style={S.td}><span style={S.badge(...(STA_C[c.status]||['#1a1a2e',C.textMute]))}>{c.status}</span></td>
+                        <td style={S.td}><span style={S.badge(...(TAG_C[c.tag]||['#eef0f5','#8a90a2']))}>{c.tag}</span></td>
+                        <td style={S.td}><span style={S.badge(...(STA_C[c.status]||['#eef0f5','#8a90a2']))}>{c.status}</span></td>
                         <td style={S.td}>
                           <div style={{display:'flex',alignItems:'center',gap:6}}>
-                            <button style={{...S.btn('green'),padding:'5px 12px',fontSize:12,gap:5}} onClick={()=>{setMsgTarget(c);setModal('msg')}}>
-                              <WaIcon size={12} color={C.green}/> WA
+                            <button style={{...S.btn('green',false,true),padding:'5px 12px',fontSize:12,gap:5}} onClick={()=>{setMsgTarget(c);setModal('msg')}}>
+                              <WaIcon size={12} color="#16a34a"/> WA
                             </button>
                             <button style={S.iconBtn(C.purpleL)} title="Modifier" onClick={()=>handleOpenEdit(c)}>✏️</button>
                             <button style={S.iconBtn(C.red)} title="Supprimer" onClick={()=>handleOpenDelete(c)}>🗑️</button>
@@ -882,7 +917,7 @@ export default function WhatsAppCRM({ profile }) {
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
             <div style={{fontSize:13,color:C.textMute}}>{campaigns.length} campagnes</div>
             {/* ✅ FIX: utilise handleOpenCampaign pour reset propre */}
-            <button style={S.btn()} onClick={handleOpenCampaign}>📢 Nouvelle campagne</button>
+            <button style={S.btn('primary',false,true)} onClick={handleOpenCampaign}>📢 Nouvelle campagne</button>
           </div>
           <div style={S.card}>
             {campaigns.length===0
@@ -893,13 +928,13 @@ export default function WhatsAppCRM({ profile }) {
                     {campaigns.map(c => (
                       <tr key={c.id}>
                         <td style={S.td}><span style={{fontWeight:600}}>{c.name}</span></td>
-                        <td style={S.td}><span style={S.badge(...(CAM_C[c.status]||['#1a1a2e',C.textMute]))}>{c.status}</span></td>
+                        <td style={S.td}><span style={S.badge(...(CAM_C[c.status]||['#eef0f5','#8a90a2']))}>{c.status}</span></td>
                         <td style={S.td}>{c.sent_count||0}</td>
                         <td style={S.td}>{c.read_count||0}</td>
                         <td style={S.td}>
                           {(c.sent_count||0)>0
                             ? <div style={{display:'flex',alignItems:'center',gap:8}}>
-                                <div style={{width:50,height:4,background:'rgba(255,255,255,0.08)',borderRadius:99,overflow:'hidden'}}>
+                                <div style={{width:50,height:4,background:'#e6e8f0',borderRadius:99,overflow:'hidden'}}>
                                   <div style={{width:`${Math.round(((c.read_count||0)/c.sent_count)*100)}%`,height:'100%',background:`linear-gradient(90deg,${C.purple},${C.purpleL})`,borderRadius:99}}/>
                                 </div>
                                 <span style={{fontSize:11,color:C.textMute}}>{Math.round(((c.read_count||0)/c.sent_count)*100)}%</span>
@@ -926,13 +961,13 @@ export default function WhatsAppCRM({ profile }) {
         {tab==='notifications' && <>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
             <div style={{fontSize:13,color:C.textMute}}>{stats.activeNotifs} automatisation(s) active(s)</div>
-            <button style={S.btn()} onClick={()=>setModal('notif')}>🔔 Nouvelle automatisation</button>
+            <button style={S.btn('primary',false,true)} onClick={()=>setModal('notif')}>🔔 Nouvelle automatisation</button>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
             {notifs.length===0 && <div style={{...S.card,textAlign:'center',color:C.textMute,padding:32}}>Aucune automatisation. Créez-en une !</div>}
             {notifs.map(n => (
-              <div key={n.id} style={{...S.card,display:'flex',alignItems:'center',gap:14,borderColor:n.active?C.borderAct:C.border}}>
-                <div style={{width:38,height:38,borderRadius:9,background:n.active?C.purpleDim:'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>
+              <div key={n.id} style={{...S.card,display:'flex',alignItems:'center',gap:14,borderColor:n.active?C.borderAct:'#e6e8f0'}}>
+                <div style={{width:38,height:38,borderRadius:9,background:n.active?C.purpleDim:'#f1f2f7',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>
                   {n.active?'🔔':'🔕'}
                 </div>
                 <div style={{flex:1}}>
@@ -942,7 +977,7 @@ export default function WhatsAppCRM({ profile }) {
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <span style={{fontSize:12,color:n.active?C.purpleL:C.textMute}}>{n.active?'Actif':'Inactif'}</span>
                   <button onClick={()=>toggleNotification(n.id,n.active)}
-                    style={{width:42,height:22,borderRadius:99,border:'none',cursor:'pointer',background:n.active?C.purple:'rgba(255,255,255,0.1)',position:'relative',transition:'all .2s',flexShrink:0}}>
+                    style={{width:42,height:22,borderRadius:99,border:'none',cursor:'pointer',background:n.active?C.purple:'#e6e8f0',position:'relative',transition:'all .2s',flexShrink:0}}>
                     <div style={{position:'absolute',top:2,left:n.active?22:2,width:18,height:18,borderRadius:'50%',background:'#fff',transition:'all .2s'}}/>
                   </button>
                 </div>
@@ -958,10 +993,10 @@ export default function WhatsAppCRM({ profile }) {
               <div style={S.cardT}>🔗 Connexion Make.com</div>
               <div style={S.fg}>
                 <label style={S.lbl}>URL Webhook Make.com</label>
-                <input style={S.inp} value={webhookInput} onChange={e=>setWebhookInput(e.target.value)} placeholder="https://hook.eu1.make.com/xxxxx..."/>
+                <input style={{ ...S.inp, background:'#f6f7fb', border:'1px solid #e6e8f0', color:'#161a2e' }} value={webhookInput} onChange={e=>setWebhookInput(e.target.value)} placeholder="https://hook.eu1.make.com/xxxxx..."/>
                 <div style={{fontSize:11,color:C.textMute,marginTop:4}}>Créez un scénario Make : Webhook → WhatsApp Business Cloud → Send Message</div>
               </div>
-              <button style={S.btn()} onClick={handleSaveWebhook}>💾 Enregistrer</button>
+              <button style={S.btn('primary',false,true)} onClick={handleSaveWebhook}>💾 Enregistrer</button>
             </div>
             <div style={S.card}>
               <div style={S.cardT}>📋 Guide Make.com (no-code)</div>
@@ -974,7 +1009,7 @@ export default function WhatsAppCRM({ profile }) {
               ].map((step,i) => (
                 <div key={i} style={{display:'flex',gap:10,marginBottom:10,alignItems:'flex-start'}}>
                   <div style={{width:22,height:22,borderRadius:'50%',background:C.purpleDim,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:C.purpleL,flexShrink:0}}>{i+1}</div>
-                  <div style={{fontSize:12,color:C.textSub,lineHeight:1.6,paddingTop:2}}>{step}</div>
+                  <div style={{fontSize:12,color:'#454b5a',lineHeight:1.6,paddingTop:2}}>{step}</div>
                 </div>
               ))}
             </div>

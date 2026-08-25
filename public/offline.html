@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hors ligne — SocialApp</title>
+  <style>
+    html, body {
+      margin: 0; height: 100%;
+      background: #0f0a1e;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      text-align: center;
+      padding: 32px 24px;
+      max-width: 360px;
+    }
+    img { width: 72px; height: 72px; border-radius: 18px; margin-bottom: 18px; }
+    h1 { font-size: 17px; margin: 0 0 8px; }
+    p { font-size: 13.5px; color: rgba(255,255,255,0.55); line-height: 1.6; margin: 0 0 20px; }
+    button {
+      background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      border: none; color: white; font-weight: 700; font-size: 13.5px;
+      padding: 11px 22px; border-radius: 12px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="/icon-192.png" alt="SocialApp" />
+    <h1>Pas de connexion internet</h1>
+    <p>Cette page n'est pas disponible hors ligne. Vérifiez votre connexion et réessayez.</p>
+    <button onclick="location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>

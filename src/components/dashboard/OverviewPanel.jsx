@@ -28,15 +28,29 @@ export default function OverviewPanel({
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];
 
-  // Couleurs reprises du dégradé du logo SocialApp (bleu → violet → magenta → orange)
+  // [SIMPLIFICATION PAR PLAN] Auparavant, une fonctionnalité non incluse
+  // dans le plan (Événement, Analytics, CRM…) restait affichée grisée avec
+  // un cadenas + bouton d'upgrade. On filtre désormais ces cartes pour ne
+  // garder QUE ce qui est réellement inclus dans le plan courant : le
+  // dashboard Basic devient ainsi visuellement plus léger (moins de
+  // cartes) que Pro, lui-même plus léger que Business, plutôt que les
+  // trois affichant la même grille avec plus ou moins de cadenas.
+  // Pour retrouver l'ancien comportement (cartes verrouillées visibles),
+  // il suffit de ne pas filtrer sur `locked` ci-dessous.
   const quickActions = [
-    { label:'Plateformes',  icon:Link2,         color:'#3b4bf0', section:'platforms',   desc:links.length+' lien(s)',                                                             locked:false },
-    { label:'Événement',    icon:CalendarClock, color:'#7b3ff2', section:'event',        desc:limits.hasEvent?(profile?.is_event?'Activé':'Désactivé'):'PRO requis',              locked:!limits.hasEvent },
-    { label:'Analytics',    icon:BarChart2,     color:'#a52ee0', section:'analytics',    desc:limits.hasStats?'Actifs':'PRO requis',                                               locked:!limits.hasStats },
-    { label:'Marketplace',  icon:ShoppingBag,   color:'#d81f9e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max',       locked:false },
-    { label:'CRM',          icon:Users,         color:'#ef2f6b', section:'crm',          desc:limits.hasCRM?'Actif':'BUSINESS requis',                                             locked:!limits.hasCRM },
-    { label:'Documents',    icon:FileText,      color:'#ff8c1a', section:'documents',    desc:limits.maxDocs+' doc(s) max',                                                        locked:false },
-  ];
+    { label:'Plateformes',  icon:Link2,         color:'#3b4bf0', section:'platforms',   desc:links.length+' lien(s)',                                                       locked:false },
+    { label:'Événement',    icon:CalendarClock, color:'#7b3ff2', section:'event',        desc:profile?.is_event?'Activé':'Désactivé',                                        locked:!limits.hasEvent },
+    { label:'Analytics',    icon:BarChart2,     color:'#a52ee0', section:'analytics',    desc:'Actifs',                                                                       locked:!limits.hasStats },
+    { label:'Marketplace',  icon:ShoppingBag,   color:'#d81f9e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max', locked:false },
+    { label:'CRM',          icon:Users,         color:'#ef2f6b', section:'crm',          desc:'Actif',                                                                        locked:!limits.hasCRM },
+    { label:'Documents',    icon:FileText,      color:'#ff8c1a', section:'documents',    desc:limits.maxDocs+' doc(s) max',                                                  locked:false },
+  ].filter(a => !a.locked);
+
+  // Idem pour la rangée du haut : la carte Statistiques n'apparaît plus du
+  // tout en version "verrouillée" pour les plans qui n'y ont pas accès —
+  // seules Profil + QR Code restent, sur 2 colonnes au lieu de 3.
+  const showStatsCard = limits.hasStats;
+  const topColumnCount = showStatsCard ? 3 : 2;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
@@ -64,8 +78,10 @@ export default function OverviewPanel({
         </div>
       )}
 
-      {/* Top 3-column grid */}
-      <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr':'repeat(3,1fr)', gap:'16px', alignItems:'start' }}>
+      {/* Top grid — 3 colonnes (Profil / QR / Stats) si le plan inclut les
+          statistiques, sinon 2 colonnes (Profil / QR) pour un dashboard
+          Basic plus compact plutôt qu'une 3e carte grisée. */}
+      <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr':`repeat(${topColumnCount},1fr)`, gap:'16px', alignItems:'start' }}>
 
         {/* Profile card — la carte profil garde son fond bleu nuit foncé
             (comme sur la capture), c'est un bloc d'accent volontairement
@@ -142,51 +158,58 @@ export default function OverviewPanel({
           />
         </div>
 
-        {/* Stats — carte claire, cohérente avec le fond blanc du dashboard */}
-        <div>
-          {limits.hasStats ? (
+        {/* Stats — n'apparaît que si le plan l'inclut (voir showStatsCard
+            plus haut) ; plus de version "grisée + upgrade" ici, elle est
+            simplement absente pour Basic. */}
+        {showStatsCard && (
+          <div>
             <StatsCard profileId={profile?.id}/>
-          ) : (
-            <div style={{ background:'#ffffff', border:'1px solid rgba(15,18,34,0.08)', borderRadius:'18px', padding:'24px 16px', textAlign:'center', boxShadow:'0 2px 10px rgba(15,18,34,0.05)' }}>
-              <BarChart2 size={28} color="rgba(15,18,34,0.2)" style={{ margin:'0 auto 10px' }}/>
-              <p style={{ color:'rgba(15,18,34,0.55)', fontSize:'13px', fontWeight:600, margin:'0 0 4px' }}>Statistiques</p>
-              <p style={{ color:'rgba(15,18,34,0.35)', fontSize:'11px', margin:'0 0 6px' }}>Disponible avec l'offre PRO</p>
-              <p style={{ color:'rgba(15,18,34,0.3)', fontSize:'10px', margin:'0 0 14px' }}>15 000 FCFA / an</p>
-              <button type="button" onClick={()=>onUpgrade?.('Statistiques','pro')}
-                style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,140,0,0.1)', border:'1px solid rgba(255,140,0,0.35)', borderRadius:'10px', padding:'7px 14px', color:'#d97600', fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                <Crown size={12}/> Upgrader → PRO
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Quick actions — cartes en couleur pleine (identique à la capture :
-          bloc bleu "Plateformes" bien saturé), les verrouillées passent en
-          gris clair sur fond blanc au lieu du gris translucide sombre. */}
+      {/* Quick actions — uniquement les sections incluses dans le plan
+          (voir le filtre `locked` plus haut). Basic : Plateformes,
+          Marketplace, Documents. Pro : + Événement, Analytics.
+          Business : + CRM. Chaque plan a donc sa propre grille, sans
+          cartes grisées à combler. */}
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr 1fr':'repeat(3,1fr)', gap:'10px' }}>
         {quickActions.map(a => (
           <button key={a.section} onClick={()=>onNavigate(a.section)}
-            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.locked?'#f4f5f9':a.color, border:'1px solid '+(a.locked?'rgba(15,18,34,0.08)':a.color), borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', opacity:a.locked?0.75:1, boxShadow:a.locked?'none':'0 2px 10px '+a.color+'40' }}
-            onMouseEnter={e=>{ if(!a.locked){e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-2px)';}}}
-            onMouseLeave={e=>{ e.currentTarget.style.filter='brightness(1)';e.currentTarget.style.transform='translateY(0)';}}>
+            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.color, border:'1px solid '+a.color, borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', boxShadow:'0 2px 10px '+a.color+'40' }}
+            onMouseEnter={e=>{ e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-2px)'; }}
+            onMouseLeave={e=>{ e.currentTarget.style.filter='brightness(1)';e.currentTarget.style.transform='translateY(0)'; }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:a.locked?'rgba(15,18,34,0.06)':'rgba(255,255,255,0.22)', border:'1px solid '+(a.locked?'rgba(15,18,34,0.08)':'rgba(255,255,255,0.3)'), display:'flex', alignItems:'center', justifyContent:'center' }}>
-                {a.locked ? <Lock size={15} color="rgba(15,18,34,0.3)"/> : <a.icon size={16} color="white"/>}
+              <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <a.icon size={16} color="white"/>
               </div>
-              {a.locked && (
-                <span style={{ background:'rgba(255,140,0,0.1)', border:'1px solid rgba(255,140,0,0.35)', borderRadius:'5px', padding:'2px 6px', fontSize:'8.5px', color:'#d97600', fontWeight:700 }}>
-                  {a.desc.includes('BUSINESS')?'💼 BIZ':'🚀 PRO'}
-                </span>
-              )}
             </div>
             <div>
-              <p style={{ color:a.locked?'#0f1222':'white', fontSize:'12px', fontWeight:700, margin:'0 0 2px' }}>{a.label}</p>
-              <p style={{ color:a.locked?'rgba(15,18,34,0.4)':'rgba(255,255,255,0.85)', fontSize:'10px', margin:0 }}>{a.desc}</p>
+              <p style={{ color:'white', fontSize:'12px', fontWeight:700, margin:'0 0 2px' }}>{a.label}</p>
+              <p style={{ color:'rgba(255,255,255,0.85)', fontSize:'10px', margin:0 }}>{a.desc}</p>
             </div>
           </button>
         ))}
       </div>
+
+      {/* Bandeau d'upgrade — visible uniquement s'il existe des sections
+          masquées pour ce plan (Basic ou Pro), pour ne pas laisser
+          l'utilisateur deviner que d'autres fonctionnalités existent.
+          Absent pour Business, qui a déjà tout débloqué. */}
+      {(!limits.hasEvent || !limits.hasStats || !limits.hasCRM) && (
+        <div style={{ background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:'14px', padding:'14px 16px', display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap' }}>
+          <Crown size={16} color="#d97600" style={{ flexShrink:0 }}/>
+          <p style={{ flex:1, minWidth:'200px', margin:0, color:'#7c4a03', fontSize:'12px', lineHeight:1.5 }}>
+            {plan === 'basic'
+              ? "Passez à l'offre PRO ou BUSINESS pour débloquer Événement, Analytics, CRM et plus de liens."
+              : "Passez à l'offre BUSINESS pour débloquer le CRM et les automatisations."}
+          </p>
+          <button type="button" onClick={()=>onUpgrade?.()}
+            style={{ padding:'8px 16px', borderRadius:'10px', border:'none', background:'#d97600', color:'white', fontWeight:700, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+            Voir les offres →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

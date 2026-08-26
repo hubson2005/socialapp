@@ -14,6 +14,12 @@
  *  [C9]  Number(profileId) normalisé une seule fois en haut de MarketplacePanel
  *  [C10] console.error doublon dans queryFn supprimé (React Query gère déjà l'erreur)
  *  [C11] window.confirm remplacé par une modale de confirmation inline
+ *  [C12] [FIX COULEUR] Overlay des modales (ConfirmModal + ProductModal) recoloré
+ *        de rgba(0,0,0,x) (noir neutre) vers rgba(10,8,23,x) — même teinte que le
+ *        fond de la boîte (#0a0817) — pour supprimer le contraste de teinte visible
+ *        entre l'overlay et la boîte modale. Opacité relevée à 0.82 (au lieu de 0.75)
+ *        pour compenser la perception plus "claire" d'une couleur teintée par
+ *        rapport à un noir pur à opacité égale.
  *  [R1]  RESPONSIVE : adaptation tablette / iOS / Android (voir bloc CSS injecté,
  *        grille adaptative, cibles tactiles, safe-area, overlay image tap-friendly)
  *  [R2]  DESKTOP UNIQUEMENT : le panel occupe une largeur plus généreuse sur grand écran
@@ -39,6 +45,7 @@ const MAX_PRODUCTS      = 10;
 const MAX_SIZE_KB       = 2000;
 const PRODUCTS_PER_PAGE = 4; // [C7] déplacé hors du composant
 const KEYFRAME_ID       = 'mp-spin-keyframe';
+const MODAL_OVERLAY_BG  = 'rgba(10,8,23,0.82)'; // [C12] teinte alignée avec #0a0817
 
 // ─── Helpers ──────────────────────────────────────────────────
 const formatPrice = (price) =>
@@ -102,7 +109,7 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
     <div
       onClick={onCancel}
       style={{
-        position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+        position: 'fixed', inset: 0, zIndex: 10000, background: MODAL_OVERLAY_BG, backdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
@@ -227,7 +234,7 @@ function ProductModal({ product, profileId, onClose, onSaved }) {
   return createPortal(
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)',
+        position: 'fixed', inset: 0, zIndex: 9999, background: MODAL_OVERLAY_BG, backdropFilter: 'blur(10px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',

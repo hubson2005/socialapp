@@ -84,6 +84,9 @@ export default function UserSidebar({
   // "modifications non sauvegardées" gérée côté UserDashboard).
   userEmail,
   onSignOut,
+  // Déjà transmis par UserDashboard (onUpgrade={()=>handleOpenUpgrade()})
+  // mais jusqu'ici non déclaré ici, donc ignoré silencieusement par React.
+  onUpgrade,
 }) {
   const currentOrder = PLAN_ORDER[plan] ?? 0;
   const isMaxPlan = currentOrder >= MAX_PLAN_ORDER;
@@ -105,14 +108,24 @@ export default function UserSidebar({
     return () => { document.body.style.overflow = prevOverflow; };
   }, [isMobile, collapsed]);
 
-  // Liste de base : on retire systématiquement les items masqués (en test côté admin)
-  const visibleNav = USER_NAV.filter(n => !n.hidden);
-
   const isNavLocked = (item) => {
     if (isAdmin) return false; // FIX — un compte admin n'est jamais restreint par le plan
     if (!item.locked) return false;
     return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
   };
+
+  // [SIMPLIFICATION PAR PLAN] Auparavant, une entrée non incluse dans le
+  // plan (Événement, Analytics, CRM…) restait dans le menu, grisée avec
+  // un cadenas + badge PRO/BUSINESS. On la retire désormais complètement
+  // de la navigation — cohérent avec le filtrage déjà appliqué dans
+  // OverviewPanel : le menu Basic est plus court que celui de Pro,
+  // lui-même plus court que celui de Business, plutôt que la même liste
+  // pour les trois avec plus ou moins de cadenas. Un admin garde le menu
+  // complet (isNavLocked renvoie toujours false pour lui).
+  // Pour revenir à l'ancien comportement (entrées verrouillées visibles),
+  // il suffit de retirer `&& !isNavLocked(n)` ci-dessous — le rendu sait
+  // encore afficher l'état verrouillé si besoin (voir plus bas).
+  const visibleNav = USER_NAV.filter(n => !n.hidden && !isNavLocked(n));
 
   const handleNav = (id, locked) => {
     if (locked) return;
@@ -250,7 +263,13 @@ export default function UserSidebar({
           </div>
         )}
 
-        {/* ── Navigation ── */}
+        {/* ── Navigation ──
+            [SIMPLIFICATION PAR PLAN] `visibleNav` exclut maintenant les
+            items masqués (hidden) ET verrouillés (isNavLocked) : plus
+            aucune entrée du menu n'est jamais dans un état "locked" ici,
+            le bloc `locked`/badge/cadenas ci-dessous est donc du code
+            mort défensif (conservé volontairement au cas où le filtre
+            serait retiré plus tard pour revenir à l'ancien comportement). */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
@@ -261,7 +280,6 @@ export default function UserSidebar({
           minHeight: 0,
         }}>
           {USER_GROUPS.map(group => {
-            // visibleNav exclut déjà les items "hidden" (en test sur le Dashboard admin)
             const items = visibleNav.filter(n => n.group === group.id);
             if (!items.length) return null;
 
@@ -275,7 +293,7 @@ export default function UserSidebar({
                 }
 
                 {items.map(item => {
-                  const locked    = isNavLocked(item);
+                  const locked    = isNavLocked(item); // toujours false ici (voir visibleNav), conservé pour robustesse
                   const isActive  = activeSection === item.id;
                   const lockColor = item.locked === 'business' ? '#f7c948' : '#ff8c00';
                   const lockLabel = item.locked === 'business' ? 'BUSINESS' : 'PRO';
@@ -377,6 +395,28 @@ export default function UserSidebar({
               </div>
             );
           })}
+
+          {/* Rappel d'upgrade en bas de menu — visible seulement si le plan
+              a des sections masquées (donc jamais pour Business). Évite
+              que l'utilisateur Basic/Pro ne sache même pas que d'autres
+              fonctionnalités existent, maintenant qu'elles ont disparu
+              du menu plutôt que d'y apparaître verrouillées. */}
+          {!isAdmin && !isMaxPlan && (!collapsed || isMobile) && (
+            <button
+              onClick={() => onUpgrade?.()}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
+                marginTop: '8px', padding: '9px 10px', borderRadius: '11px',
+                background: 'rgba(255,140,0,0.1)', border: '1px solid rgba(255,140,0,0.3)',
+                cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+              }}
+            >
+              <Crown size={14} color="#ff8c42" style={{ flexShrink: 0 }} />
+              <span style={{ color: '#ffb673', fontSize: '11px', fontWeight: 600 }}>
+                Plus de fonctionnalités en {plan === 'basic' ? 'PRO/BUSINESS' : 'BUSINESS'}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* ── Footer (déplié) : image de fond + email + déconnexion ── */}

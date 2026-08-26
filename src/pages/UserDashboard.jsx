@@ -749,12 +749,12 @@ export default function UserDashboard() {
           <div style={{ padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
               {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
-              <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Dashboard'}</h2>
+              <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Tableau de bord'}</h2>
               <AnimatePresence>
                 {hasChanges && (
                   <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
                     style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600, flexShrink:0 }}>
-                    ● {t('unsaved')}
+                    ● Non enregistré
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -768,7 +768,7 @@ export default function UserDashboard() {
                 style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'#eef0f5', border:'1px solid '+(hasChanges?'transparent':'#dde0ea'), borderRadius:'9px', color:hasChanges?'white':'#a2a7b5', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
               >
                 {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                {!isMobile && t('save')}
+                {!isMobile && 'Enregistrer'}
               </button>
             </div>
           </div>

@@ -326,6 +326,7 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           .fp-panel .fp-swatch:hover { transform: scale(1.12); }
           .fp-panel .fp-refresh:hover { border-color: #c9cddb !important; }
           .fp-panel .fp-banner-drop:hover { border-color: rgba(139,92,246,0.4) !important; background: rgba(139,92,246,0.04) !important; }
+          .fp-panel .fp-switch:not(.fp-switch-active):hover { background: #c9cddb !important; }
         }
         @media (max-width: 860px) {
           .fp-panel .fp-grid { grid-template-columns: 1fr !important; }
@@ -371,6 +372,8 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
           .fp-panel .fp-icon-delete { width: 40px !important; height: 40px !important; }
           .fp-panel .fp-swatch { width: 30px !important; height: 30px !important; }
           .fp-panel .fp-refresh { width: 34px !important; height: 34px !important; }
+          .fp-panel .fp-switch { width: 46px !important; height: 27px !important; }
+          .fp-panel .fp-switch .fp-switch-knob { width: 21px !important; height: 21px !important; }
         }
       `}</style>
 
@@ -728,38 +731,59 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px' }}>
                 <div>
                   <label style={labelStyle}>Statut</label>
-                  {/* 3 boutons-interrupteurs indépendants : chacun est son propre bouton
-                      (pas une carte + toggle séparé). Cliquer sur un bouton active CE
-                      statut et désactive automatiquement les deux autres (un seul champ
-                      `status` en base) — visuellement, seul le bouton actif est rempli
-                      de sa couleur avec une coche, les deux autres restent neutres. */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {['brouillon', 'actif', 'inactif'].map(s => {
+                  {/* 3 interrupteurs on/off indépendants, un par statut (visuel façon
+                      switch iOS : rond blanc à gauche = éteint, rond blanc à droite +
+                      fond coloré = allumé). Comme un seul statut est stocké en base,
+                      activer un interrupteur active CE statut et désactive
+                      automatiquement les deux autres — un seul switch peut donc être
+                      "allumé" à la fois. */}
+                  <div style={{
+                    background: '#f9fafc', border: '1px solid #eef0f5',
+                    borderRadius: '13px', overflow: 'hidden',
+                  }}>
+                    {['brouillon', 'actif', 'inactif'].map((s, i) => {
                       const active = formData.status === s;
                       const style = STATUS_STYLES[s];
                       const labelText = s.charAt(0).toUpperCase() + s.slice(1);
                       return (
-                        <button
+                        <div
                           key={s}
-                          onClick={() => setFormData({ ...formData, status: s })}
-                          role="switch"
-                          aria-checked={active}
-                          title={active ? `${labelText} activé` : `Activer « ${labelText} »`}
                           style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '9px 16px',
-                            background: active ? style.color : '#eef0f5',
-                            border: '1px solid ' + (active ? style.color : '#e6e8f0'),
-                            borderRadius: '100px',
-                            color: active ? '#ffffff' : '#6b7280',
-                            fontSize: '12px', fontWeight: 700,
-                            cursor: active ? 'default' : 'pointer',
-                            transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 14px',
+                            borderTop: i === 0 ? 'none' : '1px solid #eef0f5',
                           }}
                         >
-                          {active && <Check size={12} strokeWidth={3} />}
-                          {labelText}
-                        </button>
+                          <span style={{ color: '#161a2e', fontSize: '12.5px', fontWeight: 600 }}>
+                            {labelText}
+                          </span>
+                          <button
+                            onClick={() => setFormData({ ...formData, status: s })}
+                            role="switch"
+                            aria-checked={active}
+                            title={active ? `${labelText} activé` : `Activer « ${labelText} »`}
+                            className={'fp-switch' + (active ? ' fp-switch-active' : '')}
+                            style={{
+                              width: '42px', height: '24px', borderRadius: '100px',
+                              border: 'none', padding: '3px',
+                              background: active ? style.color : '#d7dae3',
+                              display: 'flex', alignItems: 'center',
+                              justifyContent: active ? 'flex-end' : 'flex-start',
+                              cursor: active ? 'default' : 'pointer',
+                              transition: 'background 0.15s ease',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <span
+                              className="fp-switch-knob"
+                              style={{
+                                width: '18px', height: '18px', borderRadius: '50%',
+                                background: '#ffffff',
+                                boxShadow: '0 1px 3px rgba(15,23,42,0.35)',
+                              }}
+                            />
+                          </button>
+                        </div>
                       );
                     })}
                   </div>

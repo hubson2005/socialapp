@@ -548,6 +548,12 @@ export default function UserDashboard() {
   // utilisaient donc la même prop `onBgUpload` avec des signatures différentes,
   // ce qui cassait silencieusement l'upload de fond sur mobile. On isole la
   // logique dans `uploadBgFile(file)` et on adapte l'un des deux appelants.
+  //
+  // [DÉPLACÉ] Le contrôle d'image de fond a quitté UserSidebar pour la carte
+  // Profil (OverviewPanel.jsx) : OverviewPanel appelle désormais directement
+  // `uploadBgFile(file)` (il gère lui-même l'extraction du File depuis
+  // l'input), donc plus besoin de l'adaptateur `handleBgUpload(e)` — MobileNav
+  // continue d'appeler `uploadBgFile` directement comme avant.
   const uploadBgFile = async (file) => {
     if (!file) return;
     if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
@@ -561,14 +567,6 @@ export default function UserDashboard() {
       toast.success('Image de fond appliquée !');
     } catch (err) { toast.error('Erreur : ' + err.message); }
     finally { setUploadingBg(false); }
-  };
-
-  // Adaptateur pour UserSidebar, qui branche onBgUpload directement sur
-  // l'onChange d'un <input type="file"> et transmet donc l'event, pas le File.
-  const handleBgUpload = (e) => {
-    const file = e.target.files?.[0];
-    uploadBgFile(file);
-    e.target.value = '';
   };
 
   // FIX logout — déplacé en bas du panel Paramètres (renderSection case 'settings')
@@ -648,7 +646,11 @@ export default function UserDashboard() {
       // (FeatureUpgradeModal) que les autres fonctionnalités verrouillées,
       // au lieu de rediriger vers "/". On lui passe explicitement le nom
       // de la feature ("Statistiques") et le palier requis ("pro").
-      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} />;
+      //
+      // [DÉPLACÉ] bgImageUrl / uploadingBg / onBgUpload / onBgRemove ajoutés :
+      // le contrôle d'image de fond vit désormais dans la carte Profil de
+      // OverviewPanel plutôt que dans le footer de UserSidebar.
+      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} />;
       case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
       // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,
@@ -723,8 +725,6 @@ export default function UserDashboard() {
             isMobile={false}
             isTablet={isTablet}
             isAdmin={isAdmin}
-            onBgUpload={handleBgUpload} onBgRemove={()=>updateLocal({ bg_image_url:null })}
-            bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
             onUpgrade={()=>handleOpenUpgrade()}
             userEmail={user?.email} onSignOut={handleSignOut}
           />

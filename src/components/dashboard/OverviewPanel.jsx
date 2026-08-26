@@ -1,8 +1,8 @@
 import React from 'react';
 import {
   Save, Loader2, Lock, CheckCircle, AlertCircle, Crown,
-  CalendarClock, AtSign, BadgeCheck, BarChart2,
-  Link2, ShoppingBag, FileText, Users,
+  CalendarClock, CalendarDays, AtSign, BadgeCheck, BarChart2,
+  Link2, ShoppingBag, Users, Image, X,
 } from "lucide-react";
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
@@ -24,6 +24,11 @@ export default function OverviewPanel({
   profile, limits, isActivated, onNavigate,
   onUpdate, onSave, hasChanges, saving, plan,
   onRequestActivation, onUpgrade,
+  // [DÉPLACÉ] Contrôle d'image de fond, auparavant dans le footer de
+  // UserSidebar — vit maintenant dans la carte Profil, juste en dessous.
+  // `onBgUpload` reçoit directement le File (comme uploadBgFile côté
+  // UserDashboard), pas l'event brut.
+  bgImageUrl, uploadingBg, onBgUpload, onBgRemove,
 }) {
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];
@@ -43,7 +48,10 @@ export default function OverviewPanel({
     { label:'Analytics',    icon:BarChart2,     color:'#a52ee0', section:'analytics',    desc:'Actifs',                                                                       locked:!limits.hasStats },
     { label:'Marketplace',  icon:ShoppingBag,   color:'#d81f9e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max', locked:false },
     { label:'CRM',          icon:Users,         color:'#ef2f6b', section:'crm',          desc:'Actif',                                                                        locked:!limits.hasCRM },
-    { label:'Documents',    icon:FileText,      color:'#ff8c1a', section:'documents',    desc:limits.maxDocs+' doc(s) max',                                                  locked:false },
+    // [CHANGEMENT] Documents remplacé par le Calendrier de RDV sur la page
+    // d'accueil — Documents reste accessible normalement depuis la
+    // sidebar/MobileNav, il n'est simplement plus mis en avant ici.
+    { label:'Calendrier',   icon:CalendarDays,  color:'#ff8c1a', section:'booking',     desc:'Prise de rendez-vous',                                                        locked:false },
   ].filter(a => !a.locked);
 
   // Idem pour la rangée du haut : la carte Statistiques n'apparaît plus du
@@ -134,6 +142,48 @@ export default function OverviewPanel({
                 {isActivated ? 'Compte activé' : "En attente d'activation"}
               </span>
             </div>
+
+            {/* [DÉPLACÉ DEPUIS LA SIDEBAR] Image de fond du profil public —
+                rapprochée de la carte qu'elle modifie plutôt que reléguée
+                au bas du menu, loin de tout aperçu. */}
+            {onBgUpload && (
+              <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                <label style={{
+                  flex:1, display:'flex', alignItems:'center', gap:'6px',
+                  background:bgImageUrl?'rgba(244,114,182,0.16)':'rgba(255,255,255,0.07)',
+                  border:'1px solid '+(bgImageUrl?'rgba(244,114,182,0.4)':'rgba(255,255,255,0.1)'),
+                  borderRadius:'8px', padding:'7px 10px', cursor:uploadingBg?'not-allowed':'pointer',
+                  position:'relative',
+                }}>
+                  {uploadingBg
+                    ? <Loader2 size={12} color="#f9a8d4" className="animate-spin" />
+                    : <Image size={12} color={bgImageUrl ? '#f9a8d4' : 'rgba(255,255,255,0.45)'} />
+                  }
+                  <span style={{ color:bgImageUrl?'#f9a8d4':'rgba(255,255,255,0.45)', fontSize:'10px', fontWeight:600 }}>
+                    {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
+                  </span>
+                  <input
+                    type="file" accept="image/*"
+                    style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+                    onChange={e => { const file = e.target.files?.[0]; if (file) onBgUpload(file); e.target.value=''; }}
+                    disabled={uploadingBg}
+                  />
+                </label>
+                {bgImageUrl && onBgRemove && (
+                  <button
+                    onClick={onBgRemove}
+                    aria-label="Retirer l'image de fond"
+                    style={{
+                      width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                      background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)',
+                      borderRadius:'8px', cursor:'pointer',
+                    }}
+                  >
+                    <X size={11} color="#f87171" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Save row */}

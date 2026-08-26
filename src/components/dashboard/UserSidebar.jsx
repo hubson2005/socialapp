@@ -1,10 +1,10 @@
 ﻿import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Lock, Crown, BarChart3, X,
+  ChevronLeft, ChevronRight, Lock, Crown, BarChart3,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
-  Image, Loader2, LogOut, CalendarClock,
+  LogOut, CalendarClock,
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
@@ -74,14 +74,10 @@ export default function UserSidebar({
   isMobile,
   isTablet = false,
   isAdmin = false,
-  onBgUpload,
-  onBgRemove,
-  bgImageUrl,
-  uploadingBg,
-  // ✅ NOUVEAU — déconnexion déplacée depuis le panel Paramètres vers le
-  // bas de la sidebar. `userEmail` affiche l'email du compte connecté,
-  // `onSignOut` déclenche la déconnexion (avec la même confirmation
-  // "modifications non sauvegardées" gérée côté UserDashboard).
+  // [DÉPLACÉ] onBgUpload / onBgRemove / bgImageUrl / uploadingBg retirés :
+  // le contrôle d'image de fond vit maintenant dans OverviewPanel (carte
+  // Profil). UserDashboard peut continuer à les passer sans problème,
+  // ils seront simplement ignorés par React.
   userEmail,
   onSignOut,
   // Déjà transmis par UserDashboard (onUpgrade={()=>handleOpenUpgrade()})
@@ -419,52 +415,16 @@ export default function UserSidebar({
           )}
         </div>
 
-        {/* ── Footer (déplié) : image de fond + email + déconnexion ── */}
+        {/* ── Footer (déplié) : email + déconnexion ──
+            [DÉPLACÉ] Le bouton "Image de fond" a été retiré d'ici et vit
+            désormais dans la carte Profil (OverviewPanel.jsx), au plus
+            près de l'aperçu du profil qu'il modifie. */}
         {(!collapsed || isMobile) && (
           <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
 
-            {/* ── Bouton image de fond ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
-                background: bgImageUrl ? 'rgba(244,114,182,0.16)' : 'rgba(255,255,255,0.07)',
-                border: '1px solid ' + (bgImageUrl ? 'rgba(244,114,182,0.4)' : 'rgba(255,255,255,0.1)'),
-                borderRadius: '8px', padding: '7px 10px', cursor: 'pointer',
-                position: 'relative',
-              }}>
-                {uploadingBg
-                  ? <Loader2 size={12} color="#f9a8d4" className="animate-spin" />
-                  : <Image size={12} color={bgImageUrl ? '#f9a8d4' : 'rgba(255,255,255,0.45)'} />
-                }
-                <span style={{ color: bgImageUrl ? '#f9a8d4' : 'rgba(255,255,255,0.45)', fontSize: '10px', fontWeight: 600 }}>
-                  {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
-                </span>
-                <input
-                  type="file" accept="image/*"
-                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-                  onChange={onBgUpload}
-                  disabled={uploadingBg}
-                />
-              </label>
-              {bgImageUrl && (
-                <button
-                  onClick={onBgRemove}
-                  aria-label="Retirer l'image de fond"
-                  style={{
-                    width: utilityBtnSize, height: utilityBtnSize, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
-                    borderRadius: '8px', cursor: 'pointer', flexShrink: 0,
-                  }}
-                >
-                  <X size={11} color="#f87171" />
-                </button>
-              )}
-            </div>
-
-            {/* ✅ NOUVEAU — email du compte + bouton de déconnexion, déplacés
-                depuis le panel Paramètres vers le bas de la sidebar. */}
+            {/* ✅ email du compte + bouton de déconnexion */}
             {onSignOut && (
-              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <div>
                 {userEmail && (
                   <p style={{
                     color: 'rgba(255,255,255,0.45)', fontSize: '10px', margin: '0 0 8px',

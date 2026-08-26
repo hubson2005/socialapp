@@ -51,7 +51,7 @@ export default function OverviewPanel({
     // [CHANGEMENT] Documents remplacé par le Calendrier de RDV sur la page
     // d'accueil — Documents reste accessible normalement depuis la
     // sidebar/MobileNav, il n'est simplement plus mis en avant ici.
-    { label:'Calendrier',   icon:CalendarDays,  color:'#ff8c1a', section:'booking',     desc:'Prise de rendez-vous',                                                        locked:false },
+    { label:'Calendrier',   icon:CalendarDays,  color:'#0d1330', section:'booking',     desc:'Prise de rendez-vous',                                                        locked:false },
   ].filter(a => !a.locked);
 
   // Idem pour la rangée du haut : la carte Statistiques n'apparaît plus du

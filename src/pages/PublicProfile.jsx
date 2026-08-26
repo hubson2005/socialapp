@@ -176,7 +176,14 @@ const SUPPORT_WHATSAPP = '2250576031212';
 const CARD_BG        = 'rgba(255,255,255,0.94)';
 const CARD_BG_HOVER  = 'rgba(255,255,255,1)';
 const CARD_BORDER    = '1px solid rgba(0,0,0,0.10)';
-const CARD_BLUR      = { backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)' };
+// [PERF1] backdropFilter retiré : appliqué en boucle sur chaque carte (liens,
+// boutique, documents), il forçait un recalcul GPU par carte visible à
+// CHAQUE frame de scroll (contrairement à un flou statique). Sur mobile,
+// avec 6-15+ cartes visibles simultanément, ça saturait le compositeur et
+// rendait le scroll saccadé. Impact visuel quasi nul à retirer : CARD_BG
+// est déjà opaque à 94% (rgba(255,255,255,0.94)), le flou derrière une
+// carte quasi opaque n'apportait presque rien à l'œil.
+const CARD_BLUR      = {};
 const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
 
 // [W3] Couleurs de texte dédiées au contenu affiché sur les cartes

@@ -610,7 +610,7 @@ export default function AutomationsPanel({ profileId }) {
   /* ── CRUD ── */
   const openCreate = () => { setForm(EMPTY_FORM); setModal('create'); };
 
-  const useTemplate = (t) => {
+  const applyTemplate = (t) => {
     setForm({
       name:    t.name    || '',
       desc:    t.desc    || '',
@@ -973,7 +973,7 @@ export default function AutomationsPanel({ profileId }) {
                   <div className="tmpl-name">{t.name}</div>
                   <div className="tmpl-desc">{t.desc}</div>
                   <div className="tmpl-tags">{t.tags.map(tag => <span key={tag} className="tmpl-tag">{tag}</span>)}</div>
-                  <button className="tmpl-use" onClick={() => useTemplate(t)}>Utiliser ce template →</button>
+                  <button className="tmpl-use" onClick={() => applyTemplate(t)}>Utiliser ce template →</button>
                 </div>
               ))}
             </div>

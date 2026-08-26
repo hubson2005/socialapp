@@ -22,6 +22,7 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = React.useState(null);
   const [visible, setVisible] = React.useState(false);
   const [showIOSSteps, setShowIOSSteps] = React.useState(false);
+  const [showManualSteps, setShowManualSteps] = React.useState(false);
   const ios = React.useMemo(() => isIOS(), []);
 
   React.useEffect(() => {
@@ -32,23 +33,23 @@ export default function InstallPrompt() {
     const dismissedUntil = Number(localStorage.getItem(DISMISS_KEY) || 0);
     if (Date.now() < dismissedUntil && !forceDebug) return;
 
-    if (ios) {
-      // iOS n'a pas d'event beforeinstallprompt : on affiche direct
-      setVisible(true);
-      return;
-    }
+    // [FIX] Auparavant, sur Android/desktop, la bannière n'apparaissait
+    // QUE lorsque Chrome avait déjà déclenché "beforeinstallprompt" —
+    // un événement soumis à ses propres heuristiques d'engagement
+    // (parfois retardé, en particulier lors des toutes premières visites
+    // après un déploiement). Résultat : le bandeau pouvait ne jamais
+    // s'afficher à temps. On affiche maintenant la bannière tout de
+    // suite dans tous les cas (comme sur iOS), et on écoute l'event en
+    // arrière-plan pour activer l'installation native dès qu'elle est
+    // prête. Si l'utilisateur clique avant que l'event soit arrivé, on
+    // bascule sur des instructions manuelles (voir handleInstall).
+    setVisible(true);
 
-    if (forceDebug) {
-      // Debug : affiche le bandeau même sans beforeinstallprompt réel
-      // (le bouton "Installer" ne fera rien tant que l'event n'est pas
-      // arrivé, mais permet de valider visuellement le rendu/placement).
-      setVisible(true);
-    }
+    if (ios) return; // iOS n'a pas d'event beforeinstallprompt
 
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setVisible(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -58,6 +59,7 @@ export default function InstallPrompt() {
     localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_DAYS * 86400000));
     setVisible(false);
     setShowIOSSteps(false);
+    setShowManualSteps(false);
   };
 
   const handleInstall = async () => {
@@ -65,7 +67,13 @@ export default function InstallPrompt() {
       setShowIOSSteps(true);
       return;
     }
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      // L'event natif n'est pas encore arrivé (ou ce navigateur ne le
+      // déclenche jamais, ex. certains navigateurs Android non-Chrome) :
+      // on guide l'utilisateur vers le menu du navigateur.
+      setShowManualSteps(true);
+      return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted' || outcome === 'dismissed') {
@@ -75,6 +83,8 @@ export default function InstallPrompt() {
   };
 
   if (!visible) return null;
+
+  const showSteps = showIOSSteps || showManualSteps;
 
   return (
     <>
@@ -116,19 +126,23 @@ export default function InstallPrompt() {
           <p style={{ color: 'white', fontSize: '13px', fontWeight: 700, margin: '0 0 2px' }}>
             Installer l'application SocialApp
           </p>
-          {!showIOSSteps ? (
+          {!showSteps ? (
             <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11.5px', margin: 0 }}>
               Accès rapide depuis ton écran d'accueil, plein écran.
             </p>
-          ) : (
+          ) : showIOSSteps ? (
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11.5px', margin: 0, display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
               Appuie sur <Share size={12} style={{ display: 'inline' }} /> puis
               <PlusSquare size={12} style={{ display: 'inline' }} /> « Sur l'écran d'accueil »
             </p>
+          ) : (
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11.5px', margin: 0 }}>
+              Ouvre le menu ⋮ de ton navigateur puis « Installer l'application »
+            </p>
           )}
         </div>
 
-        {!showIOSSteps && (
+        {!showSteps && (
           <button onClick={handleInstall} style={{
             background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
             border: 'none', borderRadius: '10px', color: 'white',

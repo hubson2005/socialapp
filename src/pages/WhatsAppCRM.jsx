@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useWhatsappCRM, BOOST_NOTIF_TEMPLATES } from '../hooks/useWhatsappCRM'
-// ✅ FIX: import CampaignAIGenerator avec fallback si inexistant
-let CampaignAIGenerator
-try {
-  CampaignAIGenerator = require('@/components/dashboard/AIPanels').CampaignAIGenerator
-} catch {
-  CampaignAIGenerator = null
-}
+// [FIX IMPORT] L'ancien code utilisait require(), qui n'existe pas côté
+// navigateur avec Vite/ESM : le try/catch échouait silencieusement à
+// CHAQUE fois et CampaignAIGenerator restait toujours `null`, désactivant
+// la fonctionnalité sans aucune erreur visible. Import ES standard :
+import { CampaignAIGenerator } from '@/components/dashboard/AIPanels'
 
 // ── TEMPLATES ────────────────────────────────────────────────────
 const TEMPLATES = [

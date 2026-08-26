@@ -22,6 +22,22 @@ export default function ModalSendMsg({
 }) {
   const target = msgTarget;
 
+  // ✅ FIX UX 1 : fermeture au clavier — Échap ferme, Entrée n'envoie pas accidentellement
+  // [FIX HOOKS] Ce useEffect doit être appelé à CHAQUE rendu, avant tout
+  // `return` conditionnel. Auparavant le composant faisait `if (!target)
+  // return null` avant ce Hook : dès que `msgTarget` passait de null à un
+  // objet (ou l'inverse) pendant que le composant restait monté, le
+  // nombre de Hooks appelés changeait d'un rendu à l'autre → crash React
+  // ("Rendered fewer hooks than expected"). Le Hook est donc remonté ici,
+  // et le `return null` déplacé juste en dessous.
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeModal();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [closeModal]);
+
   if (!target) return null;
 
   const tagColors = TAG_C[target.tag] || [
@@ -58,15 +74,6 @@ export default function ModalSendMsg({
   const currentTpl = TEMPLATES.find(
     (t) => String(t.id) === selectValue
   ) || null;
-
-  // ✅ FIX UX 1 : fermeture au clavier — Échap ferme, Entrée n'envoie pas accidentellement
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') closeModal();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [closeModal]);
 
   return (
     <div

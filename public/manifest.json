@@ -1,6 +1,7 @@
 {
   "name": "SocialApp",
   "short_name": "SocialApp",
+  "id": "/dashboard",
   "description": "Votre profil, votre CRM WhatsApp, votre boutique — tout en un.",
   "start_url": "/dashboard",
   "scope": "/",

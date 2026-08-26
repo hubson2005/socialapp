@@ -134,104 +134,11 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
   const [stats,           setStats]           = useState({ scans: 0, downloads: 0, shares: 0 });
   const [saving,          setSaving]          = useState(false);
 
-  // ── GUARD : username manquant → affiche un message clair ─────────────────
-  if (!username) {
-    return (
-      <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
-        <div style={{
-          background:'#ffffff',
-          border:'1px solid rgba(245,158,11,0.35)',
-          borderRadius:'20px',
-          padding:'24px 18px',
-          display:'flex',
-          flexDirection:'column',
-          alignItems:'center',
-          gap:'14px',
-          textAlign:'center',
-          boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
-        }}>
-          <div style={{
-            width:'48px', height:'48px', borderRadius:'14px',
-            background:'rgba(245,158,11,0.1)',
-            border:'1px solid rgba(245,158,11,0.3)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-          }}>
-            <AlertTriangle size={22} color="#d97706" />
-          </div>
-          <div>
-            <p style={{ color:'#161a2e', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
-              Nom d'utilisateur requis
-            </p>
-            <p style={{ color:'#8a90a2', fontSize:'12px', margin:0, lineHeight:1.6 }}>
-              Définissez un nom d'utilisateur pour générer votre QR code et partager votre profil public.
-            </p>
-          </div>
-          {onNavigate && (
-            <button
-              type="button"
-              onClick={() => onNavigate('profile')}
-              style={{
-                padding:'10px 20px',
-                borderRadius:'12px',
-                background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                border:'none',
-                color:'white',
-                fontSize:'13px',
-                fontWeight:700,
-                cursor:'pointer',
-              }}
-            >
-              Configurer mon profil
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // [FIX Q-ACTIVATION] GUARD : compte non activé → le username local n'est
-  // pas encore celui stocké en base (verrou anti-squattage avant paiement,
-  // voir handleSave). Générer le QR ici encoderait un lien qui répondra
-  // "Profil introuvable" au scan tant que le compte n'est pas activé.
-  if (isActivated === false) {
-    return (
-      <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
-        <div style={{
-          background:'#ffffff',
-          border:'1px solid rgba(239,68,68,0.3)',
-          borderRadius:'20px',
-          padding:'24px 18px',
-          display:'flex',
-          flexDirection:'column',
-          alignItems:'center',
-          gap:'14px',
-          textAlign:'center',
-          boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
-        }}>
-          <div style={{
-            width:'48px', height:'48px', borderRadius:'14px',
-            background:'rgba(239,68,68,0.1)',
-            border:'1px solid rgba(239,68,68,0.3)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-          }}>
-            <AlertTriangle size={22} color="#dc2626" />
-          </div>
-          <div>
-            <p style={{ color:'#161a2e', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
-              Compte en attente d'activation
-            </p>
-            <p style={{ color:'#8a90a2', fontSize:'12px', margin:0, lineHeight:1.6 }}>
-              Votre QR code sera généré une fois le paiement confirmé et votre compte activé. Le nom d'utilisateur choisi est réservé jusque-là.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // [FIX] Toujours sanitiser le username avant de construire le lien encodé
   // dans le QR — voir le commentaire sur `sanitizeUsername` ci-dessus.
-  const profileUrl = `${BASE_URL}/${sanitizeUsername(username)}`;
+  // (username peut être vide ici ; sanitizeUsername/profileUrl ne sont
+  // utilisés que plus bas, une fois le guard `!username` passé.)
+  const profileUrl = username ? `${BASE_URL}/${sanitizeUsername(username)}` : '';
   const LS_KEY     = `qr_config_${profileId}`;
 
   const upd = (key, val) => setCustomization(c => ({ ...c, [key]: val }));
@@ -321,6 +228,103 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
       qrInstanceRef.current = null;
     };
   }, []);
+
+  // [FIX HOOKS] Les deux guards ci-dessous (username manquant / compte non
+  // activé) étaient à l'origine placés AVANT les useEffect plus haut : un
+  // `return` conditionnel avant des Hooks fait varier leur nombre d'un
+  // rendu à l'autre selon `username`/`isActivated`, ce qui provoque un
+  // crash React ("Rendered fewer hooks than expected"). Les Hooks doivent
+  // toujours être appelés dans le même ordre — les guards sont donc
+  // repoussés ici, après tous les Hooks du composant.
+  if (!username) {
+    return (
+      <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
+        <div style={{
+          background:'#ffffff',
+          border:'1px solid rgba(245,158,11,0.35)',
+          borderRadius:'20px',
+          padding:'24px 18px',
+          display:'flex',
+          flexDirection:'column',
+          alignItems:'center',
+          gap:'14px',
+          textAlign:'center',
+          boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
+        }}>
+          <div style={{
+            width:'48px', height:'48px', borderRadius:'14px',
+            background:'rgba(245,158,11,0.1)',
+            border:'1px solid rgba(245,158,11,0.3)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <AlertTriangle size={22} color="#d97706" />
+          </div>
+          <div>
+            <p style={{ color:'#161a2e', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
+              Nom d'utilisateur requis
+            </p>
+            <p style={{ color:'#8a90a2', fontSize:'12px', margin:0, lineHeight:1.6 }}>
+              Définissez un nom d'utilisateur pour générer votre QR code et partager votre profil public.
+            </p>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('profile')}
+              style={{
+                padding:'10px 20px',
+                borderRadius:'12px',
+                background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                border:'none',
+                color:'white',
+                fontSize:'13px',
+                fontWeight:700,
+                cursor:'pointer',
+              }}
+            >
+              Configurer mon profil
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (isActivated === false) {
+    return (
+      <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
+        <div style={{
+          background:'#ffffff',
+          border:'1px solid rgba(239,68,68,0.3)',
+          borderRadius:'20px',
+          padding:'24px 18px',
+          display:'flex',
+          flexDirection:'column',
+          alignItems:'center',
+          gap:'14px',
+          textAlign:'center',
+          boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
+        }}>
+          <div style={{
+            width:'48px', height:'48px', borderRadius:'14px',
+            background:'rgba(239,68,68,0.1)',
+            border:'1px solid rgba(239,68,68,0.3)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <AlertTriangle size={22} color="#dc2626" />
+          </div>
+          <div>
+            <p style={{ color:'#161a2e', fontWeight:700, fontSize:'14px', margin:'0 0 6px' }}>
+              Compte en attente d'activation
+            </p>
+            <p style={{ color:'#8a90a2', fontSize:'12px', margin:0, lineHeight:1.6 }}>
+              Votre QR code sera généré une fois le paiement confirmé et votre compte activé. Le nom d'utilisateur choisi est réservé jusque-là.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const loadLibraryAndRender = () => {
     if (window.QRCodeStyling) { renderStyledQR(); return; }

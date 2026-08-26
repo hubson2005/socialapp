@@ -18,6 +18,14 @@ function urlBase64ToUint8Array(base64String) {
 
 /**
  * Enregistre le Service Worker
+ * [FIX PWA] Pointait auparavant vers /sw.js, une ancienne version (v1) du
+ * service worker qui mettait aussi en cache les réponses en erreur
+ * (403/404) et ne gérait pas la navigation en réseau-prioritaire. main.jsx
+ * enregistre déjà /service-worker.js (v2, corrigé) au chargement de l'app —
+ * comme les deux scripts partagent la même scope ("/"), activer les push
+ * ici réenregistrait /sw.js et remplaçait silencieusement le service
+ * worker v2 actif par l'ancien v1 buggé. On pointe maintenant vers le même
+ * fichier unique que main.jsx.
  */
 export async function registerServiceWorker() {
   if (
@@ -28,7 +36,7 @@ export async function registerServiceWorker() {
   }
 
   try {
-    return await navigator.serviceWorker.register("/sw.js");
+    return await navigator.serviceWorker.register("/service-worker.js");
   } catch (err) {
     console.error("Erreur Service Worker :", err);
     return null;

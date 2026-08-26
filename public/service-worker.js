@@ -1,7 +1,8 @@
-const CACHE_NAME = 'socialapp-cache-v2'; // ⬅️ bump this on every deploy (or generate at build time)
+const CACHE_NAME = 'socialapp-cache-v3'; // ⬅️ bump this on every deploy (or generate at build time)
 
 const CORE_ASSETS = [
   '/',
+  '/offline.html',
   '/manifest.json',
   '/Logo_SocialApp.png',
   '/icon-192.png',
@@ -33,9 +34,16 @@ self.addEventListener('fetch', (event) => {
   // Navigation requests (index.html / app shell) must ALWAYS go to the
   // network first and never be served stale — this is what was causing
   // old, since-deleted hashed chunk URLs to be requested after a deploy.
+  // [FIX PWA] Si le cache de secours ('/') est lui-même absent (première
+  // visite jamais mise en cache, ou navigation vers une page jamais
+  // visitée) on affiche désormais /offline.html plutôt que rien.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/'))
+      fetch(request).catch(async () =>
+        (await caches.match(request)) ||
+        (await caches.match('/')) ||
+        caches.match('/offline.html')
+      )
     );
     return;
   }

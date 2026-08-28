@@ -981,9 +981,9 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
       status: 'confirmed',
     });
     if (error) {
-      console.error(error);
-      return alert("Erreur lors de la création. Vérifie le nom de la colonne service_id dans ta table `bookings`.");
-    }
+  console.error('INSERT ERROR:', JSON.stringify(error, null, 2));
+  return alert(`Erreur : ${error.message || error.code || 'inconnue'}\n${JSON.stringify(error)}`);
+}
     setQuickForm(null);
     refresh();
   };

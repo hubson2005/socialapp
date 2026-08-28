@@ -161,7 +161,12 @@ export default function BookingCalendarPanel({ profileId }) {
 
   const loadOverview = useCallback(async () => {
     const [svcRes, bkRes] = await Promise.all([
-      supabase.from('booking_services').select('id, is_active').eq('profile_id', profileId),
+      // FIX: on récupère maintenant name / duration_minutes / color / price
+      // en plus de id / is_active, sinon le formulaire "Nouveau rendez-vous"
+      // ne peut ni afficher le nom du service ni calculer end_time
+      // automatiquement (ce qui provoquait l'erreur Postgres 23502
+      // "null value in column end_time violates not-null constraint").
+      supabase.from('booking_services').select('id, is_active, name, duration_minutes, color, price').eq('profile_id', profileId),
       supabase
         .from('bookings')
         .select('id, booking_date, start_time, end_time, status, client_name, party_size, service_id, event_id, booking_services(name,color), booking_events(title)')
@@ -968,6 +973,15 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
       const total = h * 60 + m + svc.duration_minutes;
       end_time = `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
     }
+    // Filet de sécurité : si la durée du service est toujours introuvable
+    // (service sans duration_minutes défini, etc.), on utilise 30 min par
+    // défaut plutôt que de laisser end_time à null et de déclencher
+    // l'erreur Postgres "null value in column end_time".
+    if (!end_time && quickForm.start_time) {
+      const [h, m] = quickForm.start_time.split(':').map(Number);
+      const total = h * 60 + m + 30;
+      end_time = `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    }
 
     const { error } = await supabase.from('bookings').insert({
       profile_id: profileId,
@@ -981,9 +995,9 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
       status: 'confirmed',
     });
     if (error) {
-  console.error('INSERT ERROR:', JSON.stringify(error, null, 2));
-  return alert(`Erreur : ${error.message || error.code || 'inconnue'}\n${JSON.stringify(error)}`);
-}
+      console.error('INSERT ERROR:', JSON.stringify(error, null, 2));
+      return alert(`Erreur : ${error.message || error.code || 'inconnue'}`);
+    }
     setQuickForm(null);
     refresh();
   };

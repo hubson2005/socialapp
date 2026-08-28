@@ -13,11 +13,6 @@ const COLORS = {
   cardAlt: '#f6f7fb',
   border: '#e6e8f0',
   borderStrong: '#c7cdfb',
-  // Sélecteur (onglets actifs, boutons principaux, focus, jour sélectionné
-  // du mini-calendrier) : même indigo/violet que les boutons primaires du
-  // reste du dashboard (UserDashboard.jsx : linear-gradient(135deg,#6366f1,#8b5cf6)),
-  // au lieu du violet clair #a78bfa/#6c63ff qui ne matchait aucune autre
-  // couleur de l'app.
   accent: '#6366f1',
   accent2: '#8b5cf6',
   text: '#161a2e',
@@ -48,24 +43,14 @@ const s = {
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', fontSize: 14,
   },
-  // Bouton "X" (danger) rendu 100% opaque : fond plein + texte blanc, pour
-  // rester bien visible aussi bien sur fond blanc que sur fond gris clair.
   btnDanger: {
     background: COLORS.danger, color: '#fff', border: 'none',
     borderRadius: 8, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14,
   },
-  // Bouton texte en rouge (ex: "Annuler", "Supprimer"), distinct de
-  // btnDanger qui est figé à 32x32 pour les icônes seules (X, 🗑). Style
-  // "cadre" (comme btnGhost) pour rester visuellement cohérent avec les
-  // boutons voisins "Marquer terminé" / "Absent", mais en rouge pour
-  // signaler l'action destructive.
   btnDangerText: {
     background: 'rgba(220,38,38,0.08)', color: COLORS.danger, border: `1px solid rgba(220,38,38,0.35)`,
     borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
   },
-  // Les propriétés responsive (colonnes, wrap, overflow) vivent dans les
-  // classes CSS injectées (bcp-stats / bcp-main / bcp-tabs) plutôt qu'ici,
-  // car un style inline a toujours priorité sur une media query CSS.
   statsGrid: { gap: 14, marginBottom: 20 },
   statCard: { background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0, boxShadow: '0 1px 2px rgba(15,23,42,.04)' },
   statIcon: (color) => ({
@@ -104,23 +89,10 @@ const STATUS_COLORS = { pending: COLORS.warning, confirmed: COLORS.success, canc
 const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé', completed: 'Terminé', no_show: 'Absent' };
 const SERVICE_ICON_COLORS = [COLORS.accent, COLORS.blue, COLORS.success, COLORS.warning];
 
-// Media queries : mobile < 640px (Android/iPhone), tablette 640–1023px,
-// desktop >= 1024px (iPad du mockup en landscape ≈ dashboard desktop).
-// Injecté une seule fois ; les propriétés responsive ne sont PAS dupliquées
-// en inline style ci-dessus pour laisser ces règles s'appliquer.
 const RESPONSIVE_CSS = `
-/* FIX — reset box-sizing scopé au panneau (border-box partout). Sans ça,
-   les padding s'ajoutent aux largeurs en % et poussent le contenu au-delà
-   du viewport sur mobile (Android/iOS), ce qui tronque tout à droite. */
 .bcp-wrap, .bcp-wrap *, .bcp-wrap *::before, .bcp-wrap *::after { box-sizing: border-box; }
 .bcp-wrap { overflow-x: hidden; max-width: 100%; }
 
-/* Thème clair : les icônes natives des <input type="time"> et
-   <input type="date"> (horloge / calendrier) sont déjà dessinées en noir
-   par le navigateur, ce qui reste lisible sur nos champs à fond clair
-   (COLORS.cardAlt). Plus besoin d'inverser leurs couleurs comme sur
-   l'ancien thème sombre — on force juste color-scheme: light pour éviter
-   qu'un thème sombre système ne fasse malgré tout basculer l'icône. */
 .bcp-wrap input[type="time"],
 .bcp-wrap input[type="date"] {
   color-scheme: light;
@@ -151,11 +123,6 @@ const RESPONSIVE_CSS = `
 @media (max-width: 639px) {
   .bcp-svc-actions { display: none; }
   .bcp-svc-chevron { display: inline-flex; }
-  /* FIX — sur mobile, l'icône + le texte du StatCard côte à côte forçaient
-     les libellés longs ("Actifs dans votre agenda") à retomber sous
-     l'icône en plusieurs lignes désalignées (cf. capture utilisateur).
-     On bascule la carte en colonne : icône centrée en haut, texte centré
-     en dessous, aligné proprement quelle que soit la longueur du libellé. */
   .bcp-stat-card {
     flex-direction: column;
     align-items: center;
@@ -169,8 +136,6 @@ const RESPONSIVE_CSS = `
     width: 100%;
   }
 }
-/* Très petits écrans Android (ex: anciens téléphones ~360px et moins) :
-   1 seule colonne pour éviter des cartes stats trop compressées. */
 @media (max-width: 380px) {
   .bcp-stats { grid-template-columns: 1fr; }
 }
@@ -194,10 +159,6 @@ export default function BookingCalendarPanel({ profileId }) {
   const [overview, setOverview] = useState({ services: [], bookings: [], loading: true });
   const [quickForm, setQuickForm] = useState(null); // formulaire "Nouveau rendez-vous"
 
-  // Chargement léger (lecture seule) pour les stats, le calendrier et l'agenda.
-  // Les onglets ci-dessous gèrent leurs propres opérations CRUD ; ils appellent
-  // refreshOverview() après chaque création/modification/suppression pour que
-  // les stats et le calendrier restent synchronisés instantanément.
   const loadOverview = useCallback(async () => {
     const [svcRes, bkRes] = await Promise.all([
       supabase.from('booking_services').select('id, is_active').eq('profile_id', profileId),
@@ -217,7 +178,6 @@ export default function BookingCalendarPanel({ profileId }) {
 
   useEffect(() => { loadOverview(); }, [loadOverview]);
 
-  // ---------- Stats ----------
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const activeServicesCount = overview.services.filter((sv) => sv.is_active).length;
   const monthBookings = overview.bookings.filter((b) => {
@@ -229,7 +189,6 @@ export default function BookingCalendarPanel({ profileId }) {
     ? Math.round((monthBookings.filter((b) => b.status === 'confirmed' || b.status === 'completed').length / monthBookings.length) * 100)
     : 0;
 
-  // ---------- Calendrier & agenda ----------
   const bookingsByDate = useMemo(() => {
     const map = {};
     overview.bookings.forEach((b) => {
@@ -263,7 +222,6 @@ export default function BookingCalendarPanel({ profileId }) {
         </button>
       </div>
 
-      {/* CSS responsive — mobile / tablette / desktop (voir mockups) */}
       <style>{RESPONSIVE_CSS}</style>
 
       {/* STATS */}
@@ -274,7 +232,6 @@ export default function BookingCalendarPanel({ profileId }) {
         <StatCard icon="📈" color={COLORS.warning} value={`${confirmationRate}%`} label="Confirmées" sub="Taux de confirmation" />
       </div>
 
-      {/* CONTENU PRINCIPAL + SIDEBAR (sidebar masquée < 900px, remplacée par un flux "Réservations récentes") */}
       <div className="bcp-main" style={s.mainGrid}>
         <div>
           <div className="bcp-tabs" style={s.tabs}>
@@ -284,6 +241,7 @@ export default function BookingCalendarPanel({ profileId }) {
               ['events', '✨ Évènements'],
               ['bookings', '📅 Réservations'],
               ['stats', '📊 Statistiques'],
+              ['notifications', '🔔 Notifications'],
             ].map(([key, label]) => (
               <div key={key} style={{ ...s.tab(tab === key), flexShrink: 0 }} onClick={() => setTab(key)}>{label}</div>
             ))}
@@ -302,8 +260,8 @@ export default function BookingCalendarPanel({ profileId }) {
             />
           )}
           {tab === 'stats' && <StatsTab overview={overview} />}
+          {tab === 'notifications' && <NotificationSettingsTab profileId={profileId} />}
 
-          {/* Repli mobile : remplace la sidebar calendrier/agenda par un flux compact */}
           <div className="bcp-recent-mobile">
             <RecentBookingsCard bookings={overview.bookings} onSeeAll={goToBookingsTab} />
           </div>
@@ -343,15 +301,6 @@ function StatCard({ icon, color, value, label, sub }) {
 // ============================================================
 // SELECT PERSONNALISÉ
 // ============================================================
-// Le <select> HTML natif utilisé pour "Service" déclenchait sur
-// Android/Chrome le picker natif de l'OS (plein écran, hors du thème de
-// l'app). Ce picker natif est fourni par le système d'exploitation dès
-// l'ouverture du menu : impossible à styliser en CSS une fois ouvert,
-// quelle que soit la classe appliquée au <select> lui-même. Remplacé par
-// un dropdown 100% custom (même logique que les menus du reste de
-// l'app), qui reste toujours dans le thème clair et ne délègue jamais le
-// rendu à l'UI native, sur mobile comme sur desktop. Couleur d'accent :
-// même indigo (#6366f1) que les boutons primaires du dashboard.
 function CustomSelect({ value, onChange, options, placeholder = 'Choisir…' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -437,7 +386,6 @@ function MiniCalendar({ month, setMonth, selectedDate, setSelectedDate, bookings
   const year = month.getFullYear();
   const m = month.getMonth();
   const firstOfMonth = new Date(year, m, 1);
-  // Grille lundi-first : décalage entre 0 (lundi) et 6 (dimanche)
   const firstWeekday = (firstOfMonth.getDay() + 6) % 7;
   const daysInMonth = new Date(year, m + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, m, 0).getDate();
@@ -576,7 +524,7 @@ function RecentBookingsCard({ bookings, onSeeAll }) {
 function ServicesTab({ profileId, onDataChanged }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState(null); // null = fermé, {} = nouveau, {...} = édition
+  const [form, setForm] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -723,7 +671,6 @@ function ServicesTab({ profileId, onDataChanged }) {
               <div style={s.btnIcon} title="Dupliquer" onClick={(e) => { e.stopPropagation(); duplicate(svc); }}>⧉</div>
               <div style={s.btnDanger} title="Supprimer" onClick={(e) => { e.stopPropagation(); remove(svc.id); }}>🗑</div>
             </div>
-            {/* Mobile (< 640px) : la ligne entière ouvre l'édition, remplace les icônes par un chevron */}
             <div
               className="bcp-svc-chevron"
               style={{ color: COLORS.textMuted, fontSize: 18, cursor: 'pointer' }}
@@ -773,9 +720,6 @@ function AvailabilityTab({ profileId }) {
     load();
   };
 
-  // On envoie toujours les deux champs (start_time + end_time) ensemble pour
-  // éviter que la contrainte SQL CHECK (end_time > start_time) ne rejette
-  // une mise à jour intermédiaire valide au final mais invalide ligne par ligne.
   const updateSlot = async (id, field, currentSlot, value) => {
     const next = { ...currentSlot, [field]: value };
     if (next.end_time && next.start_time && next.end_time <= next.start_time) {
@@ -1012,10 +956,6 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
     refresh();
   };
 
-  // Création manuelle depuis le bouton "+ Nouveau rendez-vous".
-  // ⚠️ Hypothèse : la colonne de clé étrangère vers booking_services
-  // s'appelle `service_id` (déduite de l'embed booking_services(...)).
-  // Vérifie/ajuste ce nom si ta table utilise un autre nom de colonne.
   const saveQuickBooking = async () => {
     if (!quickForm?.client_name?.trim()) return alert('Le nom du client est requis.');
     if (!quickForm?.service_id) return alert('Choisis un service.');
@@ -1064,9 +1004,6 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
             </div>
             <div style={{ flex: '1 1 180px' }}>
               <label style={s.label}>Service *</label>
-              {/* Remplace le <select> natif par CustomSelect (voir
-                  commentaire sur le composant) pour éviter le picker Android
-                  hors-thème et garder l'accent indigo du reste de l'app. */}
               <CustomSelect
                 value={quickForm.service_id || ''}
                 onChange={(val) => setQuickForm({ ...quickForm, service_id: val })}
@@ -1096,10 +1033,6 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
         </div>
       )}
 
-      {/* FIX — cette ligne (6 filtres) débordait sans scroll ni retour à la
-          ligne sur mobile ("Terminé" tronqué net, "Annulé"/"Absent"
-          inatteignables). On applique la même classe bcp-tabs que la barre
-          d'onglets du haut, qui gère déjà le scroll horizontal tactile. */}
       <div className="bcp-tabs" style={{ ...s.tabs, marginBottom: 14 }}>
         {['all', 'pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map((f) => (
           <div key={f} style={{ ...s.tab(filter === f), flexShrink: 0 }} onClick={() => setFilter(f)}>
@@ -1203,6 +1136,119 @@ function StatsTab({ overview }) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// NOTIFICATIONS — rappel WhatsApp avant chaque rendez-vous
+// (branché sur link_profiles.whatsapp_phone / booking_reminder_enabled /
+// booking_reminder_minutes, déjà présents dans la base)
+// ============================================================
+function NotificationSettingsTab({ profileId }) {
+  const [settings, setSettings] = useState({
+    whatsapp_phone: '',
+    booking_reminder_minutes: 30,
+    booking_reminder_enabled: false,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('link_profiles')
+      .select('whatsapp_phone, booking_reminder_minutes, booking_reminder_enabled')
+      .eq('id', profileId)
+      .maybeSingle();
+    if (!error && data) {
+      setSettings({
+        whatsapp_phone: data.whatsapp_phone || '',
+        booking_reminder_minutes: data.booking_reminder_minutes ?? 30,
+        booking_reminder_enabled: data.booking_reminder_enabled ?? false,
+      });
+    }
+    setLoading(false);
+  }, [profileId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    // Stocké sans '+' (voir commentaire de colonne whatsapp_phone dans link_profiles)
+    const clean = settings.whatsapp_phone?.trim().replace(/\s+/g, '').replace(/^\+/, '');
+    if (settings.booking_reminder_enabled && !/^\d{8,15}$/.test(clean || '')) {
+      return alert('Entre ton numéro WhatsApp au format international sans le +, ex: 2250700000000');
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from('link_profiles')
+      .update({
+        whatsapp_phone: clean || null,
+        booking_reminder_minutes: Number(settings.booking_reminder_minutes) || 30,
+        booking_reminder_enabled: settings.booking_reminder_enabled,
+      })
+      .eq('id', profileId);
+    setSaving(false);
+    if (error) {
+      console.error('save booking reminder settings error:', error);
+      return alert(`Erreur : ${error.message}`);
+    }
+    alert('Paramètres enregistrés.');
+    load();
+  };
+
+  if (loading) return <div style={s.empty}>Chargement…</div>;
+
+  return (
+    <div>
+      <div style={s.card}>
+        <strong style={{ display: 'block', marginBottom: 4, color: COLORS.text }}>
+          Rappel WhatsApp avant chaque rendez-vous
+        </strong>
+        <p style={{ margin: '0 0 14px', color: COLORS.textMuted, fontSize: 13 }}>
+          Reçois un message WhatsApp automatique un certain temps avant chaque réservation confirmée ou en attente.
+        </p>
+
+        <div style={s.row}>
+          <div style={{ flex: '1 1 220px' }}>
+            <label style={s.label}>Ton numéro WhatsApp</label>
+            <input
+              style={s.input}
+              placeholder="2250700000000 (sans le +)"
+              value={settings.whatsapp_phone}
+              onChange={(e) => setSettings({ ...settings, whatsapp_phone: e.target.value })}
+            />
+          </div>
+          <div style={{ flex: '1 1 160px' }}>
+            <label style={s.label}>Délai avant le RDV (min)</label>
+            <input
+              style={s.input}
+              type="number"
+              min="5"
+              step="5"
+              value={settings.booking_reminder_minutes}
+              onChange={(e) => setSettings({ ...settings, booking_reminder_minutes: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div style={{ ...s.row, marginTop: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: COLORS.text, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={settings.booking_reminder_enabled}
+              onChange={(e) => setSettings({ ...settings, booking_reminder_enabled: e.target.checked })}
+            />
+            Activer les rappels WhatsApp
+          </label>
+        </div>
+
+        <div style={{ ...s.row, marginTop: 14, justifyContent: 'flex-end' }}>
+          <button style={s.btn} onClick={save} disabled={saving}>
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
       </div>
     </div>
   );

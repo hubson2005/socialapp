@@ -345,6 +345,9 @@ export default function UserDashboard() {
   // { featureName, requiredPlan } pour afficher le bon libellé/montant.
   const [featureUpgrade, setFeatureUpgrade] = useState(null);
   const [uploadingBg, setUploadingBg]       = useState(false);
+  // [AJOUT] Bannière de couverture (profile.banner_url) — même pattern
+  // d'état que l'image de fond ci-dessus.
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [localProfile, setLocalProfile]     = useState(null);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [hasChanges, setHasChanges]         = useState(false);
@@ -539,6 +542,8 @@ export default function UserDashboard() {
       event_color2: localProfile.event_color2||null, event_booking_url: localProfile.event_booking_url||null,
       event_description: localProfile.event_description||null, event_images: eventImagesArray,
       event_image_url: eventImagesArray[0]||null, bg_image_url: localProfile.bg_image_url||null,
+      // [AJOUT] Bannière de couverture — persistée comme bg_image_url ci-dessus
+      banner_url: localProfile.banner_url||null,
     }});
   };
 
@@ -567,6 +572,26 @@ export default function UserDashboard() {
       toast.success('Image de fond appliquée !');
     } catch (err) { toast.error('Erreur : ' + err.message); }
     finally { setUploadingBg(false); }
+  };
+
+  // [AJOUT] Bannière de couverture (profile.banner_url) — même logique
+  // d'upload que uploadBgFile ci-dessus (même bucket Storage 'avatars',
+  // même limite de taille), juste un préfixe de nom de fichier différent
+  // ('banner-' au lieu de 'bg-') et un champ cible différent
+  // (banner_url au lieu de bg_image_url).
+  const uploadBannerFile = async (file) => {
+    if (!file) return;
+    if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
+    setUploadingBanner(true);
+    try {
+      const name = 'banner-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
+      const { error } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(name);
+      updateLocal({ banner_url: data.publicUrl });
+      toast.success('Bannière appliquée !');
+    } catch (err) { toast.error('Erreur : ' + err.message); }
+    finally { setUploadingBanner(false); }
   };
 
   // FIX logout — déplacé en bas du panel Paramètres (renderSection case 'settings')
@@ -650,7 +675,10 @@ export default function UserDashboard() {
       // [DÉPLACÉ] bgImageUrl / uploadingBg / onBgUpload / onBgRemove ajoutés :
       // le contrôle d'image de fond vit désormais dans la carte Profil de
       // OverviewPanel plutôt que dans le footer de UserSidebar.
-      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} />;
+      //
+      // [AJOUT] bannerUrl / uploadingBanner / onBannerUpload / onBannerRemove :
+      // même pattern que ci-dessus pour la bannière de couverture.
+      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrl={localProfile?.banner_url} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFile} onBannerRemove={()=>updateLocal({ banner_url:null })} />;
       case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
       case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
       // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,

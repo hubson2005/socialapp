@@ -1,4 +1,5 @@
-* PublicProfile.jsx — Page profil publique SocialApp
+/**
+ * PublicProfile.jsx — Page profil publique SocialApp
  *
  * CORRECTIONS APPLIQUÉES (revisions précédentes) :
  *  [C1]  useEffect QR scan isolé, dépendance réduite à profile?.id uniquement
@@ -153,25 +154,30 @@
  *  [BN1] Ajout d'une bannière/photo de couverture optionnelle en haut de la
  *        page publique, affichée uniquement si `profile.banner_url` est
  *        renseigné. Champ distinct de `bg_image_url` (qui reste le fond
- *        plein écran derrière toute la page).
- *        → Nécessite la colonne `banner_url` (texte, nullable) sur la
- *        table des profils, et un champ d'upload correspondant côté
- *        dashboard admin.
+ *        plein écran derrière toute la page) : la bannière est une image
+ *        rectangulaire à coins arrondis, ratio 16/7, dans la même colonne
+ *        de contenu (.pp-content-col) que le reste des sections, avec la
+ *        même ombre que les autres cartes. N'affecte rien d'existant si le
+ *        champ est vide : comportement inchangé pour tous les profils sans
+ *        bannière.
+ *        → Nécessite d'ajouter la colonne `banner_url` (texte, nullable)
+ *        sur la table des profils, et un champ d'upload correspondant côté
+ *        dashboard admin (fichier non inclus ici, cette page ne fait que
+ *        l'afficher).
  *
- * BANNIÈRE "COVER PHOTO" — AVATAR SUPERPOSÉ (cette révision) :
- *  [BN2] Remaniement du placement : la bannière n'est plus une carte
- *        indépendante suivie de l'avatar plus bas — l'avatar est
- *        désormais superposé en bas-centre de la bannière (pattern
- *        "cover photo" façon Facebook/LinkedIn), avec un léger
- *        chevauchement. N'apparaît que si `profile.banner_url` est
- *        renseigné ; sans bannière, l'avatar garde exactement son
- *        ancien emplacement/rendu (aucune régression pour les profils
- *        existants sans bannière).
- *        Détails : l'anneau de l'avatar (vérifié ou non) récupère une
- *        bordure blanche opaque supplémentaire pour rester lisible
- *        quelle que soit la photo de couverture ; une marge négative
- *        sur le bloc suivant (nom/bio) absorbe le chevauchement pour
- *        garder un espacement identique au rendu sans bannière.
+ * AVATAR SUR LA BANNIÈRE (cette révision) :
+ *  [BN2] Quand `profile.banner_url` est renseigné, l'avatar est désormais
+ *        positionné en chevauchement, centré horizontalement, sur le bord
+ *        bas de la bannière (façon page de couverture réseau social) au
+ *        lieu d'être affiché séparément en dessous. La bannière et
+ *        l'avatar partagent un même conteneur positionné en `relative`,
+ *        l'avatar étant positionné en `absolute` et à moitié au-dessus /
+ *        à moitié en dessous du bord bas de la bannière via
+ *        `transform: translate(-50%, 50%)`. Un espace supplémentaire
+ *        (`marginBottom`) est réservé sous la bannière pour laisser la
+ *        place à la moitié inférieure de l'avatar qui déborde. Quand il
+ *        n'y a pas de bannière, l'avatar garde exactement son ancien
+ *        rendu autonome (aucun changement de comportement dans ce cas).
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -999,10 +1005,34 @@ export default function PublicProfile() {
     profile.event_location || profile.event_description ||
     profile.event_booking_url
   );
-  // [BN2] Bannière présente ? détermine si l'avatar se superpose en bas
-  // de la bannière (pattern cover photo) ou garde son rendu autonome
-  // d'origine (aucune bannière renseignée).
-  const hasBanner = !!profile.banner_url;
+
+  // [BN2] Bloc avatar factorisé pour être réutilisé à la fois "flottant"
+  // sur la bannière (quand banner_url est renseigné) et en rendu autonome
+  // (comportement d'origine, inchangé) quand il n'y a pas de bannière.
+  const avatarBlock = (
+    <div style={{ position:'relative' }}>
+      {/* [W1] Anneau figé (dégradé conique statique) pour les profils
+          vérifiés, anneau statique discret sinon */}
+      <div
+        className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
+        style={{
+          padding:'3px', borderRadius:'28px',
+          background: profile.is_verified ? undefined : 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))',
+          boxShadow:'0 8px 32px rgba(0,0,0,0.3)',
+        }}
+      >
+        <div style={{ padding:'3px', borderRadius:'25px', background:'#0f0a1e' }}>
+          {profile.avatar_url
+            ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'106px', height:'106px', borderRadius:'22px', objectFit:'cover', display:'block' }} />
+            : <div style={{ width:'106px', height:'106px', borderRadius:'22px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
+          }
+        </div>
+      </div>
+      {profile.is_verified && (
+        <div style={{ position:'absolute', bottom:'-8px', right:'-8px', width:'28px', height:'28px', borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', border:'3px solid rgba(255,255,255,0.9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'700', color:'white', boxShadow:'0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
+      )}
+    </div>
+  );
 
   return (
   <>
@@ -1036,76 +1066,36 @@ export default function PublicProfile() {
         fontFamily: FONT_STACK,
       }}>
 
+        {/* [BN1][BN2] Bannière de couverture — affichée uniquement si
+            profile.banner_url est renseigné. Distincte de bg_image_url
+            (fond plein écran) : image rectangulaire à coins arrondis,
+            même largeur/ombre que les autres cartes de contenu. Quand une
+            bannière est présente, l'avatar est chevauché en bas, centré,
+            façon photo de couverture réseau social. `marginBottom` réserve
+            l'espace nécessaire à la moitié inférieure de l'avatar qui
+            déborde du cadre de la bannière. */}
+        {profile.banner_url ? (
+          <div className="pp-content-col" style={{ position:'relative', marginBottom:'70px' }}>
+            <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
+              <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+            </div>
+            <div style={{ position:'absolute', left:'50%', bottom:0, transform:'translate(-50%, 50%)' }}>
+              {avatarBlock}
+            </div>
+          </div>
+        ) : null}
+
         {/* [P2] Barre d'actions — partage, alignée à droite façon Linktree/Beacons */}
         <div className="pp-content-col" style={{ display:'flex', justifyContent:'flex-end', marginBottom:'20px' }}>
           <ShareBar profile={profile} />
         </div>
 
-        {/* [BN2] Bloc bannière + avatar — pattern "cover photo" :
-            - Si banner_url est renseigné, la bannière (16/7, coins arrondis)
-              sert de fond, et l'avatar est superposé en bas-centre avec un
-              léger chevauchement (translateY positive de moitié de sa
-              hauteur), exactement comme sur Facebook/LinkedIn.
-            - Si pas de bannière, l'avatar garde son rendu autonome
-              d'origine (aucun changement visuel pour les profils existants
-              sans bannière). */}
-        {hasBanner ? (
-          <div className="pp-content-col" style={{ position:'relative', marginBottom:'60px' }}>
-            <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
-              <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-            </div>
-            <div style={{ position:'absolute', left:'50%', bottom:0, transform:'translate(-50%, 50%)' }}>
-              <div
-                className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
-                style={{
-                  padding:'3px', borderRadius:'28px',
-                  background: profile.is_verified ? undefined : 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))',
-                  boxShadow:'0 8px 32px rgba(0,0,0,0.45)',
-                }}
-              >
-                {/* [BN2] Bordure blanche opaque supplémentaire autour de
-                    l'anneau — nécessaire ici pour détacher l'avatar de la
-                    photo de couverture, quelle que soit sa couleur/luminosité
-                    (contrairement au rendu sans bannière, posé sur le fond
-                    de page uni). */}
-                <div style={{ padding:'4px', borderRadius:'26px', background:'#ffffff' }}>
-                  <div style={{ padding:'3px', borderRadius:'22px', background:'#0f0a1e' }}>
-                    {profile.avatar_url
-                      ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'96px', height:'96px', borderRadius:'19px', objectFit:'cover', display:'block' }} />
-                      : <div style={{ width:'96px', height:'96px', borderRadius:'19px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'36px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
-                    }
-                  </div>
-                </div>
-              </div>
-              {profile.is_verified && (
-                <div style={{ position:'absolute', bottom:'2px', right:'2px', width:'26px', height:'26px', borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', border:'3px solid rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', color:'white', boxShadow:'0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* Avatar — rendu autonome d'origine, inchangé quand il n'y a pas
-             de bannière. */
-          <div style={{ position:'relative', marginBottom:'16px' }}>
-            {/* [W1] Anneau figé (dégradé conique statique) pour les profils
-                vérifiés, anneau statique discret sinon */}
-            <div
-              className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
-              style={{
-                padding:'3px', borderRadius:'28px',
-                background: profile.is_verified ? undefined : 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))',
-                boxShadow:'0 8px 32px rgba(0,0,0,0.3)',
-              }}
-            >
-              <div style={{ padding:'3px', borderRadius:'25px', background:'#0f0a1e' }}>
-                {profile.avatar_url
-                  ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'106px', height:'106px', borderRadius:'22px', objectFit:'cover', display:'block' }} />
-                  : <div style={{ width:'106px', height:'106px', borderRadius:'22px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
-                }
-              </div>
-            </div>
-            {profile.is_verified && (
-              <div style={{ position:'absolute', bottom:'-8px', right:'-8px', width:'28px', height:'28px', borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', border:'3px solid rgba(255,255,255,0.9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'700', color:'white', boxShadow:'0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
-            )}
+        {/* Avatar autonome — uniquement si pas de bannière (comportement
+            d'origine inchangé). Avec bannière, l'avatar est déjà rendu
+            ci-dessus, chevauchant le bord bas de la bannière. */}
+        {!profile.banner_url && (
+          <div style={{ marginBottom:'16px' }}>
+            {avatarBlock}
           </div>
         )}
 

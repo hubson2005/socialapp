@@ -130,7 +130,7 @@
  *        (poids/tracking), séparateur discret avant les sections pour
  *        structurer la lecture façon page pro.
  *
- * PASSE "CARTES BLANCHES + AVATAR FIGÉ" (cette révision) :
+ * PASSE "CARTES BLANCHES + AVATAR FIGÉ" (révision précédente) :
  *  [W1]  Avatar vérifié : suppression de l'animation de rotation de
  *        l'anneau (pp-spin) — l'anneau reste figé (toujours dégradé
  *        conique statique), comme demandé.
@@ -149,6 +149,21 @@
  *        une couleur de marque indigo, visible sur fond clair ET foncé ;
  *        le bouton "Partager" (fond toujours sombre) garde son anneau
  *        blanc d'origine.
+ *
+ * BANNIÈRE DE COUVERTURE (cette révision) :
+ *  [BN1] Ajout d'une bannière/photo de couverture optionnelle en haut de la
+ *        page publique, affichée uniquement si `profile.banner_url` est
+ *        renseigné. Champ distinct de `bg_image_url` (qui reste le fond
+ *        plein écran derrière toute la page) : la bannière est une image
+ *        rectangulaire à coins arrondis, ratio 16/7, dans la même colonne
+ *        de contenu (.pp-content-col) que le reste des sections, avec la
+ *        même ombre que les autres cartes. N'affecte rien d'existant si le
+ *        champ est vide : comportement inchangé pour tous les profils sans
+ *        bannière.
+ *        → Nécessite d'ajouter la colonne `banner_url` (texte, nullable)
+ *        sur la table des profils, et un champ d'upload correspondant côté
+ *        dashboard admin (fichier non inclus ici, cette page ne fait que
+ *        l'afficher).
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -702,7 +717,7 @@ export default function PublicProfile() {
           outline-offset: 2px;
         }
 
-        /* [F10] Colonne de contenu partagée (liens, boutique, docs, événement) */
+        /* [F10] Colonne de contenu partagée (liens, boutique, docs, événement, bannière) */
         .pp-content-col { width:100%; max-width:384px; }
         .pp-shop-grid   { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
         @media (min-width:768px) {
@@ -1008,6 +1023,16 @@ export default function PublicProfile() {
         paddingRight:  'max(16px, env(safe-area-inset-right, 0px))',
         fontFamily: FONT_STACK,
       }}>
+
+        {/* [BN1] Bannière de couverture — affichée uniquement si
+            profile.banner_url est renseigné. Distincte de bg_image_url
+            (fond plein écran) : image rectangulaire à coins arrondis,
+            même largeur/ombre que les autres cartes de contenu. */}
+        {profile.banner_url && (
+          <div className="pp-content-col" style={{ marginBottom:'20px', borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
+            <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+          </div>
+        )}
 
         {/* [P2] Barre d'actions — partage, alignée à droite façon Linktree/Beacons */}
         <div className="pp-content-col" style={{ display:'flex', justifyContent:'flex-end', marginBottom:'20px' }}>

@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Save, Loader2, Lock, CheckCircle, AlertCircle, Crown,
   CalendarClock, CalendarDays, AtSign, BadgeCheck, BarChart2,
-  Link2, ShoppingBag, Users, Image, X,
+  Link2, ShoppingBag, Users, Image, GalleryHorizontal, X,
 } from "lucide-react";
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
@@ -29,6 +29,12 @@ export default function OverviewPanel({
   // `onBgUpload` reçoit directement le File (comme uploadBgFile côté
   // UserDashboard), pas l'event brut.
   bgImageUrl, uploadingBg, onBgUpload, onBgRemove,
+  // [AJOUT] Bannière de couverture (profile.banner_url) — même pattern que
+  // l'image de fond ci-dessus : `onBannerUpload` reçoit directement le File.
+  // Affichée en haut de la page publique, au-dessus de l'avatar (voir
+  // PublicProfile.jsx). Distincte de l'image de fond (qui couvre tout
+  // l'écran derrière la page).
+  bannerUrl, uploadingBanner, onBannerUpload, onBannerRemove,
 }) {
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];
@@ -173,6 +179,48 @@ export default function OverviewPanel({
                   <button
                     onClick={onBgRemove}
                     aria-label="Retirer l'image de fond"
+                    style={{
+                      width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                      background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)',
+                      borderRadius:'8px', cursor:'pointer',
+                    }}
+                  >
+                    <X size={11} color="#f87171" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* [AJOUT] Bannière de couverture (profile.banner_url) — même
+                pattern que le bloc "Image de fond" ci-dessus. Affichée en
+                haut de la page publique, au-dessus de l'avatar. */}
+            {onBannerUpload && (
+              <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                <label style={{
+                  flex:1, display:'flex', alignItems:'center', gap:'6px',
+                  background:bannerUrl?'rgba(99,102,241,0.16)':'rgba(255,255,255,0.07)',
+                  border:'1px solid '+(bannerUrl?'rgba(99,102,241,0.4)':'rgba(255,255,255,0.1)'),
+                  borderRadius:'8px', padding:'7px 10px', cursor:uploadingBanner?'not-allowed':'pointer',
+                  position:'relative',
+                }}>
+                  {uploadingBanner
+                    ? <Loader2 size={12} color="#a5b4fc" className="animate-spin" />
+                    : <GalleryHorizontal size={12} color={bannerUrl ? '#a5b4fc' : 'rgba(255,255,255,0.45)'} />
+                  }
+                  <span style={{ color:bannerUrl?'#a5b4fc':'rgba(255,255,255,0.45)', fontSize:'10px', fontWeight:600 }}>
+                    {bannerUrl ? 'Changer la bannière' : 'Bannière de couverture'}
+                  </span>
+                  <input
+                    type="file" accept="image/*"
+                    style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
+                    onChange={e => { const file = e.target.files?.[0]; if (file) onBannerUpload(file); e.target.value=''; }}
+                    disabled={uploadingBanner}
+                  />
+                </label>
+                {bannerUrl && onBannerRemove && (
+                  <button
+                    onClick={onBannerRemove}
+                    aria-label="Retirer la bannière"
                     style={{
                       width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
                       background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)',

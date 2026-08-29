@@ -222,6 +222,23 @@ playstore: {
     window.location.href = `tel:${phone}`;
   }
 },
+  // [AJOUT] Téléphone fixe — distinct du mobile ("phone") pour les
+  // entreprises/pros qui veulent afficher une ligne fixe en plus du mobile.
+  // Même logique d'action (tel:) que "phone".
+  fixedphone: {
+    label: 'Téléphone fixe', color: '#0EA5E9', category: 'Contact',
+    placeholder: 'tel:+33100000000',
+    icon: (
+      <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+        <rect width="24" height="24" rx="6" fill="#0EA5E9"/>
+        <path d="M7 4h3l1 3.5-1.7 1.3c.9 2 2.5 3.6 4.5 4.5l1.3-1.7 3.5 1V16c0 .8-.7 1.4-1.5 1.3C11.2 16.4 6.6 11.8 5.7 6.9 5.6 6.1 6.2 5.4 7 5.4V4z" fill="white"/>
+        <rect x="6" y="17.5" width="12" height="2" rx="1" fill="white" opacity="0.6"/>
+      </svg>
+    ),
+    action: (phone) => {
+      window.location.href = `tel:${phone}`;
+    }
+  },
   calendly: {
     label: 'Calendly', color: '#0069FF', category: 'Contact',
     placeholder: 'https://calendly.com/tonpseudo',
@@ -297,6 +314,7 @@ const CATEGORY_ORDER = [
 const REPEATABLE_LIMITS = {
   whatsapp: 2,
   phone: 3,
+  fixedphone: 2,
 };
 
 // [LOGO RÉEL] Affiche platform.logoUrl (vraie image de marque hébergée) si

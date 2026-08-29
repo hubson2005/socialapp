@@ -157,12 +157,6 @@ function PlanModal({ onClose, onSelect }) {
   );
 }
 
-// SUPPRIMÉ — l'ancienne fonction WaveModal locale faisait doublon avec
-// l'import `WaveModal` depuis "@/components/dashboard/WaveModal" en haut
-// de ce fichier (redéclaration = crash). Le composant est maintenant
-// exclusivement celui du fichier séparé, qui reçoit `plan` pour afficher
-// le montant dynamique et gère lui-même le blocage du scroll body.
-
 function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }) {
   const isPro = requiredPlan === 'pro';
   const color = isPro ? '#d9591f' : '#b8860b';
@@ -570,6 +564,19 @@ export default function UserDashboard() {
   // immédiatement en base (update ciblé sur bg_image_url uniquement, sans
   // toucher aux autres champs potentiellement en cours d'édition), puis on
   // synchronise le state local et le cache React Query.
+  //
+  // [FIX RLS-SILENCIEUX] `.update()` seul ne renvoie PAS d'erreur si une
+  // policy RLS empêche la mise à jour de matcher une ligne : Postgres/PostgREST
+  // renvoie simplement 0 ligne affectée, sans lever d'exception. Sans
+  // `.select()`, ce cas passait inaperçu : le toast "Image appliquée !"
+  // s'affichait quand même, updateLocal() faisait apparaître l'image dans
+  // le state React local du dashboard (d'où l'impression que ça marche),
+  // mais RIEN n'était réellement écrit en base. Le profil public
+  // (PublicProfile.jsx), qui lit directement la table `link_profiles`,
+  // n'affichait donc jamais l'image. On ajoute `.select('id, bg_image_url')`
+  // pour récupérer les lignes réellement modifiées et lever une erreur
+  // explicite si aucune ligne n'a été touchée — le toast reflète alors la
+  // réalité de ce qui est en base.
   const uploadBgFile = async (file) => {
     if (!file) return;
     if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
@@ -580,8 +587,18 @@ export default function UserDashboard() {
       const { error: uploadError } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('avatars').getPublicUrl(name);
-      const { error: dbError } = await supabase.from('link_profiles').update({ bg_image_url: data.publicUrl }).eq('id', localProfile.id);
+
+      // [FIX RLS-SILENCIEUX] .select() ajouté pour détecter un update RLS-bloqué
+      const { data: dbRows, error: dbError } = await supabase
+        .from('link_profiles')
+        .update({ bg_image_url: data.publicUrl })
+        .eq('id', localProfile.id)
+        .select('id, bg_image_url');
       if (dbError) throw dbError;
+      if (!dbRows || dbRows.length === 0) {
+        throw new Error("La mise à jour n'a touché aucune ligne en base (vérifie les policies RLS sur link_profiles / que ce profil t'appartient bien)");
+      }
+
       updateLocal({ bg_image_url: data.publicUrl });
       queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
       toast.success('Image de fond appliquée !');
@@ -592,9 +609,9 @@ export default function UserDashboard() {
   // [AJOUT] Bannière de couverture (profile.banner_url) — même logique
   // d'upload que uploadBgFile ci-dessus (même bucket Storage 'avatars',
   // même limite de taille, même persistance immédiate en base — voir
-  // [FIX BG-PERSIST]), juste un préfixe de nom de fichier différent
-  // ('banner-' au lieu de 'bg-') et un champ cible différent
-  // (banner_url au lieu de bg_image_url).
+  // [FIX BG-PERSIST] / [FIX RLS-SILENCIEUX]), juste un préfixe de nom de
+  // fichier différent ('banner-' au lieu de 'bg-') et un champ cible
+  // différent (banner_url au lieu de bg_image_url).
   const uploadBannerFile = async (file) => {
     if (!file) return;
     if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
@@ -605,8 +622,18 @@ export default function UserDashboard() {
       const { error: uploadError } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('avatars').getPublicUrl(name);
-      const { error: dbError } = await supabase.from('link_profiles').update({ banner_url: data.publicUrl }).eq('id', localProfile.id);
+
+      // [FIX RLS-SILENCIEUX] même correctif que uploadBgFile — voir ci-dessus
+      const { data: dbRows, error: dbError } = await supabase
+        .from('link_profiles')
+        .update({ banner_url: data.publicUrl })
+        .eq('id', localProfile.id)
+        .select('id, banner_url');
       if (dbError) throw dbError;
+      if (!dbRows || dbRows.length === 0) {
+        throw new Error("La mise à jour n'a touché aucune ligne en base (vérifie les policies RLS sur link_profiles / que ce profil t'appartient bien)");
+      }
+
       updateLocal({ banner_url: data.publicUrl });
       queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
       toast.success('Bannière appliquée !');

@@ -165,7 +165,7 @@
  *        dashboard admin (fichier non inclus ici, cette page ne fait que
  *        l'afficher).
  *
- * AVATAR SUR LA BANNIÈRE (cette révision) :
+ * AVATAR SUR LA BANNIÈRE (révision précédente) :
  *  [BN2] Quand `profile.banner_url` est renseigné, l'avatar est désormais
  *        positionné en chevauchement, centré horizontalement, sur le bord
  *        bas de la bannière (façon page de couverture réseau social) au
@@ -178,6 +178,19 @@
  *        place à la moitié inférieure de l'avatar qui déborde. Quand il
  *        n'y a pas de bannière, l'avatar garde exactement son ancien
  *        rendu autonome (aucun changement de comportement dans ce cas).
+ *
+ * CORRECTIF BANDE BLANCHE EN BAS DE PAGE (cette révision) :
+ *  [BG1] Le décor plein écran (#__bg_layer__ / #__bg_overlay__) est en
+ *        `position: fixed` avec `height: 100dvh` : il ne couvre donc que
+ *        la fenêtre visible, pas au-delà. Or html/body étaient mis en
+ *        `background: transparent`. Résultat : sur Chrome Android,
+ *        l'effet de rebond (overscroll) quand on tire la page après la
+ *        fin du contenu révèle le vrai fond de html/body — transparent,
+ *        donc blanc par défaut du navigateur — d'où la bande blanche
+ *        visible sous le dernier bouton. Corrigé en donnant à html/body
+ *        une couleur de secours cohérente avec le thème (fond uni sombre,
+ *        ou 1er ton du dégradé du profil s'il n'y a pas d'image de fond)
+ *        au lieu de 'transparent', y compris au nettoyage de l'effet.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -697,7 +710,7 @@ export default function PublicProfile() {
       const s = document.createElement('style');
       s.id = KEYFRAME_MAIN_ID;
       s.textContent = `
-        html,body { min-height:100%;margin:0;padding:0;background:transparent; }
+        html,body { min-height:100%;margin:0;padding:0; }
         a,button { -webkit-tap-highlight-color:transparent; }
         @keyframes pp-pulse       { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes pp-ripple      { 0%{transform:translate(-50%,-50%) scale(0);opacity:1} 100%{transform:translate(-50%,-50%) scale(28);opacity:0} }
@@ -886,7 +899,7 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [profile?.is_event, profile?.event_date]);
 
-  // ── [C5][F9][O7][P4] Background style — injection unifiée, sans flash ───
+  // ── [C5][F9][O7][P4][BG1] Background style — injection unifiée, sans flash ───
   // [F2] 100vh → 100dvh pour éviter le rognage par la barre d'adresse iOS
   // [F9] Dépendances resserrées : ne se recrée plus sur un changement de
   // profil non lié au fond (évite un micro-flash inutile).
@@ -895,11 +908,23 @@ export default function PublicProfile() {
   // [P4] Sans image de fond, on remplace le linear-gradient plat par 3
   // taches radiales très légèrement animées ("mesh gradient") — plus de
   // profondeur façon page pro, tout en gardant la même palette de marque.
+  // [BG1] html/body ne sont plus mis en 'transparent' : le décor
+  // (#__bg_layer__ / #__bg_overlay__) est en position:fixed avec
+  // height:100dvh, donc il ne couvre QUE la fenêtre visible. Sur Chrome
+  // Android, l'effet de rebond (overscroll) en tirant la page après la
+  // fin du contenu révèle le vrai fond html/body — s'il est transparent,
+  // ça affiche du blanc. On lui donne donc une couleur de secours
+  // cohérente avec le thème du profil (au lieu de transparent), aussi
+  // bien à l'application qu'au nettoyage de l'effet.
   useEffect(() => {
     if (!profile) return;
 
-    document.documentElement.style.background = 'transparent';
-    document.body.style.background = 'transparent';
+    // [BG1] Couleur de secours pour html/body (visible uniquement pendant
+    // un rebond/overscroll, quand le calque fixe ne suffit plus) :
+    // fond sombre neutre si image de fond, sinon 1er ton du dégradé du profil.
+    const fallbackBg = profile.bg_image_url ? '#0f0a1e' : parseColors(profile.theme_color).bg1;
+    document.documentElement.style.background = fallbackBg;
+    document.body.style.background = fallbackBg;
 
     // [C12] Sanitisation de bg_image_url avant injection CSS
     let bgCss = '';
@@ -947,8 +972,11 @@ export default function PublicProfile() {
     return () => {
       const s = document.getElementById('__bg_style__');
       if (s) s.remove();
-      document.documentElement.style.background = '';
-      document.body.style.background = '';
+      // [BG1] On garde la couleur de secours au nettoyage au lieu de la
+      // vider (ancien comportement : remise à '', donc transparent) —
+      // évite un flash blanc au démontage / changement de profil.
+      document.documentElement.style.background = fallbackBg;
+      document.body.style.background = fallbackBg;
     };
   }, [profile?.bg_image_url, profile?.theme_color]); // [F9]
 

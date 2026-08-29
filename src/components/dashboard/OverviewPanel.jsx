@@ -97,22 +97,21 @@ export default function OverviewPanel({
           Basic plus compact plutôt qu'une 3e carte grisée. */}
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr':`repeat(${topColumnCount},1fr)`, gap:'16px', alignItems:'start' }}>
 
-        {/* Profile card — la carte profil garde son fond bleu nuit foncé
-            (comme sur la capture), c'est un bloc d'accent volontairement
-            sombre au sein d'un dashboard clair, pas un reste de l'ancien
-            thème. Tout le reste du panneau passe en thème clair. */}
-        <div style={{ background:'linear-gradient(180deg,#0d1330,#0a0f24)', border:'1px solid rgba(99,102,241,0.25)', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 20px rgba(15,18,34,0.12)' }}>
+        {/* Profile card — [THÈME CLAIR] alignée sur le style de la carte
+            profil admin : fond blanc, bordure/texte foncés, plus de bloc
+            sombre isolé au sein d'un dashboard clair. */}
+        <div style={{ background:'#ffffff', border:'1px solid rgba(15,18,34,0.08)', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 20px rgba(15,18,34,0.08)' }}>
           <ProfileHeader profile={profile} onUpdate={onUpdate}/>
 
           {/* Bloc méta compact — username + badge sur une ligne, expiry + statut sur l'autre */}
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'12px 14px', display:'flex', flexDirection:'column', gap:'10px' }}>
+          <div style={{ borderTop:'1px solid rgba(15,18,34,0.08)', padding:'12px 14px', display:'flex', flexDirection:'column', gap:'10px' }}>
 
             {/* Ligne 1 : username + badge vérifié */}
             <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <AtSign size={13} color="rgba(255,255,255,0.35)" style={{ flexShrink:0 }}/>
+              <AtSign size={13} color="rgba(15,18,34,0.35)" style={{ flexShrink:0 }}/>
               {isActivated ? (
                 <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username"
-                  style={{ background:'transparent', border:'none', color:'white', fontSize:'12px', outline:'none', flex:1, minWidth:0 }}/>
+                  style={{ background:'transparent', border:'none', color:'#3b4bf0', fontSize:'12px', fontWeight:600, outline:'none', flex:1, minWidth:0 }}/>
               ) : (
                 <div
                   role="button" tabIndex={0}
@@ -121,8 +120,8 @@ export default function OverviewPanel({
                   title="Cliquez pour activer votre compte et débloquer le username personnalisé"
                   style={{ flex:1, display:'flex', alignItems:'center', gap:'6px', cursor:'pointer', minWidth:0 }}
                 >
-                  <Lock size={11} color="rgba(255,255,255,0.35)" style={{ flexShrink:0 }}/>
-                  <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.35)', fontStyle:'italic', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile?.username||'verrouillé'}</span>
+                  <Lock size={11} color="rgba(15,18,34,0.35)" style={{ flexShrink:0 }}/>
+                  <span style={{ fontSize:'12px', color:'rgba(15,18,34,0.35)', fontStyle:'italic', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile?.username||'verrouillé'}</span>
                 </div>
               )}
 
@@ -130,20 +129,20 @@ export default function OverviewPanel({
                 title={limits.badge ? 'Badge vérifié' : 'Badge vérifié — PRO requis'}
                 aria-label="Basculer le badge vérifié"
                 style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:limits.badge?'pointer':'not-allowed', padding:0, flexShrink:0, opacity:limits.badge?1:0.4 }}>
-                <BadgeCheck size={13} color={profile?.is_verified ? '#22c55e' : 'rgba(255,255,255,0.35)'}/>
-                <div style={{ width:'30px', height:'17px', borderRadius:'100px', background:profile?.is_verified?'#22c55e':'rgba(255,255,255,0.1)', position:'relative', transition:'background 0.3s' }}>
-                  <div style={{ width:'11px', height:'11px', borderRadius:'50%', background:'white', position:'absolute', top:'3px', left:profile?.is_verified?'16px':'3px', transition:'left 0.3s' }}/>
+                <BadgeCheck size={13} color={profile?.is_verified ? '#22c55e' : 'rgba(15,18,34,0.35)'}/>
+                <div style={{ width:'30px', height:'17px', borderRadius:'100px', background:profile?.is_verified?'#22c55e':'rgba(15,18,34,0.12)', position:'relative', transition:'background 0.3s' }}>
+                  <div style={{ width:'11px', height:'11px', borderRadius:'50%', background:'white', position:'absolute', top:'3px', left:profile?.is_verified?'16px':'3px', transition:'left 0.3s', boxShadow:'0 1px 3px rgba(15,18,34,0.25)' }}/>
                 </div>
               </button>
             </div>
 
             {/* Ligne 2 : expiry + statut d'activation */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px', flexWrap:'wrap' }}>
-              <span style={{ display:'flex', alignItems:'center', gap:'5px', color:'rgba(255,255,255,0.4)', fontSize:'11px' }}>
+              <span style={{ display:'flex', alignItems:'center', gap:'5px', color:'rgba(15,18,34,0.45)', fontSize:'11px' }}>
                 <CalendarClock size={12}/>
                 Exp. {profile?.expiry_date ? new Date(profile.expiry_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
               </span>
-              <span style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'11px', color:isActivated?'#4ade80':'#60a5fa' }}>
+              <span style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'11px', color:isActivated?'#16a34a':'#3b82f6' }}>
                 {isActivated ? <CheckCircle size={12}/> : <Lock size={12}/>}
                 {isActivated ? 'Compte activé' : "En attente d'activation"}
               </span>
@@ -158,16 +157,16 @@ export default function OverviewPanel({
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
                 <label style={{
                   flex:1, display:'flex', alignItems:'center', gap:'6px',
-                  background:bannerUrl?'rgba(99,102,241,0.16)':'rgba(255,255,255,0.07)',
-                  border:'1px solid '+(bannerUrl?'rgba(99,102,241,0.4)':'rgba(255,255,255,0.1)'),
+                  background:bannerUrl?'rgba(99,102,241,0.08)':'rgba(15,18,34,0.03)',
+                  border:'1px solid '+(bannerUrl?'rgba(99,102,241,0.35)':'rgba(15,18,34,0.1)'),
                   borderRadius:'8px', padding:'7px 10px', cursor:uploadingBanner?'not-allowed':'pointer',
                   position:'relative',
                 }}>
                   {uploadingBanner
-                    ? <Loader2 size={12} color="#a5b4fc" className="animate-spin" />
-                    : <GalleryHorizontal size={12} color={bannerUrl ? '#a5b4fc' : 'rgba(255,255,255,0.45)'} />
+                    ? <Loader2 size={12} color="#6366f1" className="animate-spin" />
+                    : <GalleryHorizontal size={12} color={bannerUrl ? '#6366f1' : 'rgba(15,18,34,0.4)'} />
                   }
-                  <span style={{ color:bannerUrl?'#a5b4fc':'rgba(255,255,255,0.45)', fontSize:'10px', fontWeight:600 }}>
+                  <span style={{ color:bannerUrl?'#4f46e5':'rgba(15,18,34,0.5)', fontSize:'10px', fontWeight:600 }}>
                     {bannerUrl ? 'Changer la bannière' : 'Bannière de couverture'}
                   </span>
                   <input
@@ -201,16 +200,16 @@ export default function OverviewPanel({
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
                 <label style={{
                   flex:1, display:'flex', alignItems:'center', gap:'6px',
-                  background:bgImageUrl?'rgba(244,114,182,0.16)':'rgba(255,255,255,0.07)',
-                  border:'1px solid '+(bgImageUrl?'rgba(244,114,182,0.4)':'rgba(255,255,255,0.1)'),
+                  background:bgImageUrl?'rgba(219,39,119,0.08)':'rgba(15,18,34,0.03)',
+                  border:'1px solid '+(bgImageUrl?'rgba(219,39,119,0.35)':'rgba(15,18,34,0.1)'),
                   borderRadius:'8px', padding:'7px 10px', cursor:uploadingBg?'not-allowed':'pointer',
                   position:'relative',
                 }}>
                   {uploadingBg
-                    ? <Loader2 size={12} color="#f9a8d4" className="animate-spin" />
-                    : <Image size={12} color={bgImageUrl ? '#f9a8d4' : 'rgba(255,255,255,0.45)'} />
+                    ? <Loader2 size={12} color="#db2777" className="animate-spin" />
+                    : <Image size={12} color={bgImageUrl ? '#db2777' : 'rgba(15,18,34,0.4)'} />
                   }
-                  <span style={{ color:bgImageUrl?'#f9a8d4':'rgba(255,255,255,0.45)', fontSize:'10px', fontWeight:600 }}>
+                  <span style={{ color:bgImageUrl?'#be185d':'rgba(15,18,34,0.5)', fontSize:'10px', fontWeight:600 }}>
                     {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
                   </span>
                   <input
@@ -239,7 +238,7 @@ export default function OverviewPanel({
 
           {/* Save row */}
           {hasChanges && (
-            <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'10px 14px' }}>
+            <div style={{ borderTop:'1px solid rgba(15,18,34,0.08)', padding:'10px 14px' }}>
               <button onClick={onSave} disabled={saving}
                 style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', width:'100%', padding:'8px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>
                 {saving ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} Sauvegarder

@@ -466,23 +466,25 @@ function ShareBar({ profile }) {
     }
   };
 
+  // [SH1] Bouton icône seule, dans un cercle — plus de libellé texte.
+  // Le conteneur (position fixe en bas à droite) est géré par l'appelant.
   return (
     <button
       onClick={handleShare}
       aria-label="Partager ce profil"
       className="pp-share-btn"
       style={{
-        display:'flex', alignItems:'center', gap:'7px',
-        background: copied ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.08)',
-        border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.16)'}`,
-        color: copied ? '#4ade80' : 'rgba(255,255,255,0.85)',
-        borderRadius:'100px', padding:'8px 16px', fontSize:'12px', fontWeight:700,
+        display:'flex', alignItems:'center', justifyContent:'center',
+        width:'48px', height:'48px', borderRadius:'50%',
+        background: copied ? 'rgba(34,197,94,0.9)' : 'rgba(99,102,241,0.92)',
+        border: `1px solid ${copied ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.18)'}`,
+        color: '#fff',
         cursor:'pointer', touchAction:'manipulation', ...CARD_BLUR,
-        transition:'background 0.2s,border-color 0.2s,color 0.2s',
+        boxShadow:'0 6px 20px rgba(0,0,0,0.35)',
+        transition:'background 0.2s,border-color 0.2s,color 0.2s,transform 0.15s',
       }}
     >
-      {copied ? <Check size={14} /> : <Share2 size={14} />}
-      {copied ? 'Lien copié' : 'Partager'}
+      {copied ? <Check size={18} /> : <Share2 size={18} />}
     </button>
   );
 }
@@ -1081,6 +1083,17 @@ export default function PublicProfile() {
       <div id="__bg_layer__" />
       <div id="__bg_overlay__" />
 
+      {/* [SH1][P2] Bouton "Partager" — icône seule dans un cercle, fixe en
+          bas à droite de l'écran (au-dessus du contenu, reste visible au
+          scroll). Zones de sécurité iOS/Android respectées. */}
+      <div style={{
+        position:'fixed', zIndex:50,
+        bottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
+        right:  'max(16px, env(safe-area-inset-right, 0px))',
+      }}>
+        <ShareBar profile={profile} />
+      </div>
+
       {/* [F11] Zones de sécurité iOS/Android sur le padding vertical/horizontal
           du conteneur principal — évite de passer sous l'encoche ou la barre
           de gestes en haut/bas, et sous l'encoche latérale en paysage. */}
@@ -1112,11 +1125,6 @@ export default function PublicProfile() {
             </div>
           </div>
         ) : null}
-
-        {/* [P2] Barre d'actions — partage, alignée à droite façon Linktree/Beacons */}
-        <div className="pp-content-col" style={{ display:'flex', justifyContent:'flex-end', marginBottom:'20px' }}>
-          <ShareBar profile={profile} />
-        </div>
 
         {/* Avatar autonome — uniquement si pas de bannière (comportement
             d'origine inchangé). Avec bannière, l'avatar est déjà rendu

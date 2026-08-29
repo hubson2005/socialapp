@@ -559,16 +559,31 @@ export default function UserDashboard() {
   // `uploadBgFile(file)` (il gère lui-même l'extraction du File depuis
   // l'input), donc plus besoin de l'adaptateur `handleBgUpload(e)` — MobileNav
   // continue d'appeler `uploadBgFile` directement comme avant.
+  //
+  // [FIX BG-PERSIST] Avant, seul updateLocal() était appelé après l'upload :
+  // ça ne touche que le state React local (localProfile + hasChanges=true).
+  // Rien n'était écrit en base tant que l'utilisateur ne cliquait pas sur
+  // "Enregistrer" séparément — alors que le toast de succès laissait croire
+  // que c'était déjà fait. Le profil public (PublicProfile.jsx) lit
+  // directement la base, donc l'image n'apparaissait jamais si "Enregistrer"
+  // n'était pas cliqué juste après. On persiste maintenant ce champ
+  // immédiatement en base (update ciblé sur bg_image_url uniquement, sans
+  // toucher aux autres champs potentiellement en cours d'édition), puis on
+  // synchronise le state local et le cache React Query.
   const uploadBgFile = async (file) => {
     if (!file) return;
     if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
+    if (!localProfile?.id) return;
     setUploadingBg(true);
     try {
       const name = 'bg-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
-      const { error } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
-      if (error) throw error;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
+      if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('avatars').getPublicUrl(name);
+      const { error: dbError } = await supabase.from('link_profiles').update({ bg_image_url: data.publicUrl }).eq('id', localProfile.id);
+      if (dbError) throw dbError;
       updateLocal({ bg_image_url: data.publicUrl });
+      queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
       toast.success('Image de fond appliquée !');
     } catch (err) { toast.error('Erreur : ' + err.message); }
     finally { setUploadingBg(false); }
@@ -576,19 +591,24 @@ export default function UserDashboard() {
 
   // [AJOUT] Bannière de couverture (profile.banner_url) — même logique
   // d'upload que uploadBgFile ci-dessus (même bucket Storage 'avatars',
-  // même limite de taille), juste un préfixe de nom de fichier différent
+  // même limite de taille, même persistance immédiate en base — voir
+  // [FIX BG-PERSIST]), juste un préfixe de nom de fichier différent
   // ('banner-' au lieu de 'bg-') et un champ cible différent
   // (banner_url au lieu de bg_image_url).
   const uploadBannerFile = async (file) => {
     if (!file) return;
     if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
+    if (!localProfile?.id) return;
     setUploadingBanner(true);
     try {
       const name = 'banner-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
-      const { error } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
-      if (error) throw error;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
+      if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('avatars').getPublicUrl(name);
+      const { error: dbError } = await supabase.from('link_profiles').update({ banner_url: data.publicUrl }).eq('id', localProfile.id);
+      if (dbError) throw dbError;
       updateLocal({ banner_url: data.publicUrl });
+      queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
       toast.success('Bannière appliquée !');
     } catch (err) { toast.error('Erreur : ' + err.message); }
     finally { setUploadingBanner(false); }

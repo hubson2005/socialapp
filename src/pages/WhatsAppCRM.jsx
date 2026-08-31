@@ -19,19 +19,24 @@ const MAX_MSG = 1000
 // [T1] [FIX THÈME] `purpleL` était une teinte "claire" pensée uniquement pour
 // se détacher sur fond sombre (#8b84ff) — illisible sur fond blanc. Remplacée
 // par l'indigo signature de l'app (#6366f1), qui reste lisible aussi bien sur
-// les cartes claires de la page que sur les modales sombres (inchangées) —
-// un seul token, valable des deux côtés, plutôt que de dupliquer toute la
-// palette. Le reste de C (vert WhatsApp, orange, rouge, bleu, gris sombres
-// pour l'intérieur des modales) est conservé tel quel.
+// les cartes claires de la page que sur les modales — un seul token, valable
+// des deux côtés, plutôt que de dupliquer toute la palette.
+// [T2] MODALES PASSÉES EN THÈME CLAIR (cette révision) : les modales
+// utilisaient jusqu'ici un fond opaque sombre (#181930) volontairement
+// distinct du reste de la page. Elles sont désormais alignées sur le même
+// thème clair que la page (fond blanc, bordures/texte foncés), pour une
+// interface cohérente de bout en bout. `C.bg`/`C.card`/`C.border`/`C.text`/
+// `C.textSub` ont donc été reconvertis en équivalents clairs ; le reste de
+// la palette (vert WhatsApp, orange, rouge, bleu, violet) est inchangé.
 const C = {
-  bg:'#0c0d1a', card:'#141525', border:'rgba(255,255,255,0.07)', borderAct:'rgba(108,99,255,0.4)',
-  purple:'#6c63ff', purpleL:'#6366f1', purpleDim:'rgba(108,99,255,0.15)',
-  orange:'#ff9500', orangeDim:'rgba(255,149,0,0.15)',
-  green:'#25D366', greenDim:'rgba(37,211,102,0.12)', greenDark:'#166834',
-  blue:'#3b82f6', blueDim:'rgba(59,130,246,0.12)',
-  text:'#ffffff', textSub:'#8b8fa8', textMute:'#4a4e6a',
-  amber:'#f59e0b', amberDim:'rgba(245,158,11,0.12)',
-  red:'#ef4444', redDim:'rgba(239,68,68,0.12)',
+  bg:'#f6f7fb', card:'#ffffff', border:'#e6e8f0', borderAct:'rgba(99,102,241,0.4)',
+  purple:'#6c63ff', purpleL:'#6366f1', purpleDim:'rgba(108,99,255,0.1)',
+  orange:'#ff9500', orangeDim:'rgba(255,149,0,0.12)',
+  green:'#25D366', greenDim:'rgba(37,211,102,0.1)', greenDark:'#166834',
+  blue:'#3b82f6', blueDim:'rgba(59,130,246,0.1)',
+  text:'#161a2e', textSub:'#5b6072', textMute:'#8a90a2',
+  amber:'#f59e0b', amberDim:'rgba(245,158,11,0.1)',
+  red:'#ef4444', redDim:'rgba(239,68,68,0.1)',
 }
 const TAG_C  = { Client:[C.purpleDim,C.purpleL], Prospect:[C.blueDim,C.blue], VIP:[C.orangeDim,C.orange] }
 const STA_C  = { actif:[C.greenDim,C.green], attente:[C.orangeDim,C.orange], inactif:['#eef0f5',C.textMute] }
@@ -65,11 +70,11 @@ const GRAD = {
   orange: 'linear-gradient(135deg, rgba(255,122,0,0.42) 0%, rgba(12,13,26,0.96) 68%)',
 }
 
-// [T1] Styles de PAGE (header, onglets, cartes, tableaux) passés en thème
-// clair ci-dessous. Les styles de MODALE (overlay, modal, mT, lbl, inp, ta,
-// sel, fg, toast, loading, errBox) restent inchangés — fond opaque sombre
-// #181930, cohérent avec les autres modales de l'app (AddPlatformDialog,
-// ProductModal, LeadModal…).
+// [T1][T2] Styles de PAGE (header, onglets, cartes, tableaux) ET de MODALE
+// sont désormais tous en thème clair. Les tuiles KPI à dégradé (GRAD,
+// statCard/statIco/statVal/statLbl) restent inchangées (voir note GRAD
+// ci-dessus) : ce sont des accents volontairement sombres, pas des reliquats
+// de l'ancien thème.
 const S = {
   page:     { background:'transparent', minHeight:'auto', color:'#161a2e', fontFamily:"'Inter','DM Sans',system-ui,sans-serif" },
   header:   { padding:'18px 24px 0', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 },
@@ -101,28 +106,30 @@ const S = {
   td:       { padding:'11px 0', borderBottom:'1px solid #eef0f5', fontSize:13, color:'#3a3f52', verticalAlign:'middle' },
   badge:    (bg,c) => ({ display:'inline-flex', padding:'2px 8px', borderRadius:6, fontSize:10, fontWeight:700, background:bg, color:c, letterSpacing:'0.3px', textTransform:'uppercase' }),
   avat:     (g,sz=30) => ({ width:sz, height:sz, borderRadius:'50%', background:g, display:'flex', alignItems:'center', justifyContent:'center', fontSize:sz>30?14:11, fontWeight:700, color:'#fff', flexShrink:0 }),
-  // [T1] `light` (3e argument, défaut false) : true pour les boutons posés
-  // directement sur la page claire, false (comportement d'origine intact)
-  // pour les boutons à l'intérieur des modales sombres.
+  // [T1] `light` (3e argument, défaut false) : historiquement utilisé pour
+  // distinguer les boutons "sur page claire" des boutons "dans modale
+  // sombre". Les modales étant désormais claires elles aussi (voir [T2]),
+  // ce paramètre garde surtout un rôle de nuance de contraste plutôt que de
+  // bascule de thème complète — les deux variantes restent proches.
   btn:      (v='primary', loading=false, light=false) => ({
     display:'inline-flex', alignItems:'center', gap:6,
     padding: v==='sm'?'5px 12px':'9px 16px',
     borderRadius:9,
     border:`1px solid ${
-      v==='ghost' ? (light?'#e6e8f0':C.border)
+      v==='ghost' ? '#e6e8f0'
       : v==='green' ? C.green
       : v==='danger' ? C.red
-      : (light?'#c7d2fe':C.purple)
+      : '#c7d2fe'
     }`,
     cursor: loading?'wait':'pointer', fontSize:13, fontWeight:600, transition:'all .15s',
-    background: v==='green'? (light?'rgba(22,163,74,0.1)':'rgba(37,211,102,0.15)')
-      : v==='danger'? (light?'rgba(220,38,38,0.08)':C.redDim)
+    background: v==='green'? 'rgba(22,163,74,0.1)'
+      : v==='danger'? 'rgba(220,38,38,0.08)'
       : v==='ghost'? 'transparent'
-      : (light?'rgba(99,102,241,0.1)':C.purpleDim),
-    color: v==='green'? (light?'#16a34a':C.green)
-      : v==='danger'? (light?'#dc2626':C.red)
-      : v==='ghost'? (light?'#6b7280':C.textSub)
-      : (light?'#4f46e5':C.purpleL),
+      : 'rgba(99,102,241,0.1)',
+    color: v==='green'? '#16a34a'
+      : v==='danger'? '#dc2626'
+      : v==='ghost'? '#6b7280'
+      : '#4f46e5',
     opacity: loading?0.7:1,
     boxShadow: v==='green'?'0 4px 14px rgba(37,211,102,0.2)':'none',
     fontFamily:'inherit',
@@ -132,8 +139,10 @@ const S = {
     width:28, height:28, borderRadius:7, border:'1px solid #e6e8f0',
     background:'transparent', cursor:'pointer', color, fontSize:13, transition:'all .15s',
   }),
-  overlay:  { position:'fixed', inset:0, background:'rgba(5,5,15,0.88)', backdropFilter:'blur(6px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 },
-  modal:    { background:'#181930', border:`1px solid ${C.border}`, borderRadius:18, padding:'26px 28px', width:480, maxWidth:'94vw', boxShadow:'0 24px 64px rgba(0,0,0,0.6)', maxHeight:'90vh', overflowY:'auto' },
+  // [T2] Overlay/modale en thème clair : fond blanc, bordure/texte foncés,
+  // ombre plus légère (l'ombre profonde n'a de sens que sur fond sombre).
+  overlay:  { position:'fixed', inset:0, background:'rgba(15,18,34,0.45)', backdropFilter:'blur(6px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 },
+  modal:    { background:'#ffffff', border:`1px solid ${C.border}`, borderRadius:18, padding:'26px 28px', width:480, maxWidth:'94vw', boxShadow:'0 24px 64px rgba(15,18,34,0.25)', maxHeight:'90vh', overflowY:'auto' },
   mT:       { fontSize:16, fontWeight:700, color:C.text, marginBottom:18, display:'flex', alignItems:'center', gap:8 },
   lbl:      { fontSize:11, color:C.textMute, marginBottom:5, display:'block', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px' },
   inp:      { width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, padding:'9px 12px', color:C.text, fontSize:13, outline:'none', boxSizing:'border-box', transition:'border-color .15s' },
@@ -141,7 +150,7 @@ const S = {
   sel:      { width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, padding:'9px 12px', color:C.text, fontSize:13, outline:'none', boxSizing:'border-box' },
   fg:       { marginBottom:14 },
   quickBtn: { display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderRadius:9, border:'1px solid #e6e8f0', background:'transparent', cursor:'pointer', width:'100%', color:'#454b5a', fontSize:13, fontWeight:500, transition:'all .15s', marginBottom:8, fontFamily:'inherit' },
-  toast:    (t) => ({ position:'fixed', bottom:22, right:22, background:t==='success'?'#0d3b26':'#3b1a1a', border:`1px solid ${t==='success'?C.green:'#ef4444'}`, borderRadius:9, padding:'11px 16px', color:t==='success'?C.green:'#ef4444', fontSize:13, fontWeight:600, zIndex:2000, display:'flex', alignItems:'center', gap:8 }),
+  toast:    (t) => ({ position:'fixed', bottom:22, right:22, background:t==='success'?'#0d3b26':'#3b1a1a', border:`1px solid ${t==='success'?C.green:'#ef4444'}`, borderRadius:9, padding:'11px 16px', color:t==='success'?'#4ade80':'#f87171', fontSize:13, fontWeight:600, zIndex:2000, display:'flex', alignItems:'center', gap:8 }),
   loading:  { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh', fontSize:14, color:C.purple },
   errBox:   { background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:9, padding:'12px 16px', color:'#ef4444', fontSize:13, margin:'24px' },
 }
@@ -223,17 +232,15 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
           <div style={S.cardT}>🧪 Tester une notification</div>
           <div style={S.fg}>
             <label style={S.lbl}>Type de notification</label>
-            {/* [T1] Select posé sur carte claire — surchargé en clair (S.sel
-                est dark, réservé aux champs internes des modales). */}
-            <select value={testType} onChange={e=>setTestType(e.target.value)} style={{ ...S.sel, background:'#f6f7fb', border:'1px solid #e6e8f0', color:'#161a2e' }}>
+            <select value={testType} onChange={e=>setTestType(e.target.value)} style={S.sel}>
               {Object.entries(typeLabel).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           {/* Puce d'aperçu à fond sombre volontaire — façon bloc de code,
               contraste garanti quel que soit le thème de la page. */}
-          <div style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:9, padding:'12px', marginBottom:14, maxHeight:160, overflowY:'auto' }}>
-            <div style={{ fontSize:10, color:C.textMute, fontWeight:600, marginBottom:6, textTransform:'uppercase' }}>APERÇU</div>
-            <pre style={{ color:'rgba(255,255,255,0.7)', fontSize:11, lineHeight:1.6, margin:0, whiteSpace:'pre-wrap', fontFamily:'inherit' }}>{preview}</pre>
+          <div style={{ background:'#161a2e', border:'1px solid #2a2f45', borderRadius:9, padding:'12px', marginBottom:14, maxHeight:160, overflowY:'auto' }}>
+            <div style={{ fontSize:10, color:'#8a90a2', fontWeight:600, marginBottom:6, textTransform:'uppercase' }}>APERÇU</div>
+            <pre style={{ color:'rgba(255,255,255,0.75)', fontSize:11, lineHeight:1.6, margin:0, whiteSpace:'pre-wrap', fontFamily:'inherit' }}>{preview}</pre>
           </div>
           <div style={{ fontSize:12, color:C.textMute, marginBottom:14 }}>
             📱 Envoi vers : <span style={{ color:profile?.whatsapp_phone?C.green:'#ef4444', fontWeight:600 }}>
@@ -305,7 +312,7 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
   )
 }
 
-// ── MODALS INLINE — overlay sombre volontaire, inchangées ─────────
+// ── MODALS INLINE — [T2] thème clair, alignées sur le reste de la page ────
 function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
   return (
     <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
@@ -407,7 +414,7 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
           </span>
           Envoyer via WhatsApp
         </div>
-        <div style={{background:'rgba(255,255,255,0.04)',borderRadius:14,padding:'12px 14px',marginBottom:18,display:'flex',alignItems:'center',gap:12,border:`1px solid rgba(255,255,255,0.08)`}}>
+        <div style={{background:'#f6f7fb',borderRadius:14,padding:'12px 14px',marginBottom:18,display:'flex',alignItems:'center',gap:12,border:'1px solid #e6e8f0'}}>
           <div style={S.avat(avatarGrad,44)}>{(msgTarget?.name||'?').slice(0,2).toUpperCase()}</div>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{msgTarget?.name}</div>
@@ -422,7 +429,7 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
             {TEMPLATES.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
           {selectedTpl && (
-            <div style={{marginTop:8,padding:'10px 12px',borderRadius:9,background:'rgba(108,99,255,0.08)',border:`1px solid rgba(108,99,255,0.3)`,fontSize:12,color:C.textSub,lineHeight:1.6}}>
+            <div style={{marginTop:8,padding:'10px 12px',borderRadius:9,background:'rgba(108,99,255,0.08)',border:'1px solid rgba(108,99,255,0.25)',fontSize:12,color:C.textSub,lineHeight:1.6}}>
               <span style={{fontSize:10,color:C.purpleL,fontWeight:700,display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.5px'}}>Aperçu</span>
               {selectedTpl.text}
             </div>
@@ -436,7 +443,7 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
           </div>
         </div>
         {!connected && (
-          <div style={{display:'flex',alignItems:'center',gap:9,padding:'10px 13px',borderRadius:10,background:C.amberDim,border:'1px solid rgba(245,158,11,0.25)',color:C.amber,fontSize:12,marginBottom:16}}>
+          <div style={{display:'flex',alignItems:'center',gap:9,padding:'10px 13px',borderRadius:10,background:C.amberDim,border:'1px solid rgba(245,158,11,0.25)',color:'#b45309',fontSize:12,marginBottom:16}}>
             <span style={{fontSize:15}}>⚠️</span><span>Webhook non configuré — mode simulation actif.</span>
           </div>
         )}
@@ -534,7 +541,7 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
                   onClick={()=>setNewCam(p=>({...p,recipients:checked?p.recipients.filter(x=>x!==c.id):[...p.recipients,c.id]}))}
                   style={{display:'flex',alignItems:'center',gap:9,padding:'9px 12px',borderRadius:8,cursor:'pointer',background:checked?C.purpleDim:C.bg,border:`1px solid ${checked?C.purple:C.border}`,transition:'all .15s'}}
                 >
-                  <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${checked?C.purple:C.textMute}`,background:checked?C.purple:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${checked?C.purple:'#c3c8d6'}`,background:checked?C.purple:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
                     {checked&&<span style={{fontSize:9,color:'#fff',fontWeight:900}}>✓</span>}
                   </div>
                   <div style={S.avat(AVAT[i%5])}>{(c.name||'?').slice(0,2).toUpperCase()}</div>
@@ -542,7 +549,7 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
                     <div style={{fontSize:13,fontWeight:600}}>{c.name}</div>
                     <div style={{fontSize:11,color:C.textMute}}>{c.phone}</div>
                   </div>
-                  <span style={S.badge(...(TAG_C[c.tag]||['#1a1a2e',C.textMute]))}>{c.tag}</span>
+                  <span style={S.badge(...(TAG_C[c.tag]||['#eef0f5',C.textMute]))}>{c.tag}</span>
                 </div>
               )
             })}
@@ -991,7 +998,7 @@ export default function WhatsAppCRM({ profile }) {
               <div style={S.cardT}>🔗 Connexion Make.com</div>
               <div style={S.fg}>
                 <label style={S.lbl}>URL Webhook Make.com</label>
-                <input style={{ ...S.inp, background:'#f6f7fb', border:'1px solid #e6e8f0', color:'#161a2e' }} value={webhookInput} onChange={e=>setWebhookInput(e.target.value)} placeholder="https://hook.eu1.make.com/xxxxx..."/>
+                <input style={S.inp} value={webhookInput} onChange={e=>setWebhookInput(e.target.value)} placeholder="https://hook.eu1.make.com/xxxxx..."/>
                 <div style={{fontSize:11,color:C.textMute,marginTop:4}}>Créez un scénario Make : Webhook → WhatsApp Business Cloud → Send Message</div>
               </div>
               <button style={S.btn('primary',false,true)} onClick={handleSaveWebhook}>💾 Enregistrer</button>

@@ -243,9 +243,6 @@ const INTEGRATIONS = [
   { id: 'hubspot', name: 'HubSpot', desc: 'CRM tout-en-un pour gérer vos leads', category: 'CRM', color: '#FF7A59', bg: 'rgba(255,122,89,0.10)', LogoComponent: HubSpotLogo, docsUrl: 'https://hubspot.com', hasWebhook: true, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', type: 'password' }, { key: 'portal_id', label: 'Portal ID', placeholder: '12345678', type: 'text' }] },
   { id: 'salesforce', name: 'Salesforce', desc: 'CRM enterprise leader du marché', category: 'CRM', color: '#00A1E0', bg: 'rgba(0,161,224,0.10)', LogoComponent: SalesforceLogo, docsUrl: 'https://salesforce.com', hasWebhook: true, fields: [{ key: 'instance_url', label: 'Instance URL', placeholder: 'https://yourinstance.salesforce.com', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
   { id: 'pipedrive', name: 'Pipedrive', desc: 'Pipeline de ventes visuel et intuitif', category: 'CRM', color: '#00C85A', bg: 'rgba(0,200,90,0.10)', LogoComponent: PipedriveLogo, docsUrl: 'https://pipedrive.com', hasWebhook: true, fields: [{ key: 'api_token', label: 'API Token', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'password' }] },
-  // Notion : le logo est un carré blanc avec le "N" noir — repli spécifique
-  // color/bg (gris neutre) pour la vignette, au lieu du blanc translucide
-  // pensé pour l'ancien fond sombre (devenait invisible sur carte blanche).
   { id: 'notion', name: 'Notion', desc: 'Synchronisez vos leads dans votre workspace', category: 'CRM', color: '#37352F', bg: 'rgba(55,53,47,0.06)', LogoComponent: NotionLogo, docsUrl: 'https://notion.so', hasWebhook: true, fields: [{ key: 'database_id', label: 'Database ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', type: 'text' }] },
   { id: 'airtable', name: 'Airtable', desc: 'Exportez automatiquement vos contacts', category: 'CRM', color: '#18BFFF', bg: 'rgba(24,191,255,0.10)', LogoComponent: AirtableLogo, docsUrl: 'https://airtable.com', hasWebhook: true, fields: [{ key: 'base_id', label: 'Base ID', placeholder: 'appXXXXXXXXXXXXXX', type: 'text' }, { key: 'table_name', label: 'Table', placeholder: 'Leads', type: 'text' }] },
   { id: 'mailchimp', name: 'Mailchimp', desc: 'Ajoutez vos contacts à vos listes email', category: 'Email', color: '#E4A700', bg: 'rgba(228,167,0,0.10)', LogoComponent: MailchimpLogo, docsUrl: 'https://mailchimp.com', hasWebhook: false, fields: [{ key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1', type: 'password' }, { key: 'list_id', label: 'Audience ID', placeholder: 'xxxxxxxxxx', type: 'text' }] },
@@ -471,7 +468,6 @@ function IntegrationCard({ integration, config, onSave, onDisconnect, isTablet }
 // ─── Panel principal ───────────────────────────────────────────────────────────
 const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
   const { isMobile, isTablet } = useBreakpoint();
-  const isDesktop = !isMobile && !isTablet;
   const [configs, setConfigs] = useState({});
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('Tous');
@@ -538,17 +534,13 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
     .filter(c => c.id !== 'Tous')
     .filter(c => filtered.some(i => i.category === c.id));
 
-  // [D2] Grille responsive auto-adaptative (remplace le binaire isTablet).
-  // `auto-fill` + `minmax(260px, 1fr)` calcule le nombre de colonnes à
-  // partir de la largeur RÉELLE du conteneur, donc ça s'ajuste tout seul,
-  // sans dépendre d'un seuil isMobile/isTablet arbitraire :
-  //  - petit Android (~360px)      -> 1 colonne
-  //  - iPhone standard (~390px)    -> 1 colonne
-  //  - iPhone Max en paysage       -> 2 colonnes
-  //  - iPad mini / tablette portrait -> 2 colonnes
-  //  - iPad Pro / desktop          -> 2 colonnes (le panel plafonne à 960px)
-  // Ça garantit un rendu correct sur Android, iOS et tablette, y compris
-  // en rotation d'écran, sans avoir à multiplier les cas isMobile/isTablet.
+  // Grille responsive auto-adaptative : `auto-fill` + `minmax(260px, 1fr)`
+  // calcule le nombre de colonnes à partir de la largeur RÉELLE du
+  // conteneur parent. Comme le conteneur parent occupe maintenant 100% de
+  // l'espace disponible (voir wrapper ci-dessous, plus de maxWidth fixe),
+  // la grille ajoute automatiquement des colonnes supplémentaires sur les
+  // grands écrans (desktop large, tablette en paysage) au lieu de laisser
+  // un vide à droite, tout en restant sur 1 colonne sur mobile étroit.
   const cardGridStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
@@ -559,8 +551,10 @@ const IntegrationsPanel = React.memo(function IntegrationsPanel({ profileId }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: '20px',
-      maxWidth: isTablet ? '960px' : '720px', width: '100%', minWidth: 0, boxSizing: 'border-box',
-      margin: isDesktop ? '0 auto' : undefined,
+      width: '100%', minWidth: 0, boxSizing: 'border-box',
+      // Pas de maxWidth / margin auto ici : le panel occupe tout l'espace
+      // que son conteneur parent lui laisse, sur desktop comme tablette.
+      // Sur mobile, le conteneur parent est déjà étroit donc rien ne change.
     }}>
 
       {/* Header */}

@@ -1,6 +1,9 @@
 /**
  * PublicProfile.jsx — Page profil publique SocialApp
  *
+ * (Historique des corrections précédentes conservé ci-dessous ; voir en bas
+ * de ce bloc de commentaires pour la dernière passe appliquée.)
+ *
  * CORRECTIONS APPLIQUÉES (revisions précédentes) :
  *  [C1]  useEffect QR scan isolé, dépendance réduite à profile?.id uniquement
  *  [C2]  Promise.all([fetchCountry()]) → await fetchCountry() direct
@@ -21,204 +24,43 @@
  * CORRECTIONS ADAPTATION MOBILE/TABLETTE/iOS/ANDROID (révision précédente) :
  *  [F1]  Verrouillage du scroll dupliqué entre ImageLightbox et ProductDetailModal
  *        → mutualisé dans un hook unique useBodyScrollLock() avec compteur global
- *        et pattern iOS-safe (position:fixed + restauration du scrollY). Supprime
- *        le doublon de code ET évite un scroll-bleed si les deux modales venaient
- *        un jour à coexister.
- *  [F2]  100vh / 92vh / 90vh → 100dvh / 92dvh / 90dvh (fond de page + les deux
- *        modales) pour éviter que la barre d'adresse Safari iOS ne rogne le
- *        contenu à l'ouverture/fermeture.
- *  [F3]  -webkit-backdrop-filter ajouté à côté de chaque backdropFilter inline
- *        (Safari < 18 ignore la propriété non préfixée).
- *  [F4]  Boutons de fermeture des modales agrandis à 44×44px (cible tactile
- *        minimale) ; touchAction:'manipulation' sur les éléments interactifs
- *        pour supprimer le délai de tap ~300ms et le double-tap-zoom sur
- *        Android/iOS ; -webkit-tap-highlight-color:transparent ajouté
- *        globalement pour retirer le flash gris au tap sur Chrome Android.
- *  [F5]  ProductDetailModal et ImageLightbox rendues via createPortal(document.body)
- *        — protection préventive contre un bug de stacking context si cette page
- *        est un jour englobée dans un layout avec ancêtre transformé/filtré
- *        (même classe de bug déjà rencontrée et corrigée sur AutomationsPanel).
- *  [F6]  Nettoyage garanti des listeners globaux du swipe carrousel (touchmove/
- *        touchend sur document) même si le composant est démonté en plein geste
- *        (évite fuite mémoire / callback sur composant démonté lors d'une
- *        navigation rapide).
- *  [F7]  RippleButton : les setTimeout de nettoyage des ripples sont suivis et
- *        annulés au démontage (évite un setState après démontage si l'utilisateur
- *        navigue juste après un tap).
- *  [F8]  trackView() sorti du Promise.all bloquant : produits/documents s'affichent
- *        dès que leur propre requête répond, sans attendre la requête analytics.
- *  [F9]  Dépendances de l'effet fond d'écran resserrées à
- *        [profile?.bg_image_url, profile?.theme_color] (au lieu de l'objet
- *        profile entier) — évite de recréer inutilement le <style> de fond (et
- *        donc un micro-flash) à chaque mise à jour non liée au fond.
- *  [F10] Adaptation tablette : les sections (liens, boutique, documents,
- *        événement) partagent une classe .pp-content-col dont la largeur max
- *        passe de 384px à 480px à partir de 768px ; la grille boutique passe de
- *        2 à 3 colonnes à partir de 768px via .pp-shop-grid.
- *  [F11] Zones de sécurité iOS/Android : env(safe-area-inset-*) ajouté sur le
- *        padding du conteneur principal et sur le padding bas de la feuille
- *        produit, pour ne pas passer sous l'encoche / la barre de gestes.
- *  [F12] touchAction:'pan-y' ajouté au conteneur du carrousel d'événement pour
- *        laisser le scroll vertical natif tout en gérant le swipe horizontal
- *        manuellement.
- *  [F13] @media (prefers-reduced-motion: reduce) ajouté : coupe les animations
- *        (shimmer, pulse, ripple, fade/slide/zoom) pour les utilisateurs ayant
- *        activé la réduction des animations dans les réglages système iOS/Android.
- *  [F14] Vérification doublons : aucune règle CSS dupliquée résiduelle après
- *        cette relecture ; le seul doublon réel trouvé était la logique de
- *        verrouillage de scroll (voir [F1]), désormais mutualisée.
+ *        et pattern iOS-safe (position:fixed + restauration du scrollY).
+ *  [F2]  100vh / 92vh / 90vh → 100dvh / 92dvh / 90dvh.
+ *  [F3]  -webkit-backdrop-filter ajouté à côté de chaque backdropFilter inline.
+ *  [F4]  Boutons de fermeture des modales agrandis à 44×44px ; touchAction:'manipulation'.
+ *  [F5]  ProductDetailModal et ImageLightbox rendues via createPortal(document.body).
+ *  [F6]  Nettoyage garanti des listeners globaux du swipe carrousel.
+ *  [F7]  RippleButton : setTimeout de nettoyage des ripples suivis et annulés au démontage.
+ *  [F8]  trackView() sorti du Promise.all bloquant.
+ *  [F9]  Dépendances de l'effet fond d'écran resserrées à [bg_image_url, theme_color].
+ *  [F10] Adaptation tablette : .pp-content-col / .pp-shop-grid.
+ *  [F11] Zones de sécurité iOS/Android : env(safe-area-inset-*).
+ *  [F12] touchAction:'pan-y' sur le carrousel d'événement.
+ *  [F13] @media (prefers-reduced-motion: reduce).
+ *  [F14] Vérification doublons CSS.
  *
  * CORRECTION QR / LIEN PUBLIC (révision précédente) :
- *  [Q1]  Lookup du profil passé de `.eq('username', username)` (comparaison
- *        exacte, sensible à la casse) à `.ilike('username', username)`
- *        (comparaison insensible à la casse).
+ *  [Q1]  `.eq('username', username)` → `.ilike('username', username)`.
  *
- * AMÉLIORATION LISIBILITÉ / OPACITÉ DES CARTES (révision précédente) :
- *  [O1]  Boutons de liens (.pp-link-btn) : fond rgba(255,255,255,0.12→0.20),
- *        bordure 0.15→0.24. Le fond translucide devenait quasi invisible
- *        sur les images d'arrière-plan claires ou très texturées.
- *  [O2]  Cartes boutique (PublicProductCard) : fond 0.08→0.16, bordure
- *        0.12→0.20 pour détacher nettement la carte du fond derrière elle.
- *  [O3]  Cartes documents : fond 0.08→0.16, bordure 0.12→0.20 (même logique
- *        que [O2], garde la bordure rouge distinctive intacte).
- *  [O4]  Bloc countdown (jours/heures/min/sec) : fond 0.28→0.42, bordure
- *        0.25→0.35 — les chiffres orange perdaient en contraste sur fond
- *        clair.
- *  [O5]  Bloc description événement : fond 0.32→0.45, bordure 0.35→0.42.
- *  [O6]  Bouton support WhatsApp : fond 0.15→0.22, bordure 0.3→0.38.
- *  [O7]  Superposition #__bg_overlay__ légèrement assombrie
- *        (0.52/0.36 → 0.58/0.42) pour homogénéiser le contraste sous
- *        toutes les cartes, y compris celles restées sur fond dégradé (pas
- *        d'image).
- *  [O8]  Halo au survol desktop ajouté sur les cartes boutique et les
- *        boutons de liens (@media (hover:hover)) pour un retour visuel
- *        cohérent avec l'opacité renforcée.
- *  [O9]  RÉVISION 2 — le passage [O1]-[O8] (rgba blanc translucide,
- *        0.16→0.20) restait visuellement quasi identique sur les images
- *        de fond photo. Remplacé par une surface unie CARD_BG
- *        (rgba(15,10,30,0.94), proche du fond de page #0f0a1e) sur les
- *        boutons de liens, cartes boutique, cartes documents, bloc
- *        countdown et bloc description événement : ces cartes masquent
- *        maintenant réellement l'image derrière au lieu de la laisser
- *        transparaître. Libellé du countdown repassé en blanc translucide
- *        (était noir sur noir, invisible, avec l'ancien fond clair).
+ * PASSE "CARTES GRIS CLAIR UNI + BORDURE COLORÉE FIDÈLE AU RAYON" (révision précédente) :
+ *  [G1]-[G6] CARD_BG gris clair uni, CARD_BORDER 'none', bordure colorée via
+ *  boxShadow inset — s'applique désormais uniquement à la Boutique.
  *
- * PASSE "PRO" INSPIRÉE LINKTREE / BEACONS / BIO.SITE (révision précédente) :
- *  [P1]  Police : import Google Fonts "Manrope" (une seule famille, plusieurs
- *        graisses) appliquée à toute la page — remplace la police système
- *        par défaut, qui lisait "app générique". Feature "ss01"/tabular
- *        activée sur le countdown pour des chiffres alignés.
- *  [P2]  Barre d'actions flottante (haut de page) : bouton "Partager" natif
- *        (Web Share API avec repli "copier le lien") + retour visuel
- *        (icône qui se change en check + toast) — le geste de partage est
- *        le cœur de l'UX Linktree/Beacons et manquait totalement ici.
- *  [P3]  Avatar : anneau en dégradé (conic-gradient) pour les profils
- *        vérifiés, cohérent avec le badge existant.
- *  [P4]  Fond non-image : dégradé "mesh" à 3 taches radiales animées très
- *        lentement au lieu d'un simple linear-gradient plat — donne de la
- *        profondeur sans nuire à la lisibilité (respecte toujours
- *        prefers-reduced-motion).
- *  [P5]  Boutons de liens : légère élévation au tap (translateY), bordure
- *        supérieure "highlight" 1px façon carte premium, largeur de bordure
- *        gauche harmonisée. Focus clavier visible (outline) pour
- *        l'accessibilité — absent auparavant.
- *  [P6]  Pied de page : remplace la mention statique "Tous droits réservés"
- *        par un badge de marque discret, cliquable, façon "Fait avec
- *        SocialApp" (mécanique de croissance virale standard des outils
- *        link-in-bio), + lien support conservé au-dessus.
- *  [P7]  En-tête : bio et nom resserrés, meilleure hiérarchie typographique
- *        (poids/tracking), séparateur discret avant les sections pour
- *        structurer la lecture façon page pro.
- *
- * PASSE "CARTES BLANCHES + AVATAR FIGÉ" (révision précédente) :
- *  [W1]  Avatar vérifié : suppression de l'animation de rotation de
- *        l'anneau (pp-spin) — l'anneau reste figé (toujours dégradé
- *        conique statique), comme demandé.
- *  [W2]  CARD_BG / CARD_BG_HOVER / CARD_BORDER passés d'une surface sombre
- *        translucide à une surface blanche quasi opaque. Toutes les
- *        cartes qui s'appuient dessus (boutons de liens, cartes boutique,
- *        cartes documents, bloc countdown, bloc description événement)
- *        sont donc désormais blanches.
- *  [W3]  Chaque texte/icône affiché *à l'intérieur* d'une carte CARD_BG a
- *        son contraste inversé (blanc → noir/gris foncé) pour rester
- *        lisible sur fond blanc, sans toucher aux éléments hors cartes
- *        (avatar, titres de section, fond de page, boutons colorés,
- *        modales) qui restent inchangés.
- *  [W4]  Anneau de focus clavier (:focus-visible) des cartes/boutons de
- *        liens passé d'un blanc translucide (invisible sur fond blanc) à
- *        une couleur de marque indigo, visible sur fond clair ET foncé ;
- *        le bouton "Partager" (fond toujours sombre) garde son anneau
- *        blanc d'origine.
- *
- * BANNIÈRE DE COUVERTURE (révision précédente) :
- *  [BN1] Ajout d'une bannière/photo de couverture optionnelle en haut de la
- *        page publique, affichée uniquement si `profile.banner_url` est
- *        renseigné. Champ distinct de `bg_image_url` (qui reste le fond
- *        plein écran derrière toute la page) : la bannière est une image
- *        rectangulaire à coins arrondis, ratio 16/7, dans la même colonne
- *        de contenu (.pp-content-col) que le reste des sections, avec la
- *        même ombre que les autres cartes. N'affecte rien d'existant si le
- *        champ est vide : comportement inchangé pour tous les profils sans
- *        bannière.
- *        → Nécessite d'ajouter la colonne `banner_url` (texte, nullable)
- *        sur la table des profils, et un champ d'upload correspondant côté
- *        dashboard admin (fichier non inclus ici, cette page ne fait que
- *        l'afficher).
- *
- * AVATAR SUR LA BANNIÈRE (révision précédente) :
- *  [BN2] Quand `profile.banner_url` est renseigné, l'avatar est désormais
- *        positionné en chevauchement, centré horizontalement, sur le bord
- *        bas de la bannière (façon page de couverture réseau social) au
- *        lieu d'être affiché séparément en dessous. La bannière et
- *        l'avatar partagent un même conteneur positionné en `relative`,
- *        l'avatar étant positionné en `absolute` et à moitié au-dessus /
- *        à moitié en dessous du bord bas de la bannière via
- *        `transform: translate(-50%, 50%)`. Un espace supplémentaire
- *        (`marginBottom`) est réservé sous la bannière pour laisser la
- *        place à la moitié inférieure de l'avatar qui déborde. Quand il
- *        n'y a pas de bannière, l'avatar garde exactement son ancien
- *        rendu autonome (aucun changement de comportement dans ce cas).
- *
- * CORRECTIF BANDE BLANCHE EN BAS DE PAGE (révision précédente) :
- *  [BG1] Le décor plein écran (#__bg_layer__ / #__bg_overlay__) est en
- *        `position: fixed` avec `height: 100dvh` : il ne couvre donc que
- *        la fenêtre visible, pas au-delà. Or html/body étaient mis en
- *        `background: transparent`. Résultat : sur Chrome Android,
- *        l'effet de rebond (overscroll) quand on tire la page après la
- *        fin du contenu révèle le vrai fond de html/body — transparent,
- *        donc blanc par défaut du navigateur — d'où la bande blanche
- *        visible sous le dernier bouton. Corrigé en donnant à html/body
- *        une couleur de secours cohérente avec le thème (fond uni sombre,
- *        ou 1er ton du dégradé du profil s'il n'y a pas d'image de fond)
- *        au lieu de 'transparent', y compris au nettoyage de l'effet.
- *
- * PASSE "CARTES GRIS CLAIR UNI + BORDURE COLORÉE FIDÈLE AU RAYON" (cette révision) :
- *  [G1]  CARD_BG / CARD_BG_HOVER passés d'un blanc translucide (rgba(255,255,255,0.94))
- *        à une surface grise claire unie (#eef0f3 / #e2e5ea), pour matcher le
- *        modèle de référence (cartes gris très clair, pas de flou/transparence).
- *  [G2]  CARD_BORDER retirée (mise à 'none') : le modèle de référence n'a pas de
- *        liseré de bordure visible autour des cartes, seulement l'ombre douce.
- *  [G3]  CARD_TEXT / CARD_TEXT_MUTED / CARD_TEXT_FAINT recalées sur une teinte
- *        neutre fixe (#1a1a2e) au lieu de dépendre de l'ancienne base sombre —
- *        cohérent avec le nouveau fond de carte gris clair.
- *  [G4]  RippleButton : la bordure colorée à gauche (spécifique à chaque
- *        plateforme) ne passe plus par `borderLeft` (qui se fait « couper »
- *        par le `border-radius` et devient un trait à peine visible sur des
- *        coins très arrondis) mais par un `boxShadow: inset 4px 0 0 0 <couleur>`
- *        combiné à l'ombre portée de la carte — la bordure colorée épouse
- *        maintenant fidèlement la courbe du coin arrondi, exactement comme
- *        sur le modèle de référence.
- *  [G5]  Boutons de liens : borderRadius 16px → 22px (coins nettement plus
- *        arrondis, façon pilule, comme le modèle), icône 48px → 40px (rayon
- *        12px → 12px arrondi cohérent), padding et gap resserrés, poids du
- *        texte 700 → 600 et taille 14px → 14.5px pour coller au rendu de
- *        référence. Le `borderTop` "highlight" devient inutile (supprimé)
- *        puisque la carte est maintenant unie et sans transparence.
- *  [G6]  Toutes les autres cartes qui s'appuient sur les constantes CARD_*
- *        (boutique, documents, countdown, description événement) héritent
- *        automatiquement du même fond gris clair uni et des mêmes couleurs
- *        de texte, pour une cohérence visuelle complète sur toute la page —
- *        aucune valeur codée en dur séparément à maintenir.
+ * PASSE "CARTES VAGUES" (cette révision) :
+ *  [V1]  Nouvelle classe .pp-link-wave-card : fond blanc uni + double liseré
+ *        ondulé bleu (haut/bas) façon "ruban à vagues", inspirée du modèle
+ *        de référence fourni par l'utilisateur. Implémentée en CSS pur
+ *        (radial-gradient répété), sans image à charger.
+ *  [V2]  Appliquée aux boutons de liens (réseaux sociaux), aux cartes
+ *        documents, au bloc countdown et au bloc description événement.
+ *  [V3]  Les cartes Boutique (PublicProductCard) restent INCHANGÉES —
+ *        elles conservent le fond gris clair uni CARD_BG d'origine, à la
+ *        demande explicite (pas de vague sur la boutique).
+ *  [V4]  RippleButton (utilisé pour les liens) : fond et ombre repassés à
+ *        'transparent'/'none' car c'est désormais .pp-link-wave-card (le
+ *        conteneur parent) qui porte le fond blanc et la bordure ondulée.
+ *  [V5]  Couleur de la vague centralisée dans la constante WAVE_COLOR pour
+ *        rester facilement modifiable.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -233,33 +75,36 @@ import { triggerQrScan }          from '../lib/triggers/qr';
 import { triggerMarketplaceBuy }  from '../lib/triggers/marketplace';
 import { triggerMarketplaceClick } from '../lib/triggers/marketplaceClick'; // [A6]
 import SEO from "../components/SEO";
-import PublicBookingWidget from '@/pages//PublicBookingWidget'; 
+import PublicBookingWidget from '@/pages//PublicBookingWidget';
 
 // ─── Constantes ───────────────────────────────────────────────
 // [C11] Numéro support centralisé — modifier ici uniquement
 const SUPPORT_WHATSAPP = '2250576031212';
 
-// [G1][G2] Surface des cartes — gris clair uni (au lieu du blanc translucide
-// précédent), sans bordure visible : boutons de liens, cartes boutique,
-// cartes documents, bloc countdown et bloc description événement
-// partagent tous cette même surface, fidèle au modèle de référence.
+// [G1][G2][V3] Surface des cartes BOUTIQUE UNIQUEMENT — gris clair uni,
+// sans bordure visible. Ne s'applique plus aux liens/documents/countdown/
+// description événement, qui utilisent désormais .pp-link-wave-card.
 const CARD_BG        = '#eef0f3';
 const CARD_BG_HOVER  = '#e2e5ea';
 const CARD_BORDER    = 'none';
-// [PERF1] backdropFilter retiré : appliqué en boucle sur chaque carte (liens,
-// boutique, documents), il forçait un recalcul GPU par carte visible à
-// CHAQUE frame de scroll (contrairement à un flou statique). Sur mobile,
-// avec 6-15+ cartes visibles simultanément, ça saturait le compositeur et
-// rendait le scroll saccadé. La carte est désormais unie (non translucide),
-// un flou derrière elle n'apporterait de toute façon plus rien à l'œil.
+// [PERF1] backdropFilter retiré : appliqué en boucle sur chaque carte, il
+// forçait un recalcul GPU par carte visible à chaque frame de scroll.
 const CARD_BLUR      = {};
 const CARD_SHADOW    = '0 3px 10px rgba(0,0,0,0.2)';
 
 // [G3] Couleurs de texte dédiées au contenu affiché sur les cartes grises
-// claires (CARD_BG), pour garder un bon contraste.
+// claires (Boutique uniquement).
 const CARD_TEXT        = '#1a1a2e';
 const CARD_TEXT_MUTED  = 'rgba(26,26,46,0.55)';
 const CARD_TEXT_FAINT  = 'rgba(26,26,46,0.42)';
+
+// [V1][V5] Couleur des liserés ondulés des cartes "vague" (liens, documents,
+// countdown, description événement). Fond blanc + texte sombre associés.
+const WAVE_COLOR       = '#1d6fe0';
+const WAVE_CARD_BG     = '#ffffff';
+const WAVE_CARD_BG_HOVER = '#f5f7fb';
+const WAVE_TEXT        = '#1a1a2e';
+const WAVE_TEXT_MUTED  = 'rgba(26,26,46,0.55)';
 
 // [P1] Police de marque unique pour toute la page
 const FONT_STACK = "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -269,15 +114,6 @@ const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
 const FONT_LINK_ID          = 'pp-font-manrope';
 
 // ─── [F1] Verrouillage du scroll body — mutualisé ──────────────
-// Remplace les deux implémentations dupliquées (ImageLightbox et
-// ProductDetailModal faisaient chacune leur propre
-// document.body.style.overflow='hidden'). Un compteur global permet
-// aux deux modales de coexister sans se marcher dessus (si l'une se
-// ferme pendant que l'autre est encore ouverte, le scroll ne se
-// débloque que lorsque le compteur retombe à zéro). Le pattern
-// position:fixed + restauration du scrollY est nécessaire car iOS
-// Safari ignore parfois overflow:hidden seul sur le body, notamment
-// quand un clavier virtuel est impliqué ailleurs sur la page.
 let __ppScrollLockCount = 0;
 let __ppScrollY = 0;
 
@@ -348,10 +184,8 @@ async function fetchCountry() {
   }
 }
 
-// [C3] console.log de debug supprimés — erreurs Supabase uniquement en dev
 async function trackView(profileId) {
   try {
-    // [C2] await direct, pas de Promise.all inutile
     const geo = await fetchCountry();
     const payload = {
       profile_id:   profileId,
@@ -406,7 +240,6 @@ const formatPrice = (p) => p ? Number(p).toLocaleString('fr-FR') + ' F' : '';
 
 // ─── Sous-composants ──────────────────────────────────────────
 
-// [C6] Keyframes skeleton injectées une seule fois
 function ProfileSkeleton() {
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_SKELETON_ID)) {
@@ -420,7 +253,6 @@ function ProfileSkeleton() {
           animation: pp-shimmer 1.4s infinite linear;
           border-radius: 12px;
         }
-        /* [F13] Réduction des animations si demandé au niveau système */
         @media (prefers-reduced-motion: reduce) {
           .pp-sk { animation: none; }
         }
@@ -461,10 +293,6 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
   </svg>
 );
 
-// [P2] Barre d'actions flottante (haut de page) : bouton "Partager" natif
-// (Web Share API avec repli "copier le lien") + retour visuel
-// (icône qui se change en check + toast) — le geste de partage est
-// le cœur de l'UX Linktree/Beacons et manquait totalement ici.
 function ShareBar({ profile }) {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
@@ -492,8 +320,6 @@ function ShareBar({ profile }) {
     }
   };
 
-  // [SH1] Bouton icône seule, dans un cercle — plus de libellé texte.
-  // Le conteneur (position fixe en bas à droite) est géré par l'appelant.
   return (
     <button
       onClick={handleShare}
@@ -515,8 +341,6 @@ function ShareBar({ profile }) {
   );
 }
 
-// [F1] Body-scroll lock mutualisé · [F2] 90vh → 90dvh · [F3] webkit prefix
-// [F4] Bouton de fermeture agrandi à 44×44 + touchAction manipulation
 function ImageLightbox({ src, onClose }) {
   useBodyScrollLock();
 
@@ -540,12 +364,10 @@ function ImageLightbox({ src, onClose }) {
   );
 }
 
-// [F7] Timeouts de ripple suivis et annulés au démontage
-// [G4] La bordure colorée par plateforme ne passe plus par `borderLeft`
-// (qui se fait couper par le border-radius et devient à peine visible sur
-// des coins très arrondis) mais par un `boxShadow: inset ...` combiné à
-// l'ombre portée passée par l'appelant via `style.boxShadow` — la bordure
-// colorée épouse ainsi fidèlement la courbe du coin arrondi.
+// [V4] RippleButton conserve la bordure colorée par plateforme (boxShadow
+// inset) mais celle-ci n'est visible que si l'appelant lui passe un
+// boxShadow externe non vide — pour les liens, le fond/bordure viennent
+// désormais du conteneur .pp-link-wave-card parent.
 function RippleButton({ onClick, style, children, platformColor }) {
   const [ripples, setRipples] = useState([]);
   const timeouts = useRef([]);
@@ -562,8 +384,6 @@ function RippleButton({ onClick, style, children, platformColor }) {
     timeouts.current.push(t);
   };
 
-  // [G4] Couleur d'accent (bordure colorée) — repli neutre si aucune
-  // couleur de plateforme n'est fournie.
   const accentColor = platformColor || 'rgba(255,255,255,0.25)';
   const { boxShadow: outerShadow, ...restStyle } = style || {};
 
@@ -577,9 +397,6 @@ function RippleButton({ onClick, style, children, platformColor }) {
         position:'relative',
         overflow:'hidden',
         touchAction:'manipulation',
-        // [G4] Bordure colorée (4px, à gauche) + ombre portée de la carte,
-        // combinées dans un seul box-shadow pour que la bordure suive
-        // parfaitement le border-radius de la carte.
         boxShadow: [`inset 4px 0 0 0 ${accentColor}`, outerShadow].filter(Boolean).join(', '),
       }}
     >
@@ -591,8 +408,6 @@ function RippleButton({ onClick, style, children, platformColor }) {
   );
 }
 
-// [F1] Body-scroll lock mutualisé · [F2] 92vh → 92dvh · [F3] webkit prefix
-// [F4] Bouton de fermeture agrandi à 44×44 · [F11] safe-area-inset-bottom
 function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -651,7 +466,6 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  // [A3] Déclencher les automatisations marketplace (fire-and-forget)
                   if (profileId) triggerMarketplaceBuy(profileId, {
                     productId:    product.id,
                     productTitle: product.title,
@@ -676,8 +490,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   );
 }
 
-// [G6] Carte boutique — hérite automatiquement du fond gris clair uni
-// (CARD_BG) et des couleurs de texte (CARD_TEXT/CARD_TEXT_MUTED/CARD_TEXT_FAINT)
+// [V3] Carte boutique — INCHANGÉE : conserve le fond gris clair uni CARD_BG.
 function PublicProductCard({ product, onOpen }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -727,14 +540,12 @@ export default function PublicProfile() {
   const [documents, setDocuments]           = useState([]);
   const [lightboxSrc, setLightboxSrc]       = useState(null);
 
-  // [C8] Guard isMounted pour éviter setState après démontage
   const isMounted = useRef(true);
   useEffect(() => {
     isMounted.current = true;
     return () => { isMounted.current = false; };
   }, []);
 
-  // [P1] Import de la police de marque (une seule fois, avant tout rendu de texte)
   useEffect(() => {
     if (!document.getElementById(FONT_LINK_ID)) {
       const link = document.createElement('link');
@@ -745,15 +556,8 @@ export default function PublicProfile() {
     }
   }, []);
 
-  // [C7] Keyframes principales injectées une seule fois
-  // [F10] .pp-content-col / .pp-shop-grid : adaptation tablette (>=768px)
-  // [F13] prefers-reduced-motion : coupe les animations décoratives
-  // [O8] Halos de survol desktop sur cartes boutique et boutons de liens
-  // [W1] Anneau avatar : plus d'animation de rotation (figé)
-  // [W4] Focus clavier : anneau indigo sur cartes/boutons de liens (fond
-  //      désormais gris clair), anneau blanc conservé sur le bouton "Partager"
-  //      (fond toujours sombre)
-  // [P4] Fond "mesh" animé très lentement (respecte reduced-motion)
+  // [C7][V1] Keyframes + styles principaux injectés une seule fois,
+  // y compris la nouvelle classe .pp-link-wave-card (cartes "vague").
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_MAIN_ID)) {
       const s = document.createElement('style');
@@ -775,16 +579,14 @@ export default function PublicProfile() {
         }
         .pp-link-btn              { animation:pp-fadeSlideUp 0.4s ease both; }
 
-        /* [W1] Anneau "story" de l'avatar vérifié — figé (dégradé conique
-           statique, plus de rotation) */
         .pp-avatar-ring--verified {
           background: conic-gradient(from 0deg,#6366f1,#22c55e,#f7c948,#ff6b35,#6366f1);
         }
 
-        /* [P5][W4] Interactions clavier/tap sur les liens et cartes */
         .pp-link-btn-el:active { transform: translateY(1px); }
         .pp-link-btn-el:focus-visible,
-        .pp-shop-card:focus-visible {
+        .pp-shop-card:focus-visible,
+        .pp-link-wave-card:focus-visible {
           outline: 2px solid #6366f1;
           outline-offset: 2px;
         }
@@ -793,7 +595,6 @@ export default function PublicProfile() {
           outline-offset: 2px;
         }
 
-        /* [F10] Colonne de contenu partagée (liens, boutique, docs, événement, bannière) */
         .pp-content-col { width:100%; max-width:384px; }
         .pp-shop-grid   { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
         @media (min-width:768px) {
@@ -801,15 +602,39 @@ export default function PublicProfile() {
           .pp-shop-grid   { grid-template-columns:repeat(3,1fr); gap:12px; }
         }
 
-        /* [O8] Halo au survol desktop uniquement (évite un "collant" tactile) */
         @media (hover: hover) {
-          .pp-link-btn-el:hover  { background:${CARD_BG_HOVER} !important; transform:translateY(-1px); }
+          .pp-link-btn-el:hover  { background:${WAVE_CARD_BG_HOVER} !important; }
+          .pp-link-wave-card:hover { background:${WAVE_CARD_BG_HOVER}; }
           .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
           .pp-share-btn:hover    { background:rgba(255,255,255,0.14) !important; }
           .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
         }
 
-        /* [F13] Réduction des animations si demandé au niveau système */
+        /* [V1] Carte "vague" — fond blanc + double liseré ondulé bleu
+           (haut/bas), inspirée du modèle de référence fourni. Utilisée
+           pour les liens réseaux sociaux, les documents, le countdown et
+           la description événement. La boutique n'est PAS concernée. */
+        .pp-link-wave-card {
+          position: relative;
+          background: ${WAVE_CARD_BG};
+          border-radius: 18px;
+          box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+          transition: background 0.15s;
+        }
+        .pp-link-wave-card::before,
+        .pp-link-wave-card::after {
+          content: '';
+          position: absolute;
+          left: 8px; right: 8px;
+          height: 10px;
+          background-image: radial-gradient(circle at 5px 5px, transparent 5px, ${WAVE_COLOR} 5.5px);
+          background-size: 10px 10px;
+          background-repeat: repeat-x;
+          pointer-events: none;
+        }
+        .pp-link-wave-card::before { top: -5px; }
+        .pp-link-wave-card::after  { bottom: -5px; transform: rotate(180deg); }
+
         @media (prefers-reduced-motion: reduce) {
           .pp-link-btn { animation:none; }
           .pp-mesh-blob { animation:none !important; }
@@ -823,18 +648,13 @@ export default function PublicProfile() {
   // ── Chargement initial ───────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      // [Q1] `.ilike` au lieu de `.eq` — lookup insensible à la casse.
-      // Sans caractères joker (%), c'est toujours une comparaison exacte
-      // du username, juste sans distinction majuscule/minuscule. Corrige
-      // le cas où le lien encodé dans le QR (ou saisi/partagé) diffère
-      // par la casse de ce qui est stocké en base.
       const { data, error } = await supabase
         .from('link_profiles')
         .select('*')
         .ilike('username', username)
         .maybeSingle();
 
-      if (!isMounted.current) return; // [C8]
+      if (!isMounted.current) return;
 
       if (error || !data) {
         setNotFound(true);
@@ -845,8 +665,6 @@ export default function PublicProfile() {
       setProfile(data);
       setLoading(false);
 
-      // [F8] Analytics fire-and-forget, ne bloque plus l'affichage des
-      // produits/documents : trackView() n'est plus dans le Promise.all.
       trackView(data.id);
 
       Promise.all([
@@ -862,7 +680,7 @@ export default function PublicProfile() {
           .eq('is_visible', true)
           .order('created_at', { ascending: false }),
       ]).then(([prod, docs]) => {
-        if (!isMounted.current) return; // [C8]
+        if (!isMounted.current) return;
         setProducts(prod?.data || []);
         setDocuments(docs?.data || []);
       });
@@ -877,19 +695,17 @@ export default function PublicProfile() {
     if (params.get('source') !== 'qr') return;
     const medium = params.get('medium');
 
-    // [C9] Insert profile_stats (tracking analytics)
     supabase.from('profile_stats')
       .insert([{ profile_id: profile.id, event_type: 'qr_scan', referrer: medium || 'non_specifie' }])
       .then(({ error }) => {
         if (error && process.env.NODE_ENV !== 'production') console.error('[QR scan]', error);
       });
 
-    // [A2] Déclencher les automatisations liées au scan QR (fire-and-forget)
     triggerQrScan(profile.id, {
       referrer: medium || 'non_specifie',
       device:   detectDevice(),
     });
-  }, [profile?.id]); // [C1] Dépendance à l'ID uniquement, pas à l'objet entier
+  }, [profile?.id]);
 
   // ── Images slider ────────────────────────────────────────────
   useEffect(() => {
@@ -904,8 +720,6 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [images.length, isAutoPlay]);
 
-  // [C4] Setter fonctionnel pour éviter la closure stale sur currentIndex
-  // [F6] Nettoyage garanti des listeners globaux même si démontage en cours de geste
   const swipeCleanupRef = useRef(null);
 
   const handleTouchStart = useCallback((e) => {
@@ -914,8 +728,8 @@ export default function PublicProfile() {
       const dx = sx - me.touches[0].clientX, dy = sy - me.touches[0].clientY;
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
         setCurrentIndex(prev => {
-          if (dx > 0) return Math.min(prev + 1, images.length - 1); // swipe gauche → suivant
-          return Math.max(prev - 1, 0);                              // swipe droite → précédent
+          if (dx > 0) return Math.min(prev + 1, images.length - 1);
+          return Math.max(prev - 1, 0);
         });
         setIsAutoPlay(false);
         me.preventDefault();
@@ -931,11 +745,8 @@ export default function PublicProfile() {
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd, { once: true });
     swipeCleanupRef.current = cleanup;
-  }, [images.length]); // [C4] currentIndex retiré des deps — setter fonctionnel utilisé
+  }, [images.length]);
 
-  // [F6] Si le composant se démonte pendant un geste en cours, on retire
-  // les listeners globaux laissés en place (évite fuite mémoire et tout
-  // callback tardif après démontage lors d'une navigation rapide).
   useEffect(() => {
     return () => { if (swipeCleanupRef.current) swipeCleanupRef.current(); };
   }, []);
@@ -948,34 +759,14 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [profile?.is_event, profile?.event_date]);
 
-  // ── [C5][F9][O7][P4][BG1] Background style — injection unifiée, sans flash ───
-  // [F2] 100vh → 100dvh pour éviter le rognage par la barre d'adresse iOS
-  // [F9] Dépendances resserrées : ne se recrée plus sur un changement de
-  // profil non lié au fond (évite un micro-flash inutile).
-  // [O7] Overlay assombri (0.52/0.36 → 0.58/0.42) pour homogénéiser le
-  // contraste sous les cartes.
-  // [P4] Sans image de fond, on remplace le linear-gradient plat par 3
-  // taches radiales très légèrement animées ("mesh gradient") — plus de
-  // profondeur façon page pro, tout en gardant la même palette de marque.
-  // [BG1] html/body ne sont plus mis en 'transparent' : le décor
-  // (#__bg_layer__ / #__bg_overlay__) est en position:fixed avec
-  // height:100dvh, donc il ne couvre QUE la fenêtre visible. Sur Chrome
-  // Android, l'effet de rebond (overscroll) en tirant la page après la
-  // fin du contenu révèle le vrai fond html/body — s'il est transparent,
-  // ça affiche du blanc. On lui donne donc une couleur de secours
-  // cohérente avec le thème du profil (au lieu de transparent), aussi
-  // bien à l'application qu'au nettoyage de l'effet.
+  // ── [C5][F9][O7][P4][BG1] Background style ─────────────────────
   useEffect(() => {
     if (!profile) return;
 
-    // [BG1] Couleur de secours pour html/body (visible uniquement pendant
-    // un rebond/overscroll, quand le calque fixe ne suffit plus) :
-    // fond sombre neutre si image de fond, sinon 1er ton du dégradé du profil.
     const fallbackBg = profile.bg_image_url ? '#0f0a1e' : parseColors(profile.theme_color).bg1;
     document.documentElement.style.background = fallbackBg;
     document.body.style.background = fallbackBg;
 
-    // [C12] Sanitisation de bg_image_url avant injection CSS
     let bgCss = '';
     if (profile.bg_image_url) {
       const safeUrl = encodeURI(profile.bg_image_url);
@@ -1009,7 +800,6 @@ export default function PublicProfile() {
       `;
     }
 
-    // [C5] Upsert : créer ou mettre à jour sans doublon, sans flash
     let styleEl = document.getElementById('__bg_style__');
     if (!styleEl) {
       styleEl = document.createElement('style');
@@ -1021,15 +811,11 @@ export default function PublicProfile() {
     return () => {
       const s = document.getElementById('__bg_style__');
       if (s) s.remove();
-      // [BG1] On garde la couleur de secours au nettoyage au lieu de la
-      // vider (ancien comportement : remise à '', donc transparent) —
-      // évite un flash blanc au démontage / changement de profil.
       document.documentElement.style.background = fallbackBg;
       document.body.style.background = fallbackBg;
     };
-  }, [profile?.bg_image_url, profile?.theme_color]); // [F9]
+  }, [profile?.bg_image_url, profile?.theme_color]);
 
-  // ── Download helper ──────────────────────────────────────────
   const handleDownload = (url) => {
     try {
       const fn = url.split('/').pop().split('?')[0] || 'image.jpg';
@@ -1045,12 +831,10 @@ export default function PublicProfile() {
     }
   };
 
-  // ── [A1] Clic sur lien — avec déclencheur automatisation WhatsApp ──
   const handleLinkClick = useCallback((link) => {
     if (!profile) return;
-    trackClick(profile.id, link.platform); // fire-and-forget intentionnel
+    trackClick(profile.id, link.platform);
 
-    // [A1] Déclencher les automatisations si le lien cliqué est WhatsApp
     if ((link.platform || '').toLowerCase() === 'whatsapp') {
       triggerWhatsappClick(profile.id, {
         referrer: cleanReferrer(),
@@ -1083,13 +867,8 @@ export default function PublicProfile() {
     profile.event_booking_url
   );
 
-  // [BN2] Bloc avatar factorisé pour être réutilisé à la fois "flottant"
-  // sur la bannière (quand banner_url est renseigné) et en rendu autonome
-  // (comportement d'origine, inchangé) quand il n'y a pas de bannière.
   const avatarBlock = (
     <div style={{ position:'relative' }}>
-      {/* [W1] Anneau figé (dégradé conique statique) pour les profils
-          vérifiés, anneau statique discret sinon */}
       <div
         className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
         style={{
@@ -1130,9 +909,6 @@ export default function PublicProfile() {
       <div id="__bg_layer__" />
       <div id="__bg_overlay__" />
 
-      {/* [SH1][P2] Bouton "Partager" — icône seule dans un cercle, fixe en
-          bas à droite de l'écran (au-dessus du contenu, reste visible au
-          scroll). Zones de sécurité iOS/Android respectées. */}
       <div style={{
         position:'fixed', zIndex:50,
         bottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
@@ -1141,9 +917,6 @@ export default function PublicProfile() {
         <ShareBar profile={profile} />
       </div>
 
-      {/* [F11] Zones de sécurité iOS/Android sur le padding vertical/horizontal
-          du conteneur principal — évite de passer sous l'encoche ou la barre
-          de gestes en haut/bas, et sous l'encoche latérale en paysage. */}
       <div style={{
         position:'relative', zIndex:1, minHeight:'100dvh',
         display:'flex', flexDirection:'column', alignItems:'center',
@@ -1154,14 +927,6 @@ export default function PublicProfile() {
         fontFamily: FONT_STACK,
       }}>
 
-        {/* [BN1][BN2] Bannière de couverture — affichée uniquement si
-            profile.banner_url est renseigné. Distincte de bg_image_url
-            (fond plein écran) : image rectangulaire à coins arrondis,
-            même largeur/ombre que les autres cartes de contenu. Quand une
-            bannière est présente, l'avatar est chevauché en bas, centré,
-            façon photo de couverture réseau social. `marginBottom` réserve
-            l'espace nécessaire à la moitié inférieure de l'avatar qui
-            déborde du cadre de la bannière. */}
         {profile.banner_url ? (
           <div className="pp-content-col" style={{ position:'relative', marginBottom:'70px' }}>
             <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
@@ -1173,16 +938,12 @@ export default function PublicProfile() {
           </div>
         ) : null}
 
-        {/* Avatar autonome — uniquement si pas de bannière (comportement
-            d'origine inchangé). Avec bannière, l'avatar est déjà rendu
-            ci-dessus, chevauchant le bord bas de la bannière. */}
         {!profile.banner_url && (
           <div style={{ marginBottom:'16px' }}>
             {avatarBlock}
           </div>
         )}
 
-        {/* [P7] Hiérarchie resserrée : tracking réduit, poids affiné */}
         <h1 style={{ fontSize:'24px', fontWeight:'800', color:'white', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
           {profile.display_name}
           {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
@@ -1195,8 +956,6 @@ export default function PublicProfile() {
         {hasEventContent && (
           <div className="pp-content-col" style={{ marginBottom:'20px' }}>
             {images.length > 0 && (
-              // [F12] touchAction:'pan-y' — laisse le scroll vertical natif,
-              // le swipe horizontal reste géré manuellement par handleTouchStart
               <div style={{ position:'relative', borderRadius:'20px', overflow:'hidden', marginBottom:'12px', boxShadow:'0 8px 32px rgba(0,0,0,0.3)', touchAction:'pan-y' }} onTouchStart={handleTouchStart}>
                 <img src={images[currentIndex]} alt="event" style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }} onClick={() => setLightboxSrc(images[currentIndex])} />
                 <div style={{ position:'absolute', bottom:'14px', right:'12px', display:'flex', gap:'6px', zIndex:10 }}>
@@ -1229,21 +988,21 @@ export default function PublicProfile() {
                 {profile.event_location && <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
               </div>
             )}
+            {/* [V1][V2] Countdown — carte "vague" (fond blanc + liserés ondulés) */}
             {countdown && (
-              // [G6] Fond gris clair uni CARD_BG, libellé en CARD_TEXT_MUTED
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'14px', marginBottom:'16px', marginTop:'6px' }}>
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
-                  <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
+                  <div key={l} className="pp-link-wave-card" style={{ padding:'14px 8px', textAlign:'center' }}>
                     <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{String(v).padStart(2, '0')}</div>
-                    <div style={{ fontWeight:'700', fontSize:'9px', color:CARD_TEXT_MUTED, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
+                    <div style={{ fontWeight:'700', fontSize:'9px', color:WAVE_TEXT_MUTED, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
                   </div>
                 ))}
               </div>
             )}
+            {/* [V1][V2] Description événement — carte "vague" */}
             {profile.event_description && (
-              // [G6] Fond gris clair uni CARD_BG, texte en CARD_TEXT
-              <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
-                <p style={{ fontSize:'13px', color:CARD_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
+              <div className="pp-link-wave-card" style={{ padding:'18px 16px', marginTop:'6px', marginBottom:'16px' }}>
+                <p style={{ fontSize:'13px', color:WAVE_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
               </div>
             )}
             {profile.event_booking_url && (
@@ -1253,12 +1012,13 @@ export default function PublicProfile() {
             )}
           </div>
         )}
-   {/* Réservation */}
+
+        {/* Réservation */}
         <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
           <PublicBookingWidget profileId={profile.id} />
         </div>
-        
-        {/* Boutique */}
+
+        {/* Boutique — [V3] INCHANGÉE, fond gris clair uni CARD_BG */}
         {sortedProducts.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px' }}>
@@ -1285,7 +1045,7 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Documents */}
+        {/* Documents — [V1][V2] carte "vague" (fond blanc + liserés ondulés) */}
         {documents.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
@@ -1293,19 +1053,17 @@ export default function PublicProfile() {
               <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>Documents</h2>
               <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
             </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-              {/* [G6] Fond gris clair uni CARD_BG, textes en CARD_TEXT / CARD_TEXT_MUTED */}
+            <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
               {documents.map(doc => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
-                  onMouseEnter={e => e.currentTarget.style.background = CARD_BG_HOVER}
-                  onMouseLeave={e => e.currentTarget.style.background = CARD_BG}
+                  className="pp-link-wave-card"
+                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px 16px', borderLeft:'3px solid #ef4444', textDecoration:'none', touchAction:'manipulation' }}
                 >
                   <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={18} color="#ef4444" /></div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ color:CARD_TEXT, fontSize:'13px', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.name}</div>
+                    <div style={{ color:WAVE_TEXT, fontSize:'13px', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.name}</div>
                     {doc.file_size && (
-                      <div style={{ color:CARD_TEXT_MUTED, fontSize:'11px', marginTop:'2px' }}>
+                      <div style={{ color:WAVE_TEXT_MUTED, fontSize:'11px', marginTop:'2px' }}>
                         PDF · {doc.file_size < 1048576 ? Math.round(doc.file_size / 1024) + ' Ko' : (doc.file_size / 1048576).toFixed(1) + ' Mo'}
                       </div>
                     )}
@@ -1317,10 +1075,9 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Liens — [G4][G5] fond gris clair CARD_BG, coins très arrondis (22px),
-            bordure colorée par plateforme via box-shadow inset (suit le rayon
-            des coins), libellé/icône en CARD_TEXT / CARD_TEXT_MUTED */}
-        <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
+        {/* Liens réseaux sociaux — [V1][V2][V4] carte "vague" (fond blanc +
+            liserés ondulés bleus), inspirée du modèle de référence fourni. */}
+        <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'20px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = (link.platform || '').toLowerCase();
             const platform = PLATFORMS[key] || {
@@ -1336,31 +1093,31 @@ export default function PublicProfile() {
               ),
             };
             return (
-              <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
+              <div key={i} className="pp-link-btn pp-link-wave-card" style={{ animationDelay: `${i * 0.07}s` }}>
                 <RippleButton
                   onClick={() => handleLinkClick(link)}
                   platformColor={platform.color || '#6366f1'}
                   style={{
                     display:'flex', alignItems:'center', gap:'14px', width:'100%',
-                    padding:'14px 18px', borderRadius:'22px',
-                    background:CARD_BG, border:CARD_BORDER,
+                    padding:'14px 18px', borderRadius:'18px',
+                    background:'transparent', border:'none',
                     cursor:'pointer', textAlign:'left',
-                    boxShadow:CARD_SHADOW,
-                    transition:'background 0.15s,transform 0.1s',
+                    boxShadow:'none',
+                    transition:'transform 0.1s',
                   }}
                 >
                   <div style={{ width:'40px', height:'40px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 40, height: 40 }) : null}
                   </div>
-                  <span style={{ color:CARD_TEXT, fontWeight:'600', letterSpacing:'0.01em', fontSize:'14.5px', flex:1 }}>{link.label || platform.label}</span>
-                  <ExternalLink size={16} color={CARD_TEXT_MUTED} style={{ flexShrink:0 }} />
+                  <span style={{ color:WAVE_TEXT, fontWeight:'600', letterSpacing:'0.01em', fontSize:'14.5px', flex:1 }}>{link.label || platform.label}</span>
+                  <ExternalLink size={16} color={WAVE_TEXT_MUTED} style={{ flexShrink:0 }} />
                 </RippleButton>
               </div>
             );
           })}
         </div>
 
-        {/* Support — [C11] numéro centralisé · [O6] fond 0.15→0.22, bordure 0.3→0.38 */}
+        {/* Support */}
         <a
           href={`https://wa.me/${SUPPORT_WHATSAPP}`}
           target="_blank"
@@ -1370,9 +1127,6 @@ export default function PublicProfile() {
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>
 
-        {/* [P6] Badge de marque discret, remplace la mention statique de
-            copyright — mécanique de croissance standard des outils
-            link-in-bio ("Créé avec ..."), cliquable vers la home. */}
         <a
           href="https://www.socialapp.work"
           target="_blank"
@@ -1384,9 +1138,6 @@ export default function PublicProfile() {
         </a>
       </div>
 
-      {/* [F5] Modales portées dans document.body — protection préventive
-          contre un futur bug de stacking context si cette page est un
-          jour englobée dans un layout avec un ancêtre transformé/filtré. */}
       {selectedProduct && createPortal(
         <ProductDetailModal
           product={selectedProduct}

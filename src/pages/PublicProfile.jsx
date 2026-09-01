@@ -179,7 +179,7 @@
  *        n'y a pas de bannière, l'avatar garde exactement son ancien
  *        rendu autonome (aucun changement de comportement dans ce cas).
  *
- * CORRECTIF BANDE BLANCHE EN BAS DE PAGE (cette révision) :
+ * CORRECTIF BANDE BLANCHE EN BAS DE PAGE (révision précédente) :
  *  [BG1] Le décor plein écran (#__bg_layer__ / #__bg_overlay__) est en
  *        `position: fixed` avec `height: 100dvh` : il ne couvre donc que
  *        la fenêtre visible, pas au-delà. Or html/body étaient mis en
@@ -191,6 +191,34 @@
  *        une couleur de secours cohérente avec le thème (fond uni sombre,
  *        ou 1er ton du dégradé du profil s'il n'y a pas d'image de fond)
  *        au lieu de 'transparent', y compris au nettoyage de l'effet.
+ *
+ * PASSE "CARTES GRIS CLAIR UNI + BORDURE COLORÉE FIDÈLE AU RAYON" (cette révision) :
+ *  [G1]  CARD_BG / CARD_BG_HOVER passés d'un blanc translucide (rgba(255,255,255,0.94))
+ *        à une surface grise claire unie (#eef0f3 / #e2e5ea), pour matcher le
+ *        modèle de référence (cartes gris très clair, pas de flou/transparence).
+ *  [G2]  CARD_BORDER retirée (mise à 'none') : le modèle de référence n'a pas de
+ *        liseré de bordure visible autour des cartes, seulement l'ombre douce.
+ *  [G3]  CARD_TEXT / CARD_TEXT_MUTED / CARD_TEXT_FAINT recalées sur une teinte
+ *        neutre fixe (#1a1a2e) au lieu de dépendre de l'ancienne base sombre —
+ *        cohérent avec le nouveau fond de carte gris clair.
+ *  [G4]  RippleButton : la bordure colorée à gauche (spécifique à chaque
+ *        plateforme) ne passe plus par `borderLeft` (qui se fait « couper »
+ *        par le `border-radius` et devient un trait à peine visible sur des
+ *        coins très arrondis) mais par un `boxShadow: inset 4px 0 0 0 <couleur>`
+ *        combiné à l'ombre portée de la carte — la bordure colorée épouse
+ *        maintenant fidèlement la courbe du coin arrondi, exactement comme
+ *        sur le modèle de référence.
+ *  [G5]  Boutons de liens : borderRadius 16px → 22px (coins nettement plus
+ *        arrondis, façon pilule, comme le modèle), icône 48px → 40px (rayon
+ *        12px → 12px arrondi cohérent), padding et gap resserrés, poids du
+ *        texte 700 → 600 et taille 14px → 14.5px pour coller au rendu de
+ *        référence. Le `borderTop` "highlight" devient inutile (supprimé)
+ *        puisque la carte est maintenant unie et sans transparence.
+ *  [G6]  Toutes les autres cartes qui s'appuient sur les constantes CARD_*
+ *        (boutique, documents, countdown, description événement) héritent
+ *        automatiquement du même fond gris clair uni et des mêmes couleurs
+ *        de texte, pour une cohérence visuelle complète sur toute la page —
+ *        aucune valeur codée en dur séparément à maintenir.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -211,29 +239,27 @@ import PublicBookingWidget from '@/pages//PublicBookingWidget';
 // [C11] Numéro support centralisé — modifier ici uniquement
 const SUPPORT_WHATSAPP = '2250576031212';
 
-// [W2] Surface des cartes — passée en blanc quasi opaque (au lieu de la
-// surface sombre CARD_BG précédente) pour que boutons de liens, cartes
-// boutique, cartes documents, bloc countdown et bloc description
-// événement soient blancs, tout en gardant l'effet "glass" via le blur.
-const CARD_BG        = 'rgba(255,255,255,0.94)';
-const CARD_BG_HOVER  = 'rgba(255,255,255,1)';
-const CARD_BORDER    = '1px solid rgba(0,0,0,0.10)';
+// [G1][G2] Surface des cartes — gris clair uni (au lieu du blanc translucide
+// précédent), sans bordure visible : boutons de liens, cartes boutique,
+// cartes documents, bloc countdown et bloc description événement
+// partagent tous cette même surface, fidèle au modèle de référence.
+const CARD_BG        = '#eef0f3';
+const CARD_BG_HOVER  = '#e2e5ea';
+const CARD_BORDER    = 'none';
 // [PERF1] backdropFilter retiré : appliqué en boucle sur chaque carte (liens,
 // boutique, documents), il forçait un recalcul GPU par carte visible à
 // CHAQUE frame de scroll (contrairement à un flou statique). Sur mobile,
 // avec 6-15+ cartes visibles simultanément, ça saturait le compositeur et
-// rendait le scroll saccadé. Impact visuel quasi nul à retirer : CARD_BG
-// est déjà opaque à 94% (rgba(255,255,255,0.94)), le flou derrière une
-// carte quasi opaque n'apportait presque rien à l'œil.
+// rendait le scroll saccadé. La carte est désormais unie (non translucide),
+// un flou derrière elle n'apporterait de toute façon plus rien à l'œil.
 const CARD_BLUR      = {};
-const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
+const CARD_SHADOW    = '0 3px 10px rgba(0,0,0,0.2)';
 
-// [W3] Couleurs de texte dédiées au contenu affiché sur les cartes
-// blanches (CARD_BG), pour garder un bon contraste (au lieu du blanc
-// utilisé auparavant sur fond sombre).
-const CARD_TEXT        = '#15102a';
-const CARD_TEXT_MUTED  = 'rgba(21,16,42,0.55)';
-const CARD_TEXT_FAINT  = 'rgba(21,16,42,0.42)';
+// [G3] Couleurs de texte dédiées au contenu affiché sur les cartes grises
+// claires (CARD_BG), pour garder un bon contraste.
+const CARD_TEXT        = '#1a1a2e';
+const CARD_TEXT_MUTED  = 'rgba(26,26,46,0.55)';
+const CARD_TEXT_FAINT  = 'rgba(26,26,46,0.42)';
 
 // [P1] Police de marque unique pour toute la page
 const FONT_STACK = "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -435,10 +461,10 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
   </svg>
 );
 
-// [P2] Barre d'actions flottante — partage natif avec repli "copier le lien".
-// Retour visuel : icône Share2 → Check pendant 1.8s + toast texte discret.
-// C'est le geste central des outils link-in-bio pro (Linktree, Beacons,
-// Bio.site en font tous un bouton de premier plan) et il manquait ici.
+// [P2] Barre d'actions flottante (haut de page) : bouton "Partager" natif
+// (Web Share API avec repli "copier le lien") + retour visuel
+// (icône qui se change en check + toast) — le geste de partage est
+// le cœur de l'UX Linktree/Beacons et manquait totalement ici.
 function ShareBar({ profile }) {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
@@ -515,6 +541,11 @@ function ImageLightbox({ src, onClose }) {
 }
 
 // [F7] Timeouts de ripple suivis et annulés au démontage
+// [G4] La bordure colorée par plateforme ne passe plus par `borderLeft`
+// (qui se fait couper par le border-radius et devient à peine visible sur
+// des coins très arrondis) mais par un `boxShadow: inset ...` combiné à
+// l'ombre portée passée par l'appelant via `style.boxShadow` — la bordure
+// colorée épouse ainsi fidèlement la courbe du coin arrondi.
 function RippleButton({ onClick, style, children, platformColor }) {
   const [ripples, setRipples] = useState([]);
   const timeouts = useRef([]);
@@ -530,12 +561,27 @@ function RippleButton({ onClick, style, children, platformColor }) {
     const t = setTimeout(() => setRipples(p => p.filter(r => r.id !== id)), 600);
     timeouts.current.push(t);
   };
+
+  // [G4] Couleur d'accent (bordure colorée) — repli neutre si aucune
+  // couleur de plateforme n'est fournie.
+  const accentColor = platformColor || 'rgba(255,255,255,0.25)';
+  const { boxShadow: outerShadow, ...restStyle } = style || {};
+
   return (
     <button
       onClick={onClick}
       onPointerDown={handlePointerDown}
       className="pp-link-btn-el"
-      style={{ ...style, position:'relative', overflow:'hidden', touchAction:'manipulation', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}
+      style={{
+        ...restStyle,
+        position:'relative',
+        overflow:'hidden',
+        touchAction:'manipulation',
+        // [G4] Bordure colorée (4px, à gauche) + ombre portée de la carte,
+        // combinées dans un seul box-shadow pour que la bordure suive
+        // parfaitement le border-radius de la carte.
+        boxShadow: [`inset 4px 0 0 0 ${accentColor}`, outerShadow].filter(Boolean).join(', '),
+      }}
     >
       {ripples.map(r => (
         <span key={r.id} style={{ position:'absolute', left:r.x, top:r.y, width:'8px', height:'8px', borderRadius:'50%', background:'rgba(0,0,0,0.18)', transform:'translate(-50%,-50%) scale(0)', animation:'pp-ripple 0.6s ease-out forwards', pointerEvents:'none' }} />
@@ -630,7 +676,8 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   );
 }
 
-// [W2][W3] Carte boutique blanche — fond CARD_BG, textes en CARD_TEXT/CARD_TEXT_MUTED
+// [G6] Carte boutique — hérite automatiquement du fond gris clair uni
+// (CARD_BG) et des couleurs de texte (CARD_TEXT/CARD_TEXT_MUTED/CARD_TEXT_FAINT)
 function PublicProductCard({ product, onOpen }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -704,7 +751,7 @@ export default function PublicProfile() {
   // [O8] Halos de survol desktop sur cartes boutique et boutons de liens
   // [W1] Anneau avatar : plus d'animation de rotation (figé)
   // [W4] Focus clavier : anneau indigo sur cartes/boutons de liens (fond
-  //      désormais blanc), anneau blanc conservé sur le bouton "Partager"
+  //      désormais gris clair), anneau blanc conservé sur le bouton "Partager"
   //      (fond toujours sombre)
   // [P4] Fond "mesh" animé très lentement (respecte reduced-motion)
   useEffect(() => {
@@ -906,7 +953,7 @@ export default function PublicProfile() {
   // [F9] Dépendances resserrées : ne se recrée plus sur un changement de
   // profil non lié au fond (évite un micro-flash inutile).
   // [O7] Overlay assombri (0.52/0.36 → 0.58/0.42) pour homogénéiser le
-  // contraste sous les cartes désormais plus opaques.
+  // contraste sous les cartes.
   // [P4] Sans image de fond, on remplace le linear-gradient plat par 3
   // taches radiales très légèrement animées ("mesh gradient") — plus de
   // profondeur façon page pro, tout en gardant la même palette de marque.
@@ -1183,7 +1230,7 @@ export default function PublicProfile() {
               </div>
             )}
             {countdown && (
-              // [W2][W3] Fond blanc CARD_BG, libellé en CARD_TEXT_MUTED pour rester lisible
+              // [G6] Fond gris clair uni CARD_BG, libellé en CARD_TEXT_MUTED
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
                   <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
@@ -1194,7 +1241,7 @@ export default function PublicProfile() {
               </div>
             )}
             {profile.event_description && (
-              // [W2][W3] Fond blanc CARD_BG, texte en CARD_TEXT pour rester lisible
+              // [G6] Fond gris clair uni CARD_BG, texte en CARD_TEXT
               <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
                 <p style={{ fontSize:'13px', color:CARD_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
               </div>
@@ -1247,7 +1294,7 @@ export default function PublicProfile() {
               <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-              {/* [W2][W3] Fond blanc CARD_BG, textes en CARD_TEXT / CARD_TEXT_MUTED */}
+              {/* [G6] Fond gris clair uni CARD_BG, textes en CARD_TEXT / CARD_TEXT_MUTED */}
               {documents.map(doc => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
                   style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
@@ -1270,33 +1317,47 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Liens — [W2][W3] fond blanc CARD_BG, libellé/icône en CARD_TEXT / CARD_TEXT_MUTED */}
+        {/* Liens — [G4][G5] fond gris clair CARD_BG, coins très arrondis (22px),
+            bordure colorée par plateforme via box-shadow inset (suit le rayon
+            des coins), libellé/icône en CARD_TEXT / CARD_TEXT_MUTED */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
-  const key = (link.platform || '').toLowerCase();
-  const platform = PLATFORMS[key] || { /* ... inchangé ... */ };
-  return (
-    <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
-      <RippleButton
-        onClick={() => handleLinkClick(link)}
-        style={{
-          display:'flex', alignItems:'center', gap:'14px', width:'100%',
-          padding:'12px 16px', borderRadius:'20px',
-          background:CARD_BG, border:CARD_BORDER,
-          cursor:'pointer', textAlign:'left',
-          boxShadow:'0 2px 10px rgba(0,0,0,0.15)',
-          transition:'background 0.15s,transform 0.1s',
-        }}
-      >
-        <div style={{ width:'40px', height:'40px', borderRadius:'11px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          {platform.icon ? React.cloneElement(platform.icon, { width: 40, height: 40 }) : null}
-        </div>
-        <span style={{ color:CARD_TEXT, fontWeight:'600', letterSpacing:'0.01em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
-        <ExternalLink size={15} color={CARD_TEXT_MUTED} style={{ flexShrink:0 }} />
-      </RippleButton>
-    </div>
-  );
-})}
+            const key = (link.platform || '').toLowerCase();
+            const platform = PLATFORMS[key] || {
+              label: (link.platform || 'LIEN').toUpperCase(),
+              color: '#6366f1',
+              icon: (
+                <svg viewBox="0 0 24 24" width="28" height="28">
+                  <rect width="24" height="24" rx="6" fill="#6366f1"/>
+                  <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/>
+                  <ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/>
+                  <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/>
+                </svg>
+              ),
+            };
+            return (
+              <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
+                <RippleButton
+                  onClick={() => handleLinkClick(link)}
+                  platformColor={platform.color || '#6366f1'}
+                  style={{
+                    display:'flex', alignItems:'center', gap:'14px', width:'100%',
+                    padding:'14px 18px', borderRadius:'22px',
+                    background:CARD_BG, border:CARD_BORDER,
+                    cursor:'pointer', textAlign:'left',
+                    boxShadow:CARD_SHADOW,
+                    transition:'background 0.15s,transform 0.1s',
+                  }}
+                >
+                  <div style={{ width:'40px', height:'40px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    {platform.icon ? React.cloneElement(platform.icon, { width: 40, height: 40 }) : null}
+                  </div>
+                  <span style={{ color:CARD_TEXT, fontWeight:'600', letterSpacing:'0.01em', fontSize:'14.5px', flex:1 }}>{link.label || platform.label}</span>
+                  <ExternalLink size={16} color={CARD_TEXT_MUTED} style={{ flexShrink:0 }} />
+                </RippleButton>
+              </div>
+            );
+          })}
         </div>
 
         {/* Support — [C11] numéro centralisé · [O6] fond 0.15→0.22, bordure 0.3→0.38 */}

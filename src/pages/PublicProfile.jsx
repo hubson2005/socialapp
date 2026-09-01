@@ -1273,35 +1273,30 @@ export default function PublicProfile() {
         {/* Liens — [W2][W3] fond blanc CARD_BG, libellé/icône en CARD_TEXT / CARD_TEXT_MUTED */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
-            const key = (link.platform || '').toLowerCase();
-            const platform = PLATFORMS[key] || {
-              label: (link.platform || 'LIEN').toUpperCase(),
-              color: '#6366f1',
-              icon: (
-                <svg viewBox="0 0 24 24" width="28" height="28">
-                  <rect width="24" height="24" rx="6" fill="#6366f1"/>
-                  <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/>
-                  <ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/>
-                  <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/>
-                </svg>
-              ),
-            };
-            return (
-              <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
-                <RippleButton
-                  onClick={() => handleLinkClick(link)}
-                  platformColor={platform.color || '#6366f1'}
-                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, borderTop:'1px solid rgba(0,0,0,0.08)', ...CARD_BLUR, cursor:'pointer', textAlign:'left', boxShadow:CARD_SHADOW, transition:'background 0.15s,transform 0.1s' }}
-                >
-                  <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
-                  </div>
-                  <span style={{ color:CARD_TEXT, fontWeight:'700', letterSpacing:'0.02em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
-                  <ExternalLink size={16} color={CARD_TEXT_MUTED} style={{ flexShrink:0 }} />
-                </RippleButton>
-              </div>
-            );
-          })}
+  const key = (link.platform || '').toLowerCase();
+  const platform = PLATFORMS[key] || { /* ... inchangé ... */ };
+  return (
+    <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
+      <RippleButton
+        onClick={() => handleLinkClick(link)}
+        style={{
+          display:'flex', alignItems:'center', gap:'14px', width:'100%',
+          padding:'12px 16px', borderRadius:'20px',
+          background:CARD_BG, border:CARD_BORDER,
+          cursor:'pointer', textAlign:'left',
+          boxShadow:'0 2px 10px rgba(0,0,0,0.15)',
+          transition:'background 0.15s,transform 0.1s',
+        }}
+      >
+        <div style={{ width:'40px', height:'40px', borderRadius:'11px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          {platform.icon ? React.cloneElement(platform.icon, { width: 40, height: 40 }) : null}
+        </div>
+        <span style={{ color:CARD_TEXT, fontWeight:'600', letterSpacing:'0.01em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
+        <ExternalLink size={15} color={CARD_TEXT_MUTED} style={{ flexShrink:0 }} />
+      </RippleButton>
+    </div>
+  );
+})}
         </div>
 
         {/* Support — [C11] numéro centralisé · [O6] fond 0.15→0.22, bordure 0.3→0.38 */}

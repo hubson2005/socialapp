@@ -57,24 +57,27 @@ const AVAT = [
   'linear-gradient(135deg,#25D366,#4ade80)',
 ]
 
-// ── DÉGRADÉS "LOGO SOCIALAPP" (bleu → violet/magenta → rose/rouge → orange) ──
-// [INCHANGÉ] Repris du logo SocialApp, en version tamisée. Ces tuiles KPI
-// restent volontairement sombres/opaques (elles transitionnent vers un fond
-// navy à 96-98% d'opacité) — ce sont des accents visuels intentionnels, pas
-// du texte blanc sur transparence : elles restent lisibles quel que soit le
-// thème de la page autour, donc non concernées par la conversion.
+// ── TUILES KPI — FONDS PLEINS ─────────────────────────────────────
+// [REVU] Remplace les anciens dégradés semi-transparents (pensés pour un
+// fond sombre) par des aplats de couleur pleine et saturée, façon cartes
+// "produit" professionnelles (cf. référence design fournie : Plateformes /
+// Marketplace / Calendrier). Une seule teinte par carte = lecture immédiate,
+// contraste garanti pour le texte blanc, et rendu cohérent quel que soit
+// l'environnement autour (thème clair de la page).
 const GRAD = {
-  blue:   'linear-gradient(135deg, rgba(43,79,255,0.42) 0%, rgba(12,13,26,0.96) 68%)',
-  purple: 'linear-gradient(135deg, rgba(151,42,247,0.42) 0%, rgba(12,13,26,0.96) 68%)',
-  pink:   'linear-gradient(135deg, rgba(236,17,85,0.42) 0%, rgba(12,13,26,0.96) 68%)',
-  orange: 'linear-gradient(135deg, rgba(255,122,0,0.42) 0%, rgba(12,13,26,0.96) 68%)',
+  blue:   '#4338ca',
+  purple: '#7c3aed',
+  pink:   '#db2777',
+  orange: '#d97706',
+  green:  '#059669',
+  dark:   '#161a2e',
 }
 
 // [T1][T2] Styles de PAGE (header, onglets, cartes, tableaux) ET de MODALE
-// sont désormais tous en thème clair. Les tuiles KPI à dégradé (GRAD,
-// statCard/statIco/statVal/statLbl) restent inchangées (voir note GRAD
-// ci-dessus) : ce sont des accents volontairement sombres, pas des reliquats
-// de l'ancien thème.
+// sont désormais tous en thème clair. Les tuiles KPI (statCard/statIco/
+// statVal/statLbl) utilisent des fonds pleins (voir GRAD ci-dessus) avec
+// texte blanc — volontairement distinctes du reste de la page en thème
+// clair, à la manière de cartes "produit" mises en avant.
 const S = {
   page:     { background:'transparent', minHeight:'auto', color:'#161a2e', fontFamily:"'Inter','DM Sans',system-ui,sans-serif" },
   header:   { padding:'18px 24px 0', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 },
@@ -88,19 +91,15 @@ const S = {
   g2:       { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 },
   card:     { background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:12, padding:'16px 18px', boxShadow:'0 1px 2px rgba(15,23,42,0.04)' },
   cardT:    { fontSize:13, fontWeight:600, color:'#161a2e', marginBottom:14, display:'flex', alignItems:'center', gap:7 },
-  // ✅ FIX: statCard accepte maintenant un fond (dégradé coloré) en paramètre.
-  // Sans argument, retombe sur un fond clair (comportement d'origine adapté).
-  statCard: (bg) => ({ background:bg||'#ffffff', border:'1px solid #e6e8f0', borderRadius:12, padding:'16px 18px', position:'relative', overflow:'hidden' }),
-  // ✅ FIX LISIBILITÉ : le chip d'icône était presque invisible sur les fonds
-  // dégradés (rgba(255,255,255,0.15) sans bordure se fond dans le dégradé).
-  // Fond plus opaque + bordure + icône plus grande pour qu'il se détache
-  // clairement, quelle que soit la couleur du dégradé derrière.
-  statIco:  () => ({ width:36, height:36, borderRadius:9, background:'rgba(255,255,255,0.24)', border:'1px solid rgba(255,255,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:19, marginBottom:10, boxShadow:'0 1px 3px rgba(0,0,0,0.25)' }),
-  statVal:  { fontSize:28, fontWeight:800, letterSpacing:'-1.5px', color:'#ffffff', textShadow:'0 1px 4px rgba(0,0,0,0.35)' },
-  // Texte blanc conservé — cette étiquette vit exclusivement sur les tuiles
-  // KPI à dégradé sombre (voir GRAD ci-dessus), jamais directement sur la page.
-  statLbl:  { fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:2, fontWeight:500 },
-  statGlow: (c) => ({ position:'absolute', top:-20, right:-20, width:80, height:80, borderRadius:'50%', background:c, filter:'blur(30px)', opacity:0.25, pointerEvents:'none' }),
+  // ✅ FIX PRO : fond plein (couleur unie), coins arrondis cohérents avec le
+  // reste de l'UI, légère ombre portée pour donner de la profondeur sans
+  // paraître "gadget". Plus de bordure (inutile sur fond plein saturé).
+  statCard: (bg) => ({ background:bg||'#ffffff', border:'none', borderRadius:14, padding:'18px 20px', position:'relative', overflow:'hidden', boxShadow:'0 4px 14px rgba(15,23,42,0.12)' }),
+  // ✅ FIX LISIBILITÉ : badge d'icône en blanc translucide avec léger contour,
+  // se détache proprement sur n'importe quelle couleur pleine.
+  statIco:  () => ({ width:38, height:38, borderRadius:10, background:'rgba(255,255,255,0.16)', border:'1px solid rgba(255,255,255,0.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, marginBottom:14 }),
+  statVal:  { fontSize:26, fontWeight:800, letterSpacing:'-1px', color:'#ffffff', lineHeight:1 },
+  statLbl:  { fontSize:12.5, color:'rgba(255,255,255,0.78)', marginTop:6, fontWeight:600 },
   tbl:      { width:'100%', borderCollapse:'collapse' },
   th:       { textAlign:'left', fontSize:10, color:C.textMute, fontWeight:700, paddingBottom:9, borderBottom:'1px solid #e6e8f0', textTransform:'uppercase', letterSpacing:'0.8px' },
   td:       { padding:'11px 0', borderBottom:'1px solid #eef0f5', fontSize:13, color:'#3a3f52', verticalAlign:'middle' },
@@ -213,14 +212,13 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
 
   return (
     <div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
         {[
-          { lbl:'Envoyées', val:boostNotifs.length,                                cardBg:GRAD.blue,   glow:C.green,   ico:'📤' },
-          { lbl:'Livrées',  val:boostNotifs.filter(n=>n.status==='sent').length,   cardBg:GRAD.purple, glow:C.purple,  ico:'✅' },
-          { lbl:'Échecs',   val:boostNotifs.filter(n=>n.status==='failed').length, cardBg:GRAD.pink,   glow:'#ef4444', ico:'❌' },
+          { lbl:'Envoyées', val:boostNotifs.length,                                cardBg:GRAD.blue,  ico:'📤' },
+          { lbl:'Livrées',  val:boostNotifs.filter(n=>n.status==='sent').length,   cardBg:GRAD.green, ico:'✅' },
+          { lbl:'Échecs',   val:boostNotifs.filter(n=>n.status==='failed').length, cardBg:GRAD.pink,  ico:'❌' },
         ].map((s,i) => (
           <div key={i} style={S.statCard(s.cardBg)}>
-            <div style={S.statGlow(s.glow)}/>
             <div style={S.statIco()}>{s.ico}</div>
             <div style={S.statVal}>{s.val}</div>
             <div style={S.statLbl}>{s.lbl}</div>
@@ -835,17 +833,15 @@ export default function WhatsAppCRM({ profile }) {
         {/* ── DASHBOARD ── */}
         {tab==='dashboard' && <>
           <div style={S.g4}>
-            {/* ✅ FIX: chaque case a maintenant un fond dégradé repris des couleurs
-                du logo SocialApp (bleu → violet/magenta → rose/rouge → orange),
-                au lieu du fond uni sombre d'origine. */}
+            {/* ✅ FIX : tuiles KPI en fond plein, couleurs de la charte SocialApp
+                (bleu → violet → magenta → dark), texte blanc, ombre légère. */}
             {[
-              { lbl:'Contacts',     ico:'👥', val:stats.totalContacts,      cardBg:GRAD.blue,   glow:'#3b5bfd' },
-              { lbl:'Actifs',       ico:'✅', val:stats.activeContacts,     cardBg:GRAD.purple, glow:'#a729f0' },
-              { lbl:'Campagnes',    ico:'📢', val:stats.sentCampaigns,      cardBg:GRAD.pink,   glow:'#ec1155' },
-              { lbl:'Notifs Boost', ico:'🚀', val:stats.boostNotifsSent||0, cardBg:GRAD.orange, glow:'#ff8a00' },
+              { lbl:'Contacts',     ico:'👥', val:stats.totalContacts,      cardBg:GRAD.blue   },
+              { lbl:'Actifs',       ico:'✅', val:stats.activeContacts,     cardBg:GRAD.purple },
+              { lbl:'Campagnes',    ico:'📢', val:stats.sentCampaigns,      cardBg:GRAD.pink   },
+              { lbl:'Notifs Boost', ico:'🚀', val:stats.boostNotifsSent||0, cardBg:GRAD.dark   },
             ].map((s,i) => (
               <div key={i} style={S.statCard(s.cardBg)}>
-                <div style={S.statGlow(s.glow)}/>
                 <div style={S.statIco()}>{s.ico}</div>
                 <div style={S.statVal}>{s.val}</div>
                 <div style={S.statLbl}>{s.lbl}</div>

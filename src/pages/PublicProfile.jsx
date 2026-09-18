@@ -296,6 +296,18 @@
  *        normalement dans la liste "Liens", garantissant que le(s) lien(s)
  *        du bandeau et ceux de la liste sont toujours des exemplaires
  *        différents.
+ *
+ * TÉLÉPHONE/WHATSAPP RESTANTS REMONTÉS EN HAUT DE LA LISTE "LIENS"
+ * (cette révision) :
+ *  [SB3] Un éventuel 2e exemplaire de téléphone ou de WhatsApp (celui qui
+ *        n'a pas été absorbé par le bandeau [SB1]/[SB2]) est désormais
+ *        remonté en tête de la liste "Liens", dans l'ordre
+ *        téléphone → WhatsApp, au lieu de rester à sa position d'origine
+ *        dans profile.links (souvent en fin de liste, après TikTok,
+ *        YouTube, etc.). Implémenté par un tri stable sur mainLinksFiltered
+ *        (résultat de [SB2]) : les liens téléphone/WhatsApp passent devant,
+ *        tous les autres types de liens gardent leur ordre relatif
+ *        d'origine entre eux.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -1229,12 +1241,27 @@ export default function PublicProfile() {
   // le WhatsApp/téléphone précis déjà remontés dans le bandeau ci-dessus
   // (comparaison par référence d'objet, donc un 2e exemplaire du même
   // type de lien n'est pas affecté et reste visible ici).
-  const mainLinks = enabledLinks.filter(l => {
+  const mainLinksFiltered = enabledLinks.filter(l => {
     const linkKey = (l.platform || '').toLowerCase();
     if (linkKey === 'facebook') return false;
     if (linkKey === 'whatsapp' && l === topWhatsapp) return false;
     if (linkKey === 'phone' && l === topPhone) return false;
     return true;
+  });
+
+  // [SB3] Les éventuels téléphone/WhatsApp restants (2e exemplaire, cf.
+  // REPEATABLE_LIMITS) sont remontés en tête de la liste "Liens" — dans
+  // cet ordre (téléphone puis WhatsApp) — au lieu de rester à leur
+  // position d'origine (souvent en fin de liste). Le tri est stable : à
+  // priorité égale (ex. deux liens "autre"), l'ordre d'origine entre eux
+  // est conservé, seuls téléphone/WhatsApp sont remontés devant.
+  const MAIN_LINKS_PRIORITY = ['phone', 'whatsapp'];
+  const mainLinks = [...mainLinksFiltered].sort((a, b) => {
+    const aKey = (a.platform || '').toLowerCase();
+    const bKey = (b.platform || '').toLowerCase();
+    const aRank = MAIN_LINKS_PRIORITY.includes(aKey) ? MAIN_LINKS_PRIORITY.indexOf(aKey) : MAIN_LINKS_PRIORITY.length;
+    const bRank = MAIN_LINKS_PRIORITY.includes(bKey) ? MAIN_LINKS_PRIORITY.indexOf(bKey) : MAIN_LINKS_PRIORITY.length;
+    return aRank - bRank;
   });
 
   const ec1             = profile.event_color1 || '#ff6b35';

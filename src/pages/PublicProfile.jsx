@@ -192,7 +192,7 @@
  *        ou 1er ton du dégradé du profil s'il n'y a pas d'image de fond)
  *        au lieu de 'transparent', y compris au nettoyage de l'effet.
  *
- * CORRECTIF FOND D'ÉCRAN INVISIBLE (cette révision) :
+ * CORRECTIF FOND D'ÉCRAN INVISIBLE (révision précédente) :
  *  [BG2] Le fix [BG1] ci-dessus a introduit une régression : il posait
  *        un fond OPAQUE à la fois sur document.documentElement (html) ET
  *        sur document.body. Or #__bg_layer__ / #__bg_overlay__ sont des
@@ -212,7 +212,7 @@
  *        sur un blanc par défaut du navigateur), aussi bien à
  *        l'application qu'au nettoyage de l'effet.
  *
- * BOUTONS DE LIENS EN FORME DE CAPSULE (cette révision) :
+ * BOUTONS DE LIENS EN FORME DE CAPSULE (révision précédente) :
  *  [S1]  Boutons de liens (RippleButton dans la section "Liens") passés
  *        d'une forme rectangulaire à coins arrondis (16px) à une forme
  *        capsule complète (borderRadius:'999px'), avec l'icône de
@@ -229,6 +229,33 @@
  *        focus clavier indigo ([W4]) ni sur l'animation d'apparition
  *        (.pp-link-btn) : seul le style inline du bouton et son contenu
  *        interne changent.
+ *
+ * TRANSPARENCE DES BOUTONS DE LIENS + ADAPTATION AUTOMATIQUE AU FOND
+ * (cette révision) :
+ *  [S2]  Fond des boutons de la section "Liens" (RippleButton) passé
+ *        d'un blanc quasi opaque (CARD_BG) à une surface transparente
+ *        façon "verre" : rgba(255,255,255,0.07) + léger flou sur fond
+ *        sombre ou image, rgba(255,255,255,0.55) + léger flou sur fond
+ *        clair. Le choix clair/sombre est calculé automatiquement par
+ *        getProfileContrast(profile) : fond image → considéré sombre (un
+ *        assombrissement lui est déjà appliqué par #__bg_overlay__) ;
+ *        fond en dégradé de couleur → luminance moyenne des deux teintes
+ *        choisies par l'utilisateur (bg1/bg2 de theme_color). Le libellé
+ *        du bouton (LINK_TEXT_COLOR) et le cercle derrière le logo de la
+ *        plateforme (LINK_BORDER_COLOR pour son liseré) suivent la même
+ *        bascule, pour rester lisibles quel que soit le fond choisi, au
+ *        lieu du fond blanc opaque + texte toujours foncé d'avant. Le
+ *        cercle du logo n'a plus de fond blanc plein ni de liseré blanc
+ *        fixe : fond très légèrement teinté (adaptatif) + fin liseré
+ *        adaptatif, le logo de la plateforme (déjà en couleur de marque)
+ *        restant visible directement dessus. L'état :hover du bouton
+ *        (auparavant un blanc fixe dans le <style> injecté une seule fois
+ *        au montage) passe désormais par une variable CSS
+ *        (--pp-hover-bg) posée en inline sur chaque bouton, pour pouvoir
+ *        varier selon le fond sans avoir à réinjecter la feuille de style
+ *        à chaque changement de profil. Ce changement ne touche QUE la
+ *        section "Liens" : boutique, documents, countdown et description
+ *        événement gardent leur fond blanc (CARD_BG) inchangé.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -401,6 +428,35 @@ const parseColors = (tc) => {
   if (tc && tc.includes('|')) { const [a, b] = tc.split('|'); return { bg1: a, bg2: b }; }
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
+
+// [S2] Détermine si le contenu posé par-dessus le fond du profil doit
+// être "clair" (texte blanc) ou "sombre" (texte foncé), pour que les
+// boutons de liens désormais transparents restent lisibles quel que
+// soit le fond choisi par l'utilisateur.
+//  - Fond image (bg_image_url) : toujours considéré sombre, car un
+//    assombrissement (#__bg_overlay__, cf. [O7]) est déjà appliqué
+//    par-dessus l'image dans tous les cas.
+//  - Fond en dégradé de couleur (theme_color) : luminance relative
+//    (formule WCAG) moyenne des deux teintes bg1/bg2 choisies par
+//    l'utilisateur — au-delà de 0.5 le fond est jugé "clair" (texte
+//    foncé), en dessous il est jugé "sombre" (texte clair).
+function getProfileContrast(profile) {
+  if (profile?.bg_image_url) return 'light';
+
+  const relativeLuminance = (hex) => {
+    const clean = String(hex || '').replace('#', '');
+    if (clean.length !== 6) return 0.1; // secours : fond de marque sombre par défaut
+    const r = parseInt(clean.slice(0, 2), 16) / 255;
+    const g = parseInt(clean.slice(2, 4), 16) / 255;
+    const b = parseInt(clean.slice(4, 6), 16) / 255;
+    const lin = (v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  };
+
+  const { bg1, bg2 } = parseColors(profile?.theme_color);
+  const avgLum = (relativeLuminance(bg1) + relativeLuminance(bg2)) / 2;
+  return avgLum > 0.5 ? 'dark' : 'light';
+}
 
 const getCountdown = (eventDate) => {
   if (!eventDate) return null;
@@ -745,6 +801,10 @@ export default function PublicProfile() {
   //      désormais blanc), anneau blanc conservé sur le bouton "Partager"
   //      (fond toujours sombre)
   // [P4] Fond "mesh" animé très lentement (respecte reduced-motion)
+  // [S2] .pp-link-btn-el:hover lit désormais la variable CSS
+  //      --pp-hover-bg (posée en inline sur chaque bouton de lien, cf.
+  //      plus bas) au lieu d'un blanc fixe, pour s'adapter au fond du
+  //      profil sans réinjecter cette feuille de style à chaque profil.
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_MAIN_ID)) {
       const s = document.createElement('style');
@@ -792,9 +852,9 @@ export default function PublicProfile() {
           .pp-shop-grid   { grid-template-columns:repeat(3,1fr); gap:12px; }
         }
 
-        /* [O8] Halo au survol desktop uniquement (évite un "collant" tactile) */
+        /* [O8][S2] Halo au survol desktop uniquement (évite un "collant" tactile) */
         @media (hover: hover) {
-          .pp-link-btn-el:hover  { background:${CARD_BG_HOVER} !important; transform:translateY(-1px); }
+          .pp-link-btn-el:hover  { background:var(--pp-hover-bg, ${CARD_BG_HOVER}) !important; transform:translateY(-1px); }
           .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
           .pp-share-btn:hover    { background:rgba(255,255,255,0.14) !important; }
           .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
@@ -1074,6 +1134,20 @@ export default function PublicProfile() {
     </div>
   );
 
+  // [S2] Contraste calculé une fois par rendu à partir du fond du profil
+  // (image ou dégradé de couleurs) — pilote la transparence et la
+  // couleur des boutons de la section "Liens" ci-dessous. N'affecte
+  // aucune autre section (boutique, documents, countdown, description
+  // événement restent sur CARD_BG blanc, inchangé).
+  const linkContrast      = getProfileContrast(profile);
+  const isLinkBgDark       = linkContrast === 'light';
+  const LINK_TEXT_COLOR    = isLinkBgDark ? 'rgba(255,255,255,0.96)' : '#15102a';
+  const LINK_BORDER_COLOR  = isLinkBgDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.18)';
+  const LINK_BG_IDLE       = isLinkBgDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.55)';
+  const LINK_BG_HOVER      = isLinkBgDark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.78)';
+  const LINK_ICON_BG       = isLinkBgDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.80)';
+  const LINK_TEXT_SHADOW   = isLinkBgDark ? '0 1px 3px rgba(0,0,0,0.35)' : 'none';
+
   const enabledLinks    = (profile.links || []).filter(l => l.enabled !== false);
   const ec1             = profile.event_color1 || '#ff6b35';
   const ec2             = profile.event_color2 || '#f7c948';
@@ -1323,7 +1397,11 @@ export default function PublicProfile() {
         {/* Liens — [S1] forme capsule : icône ronde à gauche, libellé
             centré en majuscules, bordure gauche colorée par plateforme
             conservée, cale invisible après le libellé pour un centrage
-            réel (pas juste visuel). */}
+            réel (pas juste visuel). [S2] Fond transparent adaptatif au
+            fond du profil (LINK_BG_IDLE), texte et cercle de logo
+            suivant la même bascule clair/sombre (LINK_TEXT_COLOR /
+            LINK_ICON_BG / LINK_BORDER_COLOR) au lieu du fond blanc
+            opaque CARD_BG utilisé partout ailleurs sur la page. */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = (link.platform || '').toLowerCase();
@@ -1348,26 +1426,41 @@ export default function PublicProfile() {
                     display:'flex', alignItems:'center', gap:'12px', width:'100%',
                     padding:'8px 8px',
                     borderRadius:'999px',
-                    background:CARD_BG, border:CARD_BORDER, ...CARD_BLUR,
+                    // [S2] Fond transparent adaptatif (au lieu de CARD_BG blanc
+                    // opaque) + léger flou verre ; --pp-hover-bg alimente la
+                    // règle .pp-link-btn-el:hover (voir <style> injecté plus
+                    // haut) sans avoir à réinjecter cette feuille par profil.
+                    background:LINK_BG_IDLE,
+                    border:`1px solid ${LINK_BORDER_COLOR}`,
+                    backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+                    '--pp-hover-bg': LINK_BG_HOVER,
                     cursor:'pointer', textAlign:'left',
                     boxShadow:CARD_SHADOW,
                     transition:'background 0.15s,transform 0.1s',
                   }}
                 >
-                  {/* [S1] Icône de plateforme découpée en cercle, liseré blanc */}
+                  {/* [S1][S2] Icône de plateforme découpée en cercle ; fond et
+                      liseré adaptatifs (LINK_ICON_BG / LINK_BORDER_COLOR) au
+                      lieu d'un disque blanc plein fixe — le logo de la
+                      plateforme (déjà en couleur de marque) reste visible
+                      directement dessus quel que soit le fond du profil. */}
                   <div style={{
                     width:'48px', height:'48px', borderRadius:'50%', overflow:'hidden',
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                    background:'#fff', boxShadow:'0 0 0 2px #fff',
+                    background:LINK_ICON_BG, boxShadow:`0 0 0 1px ${LINK_BORDER_COLOR}`,
                   }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
                   </div>
 
-                  {/* [S1] Libellé centré, majuscules, espacement large */}
+                  {/* [S1][S2] Libellé centré, majuscules, espacement large ;
+                      couleur adaptative (LINK_TEXT_COLOR) + léger textShadow
+                      sur fond sombre/image pour garder le texte lisible
+                      malgré le fond désormais transparent. */}
                   <span style={{
                     flex:1, textAlign:'center',
-                    color:CARD_TEXT, fontWeight:'700', fontSize:'13px',
+                    color:LINK_TEXT_COLOR, fontWeight:'700', fontSize:'13px',
                     letterSpacing:'0.18em', textTransform:'uppercase',
+                    textShadow:LINK_TEXT_SHADOW,
                     overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
                   }}>
                     {link.label || platform.label}

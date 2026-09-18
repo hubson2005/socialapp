@@ -256,6 +256,29 @@
  *        à chaque changement de profil. Ce changement ne touche QUE la
  *        section "Liens" : boutique, documents, countdown et description
  *        événement gardent leur fond blanc (CARD_BG) inchangé.
+ *
+ * BANDEAU D'ICÔNES RAPIDES SOUS LA BIO (cette révision) :
+ *  [SB1] Ajout d'un petit bandeau capsule sous la bio (et sous le
+ *        numéro de téléphone affiché en texte, s'il y en a un), contenant
+ *        jusqu'à 3 icônes seules (sans libellé) : le premier lien actif
+ *        de type WhatsApp, le premier de type téléphone ("phone") et le
+ *        premier de type Facebook trouvés dans profile.links, dans cet
+ *        ordre. Une plateforme absente des liens du profil est
+ *        simplement omise du bandeau (pas d'icône vide). Purement
+ *        additif : ces liens restent affichés normalement dans la liste
+ *        "Liens" plus bas (aucune suppression, pas de logique de
+ *        masquage) — le bandeau n'est qu'un raccourci visuel en haut de
+ *        page, inspiré des bandeaux d'icônes rondes des cartes de visite
+ *        numériques. Réutilise handleLinkClick tel quel : le tracking de
+ *        clic et les déclencheurs d'automatisation (ex. WhatsApp click)
+ *        restent donc actifs depuis ce bandeau. Style et couleurs
+ *        alignés sur les tokens LINK_* de [S2] (fond/liseré adaptatifs au
+ *        fond du profil, hover partagé via --pp-hover-bg et la classe
+ *        .pp-link-btn-el). Le repli générique pour une plateforme inconnue
+ *        (auparavant dupliqué en dur dans le .map de la liste "Liens") a
+ *        été extrait dans une fonction commune resolvePlatform(link), pour
+ *        que le bandeau et la liste affichent exactement la même icône/
+ *        couleur pour une même plateforme.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -471,6 +494,27 @@ const getCountdown = (eventDate) => {
 };
 
 const formatPrice = (p) => p ? Number(p).toLocaleString('fr-FR') + ' F' : '';
+
+// [SB1] Résout les métadonnées d'affichage (icône, couleur, libellé) d'un
+// lien à partir de PLATFORMS, avec le même repli générique que la section
+// "Liens" pour toute plateforme inconnue. Partagé entre le bandeau
+// d'icônes rapides sous la bio (voir plus bas) et la liste complète des
+// liens, pour éviter de dupliquer deux fois cet objet de repli.
+function resolvePlatform(link) {
+  const key = (link.platform || '').toLowerCase();
+  return PLATFORMS[key] || {
+    label: (link.platform || 'LIEN').toUpperCase(),
+    color: '#6366f1',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28">
+        <rect width="24" height="24" rx="6" fill="#6366f1"/>
+        <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/>
+        <ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/>
+        <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/>
+      </svg>
+    ),
+  };
+}
 
 // ─── Sous-composants ──────────────────────────────────────────
 
@@ -1149,6 +1193,16 @@ export default function PublicProfile() {
   const LINK_TEXT_SHADOW   = isLinkBgDark ? '0 1px 3px rgba(0,0,0,0.35)' : 'none';
 
   const enabledLinks    = (profile.links || []).filter(l => l.enabled !== false);
+
+  // [SB1] Bandeau d'icônes rapides sous la bio : un WhatsApp, un
+  // téléphone et un Facebook — les premiers trouvés parmi les liens
+  // actifs, dans cet ordre. Purement additif : ces liens restent aussi
+  // affichés normalement dans la liste "Liens" plus bas, ce bandeau n'en
+  // est qu'un raccourci visuel en haut de page.
+  const topSocialLinks = ['whatsapp', 'phone', 'facebook']
+    .map(key => enabledLinks.find(l => (l.platform || '').toLowerCase() === key))
+    .filter(Boolean);
+
   const ec1             = profile.event_color1 || '#ff6b35';
   const ec2             = profile.event_color2 || '#f7c948';
   const available       = products.filter(p => p.is_available !== false);
@@ -1267,6 +1321,42 @@ export default function PublicProfile() {
 
         {profile.bio   && <p style={{ color:'rgba(255,255,255,0.72)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
+
+        {/* [SB1] Bandeau d'icônes rapides (WhatsApp / téléphone / Facebook)
+            sous la bio — icônes seules dans un bandeau capsule, fond et
+            liseré adaptatifs au fond du profil (mêmes tokens LINK_* que la
+            section "Liens"). Réutilise handleLinkClick, donc le tracking
+            et les déclencheurs d'automatisation (ex. WhatsApp) restent
+            actifs comme depuis la liste "Liens" normale. */}
+        {topSocialLinks.length > 0 && (
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'center', gap:'10px',
+            marginBottom:'18px', padding:'8px 14px', borderRadius:'999px',
+            background:LINK_BG_IDLE, border:`1px solid ${LINK_BORDER_COLOR}`,
+            backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+          }}>
+            {topSocialLinks.map((link, i) => {
+              const platform = resolvePlatform(link);
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleLinkClick(link)}
+                  aria-label={link.label || platform.label}
+                  className="pp-link-btn-el"
+                  style={{
+                    '--pp-hover-bg': LINK_BG_HOVER,
+                    width:'44px', height:'44px', borderRadius:'50%', overflow:'hidden',
+                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                    background:LINK_ICON_BG, border:`1px solid ${LINK_BORDER_COLOR}`,
+                    cursor:'pointer', padding:0, touchAction:'manipulation',
+                  }}
+                >
+                  {platform.icon ? React.cloneElement(platform.icon, { width: 44, height: 44 }) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Événement */}
         {hasEventContent && (
@@ -1404,19 +1494,7 @@ export default function PublicProfile() {
             opaque CARD_BG utilisé partout ailleurs sur la page. */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
-            const key = (link.platform || '').toLowerCase();
-            const platform = PLATFORMS[key] || {
-              label: (link.platform || 'LIEN').toUpperCase(),
-              color: '#6366f1',
-              icon: (
-                <svg viewBox="0 0 24 24" width="28" height="28">
-                  <rect width="24" height="24" rx="6" fill="#6366f1"/>
-                  <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/>
-                  <ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/>
-                  <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/>
-                </svg>
-              ),
-            };
+            const platform = resolvePlatform(link); // [SB1] repli générique mutualisé
             return (
               <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
                 <RippleButton

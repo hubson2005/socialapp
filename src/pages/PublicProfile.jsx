@@ -257,28 +257,45 @@
  *        section "Liens" : boutique, documents, countdown et description
  *        événement gardent leur fond blanc (CARD_BG) inchangé.
  *
- * BANDEAU D'ICÔNES RAPIDES SOUS LA BIO (cette révision) :
+ * BANDEAU D'ICÔNES RAPIDES SOUS LA BIO (révision précédente) :
  *  [SB1] Ajout d'un petit bandeau capsule sous la bio (et sous le
  *        numéro de téléphone affiché en texte, s'il y en a un), contenant
  *        jusqu'à 3 icônes seules (sans libellé) : le premier lien actif
  *        de type WhatsApp, le premier de type téléphone ("phone") et le
  *        premier de type Facebook trouvés dans profile.links, dans cet
  *        ordre. Une plateforme absente des liens du profil est
- *        simplement omise du bandeau (pas d'icône vide). Purement
- *        additif : ces liens restent affichés normalement dans la liste
- *        "Liens" plus bas (aucune suppression, pas de logique de
- *        masquage) — le bandeau n'est qu'un raccourci visuel en haut de
- *        page, inspiré des bandeaux d'icônes rondes des cartes de visite
- *        numériques. Réutilise handleLinkClick tel quel : le tracking de
- *        clic et les déclencheurs d'automatisation (ex. WhatsApp click)
- *        restent donc actifs depuis ce bandeau. Style et couleurs
- *        alignés sur les tokens LINK_* de [S2] (fond/liseré adaptatifs au
- *        fond du profil, hover partagé via --pp-hover-bg et la classe
- *        .pp-link-btn-el). Le repli générique pour une plateforme inconnue
- *        (auparavant dupliqué en dur dans le .map de la liste "Liens") a
- *        été extrait dans une fonction commune resolvePlatform(link), pour
- *        que le bandeau et la liste affichent exactement la même icône/
- *        couleur pour une même plateforme.
+ *        simplement omise du bandeau (pas d'icône vide). Réutilise
+ *        handleLinkClick tel quel : le tracking de clic et les
+ *        déclencheurs d'automatisation (ex. WhatsApp click) restent donc
+ *        actifs depuis ce bandeau. Style et couleurs alignés sur les
+ *        tokens LINK_* de [S2] (fond/liseré adaptatifs au fond du
+ *        profil, hover partagé via --pp-hover-bg et la classe
+ *        .pp-link-btn-el). Le repli générique pour une plateforme
+ *        inconnue (auparavant dupliqué en dur dans le .map de la liste
+ *        "Liens") a été extrait dans une fonction commune
+ *        resolvePlatform(link), pour que le bandeau et la liste
+ *        affichent exactement la même icône/couleur pour une même
+ *        plateforme.
+ *
+ * PAS DE DOUBLON ENTRE LE BANDEAU ET LA LISTE "LIENS" (cette révision) :
+ *  [SB2] Le bandeau [SB1] n'est plus purement additif : les liens qu'il
+ *        affiche sont désormais retirés de la liste "Liens" plus bas
+ *        (nouvelle variable mainLinks, utilisée à la place d'enabledLinks
+ *        pour le rendu de cette liste — enabledLinks continue de servir
+ *        de base commune aux deux). Facebook est retiré systématiquement
+ *        de mainLinks dès qu'il apparaît dans le bandeau : il ne peut de
+ *        toute façon exister qu'en un seul exemplaire (absent de
+ *        REPEATABLE_LIMITS dans AddPlatformDialog.jsx), donc une fois
+ *        remonté en haut il ne doit plus jamais réapparaître en bas. Pour
+ *        WhatsApp et téléphone, qui eux peuvent avoir plusieurs
+ *        exemplaires (jusqu'à 2 et 3 respectivement), seule la première
+ *        occurrence de chaque (topWhatsapp / topPhone, retenue par
+ *        référence d'objet et non par contenu, pour ne pas confondre deux
+ *        liens identiques) est retirée de mainLinks : un éventuel 2e
+ *        WhatsApp ou 2e/3e numéro de téléphone continue donc d'apparaître
+ *        normalement dans la liste "Liens", garantissant que le(s) lien(s)
+ *        du bandeau et ceux de la liste sont toujours des exemplaires
+ *        différents.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -1194,14 +1211,31 @@ export default function PublicProfile() {
 
   const enabledLinks    = (profile.links || []).filter(l => l.enabled !== false);
 
-  // [SB1] Bandeau d'icônes rapides sous la bio : un WhatsApp, un
+  // [SB1][SB2] Bandeau d'icônes rapides sous la bio : un WhatsApp, un
   // téléphone et un Facebook — les premiers trouvés parmi les liens
-  // actifs, dans cet ordre. Purement additif : ces liens restent aussi
-  // affichés normalement dans la liste "Liens" plus bas, ce bandeau n'en
-  // est qu'un raccourci visuel en haut de page.
-  const topSocialLinks = ['whatsapp', 'phone', 'facebook']
-    .map(key => enabledLinks.find(l => (l.platform || '').toLowerCase() === key))
-    .filter(Boolean);
+  // actifs, dans cet ordre. Ces trois liens précis sont ensuite retirés
+  // de la liste "Liens" plus bas (mainLinks) pour ne jamais être affichés
+  // deux fois : Facebook disparaît entièrement de la liste (il n'existe
+  // qu'en haut), tandis qu'un éventuel 2e WhatsApp ou 2e/3e numéro de
+  // téléphone (permis par REPEATABLE_LIMITS) continue lui d'apparaître
+  // normalement en bas, puisque seule cette première occurrence remonte.
+  const topWhatsapp = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'whatsapp');
+  const topPhone     = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'phone');
+  const topFacebook  = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'facebook');
+  const topSocialLinks = [topWhatsapp, topPhone, topFacebook].filter(Boolean);
+
+  // [SB2] Liste "Liens" affichée plus bas : identique à enabledLinks, sauf
+  // qu'on retire Facebook (systématiquement, il ne vit plus qu'en haut) et
+  // le WhatsApp/téléphone précis déjà remontés dans le bandeau ci-dessus
+  // (comparaison par référence d'objet, donc un 2e exemplaire du même
+  // type de lien n'est pas affecté et reste visible ici).
+  const mainLinks = enabledLinks.filter(l => {
+    const linkKey = (l.platform || '').toLowerCase();
+    if (linkKey === 'facebook') return false;
+    if (linkKey === 'whatsapp' && l === topWhatsapp) return false;
+    if (linkKey === 'phone' && l === topPhone) return false;
+    return true;
+  });
 
   const ec1             = profile.event_color1 || '#ff6b35';
   const ec2             = profile.event_color2 || '#f7c948';
@@ -1493,7 +1527,7 @@ export default function PublicProfile() {
             LINK_ICON_BG / LINK_BORDER_COLOR) au lieu du fond blanc
             opaque CARD_BG utilisé partout ailleurs sur la page. */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
-          {enabledLinks.map((link, i) => {
+          {mainLinks.map((link, i) => {
             const platform = resolvePlatform(link); // [SB1] repli générique mutualisé
             return (
               <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>

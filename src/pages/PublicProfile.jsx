@@ -211,6 +211,24 @@
  *        en 'transparent' (jamais en 'unset'/'' pour éviter de retomber
  *        sur un blanc par défaut du navigateur), aussi bien à
  *        l'application qu'au nettoyage de l'effet.
+ *
+ * BOUTONS DE LIENS EN FORME DE CAPSULE (cette révision) :
+ *  [S1]  Boutons de liens (RippleButton dans la section "Liens") passés
+ *        d'une forme rectangulaire à coins arrondis (16px) à une forme
+ *        capsule complète (borderRadius:'999px'), avec l'icône de
+ *        plateforme découpée en cercle (au lieu d'un carré à coins
+ *        arrondis) et cerclée d'un liseré blanc. Le libellé est
+ *        maintenant centré horizontalement dans le bouton (au lieu
+ *        d'aligné à gauche juste après l'icône), en majuscules avec un
+ *        espacement de lettres large façon badge, grâce à une cale
+ *        invisible de même largeur que l'icône placée après le libellé
+ *        (centrage réel, pas juste visuel). La bordure gauche colorée par
+ *        plateforme ([P5]) est conservée à l'identique (elle suit
+ *        désormais l'arrondi complet plutôt qu'un coin carré). Aucun
+ *        changement sur RippleButton lui-même, sur le ripple, sur le
+ *        focus clavier indigo ([W4]) ni sur l'animation d'apparition
+ *        (.pp-link-btn) : seul le style inline du bouton et son contenu
+ *        interne changent.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -1302,7 +1320,10 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Liens — [W2][W3] fond blanc CARD_BG, libellé/icône en CARD_TEXT / CARD_TEXT_MUTED */}
+        {/* Liens — [S1] forme capsule : icône ronde à gauche, libellé
+            centré en majuscules, bordure gauche colorée par plateforme
+            conservée, cale invisible après le libellé pour un centrage
+            réel (pas juste visuel). */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {enabledLinks.map((link, i) => {
             const key = (link.platform || '').toLowerCase();
@@ -1323,13 +1344,37 @@ export default function PublicProfile() {
                 <RippleButton
                   onClick={() => handleLinkClick(link)}
                   platformColor={platform.color || '#6366f1'}
-                  style={{ display:'flex', alignItems:'center', gap:'16px', width:'100%', padding:'14px 16px', borderRadius:'16px', background:CARD_BG, border:CARD_BORDER, borderTop:'1px solid rgba(0,0,0,0.08)', ...CARD_BLUR, cursor:'pointer', textAlign:'left', boxShadow:CARD_SHADOW, transition:'background 0.15s,transform 0.1s' }}
+                  style={{
+                    display:'flex', alignItems:'center', gap:'12px', width:'100%',
+                    padding:'8px 8px',
+                    borderRadius:'999px',
+                    background:CARD_BG, border:CARD_BORDER, ...CARD_BLUR,
+                    cursor:'pointer', textAlign:'left',
+                    boxShadow:CARD_SHADOW,
+                    transition:'background 0.15s,transform 0.1s',
+                  }}
                 >
-                  <div style={{ width:'48px', height:'48px', borderRadius:'12px', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  {/* [S1] Icône de plateforme découpée en cercle, liseré blanc */}
+                  <div style={{
+                    width:'48px', height:'48px', borderRadius:'50%', overflow:'hidden',
+                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                    background:'#fff', boxShadow:'0 0 0 2px #fff',
+                  }}>
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
                   </div>
-                  <span style={{ color:CARD_TEXT, fontWeight:'700', letterSpacing:'0.02em', fontSize:'14px', flex:1 }}>{link.label || platform.label}</span>
-                  <ExternalLink size={16} color={CARD_TEXT_MUTED} style={{ flexShrink:0 }} />
+
+                  {/* [S1] Libellé centré, majuscules, espacement large */}
+                  <span style={{
+                    flex:1, textAlign:'center',
+                    color:CARD_TEXT, fontWeight:'700', fontSize:'13px',
+                    letterSpacing:'0.18em', textTransform:'uppercase',
+                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                  }}>
+                    {link.label || platform.label}
+                  </span>
+
+                  {/* [S1] Cale invisible de même largeur que l'icône — centrage réel du libellé */}
+                  <div aria-hidden="true" style={{ width:'48px', flexShrink:0 }} />
                 </RippleButton>
               </div>
             );

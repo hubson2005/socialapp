@@ -536,7 +536,7 @@ export default function Home() {
               <div>
                 <SectionLabel bg="rgba(255,107,53,.1)" border="1px solid rgba(255,107,53,.3)" color="#ff6b35" dotBg="#ff6b35">Profil digital</SectionLabel>
                 <h2 style={S.secTitle}>Un seul lien pour<br /><GradText>toute votre présence</GradText></h2>
-                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Votre profil digital SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
+                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Votre carte de visite digitale SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
                 {[
                   { icon: '🎨', bg: 'rgba(255,107,53,.1)', bd: 'rgba(255,107,53,.2)', title: 'Personnalisation complète', desc: 'Couleurs, photo, username unique. Un profil à votre image, sans code.' },
                   { icon: '📱', bg: 'rgba(99,102,241,.1)', bd: 'rgba(99,102,241,.2)', title: 'Accessible partout', desc: 'Lien direct ou QR code à scanner, imprimable sur carte de visite ou vitrine.' },
@@ -716,11 +716,11 @@ export default function Home() {
           <div style={S.secInner}>
             <div style={S.secHead} className="sa-rv">
               <h2 style={S.secTitle}>Prêt en <GradText>5 minutes</GradText></h2>
-              <p style={S.secSub}>Créez votre profil digital complet en quelques étapes simples.</p>
+              <p style={S.secSub}>Créez votre carte de visite digitale complète en quelques étapes simples.</p>
             </div>
             <div className="sa-steps sa-rv" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px' }}>
               {[
-                { icon: '👤', n: '1', title: 'Créez votre profil', desc: 'Nom, photo, bio, vos liens sociaux. En 5 minutes votre vitrine est prête.' },
+                { icon: '👤', n: '1', title: 'Créez votre carte de visite digitale', desc: 'Nom, photo, bio, vos liens sociaux. En 5 minutes votre vitrine est prête.' },
                 { icon: '🛍️', n: '2', title: 'Ajoutez vos produits', desc: 'Photos, prix, descriptions. Votre boutique est visible directement sur votre page.' },
                 { icon: '📲', n: '3', title: 'Partagez votre QR code', desc: 'Sur vos flyers, cartes de visite, vitrine. Un scan et vos clients trouvent tout.' },
               ].map((s, i) => (<div key={i} className={`sa-step sa-d${i + 1}`} style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '24px', padding: '32px', textAlign: 'center', transition: 'all .25s', cursor: 'default' }}><div style={{ fontSize: '36px', marginBottom: '14px' }}>{s.icon}</div><div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '900', margin: '0 auto 18px' }}>{s.n}</div><h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '10px' }}>{s.title}</h3><p style={{ fontSize: '14px', color: 'rgba(255,255,255,.5)', lineHeight: '1.7' }}>{s.desc}</p></div>))}
@@ -770,11 +770,11 @@ export default function Home() {
                 Prêt à transformer votre<br /><GradText>présence digitale ?</GradText>
               </h2>
               <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '18px', lineHeight: '1.85', marginBottom: '40px', maxWidth: '560px', margin: '0 auto 40px' }}>
-                Rejoignez des centaines d'entrepreneurs ivoiriens qui utilisent SocialApp pour partager leurs réseaux, vendre leurs produits et gérer leurs leads.
+                Rejoignez des centaines d'entrepreneurs ivoiriens et Africains qui utilisent SocialApp pour partager leurs réseaux, vendre leurs produits et gérer leurs leads.
               </p>
               <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <button type="button" style={{ ...S.bpri, fontSize: '17px', padding: '18px 48px' }} className="sa-bpri sa-pulse-btn" onClick={handleCTA}>
-                  {user ? 'Accéder à mon dashboard →' : 'Créer mon profil gratuitement →'}
+                  {user ? 'Accéder à mon dashboard →' : 'Créer ma carte de visite gratuitement →'}
                 </button>
                 <a href="#pricing" style={{ ...S.bsec, fontSize: '15px', padding: '17px 32px' }} className="sa-bsec">Voir les offres</a>
               </div>

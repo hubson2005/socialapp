@@ -17,6 +17,7 @@ import { useAuth } from '../AuthContext.jsx';
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import PlatformCard from "@/components/dashboard/PlatformCard";
 import AddPlatformDialog, { PLATFORMS } from "@/components/dashboard/AddPlatformDialog";
+import CreateProfileWizard from "@/components/dashboard/CreateProfileWizard";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
@@ -1015,6 +1016,7 @@ export default function Dashboard() {
   const [activeSection,    setActiveSection]    = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showAddDialog,    setShowAddDialog]    = useState(false);
+  const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showPreview,      setShowPreview]      = useState(false);
   const [localProfile,     setLocalProfile]     = useState(null);
   const [hasChanges,       setHasChanges]       = useState(false);
@@ -1140,10 +1142,36 @@ export default function Dashboard() {
     onError: (error) => toast.error('Erreur : ' + error.message),
   });
 
+  // [SIMPLIFICATION] Auparavant, ce bouton créait immédiatement un profil
+  // vide (nom générique, bio/links vides) qu'il fallait ensuite remplir
+  // panel par panel. Il ouvre désormais CreateProfileWizard, qui fait
+  // remplir les infos essentielles une par une (comme les link-in-bio du
+  // marché) : chaque champ validé fait apparaître le suivant. La création
+  // réelle en base n'a lieu qu'à la toute fin, via handleWizardSubmit.
   const handleCreateProfile = () => {
     if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
+    setShowCreateWizard(true);
+  };
+
+  const handleWizardSubmit = async (wizardData) => {
+    if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
     const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
-    createMutation.mutate({ user_id: user.id, display_name: 'Profil ' + ((profiles.length||0)+1), bio: '', links: [], theme_color: '#6366f1', expiry_date: expiry.toISOString().split('T')[0], is_verified: false, is_event: false });
+    try {
+      await createMutation.mutateAsync({
+        user_id:      user.id,
+        display_name: wizardData.display_name || ('Profil ' + ((profiles.length||0)+1)),
+        bio:          wizardData.bio || '',
+        avatar_url:   wizardData.avatar_url || null,
+        links:        wizardData.links || [],
+        theme_color:  wizardData.theme_color || '#4f46e5|#7c3aed',
+        expiry_date:  expiry.toISOString().split('T')[0],
+        is_verified:  false,
+        is_event:     false,
+      });
+      setShowCreateWizard(false);
+    } catch (err) {
+      toast.error('Erreur : ' + err.message);
+    }
   };
 
   const handleSwitchProfile = useCallback((p) => {
@@ -1225,6 +1253,17 @@ export default function Dashboard() {
         <p style={{ color:UI.textMuted, fontSize:'14px', margin:'0 0 24px' }}>Créez votre page de liens unique et partagez-la via un seul QR code.</p>
         <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2"><Plus className="w-4 h-4"/> Créer mon profil</Button>
       </motion.div>
+      <AnimatePresence>
+        {showCreateWizard && (
+          <CreateProfileWizard
+            open={showCreateWizard}
+            onClose={() => setShowCreateWizard(false)}
+            onSubmit={handleWizardSubmit}
+            submitting={createMutation.isPending}
+            profileNumber={(profiles.length||0)+1}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 
@@ -1344,6 +1383,17 @@ export default function Dashboard() {
       {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)}/>}
       <AnimatePresence>
         {showTemplates && <TemplatesModal onClose={()=>setShowTemplates(false)} onApply={applyTemplate}/>}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCreateWizard && (
+          <CreateProfileWizard
+            open={showCreateWizard}
+            onClose={() => setShowCreateWizard(false)}
+            onSubmit={handleWizardSubmit}
+            submitting={createMutation.isPending}
+            profileNumber={(profiles.length||0)+1}
+          />
+        )}
       </AnimatePresence>
 
       <style>{`

@@ -535,7 +535,7 @@ export default function Home() {
             <div className="sa-twocol sa-rv" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
               <div>
                 <SectionLabel bg="rgba(255,107,53,.1)" border="1px solid rgba(255,107,53,.3)" color="#ff6b35" dotBg="#ff6b35">Profil digital</SectionLabel>
-                <h2 style={S.secTitle}>Un seul lien pour<br /><GradText>toute votre présence</GradText></h2>
+                <h2 style={S.secTitle}>Un seul lien pour<br /><GradText>toute votre présence Digitale</GradText></h2>
                 <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Votre carte de visite digitale SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
                 {[
                   { icon: '🎨', bg: 'rgba(255,107,53,.1)', bd: 'rgba(255,107,53,.2)', title: 'Personnalisation complète', desc: 'Couleurs, photo, username unique. Un profil à votre image, sans code.' },

@@ -1402,22 +1402,26 @@ export default function PublicProfile() {
               <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
                 <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
               </div>
-              {/* [BN4] Avatar seul, en chevauchement bas-gauche — overlap
-                  fixe (translateY(50%) de sa propre hauteur), totalement
-                  indépendant de la hauteur du nom/de la bio ci-dessous,
-                  pour ne jamais empiéter sur la bannière elle-même. */}
-              <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(50%)' }}>
+              {/* [BN5] Avatar seul, en chevauchement bas-gauche — overlap
+                  porté à 65% de sa propre hauteur (au lieu de 50%) pour
+                  descendre la photo un peu plus bas sous la bannière, à
+                  la demande. Le bloc nom/bio ci-dessous garde sa hauteur
+                  minimale ajustée en conséquence pour continuer à
+                  réserver assez d'espace sous la bannière (voir [BN4]). */}
+              <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(65%)' }}>
                 {avatarBlock}
               </div>
             </div>
 
-            {/* [BN4] Nom + bio en flux normal (donc jamais superposés à la
-                bannière) juste après celle-ci : padding-gauche pour se
-                décaler à droite de l'avatar, hauteur minimale + centrage
-                vertical pour occuper la même bande que sa partie visible
-                quand le texte est court ; une bio plus longue pousse
-                simplement la suite de la page plus bas. */}
-            <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'6px', minHeight:'56px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+            {/* [BN4][BN5] Nom + bio en flux normal (donc jamais superposés à
+                la bannière) juste après celle-ci : padding-gauche pour se
+                décaler à droite de l'avatar, hauteur minimale (80px,
+                couvre la portion visible désormais plus grande de
+                l'avatar depuis [BN5]) + centrage vertical pour occuper la
+                même bande que sa partie visible quand le texte est court ;
+                une bio plus longue pousse simplement la suite de la page
+                plus bas. */}
+            <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'6px', minHeight:'80px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
               <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {profile.display_name}
                 {profile.is_verified && <span style={{ marginLeft:'6px', fontSize:'14px', color:'#22c55e' }}>✓</span>}

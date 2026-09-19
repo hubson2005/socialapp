@@ -308,6 +308,26 @@
  *        (résultat de [SB2]) : les liens téléphone/WhatsApp passent devant,
  *        tous les autres types de liens gardent leur ordre relatif
  *        d'origine entre eux.
+ *
+ * DISPOSITION "CARTE PRO" AVATAR + NOM + BIO SUR LA BANNIÈRE (cette
+ * révision) :
+ *  [BN3] Uniquement quand profile.banner_url est renseigné : l'avatar
+ *        n'est plus centré horizontalement sur le bord bas de la
+ *        bannière ([BN2]) — il est désormais calé à gauche, et le nom +
+ *        la bio sont affichés juste à côté (alignés à gauche, sur la
+ *        même ligne que l'avatar, tous deux "collés" en bas de cette
+ *        ligne via alignItems:'flex-end'), façon carte de visite/
+ *        vCard pro. Techniquement : un seul conteneur absolu
+ *        (left/right/bottom + translateY(50%)) contient à la fois
+ *        avatarBlock et la colonne nom/bio, au lieu des deux blocs
+ *        séparés d'avant (avatar centré, puis h1/bio centrés en dessous
+ *        du conteneur bannière). Le nom passe sur une seule ligne
+ *        (ellipsis si trop long) et la bio sur deux lignes maximum
+ *        (line-clamp), pour ne jamais déborder de l'espace disponible à
+ *        droite de l'avatar. Quand il n'y a PAS de bannière, le
+ *        comportement d'origine est intégralement conservé : avatar
+ *        centré, nom et bio centrés en dessous, dans leur propre bloc —
+ *        seul le cas "avec bannière" change.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -1346,41 +1366,62 @@ export default function PublicProfile() {
         fontFamily: FONT_STACK,
       }}>
 
-        {/* [BN1][BN2] Bannière de couverture — affichée uniquement si
+        {/* [BN1][BN2][BN3] Bannière de couverture — affichée uniquement si
             profile.banner_url est renseigné. Distincte de bg_image_url
             (fond plein écran) : image rectangulaire à coins arrondis,
             même largeur/ombre que les autres cartes de contenu. Quand une
-            bannière est présente, l'avatar est chevauché en bas, centré,
-            façon photo de couverture réseau social. `marginBottom` réserve
-            l'espace nécessaire à la moitié inférieure de l'avatar qui
-            déborde du cadre de la bannière. */}
+            bannière est présente, avatar + nom + bio sont regroupés dans
+            une seule ligne en chevauchement bas-gauche de la bannière
+            (disposition "carte pro" — voir [BN3]) ; sans bannière, on
+            retombe sur l'ancienne disposition centrée (avatar, puis nom
+            et bio centrés en dessous). */}
         {profile.banner_url ? (
-          <div className="pp-content-col" style={{ position:'relative', marginBottom:'70px' }}>
+          <div className="pp-content-col" style={{ position:'relative', marginBottom:'64px' }}>
             <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
               <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
             </div>
-            <div style={{ position:'absolute', left:'50%', bottom:0, transform:'translate(-50%, 50%)' }}>
+            {/* [BN3] Avatar calé à gauche + nom/bio juste à côté, tous deux
+                alignés sur le bas de la ligne (façon carte de visite),
+                dans l'espace laissé libre sous la bannière par le
+                chevauchement (translateY(50%), comme pour l'avatar seul
+                avant [BN3]). */}
+            <div style={{
+              position:'absolute', left:'20px', right:'20px', bottom:0,
+              transform:'translateY(50%)',
+              display:'flex', alignItems:'flex-end', gap:'14px',
+            }}>
               {avatarBlock}
+              <div style={{ display:'flex', flexDirection:'column', minWidth:0, paddingBottom:'8px' }}>
+                <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {profile.display_name}
+                  {profile.is_verified && <span style={{ marginLeft:'6px', fontSize:'14px', color:'#22c55e' }}>✓</span>}
+                </h1>
+                {profile.bio && (
+                  <p style={{ color:'rgba(255,255,255,0.75)', fontSize:'13px', fontWeight:500, textAlign:'left', lineHeight:1.4, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
+                    {profile.bio}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <>
+            {/* Avatar autonome + nom/bio centrés — comportement d'origine
+                inchangé pour les profils sans bannière. */}
+            <div style={{ marginBottom:'16px' }}>
+              {avatarBlock}
+            </div>
 
-        {/* Avatar autonome — uniquement si pas de bannière (comportement
-            d'origine inchangé). Avec bannière, l'avatar est déjà rendu
-            ci-dessus, chevauchant le bord bas de la bannière. */}
-        {!profile.banner_url && (
-          <div style={{ marginBottom:'16px' }}>
-            {avatarBlock}
-          </div>
+            {/* [P7] Hiérarchie resserrée : tracking réduit, poids affiné */}
+            <h1 style={{ fontSize:'24px', fontWeight:'800', color:'white', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
+              {profile.display_name}
+              {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
+            </h1>
+
+            {profile.bio && <p style={{ color:'rgba(255,255,255,0.72)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
+          </>
         )}
 
-        {/* [P7] Hiérarchie resserrée : tracking réduit, poids affiné */}
-        <h1 style={{ fontSize:'24px', fontWeight:'800', color:'white', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
-          {profile.display_name}
-          {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
-        </h1>
-
-        {profile.bio   && <p style={{ color:'rgba(255,255,255,0.72)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
         {/* [SB1] Bandeau d'icônes rapides (WhatsApp / téléphone / Facebook)

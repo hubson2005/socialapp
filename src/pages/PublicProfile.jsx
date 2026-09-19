@@ -1421,7 +1421,7 @@ export default function PublicProfile() {
                 même bande que sa partie visible quand le texte est court ;
                 une bio plus longue pousse simplement la suite de la page
                 plus bas. */}
-            <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'6px', minHeight:'80px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+            <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'0px', minHeight:'80px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
               <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {profile.display_name}
                 {profile.is_verified && <span style={{ marginLeft:'6px', fontSize:'14px', color:'#22c55e' }}>✓</span>}

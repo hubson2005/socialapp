@@ -132,8 +132,13 @@ const db = {
     if (error) throw error;
     return updated;
   },
+  // [FIX] Ciblait la table `leads` au lieu de `link_profiles` — supprimer un
+  // profil depuis "Mes profils" tentait donc de supprimer un lead CRM
+  // portant le même id, ce qui échouait (400) dès que cet id n'existait pas
+  // côté leads, et aurait pu au contraire supprimer un vrai lead par
+  // coïncidence d'id sinon. Alignée sur create/update ci-dessus.
   delete: async (id) => {
-    const { error } = await supabase.from('leads').delete().eq('id', id);
+    const { error } = await supabase.from('link_profiles').delete().eq('id', id);
     if (error) throw error;
     return { id };
   },

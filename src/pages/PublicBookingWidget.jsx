@@ -5,7 +5,10 @@ import { triggerNewBooking, triggerNewEventRegistration } from '../lib/triggers/
 // Palette "premium" : fond opaque (plus de simple transparence sur le fond
 // dynamique), accent émeraude, séparation nette entre l'en-tête et le
 // contenu, cohérent avec la maquette validée.
-const COLORS = {
+// [LINK1] Exportée (plus seulement locale à ce fichier) pour que
+// PublicBookingPage.jsx (page dédiée "lien direct") puisse réutiliser
+// exactement les mêmes couleurs sans les dupliquer.
+export const COLORS = {
   surface: '#141220',       // fond opaque de la carte
   surfaceAlt: '#1c1930',    // fond des blocs internes (service, créneau...)
   badgeBg: '#173229',       // fond du badge icône
@@ -62,23 +65,39 @@ const s = {
 
 const DATE_RANGE_DAYS = 30;
 
+// [FIX1] `mode` ne part plus sur une valeur fixe ('services'). Si un profil
+// n'a AUCUN service actif mais un ou plusieurs événements, le mode bascule
+// automatiquement sur 'events' une fois les données chargées (voir [FIX2]) —
+// sinon le widget restait bloqué sur 'services' et n'affichait rien.
 export default function PublicBookingWidget({ profileId }) {
-  const [mode, setMode] = useState('services'); // 'services' | 'events'
+  const [mode, setMode] = useState(null); // 'services' | 'events' | null (pas encore déterminé)
   const [services, setServices] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false; // évite un setState après démontage si profileId change vite
+
     (async () => {
       setLoading(true);
       const [svc, evt] = await Promise.all([
         supabase.from('booking_services').select('*').eq('profile_id', profileId).eq('is_active', true).order('position'),
         supabase.from('booking_events_public').select('*').eq('profile_id', profileId).order('event_date'),
       ]);
-      setServices(svc.data || []);
-      setEvents(evt.data || []);
+      if (cancelled) return;
+
+      const svcData = svc.data || [];
+      const evtData = evt.data || [];
+      setServices(svcData);
+      setEvents(evtData);
+
+      // [FIX2] Bascule automatique sur le mode qui a réellement du contenu.
+      setMode(svcData.length === 0 && evtData.length > 0 ? 'events' : 'services');
+
       setLoading(false);
     })();
+
+    return () => { cancelled = true; };
   }, [profileId]);
 
   if (loading) return <div style={s.wrap}><div style={s.empty}>Chargement du calendrier…</div></div>;
@@ -111,9 +130,14 @@ export default function PublicBookingWidget({ profileId }) {
 // ============================================================
 // RÉSERVATION DE SERVICE (créneaux)
 // ============================================================
-function ServiceBookingFlow({ profileId, services }) {
-  const [step, setStep] = useState(1); // 1: service, 2: date+heure, 3: form, 4: succès
-  const [service, setService] = useState(null);
+// [LINK2] `initialService` : quand fourni (lien direct vers un service
+// précis, cf. PublicBookingPage.jsx), le flux saute directement à l'étape
+// 2 (choix de la date/heure) au lieu de partir de la liste des services.
+// Le bouton "← {service.name}" qui ramenait à la liste (étape 1) est alors
+// masqué, puisqu'il n'y a plus de liste à laquelle revenir.
+export function ServiceBookingFlow({ profileId, services, initialService }) {
+  const [step, setStep] = useState(initialService ? 2 : 1); // 1: service, 2: date+heure, 3: form, 4: succès
+  const [service, setService] = useState(initialService || null);
   const [date, setDate] = useState('');
   const [slots, setSlots] = useState([]);
   const [slot, setSlot] = useState(null);
@@ -212,7 +236,17 @@ function ServiceBookingFlow({ profileId, services }) {
   if (step === 2) {
     return (
       <div>
-        <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setStep(1)}>← {service.name}</button>
+        {/* [LINK2] Bouton "changer de service" masqué sur un lien direct :
+            il n'y a pas de liste (services peut même être vide/undefined
+            sur la page dédiée), revenir en arrière n'aurait pas de sens. */}
+        {!initialService && (
+          <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setStep(1)}>← {service.name}</button>
+        )}
+        {initialService && (
+          <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 12 }}>
+            {service.name} · {service.duration_minutes} min{service.price > 0 ? ` · ${service.price.toLocaleString('fr-FR')} FCFA` : ' · Gratuit'}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 14 }}>
           {dateOptions.map((d) => {
             const iso = d.toISOString().slice(0, 10);
@@ -268,8 +302,13 @@ function ServiceBookingFlow({ profileId, services }) {
 // ============================================================
 // INSCRIPTION À UN ÉVÉNEMENT
 // ============================================================
-function EventBookingFlow({ profileId, events }) {
-  const [event, setEvent] = useState(null);
+// [LINK3] `initialEvent` : quand fourni (lien direct vers un événement
+// précis), l'écran de liste des événements est sauté entièrement — `event`
+// démarre déjà rempli, donc la branche `if (!event) { liste... }` ne se
+// déclenche jamais. Le bouton "← {event.title}" (qui ramenait à la liste)
+// est masqué pour la même raison qu'en [LINK2].
+export function EventBookingFlow({ profileId, events, initialEvent }) {
+  const [event, setEvent] = useState(initialEvent || null);
   const [form, setForm] = useState({ client_name: '', client_phone: '', client_email: '', party_size: 1 });
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -337,7 +376,16 @@ function EventBookingFlow({ profileId, events }) {
 
   return (
     <div>
-      <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setEvent(null)}>← {event.title}</button>
+      {/* [LINK3] Masqué sur un lien direct : pas de liste à laquelle revenir */}
+      {!initialEvent && (
+        <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setEvent(null)}>← {event.title}</button>
+      )}
+      {initialEvent && (
+        <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 12 }}>
+          {new Date(event.event_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {event.start_time?.slice(0, 5)}
+          {event.location ? ` · ${event.location}` : ''}
+        </div>
+      )}
       <input style={s.input} placeholder="Nom complet *" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
       <input style={s.input} placeholder="Téléphone *" value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} />
       <input style={s.input} placeholder="Email (optionnel)" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />

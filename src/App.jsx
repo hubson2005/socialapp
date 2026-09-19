@@ -4,6 +4,7 @@ import Login          from "./pages/Login";
 import Dashboard      from "./pages/Dashboard";
 import UserDashboard  from "./pages/UserDashboard";
 import PublicProfile  from "./pages/PublicProfile";
+import PublicBookingPage from "./pages/PublicBookingPage";
 import PublicForm from "./components/forms/PublicForm";
 import Home           from "./pages/Home";
 import Blog           from "./pages/Blog";
@@ -109,6 +110,10 @@ function PublicApp() {
           "/:username" et "*" pour que /form/:formId ne soit pas avalée
           par le catch-all et redirigée vers la home. */}
       <Route path="/form/:formId" element={<PublicForm />} />
+
+      {/* Lien direct de réservation (service ou événement précis) — doit
+       aussi être déclaré avant "/:username" pour la même raison. */}
+      <Route path="/book/:profileId/:type/:itemId" element={<PublicBookingPage />} />
 
       <Route path="/:username" element={<PublicProfile />} />
       {/* Blog — doit aussi être déclaré avant "/:username" pour la même raison */}

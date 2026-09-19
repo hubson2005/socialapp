@@ -89,6 +89,25 @@ const STATUS_COLORS = { pending: COLORS.warning, confirmed: COLORS.success, canc
 const STATUS_LABELS = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé', completed: 'Terminé', no_show: 'Absent' };
 const SERVICE_ICON_COLORS = [COLORS.accent, COLORS.blue, COLORS.success, COLORS.warning];
 
+// [LINK4] Construit l'URL publique "lien direct" vers un service ou un
+// événement précis (cf. PublicBookingPage.jsx / route /book/:profileId/:type/:itemId).
+// Centralisé ici pour que ServicesTab et EventsTab utilisent exactement le
+// même format d'URL, sans le dupliquer à deux endroits.
+function buildDirectBookingUrl(profileId, type, itemId) {
+  return `${window.location.origin}/book/${profileId}/${type}/${itemId}`;
+}
+
+// [LINK4] Copie une URL dans le presse-papiers avec un repli si l'API
+// Clipboard est indisponible (contexte non sécurisé, permission refusée...).
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Lien copié !');
+  } catch {
+    window.prompt('Copiez ce lien :', text);
+  }
+}
+
 const RESPONSIVE_CSS = `
 .bcp-wrap, .bcp-wrap *, .bcp-wrap *::before, .bcp-wrap *::after { box-sizing: border-box; }
 .bcp-wrap { overflow-x: hidden; max-width: 100%; }
@@ -546,6 +565,13 @@ function ServicesTab({ profileId, onDataChanged }) {
 
   const refresh = () => { load(); onDataChanged?.(); };
 
+  // [LINK4] Copie le lien direct "/book/:profileId/service/:svcId" pour ce
+  // service précis — le visiteur qui l'ouvre saute directement au choix du
+  // créneau (cf. ServiceBookingFlow > prop initialService).
+  const copyServiceLink = (svcId) => {
+    copyToClipboard(buildDirectBookingUrl(profileId, 'service', svcId));
+  };
+
   const save = async () => {
     const payload = {
       profile_id: profileId,
@@ -670,18 +696,26 @@ function ServicesTab({ profileId, onDataChanged }) {
                 <span style={s.badge(svc.is_active ? COLORS.success : COLORS.textMuted)}>{svc.is_active ? 'Actif' : 'Inactif'}</span>
               </div>
             </div>
-            <div className="bcp-svc-actions" style={s.row}>
-              <button style={s.btnGhost} onClick={() => toggleActive(svc)}>{svc.is_active ? 'Désactiver' : 'Activer'}</button>
-              <div style={s.btnIcon} title="Modifier" onClick={() => setForm(svc)}>✎</div>
-              <div style={s.btnIcon} title="Dupliquer" onClick={(e) => { e.stopPropagation(); duplicate(svc); }}>⧉</div>
-              <div style={s.btnDanger} title="Supprimer" onClick={(e) => { e.stopPropagation(); remove(svc.id); }}>🗑</div>
-            </div>
-            <div
-              className="bcp-svc-chevron"
-              style={{ color: COLORS.textMuted, fontSize: 18, cursor: 'pointer' }}
-              onClick={() => setForm(svc)}
-            >
-              ›
+
+            {/* [LINK4] Bouton "Copier le lien" — toujours visible, y compris
+                sur mobile où bcp-svc-actions est masqué au profit du
+                chevron : partager un lien direct est une action fréquente,
+                elle ne doit pas être reléguée derrière un clic sur ✎. */}
+            <div style={s.row}>
+              <div style={s.btnIcon} title="Copier le lien direct" onClick={(e) => { e.stopPropagation(); copyServiceLink(svc.id); }}>🔗</div>
+              <div className="bcp-svc-actions" style={s.row}>
+                <button style={s.btnGhost} onClick={() => toggleActive(svc)}>{svc.is_active ? 'Désactiver' : 'Activer'}</button>
+                <div style={s.btnIcon} title="Modifier" onClick={() => setForm(svc)}>✎</div>
+                <div style={s.btnIcon} title="Dupliquer" onClick={(e) => { e.stopPropagation(); duplicate(svc); }}>⧉</div>
+                <div style={s.btnDanger} title="Supprimer" onClick={(e) => { e.stopPropagation(); remove(svc.id); }}>🗑</div>
+              </div>
+              <div
+                className="bcp-svc-chevron"
+                style={{ color: COLORS.textMuted, fontSize: 18, cursor: 'pointer' }}
+                onClick={() => setForm(svc)}
+              >
+                ›
+              </div>
             </div>
           </div>
           <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 8 }}>
@@ -822,6 +856,13 @@ function EventsTab({ profileId, onDataChanged }) {
 
   const refresh = () => { load(); onDataChanged?.(); };
 
+  // [LINK4] Copie le lien direct "/book/:profileId/event/:evId" pour cet
+  // événement précis — le visiteur qui l'ouvre saute directement au
+  // formulaire d'inscription (cf. EventBookingFlow > prop initialEvent).
+  const copyEventLink = (evId) => {
+    copyToClipboard(buildDirectBookingUrl(profileId, 'event', evId));
+  };
+
   const save = async () => {
     const payload = {
       profile_id: profileId,
@@ -917,6 +958,10 @@ function EventsTab({ profileId, onDataChanged }) {
           <div style={{ ...s.row, justifyContent: 'space-between' }}>
             <strong style={{ color: COLORS.text }}>{ev.title}</strong>
             <div style={s.row}>
+              {/* [LINK4] Bouton "Copier le lien" — placé à côté de ✎/🗑,
+                  toujours visible (EventsTab n'a pas de mode compact
+                  mobile contrairement à ServicesTab). */}
+              <div style={s.btnIcon} title="Copier le lien direct" onClick={() => copyEventLink(ev.id)}>🔗</div>
               <div style={s.btnIcon} title="Modifier" onClick={() => setForm(ev)}>✎</div>
               <div style={s.btnDanger} title="Supprimer" onClick={() => remove(ev.id)}>🗑</div>
             </div>

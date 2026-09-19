@@ -16,6 +16,7 @@ import { useAuth } from '../AuthContext.jsx';
 import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import PlatformCard from "@/components/dashboard/PlatformCard";
 import AddPlatformDialog from "@/components/dashboard/AddPlatformDialog";
+import CreateProfileWizard from "@/components/dashboard/CreateProfileWizard";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
@@ -211,11 +212,6 @@ function EventMediaCarousel({ medias = [], onRemove, adminMode = false }) {
   );
 }
 
-// Bannière de rappel d'abonnement SenePay — même emplacement/logique que
-// <InstallPrompt /> (visible en haut du contenu, sur toutes les sections).
-// Affichée uniquement si l'abonnement expire bientôt (≤ 7 jours) ou si le
-// profil est désactivé faute de renouvellement (cf. process_senepay_expirations
-// côté Supabase, qui met is_activated=false sans palier gratuit).
 function SubscriptionRenewalBanner({ subscription, isActivated, onRenew, loading }) {
   if (!subscription) return null;
   const expiresAt = subscription.expires_at ? new Date(subscription.expires_at) : null;
@@ -348,6 +344,9 @@ export default function UserDashboard() {
   // Paiement SenePay en cours (bloque le double-clic sur "Choisir un plan" /
   // "Renouveler maintenant" pendant la création de la session de paiement).
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  // [WIZARD] Assistant de création progressive du premier profil — voir
+  // CreateProfileWizard.jsx et handleCreateProfile / handleWizardSubmit.
+  const [showCreateWizard, setShowCreateWizard] = useState(false);
 
   const rawPlan     = (localProfile?.plan || user?.user_metadata?.plan || 'basic').toLowerCase().trim();
   const isActivated = localProfile?.is_activated === true;
@@ -489,10 +488,54 @@ export default function UserDashboard() {
     onError: e => toast.error('Erreur : ' + e.message),
   });
 
+  // [WIZARD] handleCreateProfile n'insère plus un profil vide directement :
+  // il ouvre CreateProfileWizard, qui fait remplir les infos essentielles
+  // une par une (nom, bio, photo, couleur, plateforme, boutique, documents).
+  // Le contrôle de quota (maxProfiles) reste fait ICI, avant même d'ouvrir
+  // le wizard, pour ne pas faire remplir 7 étapes à quelqu'un qui de toute
+  // façon ne pourra pas créer de second profil.
   const handleCreateProfile = () => {
     if (profiles.length >= limits.maxProfiles) { toast.error(`Limite atteinte — offre ${limits.label} : ${limits.maxProfiles} profil(s) max`); return; }
+    setShowCreateWizard(true);
+  };
+
+  // [WIZARD] Appelé par CreateProfileWizard à la fin de son étape
+  // "Plateforme" (voir LAST_PRE_CREATE_STEP dans le wizard). Reproduit
+  // exactement les champs que l'ancien handleCreateProfile insérait
+  // (is_activated:false, plan:rawPlan — activation manuelle plus tard,
+  // cf. handleSave/[FIX Q-ACTIVATION]), plus les champs collectés par le
+  // wizard (bio, avatar_url, links, theme_color). Pas de username ici :
+  // le verrou anti-squattage ([FIX Q-ACTIVATION] dans handleSave) empêche
+  // volontairement de le fixer avant activation du compte — il reste
+  // réglable ensuite depuis Overview une fois le compte activé.
+  // Renvoie le profil créé (ou null en cas d'échec) au wizard, qui en a
+  // besoin pour ses étapes Boutique/Documents (marketplace_products et
+  // profile_documents exigent un profile_id réel).
+  const handleWizardSubmit = async (wizardData) => {
+    if (profiles.length >= limits.maxProfiles) { toast.error(`Limite atteinte — offre ${limits.label} : ${limits.maxProfiles} profil(s) max`); return null; }
     const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
-    createMutation.mutate({ user_id: user.id, display_name: 'Mon Profil ' + (profiles.length + 1), bio: '', links: [], theme_color: '#6366f1', expiry_date: expiry.toISOString().split('T')[0], is_verified: false, is_event: false, is_activated: false, plan: rawPlan });
+    try {
+      const created = await createMutation.mutateAsync({
+        user_id: user.id,
+        display_name: wizardData.display_name || ('Mon Profil ' + (profiles.length + 1)),
+        bio: wizardData.bio || '',
+        avatar_url: wizardData.avatar_url || null,
+        links: wizardData.links || [],
+        theme_color: wizardData.theme_color || '#4f46e5|#7c3aed',
+        expiry_date: expiry.toISOString().split('T')[0],
+        is_verified: false,
+        is_event: false,
+        is_activated: false,
+        plan: rawPlan,
+      });
+      // [PAS DE FERMETURE ICI] Le wizard reste ouvert pour ses étapes
+      // Boutique / Documents (si autorisées par le plan) — c'est lui qui
+      // appelle onClose au bout de la dernière étape.
+      return created;
+    } catch (err) {
+      toast.error('Erreur : ' + err.message);
+      return null;
+    }
   };
 
   const updateLocal = useCallback((updates) => {
@@ -647,311 +690,355 @@ export default function UserDashboard() {
     await signOut();
   };
 
-  if (isLoading) return (
+ if (isLoading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f4f5fa' }}>
       <Loader2 className="w-6 h-6 animate-spin" style={{ color:'#6366f1' }} />
     </div>
   );
 
-  if (!profiles.length && !createMutation.isPending) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f4f5fa', padding:'24px' }}>
-      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', maxWidth:'360px', background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'24px', padding:'40px 32px', boxShadow:'0 20px 50px rgba(15,23,42,.08)' }}>
-        <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width:'80px', height:'80px', borderRadius:'24px', objectFit:'cover', margin:'0 auto 24px', display:'block' }} />
-        <h1 style={{ color:'#161a2e', fontSize:'24px', fontWeight:800, margin:'0 0 8px' }}>Bienvenue !</h1>
-        <p style={{ color:'#6b7280', fontSize:'14px', margin:'0 0 24px' }}>{limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits</p>
-        <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2" disabled={createMutation.isPending}>
-          {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Créer mon profil
-        </Button>
-      </motion.div>
-    </div>
-  );
+  // [FIX WIZARD-UNMOUNT] CreateProfileWizard est désormais monté UNE SEULE
+  // fois, tout en bas de la fonction (voir le `return` final) — plus dans
+  // la branche "!profiles.length" ci-dessous. Avant ce correctif : dès que
+  // la création du profil réussissait, l'invalidation de la query
+  // ['userProfiles', user.id] (dans createMutation.onSuccess) faisait
+  // passer profiles.length de 0 à 1, en général bien avant que
+  // l'utilisateur ait fini les étapes Boutique / Documents du wizard.
+  // Cette branche n'était alors plus jamais prise au rendu suivant, et le
+  // wizard disparaissait brutalement — même si showCreateWizard valait
+  // toujours true. Le contenu principal est maintenant calculé dans
+  // `mainContent`, et le wizard est rendu à côté, indépendamment de la
+  // branche empruntée par mainContent.
+  let mainContent;
 
-  if (!localProfile) return null;
-
-  const currentNav       = USER_NAV.find(n => n.id === activeSection);
-  const currentPlanOrder = PLAN_ORDER[effectivePlan] ?? 0;
-
-  const isCurrentSectionLocked = () => {
-    if (isAdmin) return false; // FIX — l'admin ne doit jamais être bloqué par le plan
-    const nav = USER_NAV.find(n => n.id === activeSection);
-    if (!nav || !nav.locked) return false;
-    return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99);
-  };
-
-  // Compte jamais payé (pas de ligne dans `subscriptions`) : accès au
-  // dashboard entièrement bloqué tant que le paiement n'est pas fait — on
-  // ne se fie plus à `rawPlan` seul (qui accordait déjà les quotas de
-  // l'offre choisie à l'inscription, avant tout paiement). Les comptes
-  // dont l'abonnement est simplement EXPIRÉ (une ligne `subscription`
-  // existe déjà) gardent le comportement actuel : bandeau de rappel,
-  // dashboard toujours accessible.
-// subscriptionLoading évite un flash de l'écran de paiement pour un
-  // utilisateur déjà activé, le temps que la requête `subscription`
-  // réponde (undefined pendant le chargement ≠ "pas d'abonnement").
-  if (!isAdmin && !isActivated && !subscriptionLoading && !subscription) {
-    return (
-      <>
-        <PaymentRequiredGate
-          plan={rawPlan}
-          onPay={() => startSenepayCheckout(rawPlan, 'new')}
-          loading={checkoutLoading}
-          onChangePlan={() => setShowPlanModal(true)}
-          onSignOut={handleSignOut}
-          userEmail={user?.email}
-        />
-        <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
-      </>
+  if (!profiles.length && !createMutation.isPending) {
+    mainContent = (
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f4f5fa', padding:'24px' }}>
+        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', maxWidth:'360px', background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'24px', padding:'40px 32px', boxShadow:'0 20px 50px rgba(15,23,42,.08)' }}>
+          <img src="/Logo_SocialApp.png" alt="SocialApp" style={{ width:'80px', height:'80px', borderRadius:'24px', objectFit:'cover', margin:'0 auto 24px', display:'block' }} />
+          <h1 style={{ color:'#161a2e', fontSize:'24px', fontWeight:800, margin:'0 0 8px' }}>Bienvenue !</h1>
+          <p style={{ color:'#6b7280', fontSize:'14px', margin:'0 0 24px' }}>{limits.maxLinks} liens · {limits.maxMarketplace === Infinity ? '∞' : limits.maxMarketplace} produits</p>
+          <Button onClick={handleCreateProfile} size="lg" className="rounded-xl gap-2" disabled={createMutation.isPending}>
+            {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Créer mon profil
+          </Button>
+        </motion.div>
+      </div>
     );
-  }
-  const renderSection = () => {
-    if (isCurrentSectionLocked()) {
+  } else if (!localProfile) {
+    // [FIX WIZARD-UNMOUNT] Auparavant `return null` ici — ce qui aurait,
+    // lui aussi, démonté le wizard pendant ce court état transitoire
+    // (profiles.length déjà à 1, localProfile pas encore synchronisé par
+    // le useEffect dédié).
+    mainContent = null;
+  } else {
+    const currentNav       = USER_NAV.find(n => n.id === activeSection);
+    const currentPlanOrder = PLAN_ORDER[effectivePlan] ?? 0;
+
+    const isCurrentSectionLocked = () => {
+      if (isAdmin) return false; // FIX — l'admin ne doit jamais être bloqué par le plan
       const nav = USER_NAV.find(n => n.id === activeSection);
-      // Feature verrouillée par palier de plan → modale d'upgrade ciblée
-      // sur CETTE feature précise (nav.label / nav.locked), plutôt que le
-      // comparatif générique des 3 offres.
-      return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={()=>handleOpenUpgrade(nav.label, nav.locked)} />;
-    }
-    switch (activeSection) {
-      // FIX — OverviewPanel reçoit désormais onUpgrade=handleOpenUpgrade :
-      // le bouton "Upgrader → PRO" de la carte Statistiques (repli quand
-      // limits.hasStats est false) ouvre la même modale de paiement Wave
-      // (FeatureUpgradeModal) que les autres fonctionnalités verrouillées,
-      // au lieu de rediriger vers "/". On lui passe explicitement le nom
-      // de la feature ("Statistiques") et le palier requis ("pro").
-      //
-      // [DÉPLACÉ] bgImageUrl / uploadingBg / onBgUpload / onBgRemove ajoutés :
-      // le contrôle d'image de fond vit désormais dans la carte Profil de
-      // OverviewPanel plutôt que dans le footer de UserSidebar.
-      //
-      // [AJOUT] bannerUrl / uploadingBanner / onBannerUpload / onBannerRemove :
-      // même pattern que ci-dessus pour la bannière de couverture.
-      case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrl={localProfile?.banner_url} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFile} onBannerRemove={()=>updateLocal({ banner_url:null })} />;
-      case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
-      case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
-      // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,
-      // quelle que soit la largeur d'écran : c'est ce qui empêchait Marketplace
-      // de profiter de l'espace disponible sur desktop, même après avoir élargi
-      // .mp-container à l'intérieur de MarketplacePanel.jsx (un enfant ne peut
-      // jamais dépasser la largeur que son parent lui laisse). Le plafond à
-      // 640px reste utile en dessous de 1024px (tablette/mobile, lisibilité) ;
-      // au-delà (desktop), on laisse MarketplacePanel gérer sa propre largeur
-      // via son breakpoint interne (1400px+).
-      case 'marketplace':     return ( <div style={isDesktop ? undefined : { maxWidth:'640px' }}>
-          <MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} />
+      if (!nav || !nav.locked) return false;
+      return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99);
+    };
+
+    // Compte jamais payé (pas de ligne dans `subscriptions`) : accès au
+    // dashboard entièrement bloqué tant que le paiement n'est pas fait — on
+    // ne se fie plus à `rawPlan` seul (qui accordait déjà les quotas de
+    // l'offre choisie à l'inscription, avant tout paiement). Les comptes
+    // dont l'abonnement est simplement EXPIRÉ (une ligne `subscription`
+    // existe déjà) gardent le comportement actuel : bandeau de rappel,
+    // dashboard toujours accessible.
+    // subscriptionLoading évite un flash de l'écran de paiement pour un
+    // utilisateur déjà activé, le temps que la requête `subscription`
+    // réponde (undefined pendant le chargement ≠ "pas d'abonnement").
+    if (!isAdmin && !isActivated && !subscriptionLoading && !subscription) {
+      mainContent = (
+        <>
+          <PaymentRequiredGate
+            plan={rawPlan}
+            onPay={() => startSenepayCheckout(rawPlan, 'new')}
+            loading={checkoutLoading}
+            onChangePlan={() => setShowPlanModal(true)}
+            onSignOut={handleSignOut}
+            userEmail={user?.email}
+          />
+          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
+        </>
+      );
+    } else {
+      const renderSection = () => {
+        if (isCurrentSectionLocked()) {
+          const nav = USER_NAV.find(n => n.id === activeSection);
+          // Feature verrouillée par palier de plan → modale d'upgrade ciblée
+          // sur CETTE feature précise (nav.label / nav.locked), plutôt que le
+          // comparatif générique des 3 offres.
+          return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={()=>handleOpenUpgrade(nav.label, nav.locked)} />;
+        }
+        switch (activeSection) {
+          // FIX — OverviewPanel reçoit désormais onUpgrade=handleOpenUpgrade :
+          // le bouton "Upgrader → PRO" de la carte Statistiques (repli quand
+          // limits.hasStats est false) ouvre la même modale de paiement Wave
+          // (FeatureUpgradeModal) que les autres fonctionnalités verrouillées,
+          // au lieu de rediriger vers "/". On lui passe explicitement le nom
+          // de la feature ("Statistiques") et le palier requis ("pro").
+          //
+          // [DÉPLACÉ] bgImageUrl / uploadingBg / onBgUpload / onBgRemove ajoutés :
+          // le contrôle d'image de fond vit désormais dans la carte Profil de
+          // OverviewPanel plutôt que dans le footer de UserSidebar.
+          //
+          // [AJOUT] bannerUrl / uploadingBanner / onBannerUpload / onBannerRemove :
+          // même pattern que ci-dessus pour la bannière de couverture.
+          case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrl={localProfile?.banner_url} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFile} onBannerRemove={()=>updateLocal({ banner_url:null })} />;
+          case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
+          case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
+          // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,
+          // quelle que soit la largeur d'écran : c'est ce qui empêchait Marketplace
+          // de profiter de l'espace disponible sur desktop, même après avoir élargi
+          // .mp-container à l'intérieur de MarketplacePanel.jsx (un enfant ne peut
+          // jamais dépasser la largeur que son parent lui laisse). Le plafond à
+          // 640px reste utile en dessous de 1024px (tablette/mobile, lisibilité) ;
+          // au-delà (desktop), on laisse MarketplacePanel gérer sa propre largeur
+          // via son breakpoint interne (1400px+).
+          case 'marketplace':     return ( <div style={isDesktop ? undefined : { maxWidth:'640px' }}>
+              <MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} />
+            </div>
+          );
+          case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} /></div>;
+          case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={()=>handleOpenUpgrade()} /></div>;
+          case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
+          case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
+          case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
+          case 'whatsapp-crm':    return limits.hasCRM      ? <WhatsappCRMPanel profileId={localProfile.id} /> : null;
+          case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
+          case 'automations':     return <AutomationsPanel     profileId={localProfile.id} />;
+          case 'meta':            return <MetaIntegrationPanel profile={localProfile} isAdmin={isAdmin} />;
+          case 'integrations':    return <IntegrationsPanel    profileId={localProfile.id} isAdmin={isAdmin} />;
+          case 'boost':           return <BoostPanel           profile={localProfile}      isAdmin={isAdmin} />;
+          case 'boost-analytics': return <BoostAnalyticsPanel  profile={localProfile} />;
+          case 'promotions':      return <PromotionsDashboard  profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} />;
+
+          // FIX — le bloc déconnexion (email + bouton) a été déplacé en bas de
+          // la sidebar (UserSidebar.jsx / MobileNav) pour rester accessible
+          // partout, pas seulement depuis Paramètres.
+          case 'settings': return <SettingsPanel />;
+
+          default: return null;
+        }
+      };
+      // Fond de la zone de contenu — gris-bleu très clair et neutre plutôt que
+      // le noir/violet précédent. Lisible longtemps, laisse les cartes blanches
+      // et les couleurs d'accent (indigo, orange, or) se détacher proprement.
+      const DASHBOARD_BG = { background: '#f4f5fa' };
+
+      // La sidebar (UserSidebar.jsx, fichier séparé) reste dans son bleu nuit
+      // pour ancrer l'identité de marque ; la topbar, elle, rejoint désormais
+      // le blanc de la zone de contenu pour un rendu "SaaS pro" cohérent —
+      // plus de rupture violet/rose entre topbar et sidebar.
+      const TOPBAR_BG = '#ffffff';
+      // [T1] Couleur de la sidebar réutilisée comme fond de secours pour le
+      // html/body : sur certains navigateurs/OS, la zone au-dessus du contenu
+      // (safe-area / arrondi de fenêtre en PWA installée, ou tout simplement
+      // le body avant que React ne monte) laisse voir le fond du <body> — qui
+      // n'était jusqu'ici pas défini ici et retombait sur le noir par défaut
+      // du navigateur. On le fixe explicitement au bleu nuit de la sidebar
+      // (UserSidebar.jsx) pour qu'un éventuel liseré résiduel s'accorde avec
+      // le reste du dashboard au lieu de trancher en noir.
+      const SIDEBAR_NAVY = '#161a2e';
+
+      mainContent = (
+        <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
+
+          {/* CONFIRMÉ par MobileNav.jsx : celui-ci gère son propre tiroir
+              (état interne drawerOpen, onglet "Menu") totalement indépendant
+              du collapsed/onToggle de UserSidebar. Le mode "tiroir mobile" de
+              UserSidebar n'est donc jamais déclenché en pratique — on ne la
+              monte que sur tablette/desktop pour éviter du code et des
+              abonnements (upload de fond, etc.) inutiles sur mobile. */}
+          {!isMobile && (
+            <div style={{ position:'relative', zIndex:10, flexShrink:0 }}>
+              <UserSidebar
+                activeSection={activeSection} onNavigate={setActiveSection}
+                profile={localProfile} plan={effectivePlan} limits={limits}
+                collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)}
+                isMobile={false}
+                isTablet={isTablet}
+                isAdmin={isAdmin}
+                onUpgrade={()=>handleOpenUpgrade()}
+                userEmail={user?.email} onSignOut={handleSignOut}
+              />
+            </div>
+          )}
+
+          <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
+
+            {/* Topbar — blanc, alignée sur la zone de contenu claire.
+                [T2] paddingTop remplacé par un fond peint jusque dans la
+                safe-area (env(safe-area-inset-top)) : avant, seul du padding
+                transparent occupait cette zone, laissant voir le fond du
+                <body> (noir par défaut) sous l'encoche/la barre de statut iOS
+                au lieu du blanc de la topbar. Le fond blanc de .ap-modal-…
+                n'a pas besoin de changer ; c'est bien ce bloc, en haut de
+                l'écran, qui correspond à la "barre" mentionnée. On étend
+                désormais le fond blanc TOPBAR_BG au-dessus du padding via un
+                wrapper englobant plutôt que de compter sur le seul padding
+                (nécessite <meta name="viewport" content="viewport-fit=cover">
+                dans index.html pour être pris en compte). */}
+            <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_BG, borderBottom:'1px solid #e6e8f0', boxShadow:'0 1px 2px rgba(15,23,42,.04)', paddingTop:'env(safe-area-inset-top)' }}>
+              <div style={{ padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
+                  {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
+                  <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Tableau de bord'}</h2>
+                  <AnimatePresence>
+                    {hasChanges && (
+                      <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
+                        style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600, flexShrink:0 }}>
+                        ● Non enregistré
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
+                  <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
+                  <NotificationBell />
+                  <button
+                    onClick={handleSave}
+                    disabled={!hasChanges || updateMutation.isPending}
+                    style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'#eef0f5', border:'1px solid '+(hasChanges?'transparent':'#dde0ea'), borderRadius:'9px', color:hasChanges?'white':'#a2a7b5', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
+                  >
+                    {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                    {!isMobile && 'Enregistrer'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* paddingBottom additionnel = hauteur de la MobileNav + zone
+                d'accueil du geste iOS (home indicator) / navigation Android. */}
+            <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':(isTablet?'20px':'24px'), paddingBottom:isMobile?'calc(100px + env(safe-area-inset-bottom))':'24px' }}>
+              <PanelErrorBoundary>
+                <div style={{ animation:'fadeIn 0.18s ease' }}>
+                  {/* Bannière d'installation PWA — affichée en haut du contenu,
+                      sur toutes les sections, dès la connexion au dashboard. Le
+                      composant gère lui-même sa visibilité (déjà installé,
+                      fermé récemment, plateforme iOS vs Android/desktop). */}
+                  <InstallPrompt />
+                  <SubscriptionRenewalBanner
+                    subscription={subscription}
+                    isActivated={isActivated}
+                    loading={checkoutLoading}
+                    onRenew={() => startSenepayCheckout(effectivePlan, 'renewal')}
+                  />
+                  {renderSection()}
+                </div>
+              </PanelErrorBoundary>
+            </div>
+
+          </div>{/* ← ferme le div flex colonne */}
+
+          {isMobile && (
+            <MobileNav
+              activeSection={activeSection} onNavigate={setActiveSection}
+              profile={localProfile} plan={effectivePlan} limits={limits}
+              isAdmin={isAdmin}
+              onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}
+              bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
+              onUpgrade={()=>handleOpenUpgrade()}
+              userEmail={user?.email} onSignOut={handleSignOut}
+            />
+          )}
+
+          {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)} />}
+
+          {/* Modale d'activation de compte (Wave manuel) — DÉSACTIVÉE pour le
+              moment : SenePay active désormais le compte automatiquement via
+              le webhook (is_activated=true dès paiement confirmé). État et
+              import conservés pour réactivation facile si besoin. */}
+          {/* <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} plan={effectivePlan} />}</AnimatePresence> */}
+
+          {/* Modale d'upgrade ciblée sur UNE feature verrouillée (Analytics, Événement, CRM…) */}
+          <AnimatePresence>
+            {featureUpgrade && (
+              <FeatureUpgradeModal
+                onClose={()=>setFeatureUpgrade(null)}
+                featureName={featureUpgrade.featureName}
+                requiredPlan={featureUpgrade.requiredPlan}
+                onUpgrade={() => startSenepayCheckout(featureUpgrade.requiredPlan, 'new')}
+                loading={checkoutLoading}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Comparatif complet des 3 offres — limites de quota (liens, formulaires…) */}
+          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
+
+          <style>{`
+            @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+            @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.3}}
+            *{scrollbar-width:thin;scrollbar-color:#c9cddb transparent}
+            *::-webkit-scrollbar{width:5px;height:5px}
+            *::-webkit-scrollbar-track{background:transparent}
+            *::-webkit-scrollbar-thumb{background:#c9cddb;border-radius:10px}
+
+            /* [T1] html/body peints en bleu nuit (couleur de la sidebar) au
+               lieu du noir par défaut du navigateur : couvre toute bande
+               résiduelle visible avant le montage de React ou dans la
+               safe-area d'une PWA installée, en cohérence avec le reste du
+               dashboard plutôt qu'un noir qui tranche. */
+            html, body {
+              background:${SIDEBAR_NAVY};
+              margin:0;
+            }
+            #root { background:${SIDEBAR_NAVY}; }
+
+            /* FIX iOS/Android — cibles tactiles ≥44x44px (Apple HIG / Material)
+               sur les petits boutons icône (fermer, flèches de carrousel, etc.)
+               qui ne mesuraient que 26–32px. On agrandit la zone cliquable via
+               un pseudo-élément plutôt que la taille visuelle, pour ne pas
+               casser le design sur desktop. */
+            @media (pointer: coarse) {
+              button { touch-action: manipulation; }
+              button[style*="border-radius:50%"] { position: relative; }
+              button[style*="border-radius:50%"]::after {
+                content: '';
+                position: absolute;
+                top: 50%; left: 50%;
+                width: max(44px, 100%);
+                height: max(44px, 100%);
+                transform: translate(-50%, -50%);
+              }
+            }
+
+            /* Empêche le zoom involontaire iOS Safari sur les champs de
+               formulaire dont la taille de police est < 16px. */
+            @media (pointer: coarse) {
+              input, select, textarea { font-size: max(16px, 1em); }
+            }
+          `}</style>
+
         </div>
       );
-      case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} /></div>;
-      case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={()=>handleOpenUpgrade()} /></div>;
-      case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
-      case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
-      case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
-      case 'whatsapp-crm':    return limits.hasCRM      ? <WhatsappCRMPanel profileId={localProfile.id} /> : null;
-      case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
-      case 'automations':     return <AutomationsPanel     profileId={localProfile.id} />;
-      case 'meta':            return <MetaIntegrationPanel profile={localProfile} isAdmin={isAdmin} />;
-      case 'integrations':    return <IntegrationsPanel    profileId={localProfile.id} isAdmin={isAdmin} />;
-      case 'boost':           return <BoostPanel           profile={localProfile}      isAdmin={isAdmin} />;
-      case 'boost-analytics': return <BoostAnalyticsPanel  profile={localProfile} />;
-      case 'promotions':      return <PromotionsDashboard  profile={localProfile} isAdmin={isAdmin} onUpdateProfile={updateLocal} />;
-
-      // FIX — le bloc déconnexion (email + bouton) a été déplacé en bas de
-      // la sidebar (UserSidebar.jsx / MobileNav) pour rester accessible
-      // partout, pas seulement depuis Paramètres.
-      case 'settings': return <SettingsPanel />;
-
-      default: return null;
     }
-  };
-// Fond de la zone de contenu — gris-bleu très clair et neutre plutôt que
-  // le noir/violet précédent. Lisible longtemps, laisse les cartes blanches
-  // et les couleurs d'accent (indigo, orange, or) se détacher proprement.
-  const DASHBOARD_BG = { background: '#f4f5fa' };
+  }
 
-  // La sidebar (UserSidebar.jsx, fichier séparé) reste dans son bleu nuit
-  // pour ancrer l'identité de marque ; la topbar, elle, rejoint désormais
-  // le blanc de la zone de contenu pour un rendu "SaaS pro" cohérent —
-  // plus de rupture violet/rose entre topbar et sidebar.
-  const TOPBAR_BG = '#ffffff';
-  // [T1] Couleur de la sidebar réutilisée comme fond de secours pour le
-  // html/body : sur certains navigateurs/OS, la zone au-dessus du contenu
-  // (safe-area / arrondi de fenêtre en PWA installée, ou tout simplement
-  // le body avant que React ne monte) laisse voir le fond du <body> — qui
-  // n'était jusqu'ici pas défini ici et retombait sur le noir par défaut
-  // du navigateur. On le fixe explicitement au bleu nuit de la sidebar
-  // (UserSidebar.jsx) pour qu'un éventuel liseré résiduel s'accorde avec
-  // le reste du dashboard au lieu de trancher en noir.
-  const SIDEBAR_NAVY = '#161a2e';
-
+  // [FIX WIZARD-UNMOUNT] Le wizard vit ici, hors de toute branche
+  // conditionnelle liée à profiles.length / localProfile / l'activation —
+  // il ne se démonte donc plus jamais tant que showCreateWizard est true,
+  // quoi qu'il se passe par ailleurs pendant sa propre création de profil.
   return (
-    <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
-
-      {/* CONFIRMÉ par MobileNav.jsx : celui-ci gère son propre tiroir
-          (état interne drawerOpen, onglet "Menu") totalement indépendant
-          du collapsed/onToggle de UserSidebar. Le mode "tiroir mobile" de
-          UserSidebar n'est donc jamais déclenché en pratique — on ne la
-          monte que sur tablette/desktop pour éviter du code et des
-          abonnements (upload de fond, etc.) inutiles sur mobile. */}
-      {!isMobile && (
-        <div style={{ position:'relative', zIndex:10, flexShrink:0 }}>
-          <UserSidebar
-            activeSection={activeSection} onNavigate={setActiveSection}
-            profile={localProfile} plan={effectivePlan} limits={limits}
-            collapsed={sidebarCollapsed} onToggle={()=>setSidebarCollapsed(v=>!v)}
-            isMobile={false}
-            isTablet={isTablet}
-            isAdmin={isAdmin}
-            onUpgrade={()=>handleOpenUpgrade()}
-            userEmail={user?.email} onSignOut={handleSignOut}
-          />
-        </div>
-      )}
-
-      <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
-
-        {/* Topbar — blanc, alignée sur la zone de contenu claire.
-            [T2] paddingTop remplacé par un fond peint jusque dans la
-            safe-area (env(safe-area-inset-top)) : avant, seul du padding
-            transparent occupait cette zone, laissant voir le fond du
-            <body> (noir par défaut) sous l'encoche/la barre de statut iOS
-            au lieu du blanc de la topbar. Le fond blanc de .ap-modal-…
-            n'a pas besoin de changer ; c'est bien ce bloc, en haut de
-            l'écran, qui correspond à la "barre" mentionnée. On étend
-            désormais le fond blanc TOPBAR_BG au-dessus du padding via un
-            wrapper englobant plutôt que de compter sur le seul padding
-            (nécessite <meta name="viewport" content="viewport-fit=cover">
-            dans index.html pour être pris en compte). */}
-        <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_BG, borderBottom:'1px solid #e6e8f0', boxShadow:'0 1px 2px rgba(15,23,42,.04)', paddingTop:'env(safe-area-inset-top)' }}>
-          <div style={{ padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
-              {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
-              <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Tableau de bord'}</h2>
-              <AnimatePresence>
-                {hasChanges && (
-                  <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
-                    style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600, flexShrink:0 }}>
-                    ● Non enregistré
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
-              <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
-              <NotificationBell />
-              <button
-                onClick={handleSave}
-                disabled={!hasChanges || updateMutation.isPending}
-                style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'#eef0f5', border:'1px solid '+(hasChanges?'transparent':'#dde0ea'), borderRadius:'9px', color:hasChanges?'white':'#a2a7b5', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
-              >
-                {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                {!isMobile && 'Enregistrer'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* paddingBottom additionnel = hauteur de la MobileNav + zone
-            d'accueil du geste iOS (home indicator) / navigation Android. */}
-        <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':(isTablet?'20px':'24px'), paddingBottom:isMobile?'calc(100px + env(safe-area-inset-bottom))':'24px' }}>
-          <PanelErrorBoundary>
-            <div style={{ animation:'fadeIn 0.18s ease' }}>
-              {/* Bannière d'installation PWA — affichée en haut du contenu,
-                  sur toutes les sections, dès la connexion au dashboard. Le
-                  composant gère lui-même sa visibilité (déjà installé,
-                  fermé récemment, plateforme iOS vs Android/desktop). */}
-              <InstallPrompt />
-              <SubscriptionRenewalBanner
-                subscription={subscription}
-                isActivated={isActivated}
-                loading={checkoutLoading}
-                onRenew={() => startSenepayCheckout(effectivePlan, 'renewal')}
-              />
-              {renderSection()}
-            </div>
-          </PanelErrorBoundary>
-        </div>
-
-      </div>{/* ← ferme le div flex colonne */}
-
-      {isMobile && (
-        <MobileNav
-          activeSection={activeSection} onNavigate={setActiveSection}
-          profile={localProfile} plan={effectivePlan} limits={limits}
-          isAdmin={isAdmin}
-          onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}
-          bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
-          onUpgrade={()=>handleOpenUpgrade()}
-          userEmail={user?.email} onSignOut={handleSignOut}
-        />
-      )}
-
-      {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)} />}
-
-      {/* Modale d'activation de compte (Wave manuel) — DÉSACTIVÉE pour le
-          moment : SenePay active désormais le compte automatiquement via
-          le webhook (is_activated=true dès paiement confirmé). État et
-          import conservés pour réactivation facile si besoin. */}
-      {/* <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} plan={effectivePlan} />}</AnimatePresence> */}
-
-      {/* Modale d'upgrade ciblée sur UNE feature verrouillée (Analytics, Événement, CRM…) */}
+    <>
+      {mainContent}
       <AnimatePresence>
-        {featureUpgrade && (
-          <FeatureUpgradeModal
-            onClose={()=>setFeatureUpgrade(null)}
-            featureName={featureUpgrade.featureName}
-            requiredPlan={featureUpgrade.requiredPlan}
-            onUpgrade={() => startSenepayCheckout(featureUpgrade.requiredPlan, 'new')}
-            loading={checkoutLoading}
+        {showCreateWizard && (
+          <CreateProfileWizard
+            open={showCreateWizard}
+            onClose={() => setShowCreateWizard(false)}
+            onSubmit={handleWizardSubmit}
+            submitting={createMutation.isPending}
+            profileNumber={profiles.length + 1}
+            hideMarketplace={limits.maxMarketplace === 0}
+            hideDocuments={limits.maxDocs === 0}
           />
         )}
       </AnimatePresence>
-
-      {/* Comparatif complet des 3 offres — limites de quota (liens, formulaires…) */}
-      <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
-
-      <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.3}}
-        *{scrollbar-width:thin;scrollbar-color:#c9cddb transparent}
-        *::-webkit-scrollbar{width:5px;height:5px}
-        *::-webkit-scrollbar-track{background:transparent}
-        *::-webkit-scrollbar-thumb{background:#c9cddb;border-radius:10px}
-
-        /* [T1] html/body peints en bleu nuit (couleur de la sidebar) au
-           lieu du noir par défaut du navigateur : couvre toute bande
-           résiduelle visible avant le montage de React ou dans la
-           safe-area d'une PWA installée, en cohérence avec le reste du
-           dashboard plutôt qu'un noir qui tranche. */
-        html, body {
-          background:${SIDEBAR_NAVY};
-          margin:0;
-        }
-        #root { background:${SIDEBAR_NAVY}; }
-
-        /* FIX iOS/Android — cibles tactiles ≥44x44px (Apple HIG / Material)
-           sur les petits boutons icône (fermer, flèches de carrousel, etc.)
-           qui ne mesuraient que 26–32px. On agrandit la zone cliquable via
-           un pseudo-élément plutôt que la taille visuelle, pour ne pas
-           casser le design sur desktop. */
-        @media (pointer: coarse) {
-          button { touch-action: manipulation; }
-          button[style*="border-radius:50%"] { position: relative; }
-          button[style*="border-radius:50%"]::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            width: max(44px, 100%);
-            height: max(44px, 100%);
-            transform: translate(-50%, -50%);
-          }
-        }
-
-        /* Empêche le zoom involontaire iOS Safari sur les champs de
-           formulaire dont la taille de police est < 16px. */
-        @media (pointer: coarse) {
-          input, select, textarea { font-size: max(16px, 1em); }
-        }
-      `}</style>
-
-    </div>
+    </>
   );
 }

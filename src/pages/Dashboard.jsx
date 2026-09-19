@@ -1154,12 +1154,13 @@ export default function Dashboard() {
   };
 
   const handleWizardSubmit = async (wizardData) => {
-    if (!user?.id) { toast.error('Utilisateur non connecté'); return; }
+    if (!user?.id) { toast.error('Utilisateur non connecté'); return null; }
     const expiry = new Date(); expiry.setFullYear(expiry.getFullYear() + 1);
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         user_id:      user.id,
         display_name: wizardData.display_name || ('Profil ' + ((profiles.length||0)+1)),
+        username:     wizardData.username || null,
         bio:          wizardData.bio || '',
         avatar_url:   wizardData.avatar_url || null,
         links:        wizardData.links || [],
@@ -1168,9 +1169,15 @@ export default function Dashboard() {
         is_verified:  false,
         is_event:     false,
       });
-      setShowCreateWizard(false);
+      // [PAS DE FERMETURE ICI] Le wizard reste ouvert : une fois le profil
+      // réellement créé (created.id existe), il enchaîne sur ses étapes
+      // Boutique / Documents, qui ont besoin de cet id. C'est le wizard
+      // lui-même (bouton "Terminer" / "Passer et terminer") qui appelle
+      // onClose au bout de la dernière étape.
+      return created;
     } catch (err) {
       toast.error('Erreur : ' + err.message);
+      return null;
     }
   };
 

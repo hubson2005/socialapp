@@ -22,37 +22,23 @@ export default defineConfig({
 
   build: {
     sourcemap: true, // TEMPORAIRE — à retirer une fois le bug trouvé
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return
-
-          // IMPORTANT : on matche des segments de chemin EXACTS
-          // (/node_modules/<pkg>/), jamais une simple sous-chaîne.
-          // L'ancien code faisait id.includes('react'), qui attrape aussi
-          // react-router-dom, react-i18next, @tanstack/react-query,
-          // react-hook-form, react-helmet-async, sonner-react, etc. et les
-          // fourre dans le même chunk que react/react-dom sans garantie
-          // d'ordre d'exécution entre eux. Résultat en prod (Rollup fait ce
-          // découpage, pas esbuild/dev, d'où "ça marche en dev mais pas en
-          // build") : ce chunk peut s'évaluer avant que React soit
-          // pleinement initialisé -> les hooks renvoient undefined ->
-          // const [x, y] = useState(...) explose avec "is not iterable" ->
-          // crash React global -> page blanche.
-          if (
-            id.includes('/node_modules/react/') ||
-            id.includes('/node_modules/react-dom/') ||
-            id.includes('/node_modules/scheduler/')
-          ) return 'react'
-
-          if (id.includes('/node_modules/react-icons/')) return 'icons'
-          if (id.includes('/node_modules/framer-motion/')) return 'motion'
-          if (id.includes('/node_modules/@supabase/')) return 'supabase'
-
-          return 'vendor'
-        }
-      }
-    },
-    chunkSizeWarningLimit: 800,
+    // [RETIRÉ] manualChunks (react / icons / motion / supabase / vendor).
+    // Ce découpage manuel a provoqué à trois reprises des crashes "page
+    // blanche" en production (ReferenceError "Cannot access '<x>' before
+    // initialization", "is not iterable") : dès que deux chunks séparés
+    // se référencent mutuellement au niveau module (ex: un paquet vendor
+    // qui dépend d'un sous-module non capté par le regex react/motion/...),
+    // l'ordre d'évaluation entre chunks n'est plus garanti et un chunk peut
+    // s'exécuter avant que l'autre ait fini de s'initialiser. Ce risque est
+    // structurel à tout découpage manuel par regex de package et revient
+    // à chaque nouvel import ajouté quelque part dans l'app.
+    // On repasse donc en bundle unique (comportement par défaut de
+    // Rolldown/Rollup pour un site à une seule entrée) : plus gros en Ko,
+    // mais un seul graphe de modules, exécuté dans l'ordre topologique
+    // naturel des imports -> plus aucune dépendance circulaire entre
+    // chunks possible. Si le gain de cache par chunk redevient nécessaire
+    // un jour, le refaire via des imports dynamiques (React.lazy) par
+    // route plutôt que via manualChunks par nom de paquet.
+    chunkSizeWarningLimit: 1200,
   },
 })

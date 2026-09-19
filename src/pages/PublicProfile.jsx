@@ -328,6 +328,27 @@
  *        comportement d'origine est intégralement conservé : avatar
  *        centré, nom et bio centrés en dessous, dans leur propre bloc —
  *        seul le cas "avec bannière" change.
+ *
+ * CORRECTIF CHEVAUCHEMENT NOM/BIO SUR LA BANNIÈRE (cette révision) :
+ *  [BN4] [BN3] ci-dessus liait la position du nom/de la bio à celle de
+ *        l'avatar (même ligne, translateY(50%) commun) : avec une bio un
+ *        peu longue, le total nom+bio dépassait la moitié inférieure de
+ *        l'avatar et venait empiéter sur l'image de la bannière
+ *        elle-même (texte illisible par-dessus les logos/coordonnées de
+ *        la bannière). Corrigé en séparant complètement les deux : l'
+ *        avatar reste seul en chevauchement absolu bas-gauche
+ *        (translateY(50%) de sa propre hauteur, ~59px sous la bannière,
+ *        inchangé) ; le nom + la bio sont désormais un bloc à part, en
+ *        flux normal juste après la bannière (donc jamais superposé à
+ *        l'image), avec un padding-gauche (152px) qui le décale à droite
+ *        de l'avatar et une petite marge (6px) + hauteur minimale (56px,
+ *        contenu centré verticalement dedans) qui le fait démarrer et
+ *        occuper visuellement la même bande que la partie visible de
+ *        l'avatar. Comme ce bloc est en flux normal (pas absolu), une
+ *        bio plus longue que 56px pousse simplement la suite de la page
+ *        vers le bas au lieu de déborder sur la bannière ou d'être
+ *        rognée — aucun chevauchement possible, quelle que soit la
+ *        longueur du nom ou de la bio.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -1376,34 +1397,38 @@ export default function PublicProfile() {
             retombe sur l'ancienne disposition centrée (avatar, puis nom
             et bio centrés en dessous). */}
         {profile.banner_url ? (
-          <div className="pp-content-col" style={{ position:'relative', marginBottom:'64px' }}>
-            <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
-              <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-            </div>
-            {/* [BN3] Avatar calé à gauche + nom/bio juste à côté, tous deux
-                alignés sur le bas de la ligne (façon carte de visite),
-                dans l'espace laissé libre sous la bannière par le
-                chevauchement (translateY(50%), comme pour l'avatar seul
-                avant [BN3]). */}
-            <div style={{
-              position:'absolute', left:'20px', right:'20px', bottom:0,
-              transform:'translateY(50%)',
-              display:'flex', alignItems:'flex-end', gap:'14px',
-            }}>
-              {avatarBlock}
-              <div style={{ display:'flex', flexDirection:'column', minWidth:0, paddingBottom:'8px' }}>
-                <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                  {profile.display_name}
-                  {profile.is_verified && <span style={{ marginLeft:'6px', fontSize:'14px', color:'#22c55e' }}>✓</span>}
-                </h1>
-                {profile.bio && (
-                  <p style={{ color:'rgba(255,255,255,0.75)', fontSize:'13px', fontWeight:500, textAlign:'left', lineHeight:1.4, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
-                    {profile.bio}
-                  </p>
-                )}
+          <>
+            <div className="pp-content-col" style={{ position:'relative' }}>
+              <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
+                <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+              </div>
+              {/* [BN4] Avatar seul, en chevauchement bas-gauche — overlap
+                  fixe (translateY(50%) de sa propre hauteur), totalement
+                  indépendant de la hauteur du nom/de la bio ci-dessous,
+                  pour ne jamais empiéter sur la bannière elle-même. */}
+              <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(50%)' }}>
+                {avatarBlock}
               </div>
             </div>
-          </div>
+
+            {/* [BN4] Nom + bio en flux normal (donc jamais superposés à la
+                bannière) juste après celle-ci : padding-gauche pour se
+                décaler à droite de l'avatar, hauteur minimale + centrage
+                vertical pour occuper la même bande que sa partie visible
+                quand le texte est court ; une bio plus longue pousse
+                simplement la suite de la page plus bas. */}
+            <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'6px', minHeight:'56px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {profile.display_name}
+                {profile.is_verified && <span style={{ marginLeft:'6px', fontSize:'14px', color:'#22c55e' }}>✓</span>}
+              </h1>
+              {profile.bio && (
+                <p style={{ color:'rgba(255,255,255,0.75)', fontSize:'13px', fontWeight:500, textAlign:'left', lineHeight:1.4, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
+                  {profile.bio}
+                </p>
+              )}
+            </div>
+          </>
         ) : (
           <>
             {/* Avatar autonome + nom/bio centrés — comportement d'origine

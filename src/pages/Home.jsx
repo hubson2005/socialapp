@@ -420,7 +420,7 @@ export default function Home() {
               <p style={S.heroTagline}>Transformez chaque scan en contact,<br />client ou opportunité.</p>
               <div style={{ marginBottom: '32px' }}>
                 {[
-                  'Créez votre profil professionnel en quelques minutes',
+                  'Créez votre carte de visite digitale professionnel avec QR CODE en quelques minutes',
                   'Partagez vos coordonnées, réseaux sociaux et services via un QR Code unique',
                   'Collectez automatiquement les contacts et prospects intéressés',
                   'Gérez vos clients et opportunités avec un CRM intégré',
@@ -434,7 +434,7 @@ export default function Home() {
               </div>
               <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '28px' }}>
                 <button type="button" style={S.bpri} className="sa-bpri sa-pulse-btn" onClick={handleCTA}>
-                  {user ? 'Mon tableau de bord →' : 'Créer mon profil gratuitement →'}
+                  {user ? 'Mon tableau de bord →' : 'Créer ma carte de visite gratuitement →'}
                 </button>
                 <a href="#features" style={S.bsec} className="sa-bsec">Voir les fonctionnalités</a>
               </div>
@@ -561,7 +561,7 @@ export default function Home() {
             </div>
             <div className="sa-fg3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
               {[
-                { icon: '🔗', bg: 'rgba(99,102,241,.15)', title: 'Page de liens personnalisée', desc: 'WhatsApp, Instagram, TikTok, Facebook, YouTube sur une seule page avec username personnalisé et badge vérifié.', tag: '✓ Toutes les offres', tagBg: 'rgba(99,102,241,.15)', tagBd: 'rgba(99,102,241,.3)', tagC: '#a78bfa' },
+                { icon: '🔗', bg: 'rgba(99,102,241,.15)', title: 'Page de liens personnalisée', desc: 'Créez votre carte de visite digitale avec', 'WhatsApp, Instagram, TikTok, Facebook, YouTube sur une seule page avec username personnalisé et badge vérifié.', tag: '✓ Toutes les offres', tagBg: 'rgba(99,102,241,.15)', tagBd: 'rgba(99,102,241,.3)', tagC: '#a78bfa' },
                 { icon: '📊', bg: 'rgba(34,197,94,.15)', title: 'Analytics & Temps réel', desc: "Vues, clics par lien, pays des visiteurs, flux live. Sachez exactement qui scanne votre QR code et d'où.", tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
                 { icon: '🛍️', bg: 'rgba(245,158,11,.15)', title: 'Marketplace intégrée', desc: 'Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission sur vos ventes.', tag: '✓ Toutes les offres', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
                 { icon: '👥', bg: 'rgba(236,72,153,.15)', title: 'CRM & Pipeline de leads', desc: 'Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.', tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },

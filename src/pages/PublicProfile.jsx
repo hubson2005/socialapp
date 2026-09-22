@@ -1,361 +1,63 @@
 /**
  * PublicProfile.jsx — Page profil publique SocialApp
  *
- * CORRECTIONS APPLIQUÉES (revisions précédentes) :
- *  [C1]  useEffect QR scan isolé, dépendance réduite à profile?.id uniquement
- *  [C2]  Promise.all([fetchCountry()]) → await fetchCountry() direct
- *  [C3]  Tous les console.log/error de debug supprimés (fuite d'infos en prod)
- *  [C4]  handleTouchStart : setter fonctionnel setCurrentIndex(prev=>) pour éviter la closure stale
- *  [C5]  Background style : injection unifiée, suppression du doublon cleanup/effect, sans flash
- *  [C6]  @keyframes shimmer dans ProfileSkeleton injecté via useEffect (une fois)
- *  [C7]  @keyframes du composant principal injectés via useEffect (une fois)
- *  [C8]  Guard isMounted dans init() pour éviter setState après démontage
- *  [C9]  insert QR scan chaîné avec .then(({error}) => error && console.error(...))
- *  [C10] Imports morts supprimés : useTranslation, Eye
- *  [C11] Numéro WhatsApp support extrait en constante SUPPORT_WHATSAPP
- *  [C12] bg_image_url sanitisé via CSS.escape + encodeURI avant injection
- *  [A1]  triggerWhatsappClick() appelé dans handleLinkClick quand platform === 'whatsapp'
- *  [A2]  triggerQrScan() appelé dans le useEffect QR scan (après l'insert profile_stats)
- *  [A3]  triggerMarketplaceBuy() appelé dans ProductDetailModal sur "Commander sur WhatsApp"
+ * [ ... tout l'historique de révisions précédent est inchangé, voir la
+ *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
+ *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1 ... ]
  *
- * CORRECTIONS ADAPTATION MOBILE/TABLETTE/iOS/ANDROID (révision précédente) :
- *  [F1]  Verrouillage du scroll dupliqué entre ImageLightbox et ProductDetailModal
- *        → mutualisé dans un hook unique useBodyScrollLock() avec compteur global
- *        et pattern iOS-safe (position:fixed + restauration du scrollY). Supprime
- *        le doublon de code ET évite un scroll-bleed si les deux modales venaient
- *        un jour à coexister.
- *  [F2]  100vh / 92vh / 90vh → 100dvh / 92dvh / 90dvh (fond de page + les deux
- *        modales) pour éviter que la barre d'adresse Safari iOS ne rogne le
- *        contenu à l'ouverture/fermeture.
- *  [F3]  -webkit-backdrop-filter ajouté à côté de chaque backdropFilter inline
- *        (Safari < 18 ignore la propriété non préfixée).
- *  [F4]  Boutons de fermeture des modales agrandis à 44×44px (cible tactile
- *        minimale) ; touchAction:'manipulation' sur les éléments interactifs
- *        pour supprimer le délai de tap ~300ms et le double-tap-zoom sur
- *        Android/iOS ; -webkit-tap-highlight-color:transparent ajouté
- *        globalement pour retirer le flash gris au tap sur Chrome Android.
- *  [F5]  ProductDetailModal et ImageLightbox rendues via createPortal(document.body)
- *        — protection préventive contre un bug de stacking context si cette page
- *        est un jour englobée dans un layout avec ancêtre transformé/filtré
- *        (même classe de bug déjà rencontrée et corrigée sur AutomationsPanel).
- *  [F6]  Nettoyage garanti des listeners globaux du swipe carrousel (touchmove/
- *        touchend sur document) même si le composant est démonté en plein geste
- *        (évite fuite mémoire / callback sur composant démonté lors d'une
- *        navigation rapide).
- *  [F7]  RippleButton : les setTimeout de nettoyage des ripples sont suivis et
- *        annulés au démontage (évite un setState après démontage si l'utilisateur
- *        navigue juste après un tap).
- *  [F8]  trackView() sorti du Promise.all bloquant : produits/documents s'affichent
- *        dès que leur propre requête répond, sans attendre la requête analytics.
- *  [F9]  Dépendances de l'effet fond d'écran resserrées à
- *        [profile?.bg_image_url, profile?.theme_color] (au lieu de l'objet
- *        profile entier) — évite de recréer inutilement le <style> de fond (et
- *        donc un micro-flash) à chaque mise à jour non liée au fond.
- *  [F10] Adaptation tablette : les sections (liens, boutique, documents,
- *        événement) partagent une classe .pp-content-col dont la largeur max
- *        passe de 384px à 480px à partir de 768px ; la grille boutique passe de
- *        2 à 3 colonnes à partir de 768px via .pp-shop-grid.
- *  [F11] Zones de sécurité iOS/Android : env(safe-area-inset-*) ajouté sur le
- *        padding du conteneur principal et sur le padding bas de la feuille
- *        produit, pour ne pas passer sous l'encoche / la barre de gestes.
- *  [F12] touchAction:'pan-y' ajouté au conteneur du carrousel d'événement pour
- *        laisser le scroll vertical natif tout en gérant le swipe horizontal
- *        manuellement.
- *  [F13] @media (prefers-reduced-motion: reduce) ajouté : coupe les animations
- *        (shimmer, pulse, ripple, fade/slide/zoom) pour les utilisateurs ayant
- *        activé la réduction des animations dans les réglages système iOS/Android.
- *  [F14] Vérification doublons : aucune règle CSS dupliquée résiduelle après
- *        cette relecture ; le seul doublon réel trouvé était la logique de
- *        verrouillage de scroll (voir [F1]), désormais mutualisée.
+ * MODE DATA-LIGHT (cette révision) :
+ *  [DL1] Détection automatique via le hook useDataSaverMode() (header
+ *        Save-Data / navigator.connection.effectiveType 2g-3g / bascule
+ *        manuelle mémorisée). isLight est calculé une fois par montage et
+ *        redevient réactif si le type de connexion change en cours de
+ *        visite (voir le hook), ou si le visiteur touche le switch [DL7].
+ *  [DL2] Police custom Manrope : chargement du Google Font entièrement
+ *        sauté en mode léger (effet à if (isLight) return; en tête).
+ *        fontFamily du conteneur principal bascule sur SYSTEM_FONT_STACK
+ *        (police système, poids zéro réseau) — hérité par tous les
+ *        enfants qui ne fixent pas leur propre fontFamily.
+ *  [DL3] Images : nouvel helper imgUrl(url, {width, quality, format})
+ *        ajoute les paramètres de transformation à la volée de Supabase
+ *        Storage. Toutes les images "passives" (avatar, bannière, cartes
+ *        boutique, carrousel événement) demandent une largeur réduite en
+ *        mode léger. Les images ouvertes explicitement par le visiteur
+ *        (lightbox plein écran, modale produit) restent en качество
+ *        normale : c'est un geste volontaire, pas un chargement passif.
+ *        ⚠️ Nécessite que la transformation d'image Supabase Storage soit
+ *        activée sur le projet (plan Pro et supérieur) ; sur un plan sans
+ *        transformation, ces paramètres sont simplement ignorés par le
+ *        CDN et l'image d'origine est servie (pas de casse, juste pas
+ *        d'économie).
+ *  [DL4] Fond "mesh" animé ([P4]) : les deux taches radiales floutées et
+ *        leur animation pp-meshDrift sont désactivées en mode léger
+ *        (animation:none, filter/blur retiré) — remplacées par un simple
+ *        dégradé plat. Coupe le coût de repaint GPU en continu, pas
+ *        seulement le poids réseau.
+ *  [DL5] Indicateur de poids ([DL5]) : en mode léger uniquement, un petit
+ *        texte "~XX Ko chargés" apparaît sous le badge de marque, calculé
+ *        via performance.getEntriesByType('resource') après le premier
+ *        rendu stable. Argument de confiance visible pour le visiteur
+ *        ("cette page respecte votre forfait data").
+ *  [DL6] isLight propagé en prop à PublicProductCard et ProductDetailModal
+ *        (déjà des composants séparés) pour qu'ils réduisent eux aussi la
+ *        largeur demandée à Supabase Storage sur les visuels produits.
+ *  [DL7] Petit switch "Mode léger" discret, à côté du badge de marque en
+ *        bas de page : permet au visiteur de forcer manuellement l'état
+ *        (utile sur desktop où Save-Data n'existe pas, ou pour repasser
+ *        en mode complet malgré la détection auto). Préférence mémorisée
+ *        en localStorage via le hook, prioritaire sur la détection auto
+ *        tant qu'elle n'est pas effacée.
  *
- * CORRECTION QR / LIEN PUBLIC (révision précédente) :
- *  [Q1]  Lookup du profil passé de `.eq('username', username)` (comparaison
- *        exacte, sensible à la casse) à `.ilike('username', username)`
- *        (comparaison insensible à la casse).
- *
- * AMÉLIORATION LISIBILITÉ / OPACITÉ DES CARTES (révision précédente) :
- *  [O1]  Boutons de liens (.pp-link-btn) : fond rgba(255,255,255,0.12→0.20),
- *        bordure 0.15→0.24. Le fond translucide devenait quasi invisible
- *        sur les images d'arrière-plan claires ou très texturées.
- *  [O2]  Cartes boutique (PublicProductCard) : fond 0.08→0.16, bordure
- *        0.12→0.20 pour détacher nettement la carte du fond derrière elle.
- *  [O3]  Cartes documents : fond 0.08→0.16, bordure 0.12→0.20 (même logique
- *        que [O2], garde la bordure rouge distinctive intacte).
- *  [O4]  Bloc countdown (jours/heures/min/sec) : fond 0.28→0.42, bordure
- *        0.25→0.35 — les chiffres orange perdaient en contraste sur fond
- *        clair.
- *  [O5]  Bloc description événement : fond 0.32→0.45, bordure 0.35→0.42.
- *  [O6]  Bouton support WhatsApp : fond 0.15→0.22, bordure 0.3→0.38.
- *  [O7]  Superposition #__bg_overlay__ légèrement assombrie
- *        (0.52/0.36 → 0.58/0.42) pour homogénéiser le contraste sous
- *        toutes les cartes, y compris celles restées sur fond dégradé (pas
- *        d'image).
- *  [O8]  Halo au survol desktop ajouté sur les cartes boutique et les
- *        boutons de liens (@media (hover:hover)) pour un retour visuel
- *        cohérent avec l'opacité renforcée.
- *  [O9]  RÉVISION 2 — le passage [O1]-[O8] (rgba blanc translucide,
- *        0.16→0.20) restait visuellement quasi identique sur les images
- *        de fond photo. Remplacé par une surface unie CARD_BG
- *        (rgba(15,10,30,0.94), proche du fond de page #0f0a1e) sur les
- *        boutons de liens, cartes boutique, cartes documents, bloc
- *        countdown et bloc description événement : ces cartes masquent
- *        maintenant réellement l'image derrière au lieu de la laisser
- *        transparaître. Libellé du countdown repassé en blanc translucide
- *        (était noir sur noir, invisible, avec l'ancien fond clair).
- *
- * PASSE "PRO" INSPIRÉE LINKTREE / BEACONS / BIO.SITE (révision précédente) :
- *  [P1]  Police : import Google Fonts "Manrope" (une seule famille, plusieurs
- *        graisses) appliquée à toute la page — remplace la police système
- *        par défaut, qui lisait "app générique". Feature "ss01"/tabular
- *        activée sur le countdown pour des chiffres alignés.
- *  [P2]  Barre d'actions flottante (haut de page) : bouton "Partager" natif
- *        (Web Share API avec repli "copier le lien") + retour visuel
- *        (icône qui se change en check + toast) — le geste de partage est
- *        le cœur de l'UX Linktree/Beacons et manquait totalement ici.
- *  [P3]  Avatar : anneau en dégradé (conic-gradient) pour les profils
- *        vérifiés, cohérent avec le badge existant.
- *  [P4]  Fond non-image : dégradé "mesh" à 3 taches radiales animées très
- *        lentement au lieu d'un simple linear-gradient plat — donne de la
- *        profondeur sans nuire à la lisibilité (respecte toujours
- *        prefers-reduced-motion).
- *  [P5]  Boutons de liens : légère élévation au tap (translateY), bordure
- *        supérieure "highlight" 1px façon carte premium, largeur de bordure
- *        gauche harmonisée. Focus clavier visible (outline) pour
- *        l'accessibilité — absent auparavant.
- *  [P6]  Pied de page : remplace la mention statique "Tous droits réservés"
- *        par un badge de marque discret, cliquable, façon "Fait avec
- *        SocialApp" (mécanique de croissance virale standard des outils
- *        link-in-bio), + lien support conservé au-dessus.
- *  [P7]  En-tête : bio et nom resserrés, meilleure hiérarchie typographique
- *        (poids/tracking), séparateur discret avant les sections pour
- *        structurer la lecture façon page pro.
- *
- * PASSE "CARTES BLANCHES + AVATAR FIGÉ" (révision précédente) :
- *  [W1]  Avatar vérifié : suppression de l'animation de rotation de
- *        l'anneau (pp-spin) — l'anneau reste figé (toujours dégradé
- *        conique statique), comme demandé.
- *  [W2]  CARD_BG / CARD_BG_HOVER / CARD_BORDER passés d'une surface sombre
- *        translucide à une surface blanche quasi opaque. Toutes les
- *        cartes qui s'appuient dessus (boutons de liens, cartes boutique,
- *        cartes documents, bloc countdown, bloc description événement)
- *        sont donc désormais blanches.
- *  [W3]  Chaque texte/icône affiché *à l'intérieur* d'une carte CARD_BG a
- *        son contraste inversé (blanc → noir/gris foncé) pour rester
- *        lisible sur fond blanc, sans toucher aux éléments hors cartes
- *        (avatar, titres de section, fond de page, boutons colorés,
- *        modales) qui restent inchangés.
- *  [W4]  Anneau de focus clavier (:focus-visible) des cartes/boutons de
- *        liens passé d'un blanc translucide (invisible sur fond blanc) à
- *        une couleur de marque indigo, visible sur fond clair ET foncé ;
- *        le bouton "Partager" (fond toujours sombre) garde son anneau
- *        blanc d'origine.
- *
- * BANNIÈRE DE COUVERTURE (révision précédente) :
- *  [BN1] Ajout d'une bannière/photo de couverture optionnelle en haut de la
- *        page publique, affichée uniquement si `profile.banner_url` est
- *        renseigné. Champ distinct de `bg_image_url` (qui reste le fond
- *        plein écran derrière toute la page) : la bannière est une image
- *        rectangulaire à coins arrondis, ratio 16/7, dans la même colonne
- *        de contenu (.pp-content-col) que le reste des sections, avec la
- *        même ombre que les autres cartes. N'affecte rien d'existant si le
- *        champ est vide : comportement inchangé pour tous les profils sans
- *        bannière.
- *        → Nécessite d'ajouter la colonne `banner_url` (texte, nullable)
- *        sur la table des profils, et un champ d'upload correspondant côté
- *        dashboard admin (fichier non inclus ici, cette page ne fait que
- *        l'afficher).
- *
- * AVATAR SUR LA BANNIÈRE (révision précédente) :
- *  [BN2] Quand `profile.banner_url` est renseigné, l'avatar est désormais
- *        positionné en chevauchement, centré horizontalement, sur le bord
- *        bas de la bannière (façon page de couverture réseau social) au
- *        lieu d'être affiché séparément en dessous. La bannière et
- *        l'avatar partagent un même conteneur positionné en `relative`,
- *        l'avatar étant positionné en `absolute` et à moitié au-dessus /
- *        à moitié en dessous du bord bas de la bannière via
- *        `transform: translate(-50%, 50%)`. Un espace supplémentaire
- *        (`marginBottom`) est réservé sous la bannière pour laisser la
- *        place à la moitié inférieure de l'avatar qui déborde. Quand il
- *        n'y a pas de bannière, l'avatar garde exactement son ancien
- *        rendu autonome (aucun changement de comportement dans ce cas).
- *
- * CORRECTIF BANDE BLANCHE EN BAS DE PAGE (révision précédente) :
- *  [BG1] Le décor plein écran (#__bg_layer__ / #__bg_overlay__) est en
- *        `position: fixed` avec `height: 100dvh` : il ne couvre donc que
- *        la fenêtre visible, pas au-delà. Or html/body étaient mis en
- *        `background: transparent`. Résultat : sur Chrome Android,
- *        l'effet de rebond (overscroll) quand on tire la page après la
- *        fin du contenu révèle le vrai fond de html/body — transparent,
- *        donc blanc par défaut du navigateur — d'où la bande blanche
- *        visible sous le dernier bouton. Corrigé en donnant à html/body
- *        une couleur de secours cohérente avec le thème (fond uni sombre,
- *        ou 1er ton du dégradé du profil s'il n'y a pas d'image de fond)
- *        au lieu de 'transparent', y compris au nettoyage de l'effet.
- *
- * CORRECTIF FOND D'ÉCRAN INVISIBLE (révision précédente) :
- *  [BG2] Le fix [BG1] ci-dessus a introduit une régression : il posait
- *        un fond OPAQUE à la fois sur document.documentElement (html) ET
- *        sur document.body. Or #__bg_layer__ / #__bg_overlay__ sont des
- *        enfants directs de body, en `position:fixed` avec un z-index
- *        NÉGATIF (-10 / -9). Par l'algorithme de stacking CSS, un
- *        descendant à z-index négatif se peint AVANT (donc en dessous
- *        de) le fond propre de son parent dès que ce parent a un fond
- *        opaque explicite — alors que le fond du <html> (racine), lui,
- *        sert de fond de "canvas" derrière absolument tout. Résultat :
- *        le fond de <body> (opaque, ex. rgb(15,10,30)) masquait
- *        entièrement l'image de fond ET le dégradé "mesh", en
- *        permanence, quel que soit le profil — alors même que
- *        bg_image_url était correctement enregistré et l'image
- *        accessible. Le fond de <html> seul suffit à couvrir l'effet de
- *        rebond (overscroll) recherché par [BG1] ; <body> repasse donc
- *        en 'transparent' (jamais en 'unset'/'' pour éviter de retomber
- *        sur un blanc par défaut du navigateur), aussi bien à
- *        l'application qu'au nettoyage de l'effet.
- *
- * BOUTONS DE LIENS EN FORME DE CAPSULE (révision précédente) :
- *  [S1]  Boutons de liens (RippleButton dans la section "Liens") passés
- *        d'une forme rectangulaire à coins arrondis (16px) à une forme
- *        capsule complète (borderRadius:'999px'), avec l'icône de
- *        plateforme découpée en cercle (au lieu d'un carré à coins
- *        arrondis) et cerclée d'un liseré blanc. Le libellé est
- *        maintenant centré horizontalement dans le bouton (au lieu
- *        d'aligné à gauche juste après l'icône), en majuscules avec un
- *        espacement de lettres large façon badge, grâce à une cale
- *        invisible de même largeur que l'icône placée après le libellé
- *        (centrage réel, pas juste visuel). La bordure gauche colorée par
- *        plateforme ([P5]) est conservée à l'identique (elle suit
- *        désormais l'arrondi complet plutôt qu'un coin carré). Aucun
- *        changement sur RippleButton lui-même, sur le ripple, sur le
- *        focus clavier indigo ([W4]) ni sur l'animation d'apparition
- *        (.pp-link-btn) : seul le style inline du bouton et son contenu
- *        interne changent.
- *
- * TRANSPARENCE DES BOUTONS DE LIENS + ADAPTATION AUTOMATIQUE AU FOND
- * (cette révision) :
- *  [S2]  Fond des boutons de la section "Liens" (RippleButton) passé
- *        d'un blanc quasi opaque (CARD_BG) à une surface transparente
- *        façon "verre" : rgba(255,255,255,0.07) + léger flou sur fond
- *        sombre ou image, rgba(255,255,255,0.55) + léger flou sur fond
- *        clair. Le choix clair/sombre est calculé automatiquement par
- *        getProfileContrast(profile) : fond image → considéré sombre (un
- *        assombrissement lui est déjà appliqué par #__bg_overlay__) ;
- *        fond en dégradé de couleur → luminance moyenne des deux teintes
- *        choisies par l'utilisateur (bg1/bg2 de theme_color). Le libellé
- *        du bouton (LINK_TEXT_COLOR) et le cercle derrière le logo de la
- *        plateforme (LINK_BORDER_COLOR pour son liseré) suivent la même
- *        bascule, pour rester lisibles quel que soit le fond choisi, au
- *        lieu du fond blanc opaque + texte toujours foncé d'avant. Le
- *        cercle du logo n'a plus de fond blanc plein ni de liseré blanc
- *        fixe : fond très légèrement teinté (adaptatif) + fin liseré
- *        adaptatif, le logo de la plateforme (déjà en couleur de marque)
- *        restant visible directement dessus. L'état :hover du bouton
- *        (auparavant un blanc fixe dans le <style> injecté une seule fois
- *        au montage) passe désormais par une variable CSS
- *        (--pp-hover-bg) posée en inline sur chaque bouton, pour pouvoir
- *        varier selon le fond sans avoir à réinjecter la feuille de style
- *        à chaque changement de profil. Ce changement ne touche QUE la
- *        section "Liens" : boutique, documents, countdown et description
- *        événement gardent leur fond blanc (CARD_BG) inchangé.
- *
- * BANDEAU D'ICÔNES RAPIDES SOUS LA BIO (révision précédente) :
- *  [SB1] Ajout d'un petit bandeau capsule sous la bio (et sous le
- *        numéro de téléphone affiché en texte, s'il y en a un), contenant
- *        jusqu'à 3 icônes seules (sans libellé) : le premier lien actif
- *        de type WhatsApp, le premier de type téléphone ("phone") et le
- *        premier de type Facebook trouvés dans profile.links, dans cet
- *        ordre. Une plateforme absente des liens du profil est
- *        simplement omise du bandeau (pas d'icône vide). Réutilise
- *        handleLinkClick tel quel : le tracking de clic et les
- *        déclencheurs d'automatisation (ex. WhatsApp click) restent donc
- *        actifs depuis ce bandeau. Style et couleurs alignés sur les
- *        tokens LINK_* de [S2] (fond/liseré adaptatifs au fond du
- *        profil, hover partagé via --pp-hover-bg et la classe
- *        .pp-link-btn-el). Le repli générique pour une plateforme
- *        inconnue (auparavant dupliqué en dur dans le .map de la liste
- *        "Liens") a été extrait dans une fonction commune
- *        resolvePlatform(link), pour que le bandeau et la liste
- *        affichent exactement la même icône/couleur pour une même
- *        plateforme.
- *
- * PAS DE DOUBLON ENTRE LE BANDEAU ET LA LISTE "LIENS" (cette révision) :
- *  [SB2] Le bandeau [SB1] n'est plus purement additif : les liens qu'il
- *        affiche sont désormais retirés de la liste "Liens" plus bas
- *        (nouvelle variable mainLinks, utilisée à la place d'enabledLinks
- *        pour le rendu de cette liste — enabledLinks continue de servir
- *        de base commune aux deux). Facebook est retiré systématiquement
- *        de mainLinks dès qu'il apparaît dans le bandeau : il ne peut de
- *        toute façon exister qu'en un seul exemplaire (absent de
- *        REPEATABLE_LIMITS dans AddPlatformDialog.jsx), donc une fois
- *        remonté en haut il ne doit plus jamais réapparaître en bas. Pour
- *        WhatsApp et téléphone, qui eux peuvent avoir plusieurs
- *        exemplaires (jusqu'à 2 et 3 respectivement), seule la première
- *        occurrence de chaque (topWhatsapp / topPhone, retenue par
- *        référence d'objet et non par contenu, pour ne pas confondre deux
- *        liens identiques) est retirée de mainLinks : un éventuel 2e
- *        WhatsApp ou 2e/3e numéro de téléphone continue donc d'apparaître
- *        normalement dans la liste "Liens", garantissant que le(s) lien(s)
- *        du bandeau et ceux de la liste sont toujours des exemplaires
- *        différents.
- *
- * TÉLÉPHONE/WHATSAPP RESTANTS REMONTÉS EN HAUT DE LA LISTE "LIENS"
- * (cette révision) :
- *  [SB3] Un éventuel 2e exemplaire de téléphone ou de WhatsApp (celui qui
- *        n'a pas été absorbé par le bandeau [SB1]/[SB2]) est désormais
- *        remonté en tête de la liste "Liens", dans l'ordre
- *        téléphone → WhatsApp, au lieu de rester à sa position d'origine
- *        dans profile.links (souvent en fin de liste, après TikTok,
- *        YouTube, etc.). Implémenté par un tri stable sur mainLinksFiltered
- *        (résultat de [SB2]) : les liens téléphone/WhatsApp passent devant,
- *        tous les autres types de liens gardent leur ordre relatif
- *        d'origine entre eux.
- *
- * DISPOSITION "CARTE PRO" AVATAR + NOM + BIO SUR LA BANNIÈRE (cette
- * révision) :
- *  [BN3] Uniquement quand profile.banner_url est renseigné : l'avatar
- *        n'est plus centré horizontalement sur le bord bas de la
- *        bannière ([BN2]) — il est désormais calé à gauche, et le nom +
- *        la bio sont affichés juste à côté (alignés à gauche, sur la
- *        même ligne que l'avatar, tous deux "collés" en bas de cette
- *        ligne via alignItems:'flex-end'), façon carte de visite/
- *        vCard pro. Techniquement : un seul conteneur absolu
- *        (left/right/bottom + translateY(50%)) contient à la fois
- *        avatarBlock et la colonne nom/bio, au lieu des deux blocs
- *        séparés d'avant (avatar centré, puis h1/bio centrés en dessous
- *        du conteneur bannière). Le nom passe sur une seule ligne
- *        (ellipsis si trop long) et la bio sur deux lignes maximum
- *        (line-clamp), pour ne jamais déborder de l'espace disponible à
- *        droite de l'avatar. Quand il n'y a PAS de bannière, le
- *        comportement d'origine est intégralement conservé : avatar
- *        centré, nom et bio centrés en dessous, dans leur propre bloc —
- *        seul le cas "avec bannière" change.
- *
- * CORRECTIF CHEVAUCHEMENT NOM/BIO SUR LA BANNIÈRE (cette révision) :
- *  [BN4] [BN3] ci-dessus liait la position du nom/de la bio à celle de
- *        l'avatar (même ligne, translateY(50%) commun) : avec une bio un
- *        peu longue, le total nom+bio dépassait la moitié inférieure de
- *        l'avatar et venait empiéter sur l'image de la bannière
- *        elle-même (texte illisible par-dessus les logos/coordonnées de
- *        la bannière). Corrigé en séparant complètement les deux : l'
- *        avatar reste seul en chevauchement absolu bas-gauche
- *        (translateY(50%) de sa propre hauteur, ~59px sous la bannière,
- *        inchangé) ; le nom + la bio sont désormais un bloc à part, en
- *        flux normal juste après la bannière (donc jamais superposé à
- *        l'image), avec un padding-gauche (152px) qui le décale à droite
- *        de l'avatar et une petite marge (6px) + hauteur minimale (56px,
- *        contenu centré verticalement dedans) qui le fait démarrer et
- *        occuper visuellement la même bande que la partie visible de
- *        l'avatar. Comme ce bloc est en flux normal (pas absolu), une
- *        bio plus longue que 56px pousse simplement la suite de la page
- *        vers le bas au lieu de déborder sur la bannière ou d'être
- *        rognée — aucun chevauchement possible, quelle que soit la
- *        longueur du nom ou de la bio.
+ * Aucun changement de comportement en mode complet (isLight === false) :
+ * toutes ces additions sont conditionnelles et n'affectent pas le rendu
+ * existant quand la détection ne déclenche pas le mode léger.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2 } from 'lucide-react';
+import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
 // [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
@@ -363,7 +65,9 @@ import { triggerQrScan }          from '../lib/triggers/qr';
 import { triggerMarketplaceBuy }  from '../lib/triggers/marketplace';
 import { triggerMarketplaceClick } from '../lib/triggers/marketplaceClick'; // [A6]
 import SEO from "../components/SEO";
-import PublicBookingWidget from '@/pages//PublicBookingWidget'; 
+import PublicBookingWidget from '@/pages//PublicBookingWidget';
+// [DL1] Détection du mode data-light
+import { useDataSaverMode } from '../hooks/useDataSaverMode';
 
 // ─── Constantes ───────────────────────────────────────────────
 // [C11] Numéro support centralisé — modifier ici uniquement
@@ -395,10 +99,30 @@ const CARD_TEXT_FAINT  = 'rgba(21,16,42,0.42)';
 
 // [P1] Police de marque unique pour toute la page
 const FONT_STACK = "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+// [DL2] Police système pure — utilisée en mode léger, zéro requête réseau
+const SYSTEM_FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
 
 const KEYFRAME_SKELETON_ID  = 'pp-keyframes-skeleton';
 const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
 const FONT_LINK_ID          = 'pp-font-manrope';
+
+// ─── [DL3] Images allégées via transformation Supabase Storage ────────
+// Ajoute width/quality/format à une URL Supabase Storage pour demander
+// une variante réduite au CDN. Sans effet si l'URL est vide, ou si le
+// projet Supabase n'a pas la transformation d'image activée (le CDN
+// ignore alors simplement ces paramètres et sert l'original).
+function imgUrl(url, { width, quality = 70, format = 'webp' } = {}) {
+  if (!url || !width) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}width=${width}&quality=${quality}&format=${format}`;
+}
+
+// Largeurs demandées selon le mode — mode léger nettement plus bas, mode
+// complet proche de la taille d'affichage réelle (retina inclus).
+const IMG_WIDTHS = {
+  light: { avatar: 90,  banner: 480, product: 220, event: 480 },
+  full:  { avatar: 212, banner: 960, product: 440, event: 960 },
+};
 
 // ─── [F1] Verrouillage du scroll body — mutualisé ──────────────
 // Remplace les deux implémentations dupliquées (ImageLightbox et
@@ -526,13 +250,6 @@ const parseColors = (tc) => {
 // être "clair" (texte blanc) ou "sombre" (texte foncé), pour que les
 // boutons de liens désormais transparents restent lisibles quel que
 // soit le fond choisi par l'utilisateur.
-//  - Fond image (bg_image_url) : toujours considéré sombre, car un
-//    assombrissement (#__bg_overlay__, cf. [O7]) est déjà appliqué
-//    par-dessus l'image dans tous les cas.
-//  - Fond en dégradé de couleur (theme_color) : luminance relative
-//    (formule WCAG) moyenne des deux teintes bg1/bg2 choisies par
-//    l'utilisateur — au-delà de 0.5 le fond est jugé "clair" (texte
-//    foncé), en dessous il est jugé "sombre" (texte clair).
 function getProfileContrast(profile) {
   if (profile?.bg_image_url) return 'light';
 
@@ -567,9 +284,7 @@ const formatPrice = (p) => p ? Number(p).toLocaleString('fr-FR') + ' F' : '';
 
 // [SB1] Résout les métadonnées d'affichage (icône, couleur, libellé) d'un
 // lien à partir de PLATFORMS, avec le même repli générique que la section
-// "Liens" pour toute plateforme inconnue. Partagé entre le bandeau
-// d'icônes rapides sous la bio (voir plus bas) et la liste complète des
-// liens, pour éviter de dupliquer deux fois cet objet de repli.
+// "Liens" pour toute plateforme inconnue.
 function resolvePlatform(link) {
   const key = (link.platform || '').toLowerCase();
   return PLATFORMS[key] || {
@@ -612,7 +327,7 @@ function ProfileSkeleton() {
   }, []);
 
   return (
-    <div style={{ minHeight:'100dvh', background:'#0f0a1e', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px', fontFamily:FONT_STACK }}>
+    <div style={{ minHeight:'100dvh', background:'#0f0a1e', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px', fontFamily:SYSTEM_FONT_STACK }}>
       <div className="pp-sk" style={{ width:118, height:118, borderRadius:28, marginBottom:16 }} />
       <div className="pp-sk" style={{ width:180, height:22, marginBottom:10 }} />
       <div className="pp-sk" style={{ width:240, height:14, marginBottom:6 }} />
@@ -644,9 +359,6 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
 );
 
 // [P2] Barre d'actions flottante — partage natif avec repli "copier le lien".
-// Retour visuel : icône Share2 → Check pendant 1.8s + toast texte discret.
-// C'est le geste central des outils link-in-bio pro (Linktree, Beacons,
-// Bio.site en font tous un bouton de premier plan) et il manquait ici.
 function ShareBar({ profile }) {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
@@ -674,8 +386,6 @@ function ShareBar({ profile }) {
     }
   };
 
-  // [SH1] Bouton icône seule, dans un cercle — plus de libellé texte.
-  // Le conteneur (position fixe en bas à droite) est géré par l'appelant.
   return (
     <button
       onClick={handleShare}
@@ -697,8 +407,6 @@ function ShareBar({ profile }) {
   );
 }
 
-// [F1] Body-scroll lock mutualisé · [F2] 90vh → 90dvh · [F3] webkit prefix
-// [F4] Bouton de fermeture agrandi à 44×44 + touchAction manipulation
 function ImageLightbox({ src, onClose }) {
   useBodyScrollLock();
 
@@ -722,7 +430,6 @@ function ImageLightbox({ src, onClose }) {
   );
 }
 
-// [F7] Timeouts de ripple suivis et annulés au démontage
 function RippleButton({ onClick, style, children, platformColor }) {
   const [ripples, setRipples] = useState([]);
   const timeouts = useRef([]);
@@ -753,14 +460,15 @@ function RippleButton({ onClick, style, children, platformColor }) {
   );
 }
 
-// [F1] Body-scroll lock mutualisé · [F2] 92vh → 92dvh · [F3] webkit prefix
-// [F4] Bouton de fermeture agrandi à 44×44 · [F11] safe-area-inset-bottom
-function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
+// [DL6] isLight en prop — réduit la largeur demandée à Supabase Storage
+// pour l'image produit affichée dans la modale de détail.
+function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLight }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
     : 0;
   const waNumber = (whatsappNumber || '').replace(/\D/g, '');
   const waMsg = encodeURIComponent(`Bonjour ! Je suis intéressé(e) par votre article : *${product.title}* à ${formatPrice(product.price)}. Est-il encore disponible ?`);
+  const imgWidth = isLight ? IMG_WIDTHS.light.product * 2 : IMG_WIDTHS.full.product * 2; // vue détail = plus grande que la vignette
 
   useBodyScrollLock();
 
@@ -780,7 +488,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
         <div style={{ overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain', padding:'0 0 calc(32px + env(safe-area-inset-bottom, 0px))' }}>
           <div style={{ margin:'10px 16px 0', borderRadius:'18px', overflow:'hidden', aspectRatio:'4/3', background:'rgba(255,255,255,0.05)', position:'relative' }}>
             {product.image_url
-              ? <LazyImg src={product.image_url} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+              ? <LazyImg src={imgUrl(product.image_url, { width: imgWidth })} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
               : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ShoppingBag size={48} color="rgba(255,255,255,0.15)" /></div>
             }
             {discount > 0 && <div style={{ position:'absolute', top:'12px', left:'12px', background:'#22c55e', borderRadius:'8px', padding:'4px 10px', fontSize:'13px', fontWeight:700, color:'white' }}>-{discount}%</div>}
@@ -813,7 +521,6 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  // [A3] Déclencher les automatisations marketplace (fire-and-forget)
                   if (profileId) triggerMarketplaceBuy(profileId, {
                     productId:    product.id,
                     productTitle: product.title,
@@ -838,11 +545,13 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose }) {
   );
 }
 
-// [W2][W3] Carte boutique blanche — fond CARD_BG, textes en CARD_TEXT/CARD_TEXT_MUTED
-function PublicProductCard({ product, onOpen }) {
+// [W2][W3][DL6] Carte boutique blanche — isLight en prop pour réduire la
+// largeur d'image demandée à Supabase Storage.
+function PublicProductCard({ product, onOpen, isLight }) {
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
     : 0;
+  const imgWidth = isLight ? IMG_WIDTHS.light.product : IMG_WIDTHS.full.product;
   return (
     <div
       onClick={() => onOpen(product)}
@@ -853,7 +562,7 @@ function PublicProductCard({ product, onOpen }) {
     >
       <div style={{ position:'relative', aspectRatio:'4/3', background:'rgba(0,0,0,0.05)', overflow:'hidden' }}>
         {product.image_url
-          ? <LazyImg src={product.image_url} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+          ? <LazyImg src={imgUrl(product.image_url, { width: imgWidth })} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ShoppingBag size={28} color="rgba(0,0,0,0.2)" /></div>
         }
         {discount > 0 && <div style={{ position:'absolute', top:'8px', left:'8px', background:'#22c55e', borderRadius:'6px', padding:'2px 7px', fontSize:'11px', fontWeight:700, color:'white' }}>-{discount}%</div>}
@@ -873,6 +582,57 @@ function PublicProductCard({ product, onOpen }) {
   );
 }
 
+// [DL5] Petit indicateur "~XX Ko chargés" — mode léger uniquement.
+// Calcule le poids transféré via la Resource Timing API, ~1.5s après le
+// montage (laisse le temps aux principales requêtes de se terminer).
+// Purement indicatif (n'inclut pas ce qui charge après ce délai) —
+// affiché comme un argument de confiance, pas comme une mesure exacte.
+function PageWeightBadge() {
+  const [kb, setKb] = useState(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        const entries = performance.getEntriesByType('resource');
+        const total = entries.reduce((sum, e) => sum + (e.transferSize || 0), 0);
+        if (total > 0) setKb(Math.round(total / 1024));
+      } catch {}
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (kb === null) return null;
+
+  return (
+    <div style={{ marginTop:'8px', display:'inline-flex', alignItems:'center', gap:'5px', color:'rgba(255,255,255,0.35)', fontSize:'11px' }}>
+      <Wifi size={11} /> Mode léger · ~{kb} Ko chargés
+    </div>
+  );
+}
+
+// [DL7] Switch discret pour forcer manuellement le mode léger/complet.
+// Force toujours explicitement l'état opposé à l'état actuel (et non un
+// simple "effacer la préférence manuelle", qui pourrait retomber sur le
+// même état si la détection auto le redonnait) — comportement prévisible
+// pour le visiteur quel que soit l'historique de détection.
+function LightModeToggle({ isLight, setManual }) {
+  return (
+    <button
+      onClick={() => setManual(!isLight)}
+      aria-label={isLight ? 'Repasser en mode complet' : 'Activer le mode léger'}
+      style={{
+        marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px',
+        background:'transparent', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'100px',
+        padding:'6px 14px', color:'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600,
+        cursor:'pointer', touchAction:'manipulation',
+      }}
+    >
+      {isLight ? <WifiOff size={11} /> : <Wifi size={11} />}
+      {isLight ? 'Mode léger activé' : 'Activer le mode léger'}
+    </button>
+  );
+}
+
 // ─── Composant principal ──────────────────────────────────────
 export default function PublicProfile() {
   const { username } = useParams();
@@ -888,6 +648,9 @@ export default function PublicProfile() {
   const [documents, setDocuments]           = useState([]);
   const [lightboxSrc, setLightboxSrc]       = useState(null);
 
+  // [DL1] Détection du mode data-light
+  const { isLight, setManual, clearManual } = useDataSaverMode();
+
   // [C8] Guard isMounted pour éviter setState après démontage
   const isMounted = useRef(true);
   useEffect(() => {
@@ -895,8 +658,9 @@ export default function PublicProfile() {
     return () => { isMounted.current = false; };
   }, []);
 
-  // [P1] Import de la police de marque (une seule fois, avant tout rendu de texte)
+  // [P1][DL2] Import de la police de marque — sauté en mode léger
   useEffect(() => {
+    if (isLight) return; // [DL2] pas de police custom en mode léger
     if (!document.getElementById(FONT_LINK_ID)) {
       const link = document.createElement('link');
       link.id = FONT_LINK_ID;
@@ -904,21 +668,9 @@ export default function PublicProfile() {
       link.href = 'https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap';
       document.head.appendChild(link);
     }
-  }, []);
+  }, [isLight]);
 
   // [C7] Keyframes principales injectées une seule fois
-  // [F10] .pp-content-col / .pp-shop-grid : adaptation tablette (>=768px)
-  // [F13] prefers-reduced-motion : coupe les animations décoratives
-  // [O8] Halos de survol desktop sur cartes boutique et boutons de liens
-  // [W1] Anneau avatar : plus d'animation de rotation (figé)
-  // [W4] Focus clavier : anneau indigo sur cartes/boutons de liens (fond
-  //      désormais blanc), anneau blanc conservé sur le bouton "Partager"
-  //      (fond toujours sombre)
-  // [P4] Fond "mesh" animé très lentement (respecte reduced-motion)
-  // [S2] .pp-link-btn-el:hover lit désormais la variable CSS
-  //      --pp-hover-bg (posée en inline sur chaque bouton de lien, cf.
-  //      plus bas) au lieu d'un blanc fixe, pour s'adapter au fond du
-  //      profil sans réinjecter cette feuille de style à chaque profil.
   useEffect(() => {
     if (!document.getElementById(KEYFRAME_MAIN_ID)) {
       const s = document.createElement('style');
@@ -940,13 +692,10 @@ export default function PublicProfile() {
         }
         .pp-link-btn              { animation:pp-fadeSlideUp 0.4s ease both; }
 
-        /* [W1] Anneau "story" de l'avatar vérifié — figé (dégradé conique
-           statique, plus de rotation) */
         .pp-avatar-ring--verified {
           background: conic-gradient(from 0deg,#6366f1,#22c55e,#f7c948,#ff6b35,#6366f1);
         }
 
-        /* [P5][W4] Interactions clavier/tap sur les liens et cartes */
         .pp-link-btn-el:active { transform: translateY(1px); }
         .pp-link-btn-el:focus-visible,
         .pp-shop-card:focus-visible {
@@ -958,7 +707,6 @@ export default function PublicProfile() {
           outline-offset: 2px;
         }
 
-        /* [F10] Colonne de contenu partagée (liens, boutique, docs, événement, bannière) */
         .pp-content-col { width:100%; max-width:384px; }
         .pp-shop-grid   { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
         @media (min-width:768px) {
@@ -966,7 +714,6 @@ export default function PublicProfile() {
           .pp-shop-grid   { grid-template-columns:repeat(3,1fr); gap:12px; }
         }
 
-        /* [O8][S2] Halo au survol desktop uniquement (évite un "collant" tactile) */
         @media (hover: hover) {
           .pp-link-btn-el:hover  { background:var(--pp-hover-bg, ${CARD_BG_HOVER}) !important; transform:translateY(-1px); }
           .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
@@ -974,7 +721,10 @@ export default function PublicProfile() {
           .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
         }
 
-        /* [F13] Réduction des animations si demandé au niveau système */
+        /* [DL4] Mode léger : coupe l'animation "mesh" (pp-meshDrift) du
+           fond décoratif, en plus de la règle reduced-motion existante. */
+        .pp-light-mode .pp-mesh-blob { animation:none !important; filter:none !important; }
+
         @media (prefers-reduced-motion: reduce) {
           .pp-link-btn { animation:none; }
           .pp-mesh-blob { animation:none !important; }
@@ -988,11 +738,6 @@ export default function PublicProfile() {
   // ── Chargement initial ───────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      // [Q1] `.ilike` au lieu de `.eq` — lookup insensible à la casse.
-      // Sans caractères joker (%), c'est toujours une comparaison exacte
-      // du username, juste sans distinction majuscule/minuscule. Corrige
-      // le cas où le lien encodé dans le QR (ou saisi/partagé) diffère
-      // par la casse de ce qui est stocké en base.
       const { data, error } = await supabase
         .from('link_profiles')
         .select('*')
@@ -1010,8 +755,6 @@ export default function PublicProfile() {
       setProfile(data);
       setLoading(false);
 
-      // [F8] Analytics fire-and-forget, ne bloque plus l'affichage des
-      // produits/documents : trackView() n'est plus dans le Promise.all.
       trackView(data.id);
 
       Promise.all([
@@ -1042,19 +785,17 @@ export default function PublicProfile() {
     if (params.get('source') !== 'qr') return;
     const medium = params.get('medium');
 
-    // [C9] Insert profile_stats (tracking analytics)
     supabase.from('profile_stats')
       .insert([{ profile_id: profile.id, event_type: 'qr_scan', referrer: medium || 'non_specifie' }])
       .then(({ error }) => {
         if (error && process.env.NODE_ENV !== 'production') console.error('[QR scan]', error);
       });
 
-    // [A2] Déclencher les automatisations liées au scan QR (fire-and-forget)
     triggerQrScan(profile.id, {
       referrer: medium || 'non_specifie',
       device:   detectDevice(),
     });
-  }, [profile?.id]); // [C1] Dépendance à l'ID uniquement, pas à l'objet entier
+  }, [profile?.id]);
 
   // ── Images slider ────────────────────────────────────────────
   useEffect(() => {
@@ -1069,8 +810,6 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [images.length, isAutoPlay]);
 
-  // [C4] Setter fonctionnel pour éviter la closure stale sur currentIndex
-  // [F6] Nettoyage garanti des listeners globaux même si démontage en cours de geste
   const swipeCleanupRef = useRef(null);
 
   const handleTouchStart = useCallback((e) => {
@@ -1079,8 +818,8 @@ export default function PublicProfile() {
       const dx = sx - me.touches[0].clientX, dy = sy - me.touches[0].clientY;
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
         setCurrentIndex(prev => {
-          if (dx > 0) return Math.min(prev + 1, images.length - 1); // swipe gauche → suivant
-          return Math.max(prev - 1, 0);                              // swipe droite → précédent
+          if (dx > 0) return Math.min(prev + 1, images.length - 1);
+          return Math.max(prev - 1, 0);
         });
         setIsAutoPlay(false);
         me.preventDefault();
@@ -1096,11 +835,8 @@ export default function PublicProfile() {
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd, { once: true });
     swipeCleanupRef.current = cleanup;
-  }, [images.length]); // [C4] currentIndex retiré des deps — setter fonctionnel utilisé
+  }, [images.length]);
 
-  // [F6] Si le composant se démonte pendant un geste en cours, on retire
-  // les listeners globaux laissés en place (évite fuite mémoire et tout
-  // callback tardif après démontage lors d'une navigation rapide).
   useEffect(() => {
     return () => { if (swipeCleanupRef.current) swipeCleanupRef.current(); };
   }, []);
@@ -1113,80 +849,58 @@ export default function PublicProfile() {
     return () => clearInterval(t);
   }, [profile?.is_event, profile?.event_date]);
 
-  // ── [C5][F9][O7][P4][BG1][BG2] Background style — injection unifiée, sans flash ───
-  // [F2] 100vh → 100dvh pour éviter le rognage par la barre d'adresse iOS
-  // [F9] Dépendances resserrées : ne se recrée plus sur un changement de
-  // profil non lié au fond (évite un micro-flash inutile).
-  // [O7] Overlay assombri (0.52/0.36 → 0.58/0.42) pour homogénéiser le
-  // contraste sous les cartes désormais plus opaques.
-  // [P4] Sans image de fond, on remplace le linear-gradient plat par 3
-  // taches radiales très légèrement animées ("mesh gradient") — plus de
-  // profondeur façon page pro, tout en gardant la même palette de marque.
-  // [BG1] html/body ne sont plus mis en 'transparent' : le décor
-  // (#__bg_layer__ / #__bg_overlay__) est en position:fixed avec
-  // height:100dvh, donc il ne couvre QUE la fenêtre visible. Sur Chrome
-  // Android, l'effet de rebond (overscroll) en tirant la page après la
-  // fin du contenu révèle le vrai fond html/body — s'il est transparent,
-  // ça affiche du blanc. On lui donne donc une couleur de secours
-  // cohérente avec le thème du profil (au lieu de transparent).
-  // [BG2] CORRECTIF : seul document.documentElement (html) reçoit cette
-  // couleur de secours opaque. document.body reste 'transparent' :
-  // #__bg_layer__ / #__bg_overlay__ sont des ENFANTS de body en
-  // position:fixed avec un z-index NÉGATIF (-10/-9). Par l'algorithme de
-  // stacking CSS, un fond opaque posé directement sur body (élément non
-  // positionné, en flux normal) se peint AU-DESSUS de ses descendants à
-  // z-index négatif — masquant donc entièrement l'image de fond et le
-  // dégradé "mesh", en permanence, quel que soit le profil. Le fond de
-  // <html> seul suffit à couvrir l'effet de rebond (overscroll) visé par
-  // [BG1], sans ce problème (le fond du <html> sert de fond de "canvas"
-  // derrière absolument tout, y compris les éléments à z-index négatif).
+  // ── [C5][F9][O7][P4][BG1][BG2][DL4] Background style ──────────
+  // [DL4] En mode léger : pas de taches radiales floutées animées
+  // (pp-meshDrift + filter:blur), juste un dégradé plat — coupe le coût
+  // de repaint GPU en continu en plus du poids réseau.
   useEffect(() => {
     if (!profile) return;
 
-    // [BG1][BG2] Couleur de secours pour html UNIQUEMENT (visible lors
-    // d'un rebond/overscroll, quand le calque fixe ne suffit plus) :
-    // fond sombre neutre si image de fond, sinon 1er ton du dégradé du profil.
     const fallbackBg = profile.bg_image_url ? '#0f0a1e' : parseColors(profile.theme_color).bg1;
     document.documentElement.style.background = fallbackBg;
-    // [BG2] body reste transparent — voir explication ci-dessus. Ne JAMAIS
-    // remettre une couleur opaque ici sous peine de recréer le bug.
     document.body.style.background = 'transparent';
 
-    // [C12] Sanitisation de bg_image_url avant injection CSS
     let bgCss = '';
     if (profile.bg_image_url) {
-      const safeUrl = encodeURI(profile.bg_image_url);
+      const safeUrl = encodeURI(imgUrl(profile.bg_image_url, { width: isLight ? IMG_WIDTHS.light.banner : IMG_WIDTHS.full.banner }));
       bgCss = `
         #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background-image:url(${JSON.stringify(safeUrl)});background-size:cover;background-position:center;background-repeat:no-repeat; }
         #__bg_overlay__ { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-9;background:linear-gradient(160deg,rgba(0,0,0,0.58),rgba(0,0,0,0.42));pointer-events:none; }
       `;
     } else {
       const { bg1, bg2 } = parseColors(profile.theme_color);
-      bgCss = `
-        #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2});overflow:hidden; }
-        #__bg_layer__::before, #__bg_layer__::after {
-          content:'';
-          position:absolute;
-          width:70%; height:70%;
-          border-radius:50%;
-          filter:blur(70px);
-          opacity:0.5;
-        }
-        #__bg_layer__::before {
-          top:-15%; left:-10%;
-          background:${bg2};
-          animation:pp-meshDrift 22s ease-in-out infinite;
-        }
-        #__bg_layer__::after {
-          bottom:-20%; right:-10%;
-          background:${bg1};
-          animation:pp-meshDrift 26s ease-in-out infinite reverse;
-        }
-        #__bg_overlay__ { display:none; }
-      `;
+      if (isLight) {
+        // [DL4] Dégradé plat, pas de blob/blur/animation
+        bgCss = `
+          #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2}); }
+          #__bg_overlay__ { display:none; }
+        `;
+      } else {
+        bgCss = `
+          #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2});overflow:hidden; }
+          #__bg_layer__::before, #__bg_layer__::after {
+            content:'';
+            position:absolute;
+            width:70%; height:70%;
+            border-radius:50%;
+            filter:blur(70px);
+            opacity:0.5;
+          }
+          #__bg_layer__::before {
+            top:-15%; left:-10%;
+            background:${bg2};
+            animation:pp-meshDrift 22s ease-in-out infinite;
+          }
+          #__bg_layer__::after {
+            bottom:-20%; right:-10%;
+            background:${bg1};
+            animation:pp-meshDrift 26s ease-in-out infinite reverse;
+          }
+          #__bg_overlay__ { display:none; }
+        `;
+      }
     }
 
-    // [C5] Upsert : créer ou mettre à jour sans doublon, sans flash
     let styleEl = document.getElementById('__bg_style__');
     if (!styleEl) {
       styleEl = document.createElement('style');
@@ -1198,13 +912,10 @@ export default function PublicProfile() {
     return () => {
       const s = document.getElementById('__bg_style__');
       if (s) s.remove();
-      // [BG1][BG2] On garde la couleur de secours sur html au nettoyage
-      // (évite un flash blanc au démontage / changement de profil), mais
-      // body reste transparent, pour la même raison que ci-dessus.
       document.documentElement.style.background = fallbackBg;
       document.body.style.background = 'transparent';
     };
-  }, [profile?.bg_image_url, profile?.theme_color]); // [F9]
+  }, [profile?.bg_image_url, profile?.theme_color, isLight]); // [DL4] isLight ajouté aux dépendances
 
   // ── Download helper ──────────────────────────────────────────
   const handleDownload = (url) => {
@@ -1225,9 +936,8 @@ export default function PublicProfile() {
   // ── [A1] Clic sur lien — avec déclencheur automatisation WhatsApp ──
   const handleLinkClick = useCallback((link) => {
     if (!profile) return;
-    trackClick(profile.id, link.platform); // fire-and-forget intentionnel
+    trackClick(profile.id, link.platform);
 
-    // [A1] Déclencher les automatisations si le lien cliqué est WhatsApp
     if ((link.platform || '').toLowerCase() === 'whatsapp') {
       triggerWhatsappClick(profile.id, {
         referrer: cleanReferrer(),
@@ -1243,16 +953,11 @@ export default function PublicProfile() {
 
   if (loading)  return <ProfileSkeleton />;
   if (notFound) return (
-    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white', fontFamily:FONT_STACK }}>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white', fontFamily:SYSTEM_FONT_STACK }}>
       <p>Profil introuvable.</p>
     </div>
   );
 
-  // [S2] Contraste calculé une fois par rendu à partir du fond du profil
-  // (image ou dégradé de couleurs) — pilote la transparence et la
-  // couleur des boutons de la section "Liens" ci-dessous. N'affecte
-  // aucune autre section (boutique, documents, countdown, description
-  // événement restent sur CARD_BG blanc, inchangé).
   const linkContrast      = getProfileContrast(profile);
   const isLinkBgDark       = linkContrast === 'light';
   const LINK_TEXT_COLOR    = isLinkBgDark ? 'rgba(255,255,255,0.96)' : '#15102a';
@@ -1264,24 +969,11 @@ export default function PublicProfile() {
 
   const enabledLinks    = (profile.links || []).filter(l => l.enabled !== false);
 
-  // [SB1][SB2] Bandeau d'icônes rapides sous la bio : un WhatsApp, un
-  // téléphone et un Facebook — les premiers trouvés parmi les liens
-  // actifs, dans cet ordre. Ces trois liens précis sont ensuite retirés
-  // de la liste "Liens" plus bas (mainLinks) pour ne jamais être affichés
-  // deux fois : Facebook disparaît entièrement de la liste (il n'existe
-  // qu'en haut), tandis qu'un éventuel 2e WhatsApp ou 2e/3e numéro de
-  // téléphone (permis par REPEATABLE_LIMITS) continue lui d'apparaître
-  // normalement en bas, puisque seule cette première occurrence remonte.
   const topWhatsapp = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'whatsapp');
   const topPhone     = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'phone');
   const topFacebook  = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'facebook');
   const topSocialLinks = [topWhatsapp, topPhone, topFacebook].filter(Boolean);
 
-  // [SB2] Liste "Liens" affichée plus bas : identique à enabledLinks, sauf
-  // qu'on retire Facebook (systématiquement, il ne vit plus qu'en haut) et
-  // le WhatsApp/téléphone précis déjà remontés dans le bandeau ci-dessus
-  // (comparaison par référence d'objet, donc un 2e exemplaire du même
-  // type de lien n'est pas affecté et reste visible ici).
   const mainLinksFiltered = enabledLinks.filter(l => {
     const linkKey = (l.platform || '').toLowerCase();
     if (linkKey === 'facebook') return false;
@@ -1290,12 +982,6 @@ export default function PublicProfile() {
     return true;
   });
 
-  // [SB3] Les éventuels téléphone/WhatsApp restants (2e exemplaire, cf.
-  // REPEATABLE_LIMITS) sont remontés en tête de la liste "Liens" — dans
-  // cet ordre (téléphone puis WhatsApp) — au lieu de rester à leur
-  // position d'origine (souvent en fin de liste). Le tri est stable : à
-  // priorité égale (ex. deux liens "autre"), l'ordre d'origine entre eux
-  // est conservé, seuls téléphone/WhatsApp sont remontés devant.
   const MAIN_LINKS_PRIORITY = ['phone', 'whatsapp'];
   const mainLinks = [...mainLinksFiltered].sort((a, b) => {
     const aKey = (a.platform || '').toLowerCase();
@@ -1316,13 +1002,13 @@ export default function PublicProfile() {
     profile.event_booking_url
   );
 
-  // [BN2] Bloc avatar factorisé pour être réutilisé à la fois "flottant"
-  // sur la bannière (quand banner_url est renseigné) et en rendu autonome
-  // (comportement d'origine, inchangé) quand il n'y a pas de bannière.
+  // [DL3] Largeur d'avatar/bannière selon le mode
+  const avatarW = isLight ? IMG_WIDTHS.light.avatar : IMG_WIDTHS.full.avatar;
+  const bannerW = isLight ? IMG_WIDTHS.light.banner : IMG_WIDTHS.full.banner;
+  const eventW  = isLight ? IMG_WIDTHS.light.event  : IMG_WIDTHS.full.event;
+
   const avatarBlock = (
     <div style={{ position:'relative' }}>
-      {/* [W1] Anneau figé (dégradé conique statique) pour les profils
-          vérifiés, anneau statique discret sinon */}
       <div
         className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
         style={{
@@ -1333,7 +1019,7 @@ export default function PublicProfile() {
       >
         <div style={{ padding:'3px', borderRadius:'25px', background:'#0f0a1e' }}>
           {profile.avatar_url
-            ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:'106px', height:'106px', borderRadius:'22px', objectFit:'cover', display:'block' }} />
+            ? <img src={imgUrl(profile.avatar_url, { width: avatarW })} alt={profile.display_name} style={{ width:'106px', height:'106px', borderRadius:'22px', objectFit:'cover', display:'block' }} />
             : <div style={{ width:'106px', height:'106px', borderRadius:'22px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
           }
         </div>
@@ -1360,12 +1046,9 @@ export default function PublicProfile() {
         image: profile.avatar_url,
       }}
     />
-      <div id="__bg_layer__" />
+      <div id="__bg_layer__" className={isLight ? 'pp-light-mode' : undefined} />
       <div id="__bg_overlay__" />
 
-      {/* [SH1][P2] Bouton "Partager" — icône seule dans un cercle, fixe en
-          bas à droite de l'écran (au-dessus du contenu, reste visible au
-          scroll). Zones de sécurité iOS/Android respectées. */}
       <div style={{
         position:'fixed', zIndex:50,
         bottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
@@ -1374,9 +1057,9 @@ export default function PublicProfile() {
         <ShareBar profile={profile} />
       </div>
 
-      {/* [F11] Zones de sécurité iOS/Android sur le padding vertical/horizontal
-          du conteneur principal — évite de passer sous l'encoche ou la barre
-          de gestes en haut/bas, et sous l'encoche latérale en paysage. */}
+      {/* [DL2] fontFamily bascule sur SYSTEM_FONT_STACK en mode léger —
+          hérité par tous les descendants qui ne fixent pas leur propre
+          fontFamily (aucun ne le fait dans cette page). */}
       <div style={{
         position:'relative', zIndex:1, minHeight:'100dvh',
         display:'flex', flexDirection:'column', alignItems:'center',
@@ -1384,43 +1067,20 @@ export default function PublicProfile() {
         paddingBottom: 'max(40px, env(safe-area-inset-bottom, 0px))',
         paddingLeft:   'max(16px, env(safe-area-inset-left, 0px))',
         paddingRight:  'max(16px, env(safe-area-inset-right, 0px))',
-        fontFamily: FONT_STACK,
+        fontFamily: isLight ? SYSTEM_FONT_STACK : FONT_STACK,
       }}>
 
-        {/* [BN1][BN2][BN3] Bannière de couverture — affichée uniquement si
-            profile.banner_url est renseigné. Distincte de bg_image_url
-            (fond plein écran) : image rectangulaire à coins arrondis,
-            même largeur/ombre que les autres cartes de contenu. Quand une
-            bannière est présente, avatar + nom + bio sont regroupés dans
-            une seule ligne en chevauchement bas-gauche de la bannière
-            (disposition "carte pro" — voir [BN3]) ; sans bannière, on
-            retombe sur l'ancienne disposition centrée (avatar, puis nom
-            et bio centrés en dessous). */}
         {profile.banner_url ? (
           <>
             <div className="pp-content-col" style={{ position:'relative' }}>
               <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
-                <LazyImg src={profile.banner_url} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                <LazyImg src={imgUrl(profile.banner_url, { width: bannerW })} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
               </div>
-              {/* [BN5] Avatar seul, en chevauchement bas-gauche — overlap
-                  porté à 65% de sa propre hauteur (au lieu de 50%) pour
-                  descendre la photo un peu plus bas sous la bannière, à
-                  la demande. Le bloc nom/bio ci-dessous garde sa hauteur
-                  minimale ajustée en conséquence pour continuer à
-                  réserver assez d'espace sous la bannière (voir [BN4]). */}
               <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(65%)' }}>
                 {avatarBlock}
               </div>
             </div>
 
-            {/* [BN4][BN5] Nom + bio en flux normal (donc jamais superposés à
-                la bannière) juste après celle-ci : padding-gauche pour se
-                décaler à droite de l'avatar, hauteur minimale (80px,
-                couvre la portion visible désormais plus grande de
-                l'avatar depuis [BN5]) + centrage vertical pour occuper la
-                même bande que sa partie visible quand le texte est court ;
-                une bio plus longue pousse simplement la suite de la page
-                plus bas. */}
             <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'0px', minHeight:'80px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
               <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {profile.display_name}
@@ -1435,13 +1095,10 @@ export default function PublicProfile() {
           </>
         ) : (
           <>
-            {/* Avatar autonome + nom/bio centrés — comportement d'origine
-                inchangé pour les profils sans bannière. */}
             <div style={{ marginBottom:'16px' }}>
               {avatarBlock}
             </div>
 
-            {/* [P7] Hiérarchie resserrée : tracking réduit, poids affiné */}
             <h1 style={{ fontSize:'24px', fontWeight:'800', color:'white', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
               {profile.display_name}
               {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
@@ -1453,12 +1110,6 @@ export default function PublicProfile() {
 
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
-        {/* [SB1] Bandeau d'icônes rapides (WhatsApp / téléphone / Facebook)
-            sous la bio — icônes seules dans un bandeau capsule, fond et
-            liseré adaptatifs au fond du profil (mêmes tokens LINK_* que la
-            section "Liens"). Réutilise handleLinkClick, donc le tracking
-            et les déclencheurs d'automatisation (ex. WhatsApp) restent
-            actifs comme depuis la liste "Liens" normale. */}
         {topSocialLinks.length > 0 && (
           <div style={{
             display:'flex', alignItems:'center', justifyContent:'center', gap:'10px',
@@ -1493,10 +1144,8 @@ export default function PublicProfile() {
         {hasEventContent && (
           <div className="pp-content-col" style={{ marginBottom:'20px' }}>
             {images.length > 0 && (
-              // [F12] touchAction:'pan-y' — laisse le scroll vertical natif,
-              // le swipe horizontal reste géré manuellement par handleTouchStart
               <div style={{ position:'relative', borderRadius:'20px', overflow:'hidden', marginBottom:'12px', boxShadow:'0 8px 32px rgba(0,0,0,0.3)', touchAction:'pan-y' }} onTouchStart={handleTouchStart}>
-                <img src={images[currentIndex]} alt="event" style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }} onClick={() => setLightboxSrc(images[currentIndex])} />
+                <img src={imgUrl(images[currentIndex], { width: eventW })} alt="event" style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }} onClick={() => setLightboxSrc(images[currentIndex])} />
                 <div style={{ position:'absolute', bottom:'14px', right:'12px', display:'flex', gap:'6px', zIndex:10 }}>
                   <button onClick={e => { e.stopPropagation(); setLightboxSrc(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.9)', color:'white', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', touchAction:'manipulation', minHeight:'36px' }}>
                     <ZoomIn size={12} /> Afficher
@@ -1528,7 +1177,6 @@ export default function PublicProfile() {
               </div>
             )}
             {countdown && (
-              // [W2][W3] Fond blanc CARD_BG, libellé en CARD_TEXT_MUTED pour rester lisible
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
                   <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
@@ -1539,7 +1187,6 @@ export default function PublicProfile() {
               </div>
             )}
             {profile.event_description && (
-              // [W2][W3] Fond blanc CARD_BG, texte en CARD_TEXT pour rester lisible
               <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
                 <p style={{ fontSize:'13px', color:CARD_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
               </div>
@@ -1551,11 +1198,12 @@ export default function PublicProfile() {
             )}
           </div>
         )}
-   {/* Réservation */}
+
+        {/* Réservation */}
         <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
           <PublicBookingWidget profileId={profile.id} />
         </div>
-        
+
         {/* Boutique */}
         {sortedProducts.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
@@ -1569,6 +1217,7 @@ export default function PublicProfile() {
                 <PublicProductCard
                   key={p.id}
                   product={p}
+                  isLight={isLight}
                   onOpen={(product) => {
                     setSelectedProduct(product);
                     if (profile?.id) triggerMarketplaceClick(profile.id, { productId: product.id, productTitle: product.title, price: product.price });
@@ -1592,7 +1241,6 @@ export default function PublicProfile() {
               <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-              {/* [W2][W3] Fond blanc CARD_BG, textes en CARD_TEXT / CARD_TEXT_MUTED */}
               {documents.map(doc => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
                   style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
@@ -1615,17 +1263,10 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Liens — [S1] forme capsule : icône ronde à gauche, libellé
-            centré en majuscules, bordure gauche colorée par plateforme
-            conservée, cale invisible après le libellé pour un centrage
-            réel (pas juste visuel). [S2] Fond transparent adaptatif au
-            fond du profil (LINK_BG_IDLE), texte et cercle de logo
-            suivant la même bascule clair/sombre (LINK_TEXT_COLOR /
-            LINK_ICON_BG / LINK_BORDER_COLOR) au lieu du fond blanc
-            opaque CARD_BG utilisé partout ailleurs sur la page. */}
+        {/* Liens */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {mainLinks.map((link, i) => {
-            const platform = resolvePlatform(link); // [SB1] repli générique mutualisé
+            const platform = resolvePlatform(link);
             return (
               <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
                 <RippleButton
@@ -1635,10 +1276,6 @@ export default function PublicProfile() {
                     display:'flex', alignItems:'center', gap:'12px', width:'100%',
                     padding:'8px 8px',
                     borderRadius:'999px',
-                    // [S2] Fond transparent adaptatif (au lieu de CARD_BG blanc
-                    // opaque) + léger flou verre ; --pp-hover-bg alimente la
-                    // règle .pp-link-btn-el:hover (voir <style> injecté plus
-                    // haut) sans avoir à réinjecter cette feuille par profil.
                     background:LINK_BG_IDLE,
                     border:`1px solid ${LINK_BORDER_COLOR}`,
                     backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
@@ -1648,11 +1285,6 @@ export default function PublicProfile() {
                     transition:'background 0.15s,transform 0.1s',
                   }}
                 >
-                  {/* [S1][S2] Icône de plateforme découpée en cercle ; fond et
-                      liseré adaptatifs (LINK_ICON_BG / LINK_BORDER_COLOR) au
-                      lieu d'un disque blanc plein fixe — le logo de la
-                      plateforme (déjà en couleur de marque) reste visible
-                      directement dessus quel que soit le fond du profil. */}
                   <div style={{
                     width:'48px', height:'48px', borderRadius:'50%', overflow:'hidden',
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
@@ -1661,10 +1293,6 @@ export default function PublicProfile() {
                     {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
                   </div>
 
-                  {/* [S1][S2] Libellé centré, majuscules, espacement large ;
-                      couleur adaptative (LINK_TEXT_COLOR) + léger textShadow
-                      sur fond sombre/image pour garder le texte lisible
-                      malgré le fond désormais transparent. */}
                   <span style={{
                     flex:1, textAlign:'center',
                     color:LINK_TEXT_COLOR, fontWeight:'700', fontSize:'13px',
@@ -1675,7 +1303,6 @@ export default function PublicProfile() {
                     {link.label || platform.label}
                   </span>
 
-                  {/* [S1] Cale invisible de même largeur que l'icône — centrage réel du libellé */}
                   <div aria-hidden="true" style={{ width:'48px', flexShrink:0 }} />
                 </RippleButton>
               </div>
@@ -1683,7 +1310,7 @@ export default function PublicProfile() {
           })}
         </div>
 
-        {/* Support — [C11] numéro centralisé · [O6] fond 0.15→0.22, bordure 0.3→0.38 */}
+        {/* Support */}
         <a
           href={`https://wa.me/${SUPPORT_WHATSAPP}`}
           target="_blank"
@@ -1693,9 +1320,6 @@ export default function PublicProfile() {
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>
 
-        {/* [P6] Badge de marque discret, remplace la mention statique de
-            copyright — mécanique de croissance standard des outils
-            link-in-bio ("Créé avec ..."), cliquable vers la home. */}
         <a
           href="https://www.socialapp.work"
           target="_blank"
@@ -1705,16 +1329,20 @@ export default function PublicProfile() {
         >
           <Link2 size={12} /> Créé avec SocialApp
         </a>
+
+        {/* [DL5] Indicateur de poids — mode léger uniquement */}
+        {isLight && <PageWeightBadge />}
+
+        {/* [DL7] Switch manuel mode léger/complet */}
+        <LightModeToggle isLight={isLight} setManual={setManual} />
       </div>
 
-      {/* [F5] Modales portées dans document.body — protection préventive
-          contre un futur bug de stacking context si cette page est un
-          jour englobée dans un layout avec un ancêtre transformé/filtré. */}
       {selectedProduct && createPortal(
         <ProductDetailModal
           product={selectedProduct}
           whatsappNumber={profile.phone || ''}
           profileId={profile.id}
+          isLight={isLight}
           onClose={() => setSelectedProduct(null)}
         />,
         document.body

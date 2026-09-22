@@ -1,36 +1,28 @@
 {
   "name": "SocialApp",
   "short_name": "SocialApp",
-  "id": "/dashboard",
-  "description": "Votre profil, votre CRM WhatsApp, votre boutique — tout en un.",
-  "start_url": "/dashboard",
+  "description": "Profil digital, liens, boutique et réservation en un seul lien.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0f0a1e",
   "theme_color": "#0f0a1e",
   "lang": "fr",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-maskable-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-maskable-512.png",
+      "src": "/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

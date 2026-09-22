@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -341,7 +341,7 @@ export default function UserDashboard() {
   const [localProfile, setLocalProfile]     = useState(null);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [hasChanges, setHasChanges]         = useState(false);
-  // Paiement SenePay en cours (bloque le double-clic sur "Choisir un plan" /
+  // Paiement GeniusPay en cours (bloque le double-clic sur "Choisir un plan" /
   // "Renouveler maintenant" pendant la création de la session de paiement).
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   // [WIZARD] Assistant de création progressive du premier profil — voir
@@ -389,7 +389,7 @@ export default function UserDashboard() {
     else setShowPlanModal(true);
   };
 
-  // Abonnement SenePay courant (table `subscriptions`, une ligne par user_id).
+  // Abonnement GeniusPay courant (table `subscriptions`, une ligne par user_id).
   // Alimente la bannière de rappel de renouvellement.
   const { data: subscription, isLoading: subscriptionLoading } = useQuery({
     queryKey: ['subscription', user?.id],
@@ -401,15 +401,15 @@ export default function UserDashboard() {
     enabled: !!user?.id,
   });
 
-  // Point d'entrée unique pour créer une session de paiement SenePay
+  // Point d'entrée unique pour créer une session de paiement GeniusPay
   // (souscription initiale via PlanModal, ou renouvellement via la
   // bannière). Redirige vers le lien de paiement Wave/Orange Money/Free
-  // Money renvoyé par la fonction Edge `senepay-checkout`.
-  const startSenepayCheckout = async (planSlug, mode = 'new') => {
+  // Money renvoyé par la fonction Edge `geniuspay-checkout`.
+  const startGeniusPayCheckout = async (planSlug, mode = 'new') => {
     if (!localProfile?.id || checkoutLoading) return;
     setCheckoutLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('senepay-checkout', {
+      const { data, error } = await supabase.functions.invoke('geniuspay-checkout', {
         body: { profile_id: localProfile.id, plan: planSlug, mode },
       });
       if (error) throw error;
@@ -421,7 +421,7 @@ export default function UserDashboard() {
     }
   };
 
-  const handlePlanSelect = (planSlug) => { setShowPlanModal(false); startSenepayCheckout(planSlug, 'new'); };
+  const handlePlanSelect = (planSlug) => { setShowPlanModal(false); startGeniusPayCheckout(planSlug, 'new'); };
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['userProfiles', user?.id],
@@ -755,7 +755,7 @@ export default function UserDashboard() {
         <>
           <PaymentRequiredGate
             plan={rawPlan}
-            onPay={() => startSenepayCheckout(rawPlan, 'new')}
+            onPay={() => startGeniusPayCheckout(rawPlan, 'new')}
             loading={checkoutLoading}
             onChangePlan={() => setShowPlanModal(true)}
             onSignOut={handleSignOut}
@@ -925,7 +925,7 @@ export default function UserDashboard() {
                     subscription={subscription}
                     isActivated={isActivated}
                     loading={checkoutLoading}
-                    onRenew={() => startSenepayCheckout(effectivePlan, 'renewal')}
+                    onRenew={() => startGeniusPayCheckout(effectivePlan, 'renewal')}
                   />
                   {renderSection()}
                 </div>
@@ -949,7 +949,7 @@ export default function UserDashboard() {
           {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)} />}
 
           {/* Modale d'activation de compte (Wave manuel) — DÉSACTIVÉE pour le
-              moment : SenePay active désormais le compte automatiquement via
+              moment : GeniusPay active désormais le compte automatiquement via
               le webhook (is_activated=true dès paiement confirmé). État et
               import conservés pour réactivation facile si besoin. */}
           {/* <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} plan={effectivePlan} />}</AnimatePresence> */}
@@ -961,7 +961,7 @@ export default function UserDashboard() {
                 onClose={()=>setFeatureUpgrade(null)}
                 featureName={featureUpgrade.featureName}
                 requiredPlan={featureUpgrade.requiredPlan}
-                onUpgrade={() => startSenepayCheckout(featureUpgrade.requiredPlan, 'new')}
+                onUpgrade={() => startGeniusPayCheckout(featureUpgrade.requiredPlan, 'new')}
                 loading={checkoutLoading}
               />
             )}

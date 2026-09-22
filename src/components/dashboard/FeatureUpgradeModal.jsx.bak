@@ -1,4 +1,4 @@
-﻿import { useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
@@ -13,9 +13,9 @@ const PLAN_AMOUNTS = {
 // requiredPlan : 'pro' | 'business' — détermine le libellé et le montant
 // suggéré (le prix DE l'offre requise, pas celui de l'offre actuelle de
 // l'utilisateur, puisque c'est vers celle-là qu'il doit upgrader).
-// onUpgrade : déclenche startGeniusPayCheckout(requiredPlan, 'new') côté
+// onUpgrade : déclenche startSenepayCheckout(requiredPlan, 'new') côté
 // UserDashboard.jsx — même flux de paiement automatique que PlanModal
-// (Wave / Orange Money / Free Money via GeniusPay, activation par webhook).
+// (Wave / Orange Money / Free Money via SenePay, activation par webhook).
 export default function FeatureUpgradeModal({ onClose, featureName, requiredPlan = 'pro', onUpgrade, loading = false }) {
   const planLabel   = requiredPlan === 'business' ? 'BUSINESS' : 'PRO';
   const amountLabel = PLAN_AMOUNTS[requiredPlan] || PLAN_AMOUNTS.pro;

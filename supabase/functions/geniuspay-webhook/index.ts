@@ -1,18 +1,21 @@
-/**
- * supabase/functions/senepay-webhook/index.ts
- * ──────────────────────────────────────────────────────────────────
- * Reçoit les notifications de paiement SenePay (checkout.session.completed
- * / checkout.session.failed) et active/renouvelle l'abonnement correspondant.
+﻿/**
+ * supabase/functions/geniuspay-webhook/index.ts
+ * ─────────────────────────────────────────────────────────────
+ * Reçoit les notifications de paiement GeniusPay (payment.success
+ * / payment.failed / payment.cancelled / payment.expired) et
+ * active/renouvelle l'abonnement correspondant.
  *
- * Sécurité (doc officielle SenePay) : chaque webhook est signé HMAC-SHA256
- * du CORPS BRUT avec `webhookSigningSecret` (préfixe whsec_), transmis dans
- * le header `X-SenePay-Signature` (hex minuscules). On DOIT calculer le HMAC
- * sur le texte brut reçu, avant tout JSON.parse.
+ * Sécurité (doc officielle GeniusPay) : chaque webhook est signé
+ * HMAC-SHA256 de `timestamp + "." + rawBody` avec le secret webhook
+ * (préfixe whsec_ côté dashboard), transmis dans le header
+ * `X-Webhook-Signature` (hex minuscules). Le timestamp est transmis
+ * dans `X-Webhook-Timestamp` (secondes epoch) et DOIT être vérifié
+ * pour éviter les attaques par rejeu (fenêtre de 5 minutes ici).
  *
- * Idempotence : SenePay peut renvoyer le même webhook plusieurs fois
- * (retries jusqu'à ~3 jours) — on ignore si `order_reference` est déjà
- * marqué status='success' en base.
- * ─────────────────────────────────────────────────────────────────
+ * Idempotence : GeniusPay peut renvoyer le même webhook plusieurs
+ * fois — on ignore si `data.reference` est déjà marqué
+ * status='success' en base.
+ * ─────────────────────────────────────────────────────────────
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -24,7 +27,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SENEPAY_WEBHOOK_SECRET = Deno.env.get('SENEPAY_WEBHOOK_SECRET') ?? '';
+const GENIUSPAY_WEBHOOK_SECRET = Deno.env.get('GENIUSPAY_WEBHOOK_SECRET') ?? '';
+
+// Fenêtre de tolérance anti-rejeu, en secondes (doc GeniusPay : 5 minutes).
+const MAX_TIMESTAMP_DRIFT_SECONDS = 5 * 60;
 
 // HMAC-SHA256 hex digest via Web Crypto (disponible nativement dans Deno,
 // pas besoin du module `crypto` Node).
@@ -56,25 +62,47 @@ serve(async (req: Request) => {
   try {
     // ── Lire le corps BRUT avant tout parsing — requis pour le HMAC ──
     const rawBody = await req.text();
-    const signature = req.headers.get('x-senepay-signature') || '';
+    const signature = req.headers.get('x-webhook-signature') || '';
+    const timestampHeader = req.headers.get('x-webhook-timestamp') || '';
 
-    if (!SENEPAY_WEBHOOK_SECRET) {
-      console.error('[senepay-webhook] SENEPAY_WEBHOOK_SECRET non configuré');
+    if (!GENIUSPAY_WEBHOOK_SECRET) {
+      console.error('[geniuspay-webhook] GENIUSPAY_WEBHOOK_SECRET non configuré');
       return _json({ error: 'server misconfigured' }, 500);
     }
 
-    const expectedSignature = await hmacHex(SENEPAY_WEBHOOK_SECRET, rawBody);
+    if (!timestampHeader) {
+      return _json({ error: 'timestamp manquant' }, 400);
+    }
+
+    // ── Vérification anti-rejeu ──
+    const timestampSeconds = Number(timestampHeader);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (!Number.isFinite(timestampSeconds) || Math.abs(nowSeconds - timestampSeconds) > MAX_TIMESTAMP_DRIFT_SECONDS) {
+      console.warn('[geniuspay-webhook] Timestamp hors fenêtre autorisée');
+      return _json({ error: 'timestamp invalide ou expiré' }, 401);
+    }
+
+    // ── Vérification de la signature ──
+    const signedPayload = `${timestampHeader}.${rawBody}`;
+    const expectedSignature = await hmacHex(GENIUSPAY_WEBHOOK_SECRET, signedPayload);
     if (!signature || !timingSafeEqual(signature.toLowerCase(), expectedSignature)) {
-      console.warn('[senepay-webhook] Signature invalide');
+      console.warn('[geniuspay-webhook] Signature invalide');
       return _json({ error: 'invalid signature' }, 401);
     }
 
     const body = JSON.parse(rawBody);
-    const { event, orderReference, status, transactionId, netAmount, fees, metadata } = body;
+    const { event, data } = body;
 
-    if (!orderReference) {
-      return _json({ error: 'orderReference manquant' }, 400);
+    if (!data?.reference) {
+      return _json({ error: 'reference manquante' }, 400);
     }
+
+    const orderReference: string = data.reference;
+    const status: string = data.status;
+    const transactionId = data.id ?? data.reference;
+    const netAmount = data.net_amount ?? null;
+    const fees = data.fees ?? null;
+    const metadata = data.metadata ?? {};
 
     // ── Idempotence : ignorer si déjà traité avec succès ──
     const { data: existingPayment } = await supabase
@@ -87,9 +115,7 @@ serve(async (req: Request) => {
       return _json({ ok: true, message: 'Déjà traité' });
     }
 
-    // NOTE: le statut SenePay pour un paiement réussi est "Complete" (SANS 'd'),
-    // à ne pas confondre avec l'événement "checkout.session.completed" (AVEC 'd').
-    const isCompleted = event === 'checkout.session.completed' && status === 'Complete';
+    const isCompleted = event === 'payment.success' && status === 'completed';
 
     if (!isCompleted) {
       await supabase
@@ -104,7 +130,7 @@ serve(async (req: Request) => {
     const plan = metadata?.plan;
 
     if (!profileId || !userId || !plan) {
-      console.error('[senepay-webhook] metadata incomplet:', metadata);
+      console.error('[geniuspay-webhook] metadata incomplet:', metadata);
       return _json({ error: 'metadata incomplet' }, 400);
     }
 
@@ -114,8 +140,8 @@ serve(async (req: Request) => {
       .update({
         status: 'success',
         provider_transaction_id: transactionId,
-        net_amount: netAmount ?? null,
-        fees: fees ?? null,
+        net_amount: netAmount,
+        fees: fees,
         updated_at: new Date().toISOString(),
       })
       .eq('order_reference', orderReference);
@@ -151,8 +177,8 @@ serve(async (req: Request) => {
       plan,
       status: 'active',
       expires_at: expiresAt.toISOString(),
-      payment_method: 'senepay',
-      provider: 'senepay',
+      payment_method: 'geniuspay',
+      provider: 'geniuspay',
       transaction_id: transactionId,
       renewal_reminder_sent_at: null,
       updated_at: now.toISOString(),
@@ -171,10 +197,10 @@ serve(async (req: Request) => {
       profileId,
       context: {
         source: 'payment_received',
-        amount: body.amount,
-        currency: body.currency || 'XOF',
+        amount: data.amount,
+        currency: data.currency || 'XOF',
         orderId: transactionId,
-        provider: 'senepay',
+        provider: 'geniuspay',
         plan,
       },
       supabase,
@@ -189,7 +215,7 @@ serve(async (req: Request) => {
     });
 
     if (notifError) {
-      console.error('[senepay-webhook] Échec insertion notification:', notifError.message);
+      console.error('[geniuspay-webhook] Échec insertion notification:', notifError.message);
       // On ne bloque pas la réponse pour ça — l'abonnement est déjà activé,
       // seule la notification a échoué. Mais on le loggue pour investigation.
     }
@@ -198,7 +224,7 @@ serve(async (req: Request) => {
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue';
-    console.error('[senepay-webhook]', msg);
+    console.error('[geniuspay-webhook]', msg);
     return _json({ error: msg }, 500);
   }
 });

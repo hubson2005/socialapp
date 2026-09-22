@@ -6,6 +6,7 @@ import UserDashboard  from "./pages/UserDashboard";
 import PublicProfile  from "./pages/PublicProfile";
 import PublicBookingPage from "./pages/PublicBookingPage";
 import PublicForm from "./components/forms/PublicForm";
+import PublicEventPage from "./pages/PublicEventPage";
 import Home           from "./pages/Home";
 import Blog           from "./pages/Blog";
 import BlogPostPage   from "./pages/BlogPostPage";
@@ -119,6 +120,11 @@ function PublicApp() {
       {/* Blog — doit aussi être déclaré avant "/:username" pour la même raison */}
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />
+
+      {/* Page publique d'un événement (Mode Événement) — doit aussi être
+       déclarée avant "*" pour la même raison. */}
+      <Route path="/e/:slug" element={<PublicEventPage />} />
+
       <Route path="*"          element={<Navigate to="/" replace />} />
     </Routes>
   );

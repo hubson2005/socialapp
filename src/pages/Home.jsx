@@ -11,6 +11,7 @@ import tempsReelMockupWebp from '../assets/TEMPS_REEL.webp';
 import leadsCrmMockup from '../assets/LEADS_CRM.png';
 import leadsCrmMockupWebp from '../assets/LEADS_CRM.webp';
 import profilMockup from '../assets/INTERFACE_SOCIALAPP.png';
+import EventQuickCreateModal from '../components/EventQuickCreateModal';
 
 /* ─────────────────────────────────────────────
    MODAL DE SÉLECTION D'OFFRE
@@ -195,6 +196,7 @@ export default function Home() {
   const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
 
   const handleCTA = () => { if (user) { navigate('/dashboard'); } else { setShowPlanModal(true); } };
   const handlePlanSelect = (planSlug) => { setShowPlanModal(false); navigate(`/login?plan=${encodeURIComponent(planSlug)}`); };
@@ -377,6 +379,7 @@ export default function Home() {
 
         {/* ── Modal sélection d'offre ── */}
         {showPlanModal && (<PlanModal onClose={() => setShowPlanModal(false)} onSelect={handlePlanSelect} />)}
+        {showEventModal && (<EventQuickCreateModal onClose={() => setShowEventModal(false)} />)}
 
         {/* ════════════ NAV ════════════ */}
         <nav style={S.nav}>
@@ -392,7 +395,10 @@ export default function Home() {
             <span className="sa-nav-brand-text" style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-.5px' }}>SocialApp</span>
           </div>
           <div className="sa-nav-links" style={S.navLinks}>
-            {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#event', 'Événement'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (<a key={h} href={h} className="sa-nav-link">{l}</a>))}
+            {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (<a key={h} href={h} className="sa-nav-link">{l}</a>))}
+            <button type="button" className="sa-nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => setShowEventModal(true)}>
+              Événement
+            </button>
           </div>
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
             <button type="button" style={S.navCta} className="sa-bpri sa-nav-cta" onClick={handleCTA}>Commencer →</button>

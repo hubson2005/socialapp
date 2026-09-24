@@ -1,11 +1,14 @@
 ﻿import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
   LogOut, CalendarClock, Eye,
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 export const USER_NAV = [

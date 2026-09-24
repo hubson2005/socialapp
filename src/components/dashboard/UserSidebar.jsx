@@ -4,9 +4,8 @@ import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
-  LogOut, CalendarClock,
+  LogOut, CalendarClock, Eye,
 } from "lucide-react";
-import { useTranslation } from 'react-i18next';
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 export const USER_NAV = [
@@ -23,6 +22,7 @@ export const USER_NAV = [
   { id:'meta', label:'Connexion Meta', icon:Zap, group:'crm', hidden: true },
   { id: 'crm',           label: 'CRM / Leads',     icon: Users,           group: 'business',  locked: 'business', path: null                        },
   { id: 'whatsapp-crm',  label: 'WhatsApp CRM',    icon: MessageCircle,   group: 'business',  locked: 'business', path: null                        },
+  { id: 'profile-visits', label: 'Visiteurs',       icon: Eye,             group: 'business',  locked: 'business', path: null                       },
   { id: 'automations',   label: 'Automatisations', icon: Zap,             group: 'business',  locked: 'business', path: null                        },
   { id: 'integrations',  label: 'Intégrations',    icon: GitBranch,       group: 'business',  locked: 'business', path: null                        },
   { id: 'boost', label: 'Boost & Promo', icon: Zap, group: 'crm', badge: 'NEW', hidden: true },

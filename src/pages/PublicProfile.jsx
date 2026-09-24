@@ -240,6 +240,22 @@ async function trackClick(profileId, platform) {
   }
 }
 
+// [DL8] Tracking CRM dédié — capture l'IP réelle du visiteur via l'Edge
+// Function track-profile-visit (impossible à lire côté client, il faut
+// passer par le serveur qui reçoit la requête HTTP brute). Best-effort :
+// un échec ne doit jamais bloquer ou ralentir l'affichage du profil
+// public, d'où le .catch() silencieux plutôt qu'un throw.
+function trackProfileVisit(profileId) {
+  supabase.functions.invoke('track-profile-visit', {
+    body: {
+      profile_id: profileId,
+      referrer: document.referrer,
+    },
+  }).catch((err) => {
+    if (process.env.NODE_ENV !== 'production') console.error('[trackProfileVisit]', err);
+  });
+}
+
 // ─── Utilitaires ──────────────────────────────────────────────
 const parseColors = (tc) => {
   if (tc && tc.includes('|')) { const [a, b] = tc.split('|'); return { bg1: a, bg2: b }; }
@@ -752,12 +768,13 @@ export default function PublicProfile() {
         return;
       }
 
-      setProfile(data);
-      setLoading(false);
+     setProfile(data);
+setLoading(false);
 
-      trackView(data.id);
+trackView(data.id);
+trackProfileVisit(data.id); // [DL8] Tracking CRM — adresse IP du visiteur via Edge Function
 
-      Promise.all([
+Promise.all([
         supabase
           .from('marketplace_products')
           .select('id,title,price,original_price,description,image_url,is_available')

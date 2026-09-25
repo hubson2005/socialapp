@@ -114,6 +114,17 @@ export default function EventPanel({ eventId, onChange }) {
     set({ images: [...form.images, pub.publicUrl] });
   };
 
+  const handleRemoveImage = async (index) => {
+  const url = form.images[index];
+  const marker = '/socialapp-assets/';
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex !== -1) {
+    const path = decodeURIComponent(url.slice(markerIndex + marker.length));
+    await supabase.storage.from('socialapp-assets').remove([path]);
+  }
+  set({ images: form.images.filter((_, i) => i !== index) });
+};
+
   const validate = () => {
     if (!form.title.trim()) return 'Ajoutez au moins un titre.';
     if (form.type === 'expo_temp' && !form.editionId) return 'Choisissez une édition de salon.';
@@ -252,17 +263,27 @@ export default function EventPanel({ eventId, onChange }) {
       )}
 
       <div className="mt-6">
-        <label className={labelClass}>Galerie médias</label>
-        <div className="flex gap-3 flex-wrap">
-          {form.images.map((src, i) => (
-            <img key={i} src={src} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/10" />
-          ))}
-          <label className="w-16 h-16 rounded-xl border border-dashed border-white/20 flex items-center justify-center text-zinc-500 cursor-pointer hover:border-orange-500/50 transition">
-            +
-            <input type="file" accept="image/*" onChange={handleAddImage} hidden />
-          </label>
-        </div>
+  <label className={labelClass}>Galerie médias</label>
+  <div className="flex gap-3 flex-wrap">
+    {form.images.map((src, i) => (
+      <div key={i} className="relative w-16 h-16">
+        <img src={src} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/10" />
+        <button
+          type="button"
+          onClick={() => handleRemoveImage(i)}
+          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-[11px] font-bold text-white transition"
+          aria-label="Supprimer l'image"
+        >
+          ×
+        </button>
       </div>
+    ))}
+    <label className="w-16 h-16 rounded-xl border border-dashed border-white/20 flex items-center justify-center text-zinc-500 cursor-pointer hover:border-orange-500/50 transition">
+      +
+      <input type="file" accept="image/*" onChange={handleAddImage} hidden />
+    </label>
+  </div>
+</div>
 
       <div className="mt-6">
         <label className={labelClass}>Thème</label>

@@ -87,7 +87,7 @@ export default function EventEditorPage() {
                   </div>
                 </div>
                 <div className="p-4 space-y-3">
-                  {preview.description && <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-wrap">{preview.description}</p>}
+                  {preview.description && <p whitespace-pre-wrap className="text-xs text-zinc-400 leading-relaxed whitespace-pre-wrap">{preview.description}</p>}
                   <button
                     type="button"
                     disabled

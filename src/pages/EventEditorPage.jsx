@@ -43,6 +43,8 @@ export default function EventEditorPage() {
       .then(({ data }) => setRsvps(data || []));
   }, [id, isNew]);
 
+  const headerImage = preview?.bgImage || preview?.images?.[0] || null;
+
   return (
     <div className="min-h-screen bg-[#111215] text-white p-6">
       <div className="max-w-5xl mx-auto">
@@ -73,14 +75,23 @@ export default function EventEditorPage() {
               <div className="bg-[#1a1c21] border border-white/10 rounded-2xl overflow-hidden">
                 <div
                   className="relative h-40"
-                  style={{
-                    background: preview.bgImage
-                      ? `linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.65)), url(${preview.bgImage}) center/cover`
-                      : preview.images?.[0]
-                        ? `linear-gradient(180deg, transparent, rgba(0,0,0,.5)), url(${preview.images[0]}) center/cover`
-                        : `linear-gradient(135deg, ${preview.color1}, ${preview.color2})`,
-                  }}
+                  style={{ background: `linear-gradient(135deg, ${preview.color1}, ${preview.color2})` }}
                 >
+                  {headerImage && (
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundImage: `url(${headerImage})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0.22,
+                      }}
+                    />
+                  )}
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: 'linear-gradient(180deg, transparent, rgba(0,0,0,.55))' }}
+                  />
                   <div className="absolute bottom-3 left-4 right-4">
                     <p className="font-bold text-lg leading-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{preview.title || 'Titre de l\'événement'}</p>
                     <p className="text-xs text-white/80 mt-1" style={{ textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{preview.location}</p>
@@ -96,6 +107,16 @@ export default function EventEditorPage() {
                   >
                     {CTA_LABEL[preview.type]}
                   </button>
+                  {preview.images?.length > 0 && (
+                    <div>
+                      <p className="text-[11px] text-zinc-500 mb-2">Galerie</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {preview.images.slice(0, 6).map((src, i) => (
+                          <img key={i} src={src} alt="" className="w-full aspect-square object-cover rounded-lg" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

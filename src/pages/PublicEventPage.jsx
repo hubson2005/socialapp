@@ -72,6 +72,8 @@ export default function PublicEventPage() {
     expo_temp: 'Temps restant avant la fin du salon',
   }[event.type];
 
+  const headerImage = event.bg_image || event.images?.[0] || null;
+
   const handleCTA = () => {
     if (event.type === 'custom' && event.ticket_url) {
       window.open(event.ticket_url, '_blank');
@@ -89,18 +91,28 @@ export default function PublicEventPage() {
         <div style={{ background: '#141026', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,.08)' }}>
 
           <div style={{
-            height: 150, display: 'flex', alignItems: 'flex-end', padding: 14,
-            background: event.bg_image
-              ? `linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.65)), url(${event.bg_image}) center/cover`
-              : event.images?.[0]
-                ? `linear-gradient(180deg, transparent, rgba(0,0,0,.5)), url(${event.images[0]}) center/cover`
-                : `linear-gradient(135deg, ${event.color1 || '#ff6b35'}, ${event.color2 || '#f7c948'})`,
+            height: 150, position: 'relative', overflow: 'hidden',
+            background: `linear-gradient(135deg, ${event.color1 || '#ff6b35'}, ${event.color2 || '#f7c948'})`,
           }}>
-            <div>
-              <p style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: 0, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{event.title}</p>
-              <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 12, margin: '2px 0 0', textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>
-                {event.location}{event.stand_number ? ` · ${event.stand_number}` : ''}
-              </p>
+            {headerImage && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url(${headerImage})`,
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                opacity: 0.22,
+              }} />
+            )}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.55))',
+            }} />
+            <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', alignItems: 'flex-end', padding: 14 }}>
+              <div>
+                <p style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: 0, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{event.title}</p>
+                <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 12, margin: '2px 0 0', textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>
+                  {event.location}{event.stand_number ? ` · ${event.stand_number}` : ''}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -133,11 +145,14 @@ export default function PublicEventPage() {
               </button>
             )}
 
-            {event.images?.length > 1 && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
-                {event.images.slice(1, 7).map((src, i) => (
-                  <img key={i} src={src} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
-                ))}
+            {event.images?.length > 0 && (
+              <div>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', margin: '0 0 8px' }}>Galerie</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
+                  {event.images.slice(0, 6).map((src, i) => (
+                    <img key={i} src={src} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
+                  ))}
+                </div>
               </div>
             )}
           </div>

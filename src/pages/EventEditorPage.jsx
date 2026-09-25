@@ -74,18 +74,20 @@ export default function EventEditorPage() {
                 <div
                   className="relative h-40"
                   style={{
-                    background: preview.images?.[0]
-                      ? `linear-gradient(180deg, transparent, rgba(0,0,0,.5)), url(${preview.images[0]}) center/cover`
-                      : `linear-gradient(135deg, ${preview.color1}, ${preview.color2})`,
+                    background: preview.bgImage
+                      ? `linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.65)), url(${preview.bgImage}) center/cover`
+                      : preview.images?.[0]
+                        ? `linear-gradient(180deg, transparent, rgba(0,0,0,.5)), url(${preview.images[0]}) center/cover`
+                        : `linear-gradient(135deg, ${preview.color1}, ${preview.color2})`,
                   }}
                 >
                   <div className="absolute bottom-3 left-4 right-4">
-                    <p className="font-bold text-lg leading-tight">{preview.title || 'Titre de l\'événement'}</p>
-                    <p className="text-xs text-white/80 mt-1">{preview.location}</p>
+                    <p className="font-bold text-lg leading-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{preview.title || 'Titre de l\'événement'}</p>
+                    <p className="text-xs text-white/80 mt-1" style={{ textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{preview.location}</p>
                   </div>
                 </div>
                 <div className="p-4 space-y-3">
-                  {preview.description && <p className="text-xs text-zinc-400 leading-relaxed">{preview.description}</p>}
+                  {preview.description && <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-wrap">{preview.description}</p>}
                   <button
                     type="button"
                     disabled

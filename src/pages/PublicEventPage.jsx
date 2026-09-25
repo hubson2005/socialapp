@@ -90,13 +90,15 @@ export default function PublicEventPage() {
 
           <div style={{
             height: 150, display: 'flex', alignItems: 'flex-end', padding: 14,
-            background: event.images?.[0]
-              ? `linear-gradient(180deg, transparent, rgba(0,0,0,.5)), url(${event.images[0]}) center/cover`
-              : `linear-gradient(135deg, ${event.color1 || '#ff6b35'}, ${event.color2 || '#f7c948'})`,
+            background: event.bg_image
+              ? `linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.65)), url(${event.bg_image}) center/cover`
+              : event.images?.[0]
+                ? `linear-gradient(180deg, transparent, rgba(0,0,0,.5)), url(${event.images[0]}) center/cover`
+                : `linear-gradient(135deg, ${event.color1 || '#ff6b35'}, ${event.color2 || '#f7c948'})`,
           }}>
             <div>
-              <p style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: 0 }}>{event.title}</p>
-              <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 12, margin: '2px 0 0' }}>
+              <p style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: 0, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{event.title}</p>
+              <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 12, margin: '2px 0 0', textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>
                 {event.location}{event.stand_number ? ` · ${event.stand_number}` : ''}
               </p>
             </div>
@@ -118,7 +120,7 @@ export default function PublicEventPage() {
             )}
 
             {event.description && (
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', lineHeight: 1.5, margin: '0 0 14px' }}>{event.description}</p>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', lineHeight: 1.5, margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>{event.description}</p>
             )}
 
             {(event.whatsapp || event.ticket_url) && (

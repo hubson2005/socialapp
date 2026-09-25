@@ -11,9 +11,16 @@ const TYPES = [
 ];
 
 const THEMES = [
-  { c1: '#ff6b35', c2: '#f7c948' },
-  { c1: '#6366f1', c2: '#a5b4fc' },
-  { c1: '#0f6e56', c2: '#5dcaa5' },
+  { c1: '#ff6b35', c2: '#f7c948' }, // orange -> jaune
+  { c1: '#6366f1', c2: '#a5b4fc' }, // indigo -> lavande
+  { c1: '#0f6e56', c2: '#5dcaa5' }, // vert foncé -> vert clair
+  { c1: '#db2777', c2: '#f9a8d4' }, // rose -> rose pâle
+  { c1: '#0ea5e9', c2: '#7dd3fc' }, // bleu ciel -> bleu clair
+  { c1: '#7c3aed', c2: '#c4b5fd' }, // violet -> mauve
+  { c1: '#dc2626', c2: '#fca5a5' }, // rouge -> rouge clair
+  { c1: '#059669', c2: '#a7f3d0' }, // émeraude -> vert d'eau
+  { c1: '#d97706', c2: '#fcd34d' }, // ambre -> jaune doré
+  { c1: '#334155', c2: '#94a3b8' }, // ardoise -> gris bleuté
 ];
 
 const emptyForm = {
@@ -94,9 +101,15 @@ export default function EventPanel({ eventId, onChange }) {
   const handleAddImage = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    const path = `events/${user.id}/${Date.now()}-${file.name}`;
+    // Le premier segment du chemin doit être user.id pour respecter la policy RLS
+    // du bucket (storage.foldername(name))[1] = auth.uid()::text
+    const path = `${user.id}/events/${Date.now()}-${file.name}`;
     const { error: uploadError } = await supabase.storage.from('socialapp-assets').upload(path, file);
-    if (uploadError) { setError("Échec de l'envoi de l'image."); return; }
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      setError("Échec de l'envoi de l'image.");
+      return;
+    }
     const { data: pub } = supabase.storage.from('socialapp-assets').getPublicUrl(path);
     set({ images: [...form.images, pub.publicUrl] });
   };
@@ -253,7 +266,7 @@ export default function EventPanel({ eventId, onChange }) {
 
       <div className="mt-6">
         <label className={labelClass}>Thème</label>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           {THEMES.map((t) => (
             <button
               key={t.c1}

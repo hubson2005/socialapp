@@ -30,7 +30,7 @@ function PlanModal({ onClose, onSelect }) {
       subtitle: "Prestataires de services, Professions libérales, Créateurs de contenu, Automobile, Commerçants, Événementiel",
       bg: "rgba(255,107,53,.1)", border: "2px solid rgba(255,107,53,.55)",
       features: [ "1 profil", "8 liens sociaux", "1 Carte NFC ou PVC", "Analytics & statistiques détaillées", "Visiteurs en temps réel",
-        "Mode Événement", "Calendrier de réservation", "3 formulaires personnalisés", "Marketplace (10 produits)", "Support standard",
+        "Calendrier de réservation", "3 formulaires personnalisés", "Marketplace (10 produits)", "Support standard",
       ],
     },
     {
@@ -209,17 +209,17 @@ export default function Home() {
 
   const plans = [
     { name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa', subtitle: 'Particulier, petit commerce, Étudiants, Freelances', bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)', btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)', features: ['1 profil · 3 liens sociaux', 'Page publique', 'QR Code standard', '1 import PDF', 'Marketplace (4 produits)'] },
-    { name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true, subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)', btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none', features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics & statistiques détaillées', 'Temps réel — flux visiteurs live', 'Mode Événement inclus', 'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés (3)', 'Marketplace (10 produits)', '3 imports PDFs', 'QR Code premium', 'Support standard'] },
-    { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics avancés complets', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA (génération automatique)', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Toutes les intégrations', 'Marketplace illimitée', '10 imports PDFs', 'QR Code dynamique', '1 mois Événement offert', 'Support VIP prioritaire'] },
+    { name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true, subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)', btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none', features: ['1 profil · 8 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics & statistiques détaillées', 'Temps réel — flux visiteurs live', 'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés (3)', 'Marketplace (10 produits)', '3 imports PDFs', 'QR Code premium', 'Support standard'] },
+    { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics avancés complets', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA (génération automatique)', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Toutes les intégrations', 'Marketplace illimitée', '10 imports PDFs', 'QR Code dynamique', 'Support VIP prioritaire'] },
   ];
 
   const faqs = [
     { q: "C'est quoi exactement SocialApp ?", a: "SocialApp est votre profil digital tout-en-un : un lien unique et un QR code qui regroupe tous vos réseaux sociaux, WhatsApp, votre boutique et vos événements. Un seul scan, vos clients trouvent tout." },
-    { q: "Combien ça coûte ?", a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO), 25 000 FCFA/an (BUSINESS). Module Événement disponible à 5 000 FCFA. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
+    { q: "Combien ça coûte ?", a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO), 25 000 FCFA/an (BUSINESS). Module Événement disponible à 5 000 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
     { q: "Qu'est-ce que le CRM ?", a: "Le CRM intégré (offre BUSINESS) vous permet de capturer et gérer vos prospects. Tags intelligents (Prospect, Chaud, Client, Froid), notes, historique et export CSV. Transformez chaque visiteur en opportunité." },
     { q: "Je peux vendre mes produits ?", a: "Oui ! La marketplace affiche vos produits avec photos, prix et description. 4 produits (BASIC), 10 (PRO), illimités (BUSINESS). Vos clients commandent via WhatsApp. Zéro commission." },
     { q: "Le QR code peut-il être modifié sans le réimprimer ?", a: "Oui ! Modifiez vos liens, votre boutique ou votre WhatsApp à tout moment — votre QR code sur vos flyers et cartes reste valide à vie." },
-    { q: "C'est quoi le mode Événement ?", a: "Transformez votre profil en page d'événement : compte à rebours en direct, galerie photos & vidéos (50 Mo), bouton de réservation, couleurs personnalisables. Inclus dès PRO ou 5 000 FCFA." },
+    { q: "C'est quoi le mode Événement ?", a: "Transformez votre profil en page d'événement : compte à rebours en direct, galerie photos & vidéos (50 Mo), bouton de réservation, couleurs personnalisables. Disponible à 5 000 FCFA, quel que soit votre plan." },
     { q: "Comment je reçois ma carte PVC ou NFC ?", a: "Dès votre souscription PRO ou BUSINESS, notre équipe vous contacte sur WhatsApp pour personnaliser votre carte. Réception sous 7 jours." },
     { q: "Comment payer ?", a: "Paiement via Mobile Money (Orange Money, Wave, MTN). Contactez-nous sur WhatsApp au +225 05 76 03 12 12. Aucune carte bancaire requise." },
   ];
@@ -571,7 +571,7 @@ export default function Home() {
                 { icon: '📊', bg: 'rgba(34,197,94,.15)', title: 'Analytics & Temps réel', desc: "Vues, clics par lien, pays des visiteurs, flux live. Sachez exactement qui scanne votre QR code et d'où.", tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
                 { icon: '🛍️', bg: 'rgba(245,158,11,.15)', title: 'Marketplace intégrée', desc: 'Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission sur vos ventes.', tag: '✓ Toutes les offres', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
                 { icon: '👥', bg: 'rgba(236,72,153,.15)', title: 'CRM & Pipeline de leads', desc: 'Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.', tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
-                { icon: '🎉', bg: 'rgba(255,107,53,.15)', title: 'Mode Événement', desc: 'Compte à rebours live, galerie photos & vidéos (50 Mo), bouton réservation. Parfait pour soirées et concerts.', tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
+                { icon: '🎉', bg: 'rgba(255,107,53,.15)', title: 'Mode Événement', desc: 'Compte à rebours live, galerie photos & vidéos (50 Mo), bouton réservation. Parfait pour soirées, salons et concerts.', tag: '🎉 Option — 5 000 FCFA', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
                 { icon: '📅', bg: 'rgba(93,202,165,.15)', title: 'Calendrier de réservation', desc: 'Vos clients réservent un créneau ou une place directement depuis votre profil public, sans échange de messages.', tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
                 { icon: '📝', bg: 'rgba(59,130,246,.15)', title: 'Formulaires personnalisés', desc: 'Créez des formulaires sur mesure (contact, devis, inscription) et recevez les réponses directement dans votre dashboard.', tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
                 { icon: '🤖', bg: 'rgba(37,211,102,.15)', title: 'Campagnes WhatsApp IA', desc: "Décrivez votre offre, l'IA génère vos messages de campagne (promo, relance, nouveauté) prêts à envoyer.", tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
@@ -668,9 +668,9 @@ export default function Home() {
           <div style={S.secInner}>
             <div className="sa-twocol" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
               <div>
-                <SectionLabel bg="rgba(34,197,94,.1)" border="1px solid rgba(34,197,94,.3)" color="#22c55e" dotBg="#22c55e">Soirées & Concerts</SectionLabel>
+                <SectionLabel bg="rgba(34,197,94,.1)" border="1px solid rgba(34,197,94,.3)" color="#22c55e" dotBg="#22c55e">Soirées, salons & concerts</SectionLabel>
                 <h2 style={S.secTitle}>Mode <GradText>Événement</GradText></h2>
-                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Transformez votre profil en page d'événement en 2 minutes. Compte à rebours live, galerie médias, réservation en ligne.</p>
+                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Créez une page d'événement dédiée en 2 minutes, avec son propre lien — compte à rebours live, galerie médias, réservation en ligne.</p>
                 {[
                   { icon: '⏱', bg: 'rgba(34,197,94,.15)', title: 'Compte à rebours en direct', desc: 'Jours, heures, minutes, secondes — en temps réel.' },
                   { icon: '📸', bg: 'rgba(255,107,53,.15)', title: 'Galerie photos & vidéos', desc: "Carrousel jusqu'à 50 Mo pour présenter l'ambiance." },
@@ -679,7 +679,7 @@ export default function Home() {
                 ].map((f, i) => (<div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '16px' }}><div style={{ width: '38px', height: '38px', borderRadius: '10px', background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{f.icon}</div><div><div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '3px' }}>{f.title}</div><div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)' }}>{f.desc}</div></div></div>))}
                 <div style={{ background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: '14px', padding: '16px 20px', marginTop: '8px' }}>
                   <div style={{ fontSize: '22px', fontWeight: '900', color: '#22c55e' }}>5 000 FCFA</div>
-                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', marginTop: '4px' }}>par événement · Ou inclus dès l'offre PRO</div>
+                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', marginTop: '4px' }}>par événement · Quel que soit votre plan</div>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import { supabase } from '../supabase';
 import { Loader2, Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, ShieldX, XCircle } from 'lucide-react';
 
 function FloatingOrb({ style }) {
@@ -73,11 +74,6 @@ export default function Login() {
   const [error,           setError]           = useState('');
   const [emailWarning,    setEmailWarning]    = useState('');
   const [successEmail,    setSuccessEmail]    = useState('');
-  const [supabase,        setSupabase]        = useState(null);
-
-  useEffect(() => {
-    import('../supabase').then(mod => setSupabase(mod.supabase));
-  }, []);
 
   useEffect(() => {
     if (searchParams.get('plan')) setMode('signup');
@@ -105,7 +101,6 @@ export default function Login() {
     if (isDisposableEmail(email)) { setError('Les adresses email temporaires ne sont pas autorisées.'); return; }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
     if (password !== confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return; }
-    if (!supabase) return;
     setLoading(true);
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -155,7 +150,6 @@ export default function Login() {
     e.preventDefault();
     setError('');
     if (!email) { setError('Veuillez entrer votre adresse email.'); return; }
-    if (!supabase) return;
     setLoading(true);
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
@@ -171,7 +165,6 @@ export default function Login() {
 
   // ── Auth sociale ─────────────────────────────────────────────────────────────
   const handleSocialAuth = async (provider) => {
-    if (!supabase) return;
     const key = provider === 'Google' ? 'google' : provider === 'Apple' ? 'apple' : 'facebook';
     try {
       const { error } = await supabase.auth.signInWithOAuth({

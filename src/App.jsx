@@ -1,28 +1,31 @@
+import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
-import Login          from "./pages/Login";
-import Dashboard      from "./pages/Dashboard";
-import UserDashboard  from "./pages/UserDashboard";
-import PublicProfile  from "./pages/PublicProfile";
-import PublicBookingPage from "./pages/PublicBookingPage";
-import PublicForm from "./components/forms/PublicForm";
-import PublicEventPage from "./pages/PublicEventPage";
-import EventsDashboard from "./pages/EventsDashboard";
-import EventEditorPage from "./pages/EventEditorPage";
-import Home           from "./pages/Home";
-import Blog           from "./pages/Blog";
-import BlogPostPage   from "./pages/BlogPostPage";
-import PrivacyPolicy  from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import DeleteAccount  from "./pages/DeleteAccount";
-import ResetPassword  from "./pages/ResetPassword";
-import WhatsAppCRM    from "./pages/WhatsAppCRM";
 import { Loader2 } from "lucide-react";
 import {
   ProtectedRoute,
   AdminRoute,
   PublicOnlyRoute,
 } from "./routes/AuthRoutes";
+
+// Pages chargées à la demande (code-splitting)
+const Login             = lazy(() => import("./pages/Login"));
+const Dashboard         = lazy(() => import("./pages/Dashboard"));
+const UserDashboard     = lazy(() => import("./pages/UserDashboard"));
+const PublicProfile     = lazy(() => import("./pages/PublicProfile"));
+const PublicBookingPage = lazy(() => import("./pages/PublicBookingPage"));
+const PublicForm        = lazy(() => import("./components/forms/PublicForm"));
+const PublicEventPage   = lazy(() => import("./pages/PublicEventPage"));
+const EventsDashboard   = lazy(() => import("./pages/EventsDashboard"));
+const EventEditorPage   = lazy(() => import("./pages/EventEditorPage"));
+const Home              = lazy(() => import("./pages/Home"));
+const Blog               = lazy(() => import("./pages/Blog"));
+const BlogPostPage       = lazy(() => import("./pages/BlogPostPage"));
+const PrivacyPolicy      = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService     = lazy(() => import("./pages/TermsOfService"));
+const DeleteAccount      = lazy(() => import("./pages/DeleteAccount"));
+const ResetPassword      = lazy(() => import("./pages/ResetPassword"));
+const WhatsAppCRM        = lazy(() => import("./pages/WhatsAppCRM"));
 
 const isAdminDomain = () => {
   const hostname = window.location.hostname;
@@ -195,7 +198,9 @@ function RoleBasedDashboard() {
 export default function App() {
   return (
     <AuthProvider>
-      {isAdminDomain() ? <AdminApp /> : <PublicApp />}
+      <Suspense fallback={<AuthLoadingScreen />}>
+        {isAdminDomain() ? <AdminApp /> : <PublicApp />}
+      </Suspense>
     </AuthProvider>
   );
 }

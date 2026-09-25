@@ -32,7 +32,11 @@ const emptyForm = {
   color2: THEMES[0].c2,
 };
 
-export default function EventPanel({ eventId }) {
+const inputClass =
+  'w-full bg-[#22252c] border border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-white placeholder:text-zinc-500 focus:border-orange-500/50 transition';
+const labelClass = 'text-sm text-zinc-400 mb-2 block';
+
+export default function EventPanel({ eventId, onChange }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -43,9 +47,12 @@ export default function EventPanel({ eventId }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const set = (patch) => setForm((f) => {
+    const next = { ...f, ...patch };
+    onChange?.(next);
+    return next;
+  });
 
-  // ── Charger les éditions de salons actives (pour le type expo_temp) ──
   useEffect(() => {
     supabase
       .from('event_editions')
@@ -55,7 +62,6 @@ export default function EventPanel({ eventId }) {
       .then(({ data }) => setEditions(data || []));
   }, []);
 
-  // ── Charger l'événement existant, le cas échéant ──
   useEffect(() => {
     if (!eventId) return;
     setLoading(true);
@@ -63,7 +69,7 @@ export default function EventPanel({ eventId }) {
       .then(({ data, error: fetchError }) => {
         setLoading(false);
         if (fetchError || !data) { setError("Impossible de charger l'événement."); return; }
-        setForm({
+        const loaded = {
           type: data.type,
           title: data.title || '',
           location: data.location || '',
@@ -77,12 +83,14 @@ export default function EventPanel({ eventId }) {
           images: data.images || [],
           color1: data.color1 || THEMES[0].c1,
           color2: data.color2 || THEMES[0].c2,
-        });
+        };
+        setForm(loaded);
+        onChange?.(loaded);
         setExpiresAt(data.expires_at);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  // ── Ajout d'une image (upload direct vers le bucket public 'event-media') ──
   const handleAddImage = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -137,80 +145,92 @@ export default function EventPanel({ eventId }) {
     navigate(`/dashboard/events/${result.data.id}`);
   };
 
-  if (loading) return <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Chargement...</p>;
-
-  const showExpiryLine = form.type === 'expo_temp' && expiresAt;
+  if (loading) return <p className="text-zinc-400 text-sm">Chargement...</p>;
 
   return (
-    <div style={{ background: 'var(--surface-2)', borderRadius: 12, border: '0.5px solid var(--border)', padding: '1.25rem', maxWidth: 520 }}>
+    <div className="bg-[#1a1c21] border border-white/10 rounded-2xl p-6">
+      <h2 className="text-xl font-bold mb-6">Informations événement</h2>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: '1.25rem' }}>
+      <div className="flex gap-2 mb-6">
         {TYPES.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => set({ type: t.id })}
-            style={{
-              flex: 1, height: 32, fontSize: 12, borderRadius: 'var(--radius)',
-              border: `0.5px solid ${form.type === t.id ? 'var(--border-accent)' : 'var(--border)'}`,
-              background: form.type === t.id ? 'var(--bg-accent)' : 'transparent',
-              color: form.type === t.id ? 'var(--text-accent)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-            }}
+            className={`flex-1 h-9 rounded-xl text-xs font-semibold transition ${
+              form.type === t.id
+                ? 'bg-orange-500/15 border border-orange-500 text-orange-400'
+                : 'bg-[#22252c] border border-white/10 text-zinc-400'
+            }`}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      <Field label="Titre">
-        <input type="text" value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="Mariage Awa & Yves" style={inputStyle} />
-      </Field>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Titre</label>
+          <input className={inputClass} value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="Mariage Awa & Yves" />
+        </div>
+        <div>
+          <label className={labelClass}>Lieu</label>
+          <input className={inputClass} value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder="Sofitel Abidjan Hôtel Ivoire" />
+        </div>
+      </div>
 
-      <Field label="Lieu">
-        <input type="text" value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder="Sofitel Abidjan Hôtel Ivoire" style={inputStyle} />
-      </Field>
-
-      <Field label="Description">
-        <textarea rows={2} value={form.description} onChange={(e) => set({ description: e.target.value })} placeholder="Quelques mots sur l'événement..." style={{ ...inputStyle, resize: 'none', height: 'auto', padding: '8px 12px' }} />
-      </Field>
+      <div className="mt-4">
+        <label className={labelClass}>Description</label>
+        <textarea rows={3} className={`${inputClass} resize-none`} value={form.description} onChange={(e) => set({ description: e.target.value })} placeholder="Quelques mots sur l'événement..." />
+      </div>
 
       {form.type !== 'expo_temp' ? (
         <>
-          <Field label="Date et heure">
-            <input type="datetime-local" value={form.eventDate} onChange={(e) => set({ eventDate: e.target.value })} style={inputStyle} />
-          </Field>
-          <Field label="Numéro WhatsApp (RSVP)">
-            <input type="text" value={form.whatsapp} onChange={(e) => set({ whatsapp: e.target.value })} placeholder="+225 07 00 00 00 00" style={inputStyle} />
-          </Field>
-          <Field label="Lien de réservation externe">
-            <input type="text" value={form.bookingUrl} onChange={(e) => set({ bookingUrl: e.target.value })} placeholder="https://..." style={inputStyle} />
-          </Field>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className={labelClass}>Date et heure</label>
+              <input type="datetime-local" className={inputClass} value={form.eventDate} onChange={(e) => set({ eventDate: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>Numéro WhatsApp (RSVP)</label>
+              <input className={inputClass} value={form.whatsapp} onChange={(e) => set({ whatsapp: e.target.value })} placeholder="+225 07 00 00 00 00" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className={labelClass}>Lien de réservation externe</label>
+            <input className={inputClass} value={form.bookingUrl} onChange={(e) => set({ bookingUrl: e.target.value })} placeholder="https://..." />
+          </div>
         </>
       ) : (
         <>
-          <Field label="Édition du salon">
-            <select value={form.editionId} onChange={(e) => set({ editionId: e.target.value })} style={inputStyle}>
-              <option value="">Sélectionner...</option>
-              {editions.map((ed) => (
-                <option key={ed.id} value={ed.id}>{ed.name} — {formatRange(ed.starts_at, ed.ends_at)}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Numéro de stand">
-            <input type="text" value={form.standNumber} onChange={(e) => set({ standNumber: e.target.value })} placeholder="Hall 3, stand B-12" style={inputStyle} />
-          </Field>
-          <Field label="Produits / services présentés">
-            <textarea rows={2} value={form.products} onChange={(e) => set({ products: e.target.value })} placeholder="Mobilier bois massif, agencement sur-mesure..." style={{ ...inputStyle, resize: 'none', height: 'auto', padding: '8px 12px' }} />
-          </Field>
-          <Field label="Numéro WhatsApp (contact)">
-            <input type="text" value={form.whatsapp} onChange={(e) => set({ whatsapp: e.target.value })} placeholder="+225 07 00 00 00 00" style={inputStyle} />
-          </Field>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className={labelClass}>Édition du salon</label>
+              <select className={inputClass} value={form.editionId} onChange={(e) => set({ editionId: e.target.value })}>
+                <option value="">Sélectionner...</option>
+                {editions.map((ed) => (
+                  <option key={ed.id} value={ed.id}>{ed.name} — {formatRange(ed.starts_at, ed.ends_at)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Numéro de stand</label>
+              <input className={inputClass} value={form.standNumber} onChange={(e) => set({ standNumber: e.target.value })} placeholder="Hall 3, stand B-12" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className={labelClass}>Produits / services présentés</label>
+            <textarea rows={2} className={`${inputClass} resize-none`} value={form.products} onChange={(e) => set({ products: e.target.value })} placeholder="Mobilier bois massif, agencement sur-mesure..." />
+          </div>
+          <div className="mt-4">
+            <label className={labelClass}>Numéro WhatsApp (contact)</label>
+            <input className={inputClass} value={form.whatsapp} onChange={(e) => set({ whatsapp: e.target.value })} placeholder="+225 07 00 00 00 00" />
+          </div>
 
-          {showExpiryLine && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-1)', borderRadius: 'var(--radius)', padding: '10px 12px', marginBottom: 14 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Carte active jusqu'au</span>
-              <span style={{ fontSize: 12, fontWeight: 500 }}>
+          {expiresAt && (
+            <div className="mt-4 flex items-center justify-between bg-[#22252c] border border-white/10 rounded-xl px-4 py-3">
+              <span className="text-sm text-zinc-400">Carte active jusqu'au</span>
+              <span className="text-sm font-semibold">
                 {new Date(expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             </div>
@@ -218,48 +238,48 @@ export default function EventPanel({ eventId }) {
         </>
       )}
 
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 6px' }}>Galerie médias</p>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-        {form.images.map((src, i) => (
-          <img key={i} src={src} alt="" style={{ width: 56, height: 56, borderRadius: 'var(--radius)', objectFit: 'cover' }} />
-        ))}
-        <label style={{ width: 56, height: 56, borderRadius: 'var(--radius)', border: '0.5px dashed var(--border-strong)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
-          +
-          <input type="file" accept="image/*" onChange={handleAddImage} style={{ display: 'none' }} />
-        </label>
+      <div className="mt-6">
+        <label className={labelClass}>Galerie médias</label>
+        <div className="flex gap-3 flex-wrap">
+          {form.images.map((src, i) => (
+            <img key={i} src={src} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/10" />
+          ))}
+          <label className="w-16 h-16 rounded-xl border border-dashed border-white/20 flex items-center justify-center text-zinc-500 cursor-pointer hover:border-orange-500/50 transition">
+            +
+            <input type="file" accept="image/*" onChange={handleAddImage} hidden />
+          </label>
+        </div>
       </div>
 
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 6px' }}>Thème</p>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-        {THEMES.map((t) => (
-          <button
-            key={t.c1}
-            type="button"
-            onClick={() => set({ color1: t.c1, color2: t.c2 })}
-            style={{
-              width: 28, height: 28, borderRadius: '50%', cursor: 'pointer',
-              background: `linear-gradient(135deg, ${t.c1}, ${t.c2})`,
-              border: form.color1 === t.c1 ? '2px solid var(--border-accent)' : '0.5px solid var(--border)',
-            }}
-          />
-        ))}
+      <div className="mt-6">
+        <label className={labelClass}>Thème</label>
+        <div className="flex gap-3">
+          {THEMES.map((t) => (
+            <button
+              key={t.c1}
+              type="button"
+              onClick={() => set({ color1: t.c1, color2: t.c2 })}
+              className="w-7 h-7 rounded-full"
+              style={{
+                background: `linear-gradient(135deg, ${t.c1}, ${t.c2})`,
+                boxShadow: form.color1 === t.c1 ? '0 0 0 2px #fff, 0 0 0 4px ' + t.c1 : 'none',
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {error && <p style={{ color: 'var(--text-danger)', fontSize: 12, margin: '0 0 12px' }}>{error}</p>}
+      {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
 
-      <button type="button" onClick={handleSave} disabled={saving} style={{ width: '100%', height: 36, borderRadius: 'var(--radius)', border: '0.5px solid var(--border-strong)', background: 'var(--fill-secondary)', fontSize: 13, cursor: 'pointer' }}>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full mt-6 bg-orange-500 hover:bg-orange-600 transition rounded-xl py-3 font-semibold text-sm"
+      >
         {saving ? 'Enregistrement...' : 'Enregistrer'}
       </button>
     </div>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 6px' }}>{label}</p>
-      {children}
-    </>
   );
 }
 
@@ -269,17 +289,3 @@ function formatRange(start, end) {
   const e = new Date(end).toLocaleDateString('fr-FR', opts);
   return `${s} au ${e}`;
 }
-
-const inputStyle = {
-  width: '100%',
-  height: 36,
-  borderRadius: 'var(--radius)',
-  border: '0.5px solid var(--border)',
-  background: 'var(--surface-1)',
-  color: 'var(--text-primary)',
-  padding: '0 12px',
-  marginBottom: 14,
-  fontSize: 13,
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
-};

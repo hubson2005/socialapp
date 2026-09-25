@@ -21,20 +21,16 @@ export default function EventActivateButton({ eventId }) {
   };
 
   return (
-    <div>
+    <div className="w-full">
       <button
         type="button"
         onClick={handleActivate}
         disabled={loading}
-        style={{
-          width: '100%', height: 40, borderRadius: 'var(--radius)', border: 'none',
-          background: 'linear-gradient(135deg,#ff6b35,#f7c948)', color: '#fff',
-          fontWeight: 600, fontSize: 13, cursor: 'pointer',
-        }}
+        className="w-full h-10 rounded-xl font-semibold text-sm text-white bg-orange-500 hover:bg-orange-600 transition disabled:opacity-60"
       >
         {loading ? 'Redirection...' : 'Activer ma carte événement'}
       </button>
-      {error && <p style={{ color: 'var(--text-danger)', fontSize: 12, marginTop: 8 }}>{error}</p>}
+      {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
     </div>
   );
 }

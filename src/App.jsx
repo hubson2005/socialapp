@@ -7,6 +7,8 @@ import PublicProfile  from "./pages/PublicProfile";
 import PublicBookingPage from "./pages/PublicBookingPage";
 import PublicForm from "./components/forms/PublicForm";
 import PublicEventPage from "./pages/PublicEventPage";
+import EventsDashboard from "./pages/EventsDashboard";
+import EventEditorPage from "./pages/EventEditorPage";
 import Home           from "./pages/Home";
 import Blog           from "./pages/Blog";
 import BlogPostPage   from "./pages/BlogPostPage";
@@ -103,6 +105,32 @@ function PublicApp() {
         element={
           <ProtectedRoute>
             <WhatsAppCRM />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Mode Événement — dashboard de gestion (liste + édition) */}
+      <Route
+        path="/dashboard/events"
+        element={
+          <ProtectedRoute>
+            <EventsDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/events/new"
+        element={
+          <ProtectedRoute>
+            <EventEditorPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/events/:id"
+        element={
+          <ProtectedRoute>
+            <EventEditorPage />
           </ProtectedRoute>
         }
       />

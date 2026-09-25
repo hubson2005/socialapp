@@ -336,6 +336,8 @@ export default function Home() {
           .sa-pulse-btn{animation:sa-pulse 2.5s infinite}
           .sa-nav-link{color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s;font-size:13px}
           .sa-nav-link:hover{color:#fff}
+          .sa-event-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(34,197,94,.5)!important}
+          .sa-event-short{display:none}
           .sa-bpri:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(255,107,53,.45)!important}
           .sa-bsec:hover{background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.3)!important}
           .sa-fcard:hover{transform:translateY(-6px);border-color:rgba(255,255,255,.16)!important;background:rgba(255,255,255,.07)!important}
@@ -363,6 +365,8 @@ export default function Home() {
             .sa-cta-outer{padding:48px 24px!important}
             .sa-nav-brand-text{display:none!important}
             .sa-nav-cta{padding:7px 16px!important;font-size:12px!important}
+            .sa-event-full{display:none!important}
+            .sa-event-short{display:inline!important}
             .sa-mockup-overflow{width:100%!important;max-width:100%!important}
             .sa-footer-top{flex-direction:column!important;align-items:center!important;text-align:center!important}
             .sa-footer-grid{grid-template-columns:1fr!important;text-align:center!important;gap:32px!important}
@@ -396,11 +400,30 @@ export default function Home() {
           </div>
           <div className="sa-nav-links" style={S.navLinks}>
             {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (<a key={h} href={h} className="sa-nav-link">{l}</a>))}
-            <button type="button" className="sa-nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => setShowEventModal(true)}>
-              Événement
-            </button>
           </div>
-          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              type="button"
+              style={{
+                background: 'linear-gradient(135deg,#22c55e,#16a34a)',
+                border: 'none',
+                borderRadius: '100px',
+                color: '#fff',
+                fontWeight: '700',
+                fontSize: '13px',
+                padding: '9px 18px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                boxShadow: '0 2px 10px rgba(34,197,94,.35)',
+                transition: 'transform .15s, box-shadow .15s',
+                whiteSpace: 'nowrap',
+              }}
+              className="sa-event-btn sa-nav-cta"
+              onClick={() => setShowEventModal(true)}
+            >
+              <span className="sa-event-full">🎉 Créez un évent</span>
+              <span className="sa-event-short">🎉 Évent</span>
+            </button>
             <button type="button" style={S.navCta} className="sa-bpri sa-nav-cta" onClick={handleCTA}>Commencer →</button>
           </div>
         </nav>

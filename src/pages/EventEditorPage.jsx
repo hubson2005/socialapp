@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import EventPanel from '../components/EventPanel';
+import EventPanel from '../components/dashboard/EventPanel';
 import EventQRCode from '../components/EventQRCode';
 import EventActivateButton from '../components/EventActivateButton';
 

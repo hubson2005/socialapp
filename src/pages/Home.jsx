@@ -214,6 +214,15 @@ export default function Home() {
     { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: ['1 profil · 17 liens sociaux', '1 Carte NFC ou PVC (logo + QR CODE)', 'Analytics avancés complets', 'CRM & Pipeline de leads', 'CRM WHATSAPP', 'Campagnes WhatsApp IA (génération automatique)', 'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations', 'Toutes les intégrations', 'Marketplace illimitée', '10 imports PDFs', 'QR Code dynamique', 'Support VIP prioritaire'] },
   ];
 
+  const eventPlan = {
+    name: 'ÉVÉNEMENT', emoji: '🎉', price: '5 000', color: '#22c55e',
+    subtitle: 'Salons, mariages, soirées, lancements — une carte dédiée à votre événement, avec son propre lien',
+    bg: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.28)',
+    btnBg: 'linear-gradient(135deg,#22c55e,#16a34a)', btnBorder: 'none',
+    features: ['Page publique dédiée (lien propre /e/...)', 'Compte à rebours en direct', 'Galerie photos & vidéos', 'QR code à télécharger', 'Formulaire de contact / RSVP', 'Analytics (vues, contacts, demandes)'],
+    isEvent: true,
+  };
+
   const faqs = [
     { q: "C'est quoi exactement SocialApp ?", a: "SocialApp est votre profil digital tout-en-un : un lien unique et un QR code qui regroupe tous vos réseaux sociaux, WhatsApp, votre boutique et vos événements. Un seul scan, vos clients trouvent tout." },
     { q: "Combien ça coûte ?", a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO), 25 000 FCFA/an (BUSINESS). Module Événement disponible à 5 000 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
@@ -758,17 +767,17 @@ export default function Home() {
               <h2 style={S.secTitle}>Des prix faits pour <GradText>l'Afrique</GradText></h2>
               <p style={S.secSub}>Paiement Mobile Money · Pas de carte bancaire nécessaire</p>
             </div>
-            <div className="sa-plans sa-rv" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '22px', alignItems: 'start', paddingTop: '16px' }}>
-              {plans.map((p, i) => (
+            <div className="sa-plans sa-rv" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '20px', alignItems: 'start', paddingTop: '16px' }}>
+              {[...plans, eventPlan].map((p, i) => (
                 <div key={i} className={`sa-plan${p.popular ? ' sa-plan-pro' : ''}`} style={{ borderRadius: '26px', padding: p.popular ? '44px 32px 32px' : '32px', position: 'relative', background: p.bg, border: p.border, transition: 'transform .25s,box-shadow .25s', overflow: 'visible', marginTop: p.popular ? '14px' : '0' }}>
                   {p.popular && (<div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '6px 20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: '#fff', boxShadow: '0 4px 16px rgba(255,107,53,.4)', zIndex: 2 }}>⭐ Plus populaire</div>)}
                   <div style={{ fontSize: '11px', fontWeight: '700', color: p.color, letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: '16px' }}>{p.emoji} {p.name}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginBottom: '6px' }}><span style={{ fontSize: '38px', fontWeight: '900', letterSpacing: '-1.5px' }}>{p.price}</span><span style={{ fontSize: '14px', color: 'rgba(255,255,255,.4)' }}>FCFA</span></div>
-                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginBottom: '8px' }}>/ Paiement annuel</div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginBottom: '8px' }}>{p.isEvent ? 'par événement · Quel que soit votre plan' : '/ Paiement annuel'}</div>
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', lineHeight: '1.55', marginBottom: '22px', minHeight: '36px' }}>{p.subtitle}</div>
                   <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '20px' }} />
                   {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,.75)' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span><span>{f}</span></div>))}
-                  <button type="button" onClick={() => handlePlanSelect(p.name.toLowerCase())} style={{ display: 'block', width: '100%', padding: '14px', border: p.btnBorder, borderRadius: '14px', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', background: p.btnBg, marginTop: '8px', transition: 'transform .2s,box-shadow .2s' }}>Choisir {p.name} →</button>
+                  <button type="button" onClick={() => (p.isEvent ? setShowEventModal(true) : handlePlanSelect(p.name.toLowerCase()))} style={{ display: 'block', width: '100%', padding: '14px', border: p.btnBorder, borderRadius: '14px', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', background: p.btnBg, marginTop: '8px', transition: 'transform .2s,box-shadow .2s' }}>{p.isEvent ? 'Créer mon événement →' : `Choisir ${p.name} →`}</button>
                 </div>
               ))}
             </div>

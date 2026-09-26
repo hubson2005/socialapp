@@ -195,6 +195,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
 
@@ -337,7 +338,6 @@ export default function Home() {
           .sa-nav-link{color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s;font-size:13px}
           .sa-nav-link:hover{color:#fff}
           .sa-event-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(34,197,94,.5)!important}
-          .sa-event-short{display:none}
           .sa-bpri:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(255,107,53,.45)!important}
           .sa-bsec:hover{background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.3)!important}
           .sa-fcard:hover{transform:translateY(-6px);border-color:rgba(255,255,255,.16)!important;background:rgba(255,255,255,.07)!important}
@@ -357,16 +357,12 @@ export default function Home() {
             .sa-hero-grid,.sa-twocol,.sa-plans,.sa-fg3,.sa-tgrid,.sa-steps{grid-template-columns:1fr!important}
             .sa-stats-grid{grid-template-columns:repeat(2,1fr)!important}
             .sa-hero-h1{font-size:40px!important;letter-spacing:-2px!important}
-            .sa-nav-links{display:none!important}
             .sa-hero-sec{padding:100px 20px 60px!important}
             .sa-sec{padding:70px 20px!important}
             .sa-dash-mockup{margin-top:48px!important}
             .sa-fbadge{display:none!important}
             .sa-cta-outer{padding:48px 24px!important}
             .sa-nav-brand-text{display:none!important}
-            .sa-nav-cta{padding:7px 16px!important;font-size:12px!important}
-            .sa-event-full{display:none!important}
-            .sa-event-short{display:inline!important}
             .sa-mockup-overflow{width:100%!important;max-width:100%!important}
             .sa-footer-top{flex-direction:column!important;align-items:center!important;text-align:center!important}
             .sa-footer-grid{grid-template-columns:1fr!important;text-align:center!important;gap:32px!important}
@@ -398,10 +394,7 @@ export default function Home() {
             <div style={S.navIcon}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
             <span className="sa-nav-brand-text" style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-.5px' }}>SocialApp</span>
           </div>
-          <div className="sa-nav-links" style={S.navLinks}>
-            {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (<a key={h} href={h} className="sa-nav-link">{l}</a>))}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
               type="button"
               style={{
@@ -418,15 +411,58 @@ export default function Home() {
                 transition: 'transform .15s, box-shadow .15s',
                 whiteSpace: 'nowrap',
               }}
-              className="sa-event-btn sa-nav-cta"
+              className="sa-event-btn"
               onClick={() => setShowEventModal(true)}
             >
-              <span className="sa-event-full">🎉 Créez un évent</span>
-              <span className="sa-event-short">🎉 Évent</span>
+              🎉 Créez un évent
             </button>
-            <button type="button" style={S.navCta} className="sa-bpri sa-nav-cta" onClick={handleCTA}>Commencer →</button>
+            <button
+              type="button"
+              aria-label="Ouvrir le menu"
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              style={{
+                width: '38px', height: '38px', borderRadius: '10px',
+                background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              <div style={{ width: '16px' }}>
+                <span style={{ display: 'block', height: '2px', background: '#fff', borderRadius: '2px', marginBottom: '4px', transform: mobileMenuOpen ? 'translateY(6px) rotate(45deg)' : 'none', transition: 'transform .2s' }} />
+                <span style={{ display: 'block', height: '2px', background: '#fff', borderRadius: '2px', marginBottom: '4px', opacity: mobileMenuOpen ? 0 : 1, transition: 'opacity .2s' }} />
+                <span style={{ display: 'block', height: '2px', background: '#fff', borderRadius: '2px', transform: mobileMenuOpen ? 'translateY(-6px) rotate(-45deg)' : 'none', transition: 'transform .2s' }} />
+              </div>
+            </button>
           </div>
         </nav>
+
+        {mobileMenuOpen && (
+          <div
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ position: 'fixed', inset: 0, top: '64px', zIndex: 190, background: 'rgba(0,0,0,.6)' }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#0a0818', borderBottom: '1px solid rgba(255,255,255,.08)',
+                padding: '20px 24px 28px', display: 'flex', flexDirection: 'column', gap: '4px',
+                animation: 'sa-fadeup .25s ease both',
+              }}
+            >
+              {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (
+                <a key={h} href={h} onClick={() => setMobileMenuOpen(false)} style={{ color: 'rgba(255,255,255,.75)', textDecoration: 'none', fontSize: '15px', fontWeight: '600', padding: '12px 4px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>{l}</a>
+              ))}
+              <button
+                type="button"
+                style={{ ...S.navCta, marginTop: '14px', padding: '13px', fontSize: '14px' }}
+                onClick={() => { setMobileMenuOpen(false); handleCTA(); }}
+              >
+                {user ? 'Mon tableau de bord →' : 'Commencer →'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ════════════ HERO ════════════ */}
         <section style={{ ...S.hero }} className="sa-hero-sec">

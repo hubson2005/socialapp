@@ -5,7 +5,17 @@
  *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
  *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1 ... ]
  *
- * MODE DATA-LIGHT (cette révision) :
+ * TRACKING (cette révision) :
+ *  [TRK1] Garde anti-double appel (alreadyTracked) sur trackView,
+ *         trackProfileVisit et l'insertion qr_scan : une seule écriture
+ *         par onglet et par profil. La clé sessionStorage est posée AVANT
+ *         tout await (la géoloc peut durer jusqu'à 3 s), sinon une double
+ *         exécution de l'effet (StrictMode, re-rendu) passerait la garde
+ *         deux fois.
+ *  [TRK2] fetchCountry renvoie null (et non '') quand la géoloc échoue.
+ *         Côté base, un trigger normalise aussi '' -> NULL.
+ *
+ * MODE DATA-LIGHT :
  *  [DL1] Détection automatique via le hook useDataSaverMode() (header
  *        Save-Data / navigator.connection.effectiveType 2g-3g / bascule
  *        manuelle mémorisée). isLight est calculé une fois par montage et
@@ -21,7 +31,7 @@
  *        Storage. Toutes les images "passives" (avatar, bannière, cartes
  *        boutique, carrousel événement) demandent une largeur réduite en
  *        mode léger. Les images ouvertes explicitement par le visiteur
- *        (lightbox plein écran, modale produit) restent en качество
+ *        (lightbox plein écran, modale produit) restent en qualité
  *        normale : c'est un geste volontaire, pas un chargement passif.
  *        ⚠️ Nécessite que la transformation d'image Supabase Storage soit
  *        activée sur le projet (plan Pro et supérieur) ; sur un plan sans
@@ -190,6 +200,8 @@ function cleanReferrer() {
   } catch { return 'direct'; }
 }
 
+// [TRK2] null (et non '') quand la géoloc échoue : un seul cas "inconnu"
+// côté base et côté dashboard.
 async function fetchCountry() {
   try {
     const ctrl = new AbortController();
@@ -198,14 +210,26 @@ async function fetchCountry() {
     clearTimeout(t);
     if (!res.ok) throw new Error();
     const d = await res.json();
-    return { country: d.country_code || '', country_name: d.country_name || '' };
+    return { country: d.country_code || null, country_name: d.country_name || null };
   } catch {
-    return { country: '', country_name: '' };
+    return { country: null, country_name: null };
   }
+}
+
+// [TRK1] Garde anti-double appel : une écriture par onglet et par clé.
+// La clé est posée immédiatement (avant tout await). Si sessionStorage
+// est indisponible (navigation privée stricte), on laisse passer.
+function alreadyTracked(key) {
+  try {
+    if (sessionStorage.getItem(key)) return true;
+    sessionStorage.setItem(key, '1');
+  } catch { /* stockage indisponible : on ne bloque pas le tracking */ }
+  return false;
 }
 
 // [C3] console.log de debug supprimés — erreurs Supabase uniquement en dev
 async function trackView(profileId) {
+  if (alreadyTracked(`pp-viewed:${profileId}`)) return; // [TRK1]
   try {
     // [C2] await direct, pas de Promise.all inutile
     const geo = await fetchCountry();
@@ -245,7 +269,9 @@ async function trackClick(profileId, platform) {
 // passer par le serveur qui reçoit la requête HTTP brute). Best-effort :
 // un échec ne doit jamais bloquer ou ralentir l'affichage du profil
 // public, d'où le .catch() silencieux plutôt qu'un throw.
+// [TRK1] Même garde que trackView pour ne pas doubler profile_visits.
 function trackProfileVisit(profileId) {
+  if (alreadyTracked(`pp-visited:${profileId}`)) return;
   supabase.functions.invoke('track-profile-visit', {
     body: {
       profile_id: profileId,
@@ -768,13 +794,14 @@ export default function PublicProfile() {
         return;
       }
 
-     setProfile(data);
-setLoading(false);
+      setProfile(data);
+      setLoading(false);
 
-trackView(data.id);
-trackProfileVisit(data.id); // [DL8] Tracking CRM — adresse IP du visiteur via Edge Function
+      // [TRK1] Protégés par alreadyTracked : une seule écriture par onglet/profil
+      trackView(data.id);
+      trackProfileVisit(data.id); // [DL8] Tracking CRM — adresse IP du visiteur via Edge Function
 
-Promise.all([
+      Promise.all([
         supabase
           .from('marketplace_products')
           .select('id,title,price,original_price,description,image_url,is_available')
@@ -800,6 +827,7 @@ Promise.all([
     if (!profile?.id) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('source') !== 'qr') return;
+    if (alreadyTracked(`pp-qr:${profile.id}`)) return; // [TRK1]
     const medium = params.get('medium');
 
     supabase.from('profile_stats')

@@ -4,6 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Connexions anticipées vers Supabase :
+       la 1re pour les appels API (fetch/CORS), la 2e pour les images (mode no-cors) -->
+  <link rel="preconnect" href="https://gxguirtpunmiiuxpxlap.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://gxguirtpunmiiuxpxlap.supabase.co" />
+
+  <!-- Police : téléchargée dès le HTML (avant, elle n'était découverte qu'après le CSS).
+       Nécessite le fichier /public/fonts/geist-latin.woff2 (voir instructions). -->
+  <link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
+
   <link rel="icon" type="image/png" href="/Logo_SocialApp.png" />
   <link rel="shortcut icon" href="/Logo_SocialApp.png" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -30,7 +39,7 @@
     property="og:description"
     content="Créez votre profil digital, partagez votre QR Code et gérez vos prospects avec un CRM intégré."
   />
-  <meta property="og:image" content="/Logo_SocialApp.png" />
+  <meta property="og:image" content="https://www.socialapp.work/Logo_SocialApp.png" />
   <meta property="og:url" content="https://www.socialapp.work/" />
 
   <meta name="twitter:card" content="summary_large_image" />
@@ -39,10 +48,27 @@
     name="twitter:description"
     content="Créez votre profil digital, partagez votre QR Code et gérez vos prospects avec un CRM intégré."
   />
-  <meta name="twitter:image" content="/Logo_SocialApp.png" />
+  <meta name="twitter:image" content="https://www.socialapp.work/Logo_SocialApp.png" />
+
+  <!-- Fond sombre immédiat (pas de flash blanc) + style de la coquille -->
+  <style>
+    html, body { margin: 0; background: #0f0a1e; }
+    #shell {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px; padding: 24px;
+      box-sizing: border-box; color: #fff; text-align: center;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    #shell h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    #shell p { margin: 0; max-width: 320px; opacity: .7; font-size: 14px; line-height: 1.4; }
+  </style>
+
+  <!-- Rempli côté serveur (api/profile.js) : preload de l'image principale + données du profil.
+       Ne pas supprimer ce marqueur. -->
+  <!--PROFILE_HEAD-->
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root"><!--SHELL_START--><div id="shell"><h1>SocialApp</h1></div><!--SHELL_END--></div>
 
   <noscript>
     <h1>SocialApp</h1>

@@ -12,6 +12,10 @@
       "destination": "/api/sitemap.xml"
     },
     {
+      "source": "/:username((?!(?:api|assets|fonts|admin|dashboard|login|signup|register|pricing|auth|reset-password|forgot-password|e|event|events|booking|marketplace|payment|success|cancel|terms|privacy|blog|sitemap|robots|manifest|favicon)$)[A-Za-z0-9_-]{1,64})",
+      "destination": "/api/profile?username=:username"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
@@ -33,11 +37,20 @@
       ]
     },
     {
+      "source": "/fonts/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000" }
+      ]
+    },
+    {
+      "source": "/service-worker.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Pragma", "value": "no-cache" },
-        { "key": "Expires", "value": "0" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-XSS-Protection", "value": "1; mode=block" },

@@ -1,8 +1,8 @@
 // api/profile.js — Pré-rendu léger des profils publics SocialApp (Vercel, Node runtime)
 //
 // Rôle : quand quelqu'un ouvre https://www.socialapp.work/<username>, cette fonction
-//  1. lit le profil dans Supabase (table link_profiles, colonne username) avec la clé
-//     publique (les règles RLS s'appliquent exactement comme dans le navigateur) ;
+//  1. lit le profil dans Supabase (table link_profiles, colonne username, insensible à la casse)
+//     avec la clé publique (les règles RLS s'appliquent comme dans le navigateur) ;
 //  2. renvoie le même index.html que d'habitude, mais avec, déjà dans le HTML :
 //       - un <link rel="preload" as="image" fetchpriority="high"> vers l'image principale,
 //       - window.__PROFILE__ (les données du profil, pour éviter l'attente de l'API),
@@ -21,12 +21,16 @@ const SUPABASE_KEY =
   process.env.VITE_SUPABASE_KEY ||
   '';
 
+// Hôtes autorisés pour aller chercher index.html (évite de fetch un hôte arbitraire).
+const ALLOWED_HOST = /^(www\.)?socialapp\.work$|^[a-z0-9-]+\.vercel\.app$/i;
+
 // À ADAPTER : routes de premier niveau de l'application qui ne sont PAS des profils.
-// (À garder synchronisé avec la liste du même nom dans vercel.json.)
+// (À garder synchronisé avec les routes de App.jsx et la liste du même nom dans vercel.json.)
 const RESERVED = new Set([
   'api', 'assets', 'fonts', 'admin', 'dashboard', 'login', 'signup', 'register', 'pricing',
   'auth', 'reset-password', 'forgot-password', 'e', 'event', 'events', 'booking',
   'marketplace', 'payment', 'success', 'cancel', 'terms', 'privacy',
+  'blog', 'sitemap', 'robots', 'manifest', 'favicon',
 ]);
 const VALID_USERNAME = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -38,6 +42,8 @@ const esc = (s) =>
 const safeJson = (obj) =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
+const httpsUrl = (u) => (typeof u === 'string' && /^https:\/\//i.test(u) ? u : null);
+
 // Remplace le contenu d'une balise <meta> existante (gère les balises sur plusieurs lignes)
 function setMeta(html, attr, key, content) {
   const re = new RegExp(`<meta\\s+${attr}="${key}"[\\s\\S]*?/>`, 'i');
@@ -47,17 +53,17 @@ function setMeta(html, attr, key, content) {
 // Image principale du profil (celle qui devient le LCP). À VÉRIFIER : doit être exactement
 // la même URL que celle affichée par le composant de la page publique.
 function pickHero(p) {
-  const url = p.is_event ? p.event_image_url : p.banner_url;
-  return typeof url === 'string' && /^https:\/\//.test(url) ? url : null;
+  return httpsUrl(p.is_event ? p.event_image_url : p.banner_url);
 }
 
 // ---------- coquille HTML (index.html du déploiement), mise en cache mémoire ----------
+// TTL court : après un déploiement, un vieux index.html référencerait des assets disparus.
 let shellCache = { html: null, at: 0 };
-const SHELL_TTL_MS = 10 * 60 * 1000;
+const SHELL_TTL_MS = 60 * 1000;
 
 async function getShell(origin) {
   if (shellCache.html && Date.now() - shellCache.at < SHELL_TTL_MS) return shellCache.html;
-  const r = await fetch(`${origin}/index.html`, { redirect: 'follow' });
+  const r = await fetch(`${origin}/index.html`, { redirect: 'follow', headers: { 'x-profile-shell': '1' } });
   if (!r.ok) throw new Error(`index.html: HTTP ${r.status}`);
   const html = await r.text();
   shellCache = { html, at: Date.now() };
@@ -69,7 +75,10 @@ async function fetchProfile(username) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 2500);
   try {
-    const url = `${SUPABASE_URL}/rest/v1/link_profiles?username=eq.${encodeURIComponent(username)}&select=*&limit=1`;
+    // ilike = même comportement que PublicProfile.jsx (insensible à la casse).
+    // « _ » est un joker en SQL LIKE : on l'échappe pour ne pas matcher un autre profil.
+    const pattern = username.replace(/_/g, '\\_');
+    const url = `${SUPABASE_URL}/rest/v1/link_profiles?username=ilike.${encodeURIComponent(pattern)}&select=*&limit=3`;
     const headers = { apikey: SUPABASE_KEY, Accept: 'application/json' };
     // Les clés « legacy » sont des JWT (eyJ…) ; les nouvelles clés sb_publishable_… ne doivent
     // pas être envoyées dans Authorization.
@@ -77,7 +86,8 @@ async function fetchProfile(username) {
     const r = await fetch(url, { headers, signal: ctrl.signal });
     if (!r.ok) return null;
     const rows = await r.json();
-    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+    if (!Array.isArray(rows) || !rows.length) return null;
+    return rows.find((row) => row.username === username) || rows[0];
   } catch {
     return null;
   } finally {
@@ -91,7 +101,7 @@ function render(shell, p) {
   const bio = (p.bio || '').trim();
   const description = bio ? bio.slice(0, 160) : 'Retrouvez mon profil digital sur SocialApp.';
   const hero = pickHero(p);
-  const image = hero || p.avatar_url || `${SITE}/Logo_SocialApp.png`;
+  const image = hero || httpsUrl(p.avatar_url) || `${SITE}/Logo_SocialApp.png`;
   const pageUrl = `${SITE}/${encodeURIComponent(p.username)}`;
   const title = `${name} – SocialApp`;
 
@@ -125,17 +135,25 @@ function render(shell, p) {
 
 // ---------- handler ----------
 export default async function handler(req, res) {
+  // Garde anti-boucle : si un rewrite renvoyait /index.html vers cette fonction,
+  // notre propre fetch de la coquille ne doit pas se rappeler indéfiniment.
+  if (req.headers['x-profile-shell']) {
+    res.status(404).send('Not found');
+    return;
+  }
+
   const username = String(req.query?.username || '').trim();
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const origin = `https://${host}`;
+  const rawHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  const origin = ALLOWED_HOST.test(rawHost) ? `https://${rawHost}` : SITE;
 
   let shell;
   try {
     shell = await getShell(origin);
   } catch (err) {
     console.error('profile: impossible de charger index.html', err);
-    res.status(502).setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send('Service momentanément indisponible');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(502).send('Service momentanément indisponible');
     return;
   }
 

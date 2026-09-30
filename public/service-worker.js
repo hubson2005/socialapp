@@ -19,10 +19,18 @@
 // 80 entrées (les plus anciennes sont évincées en premier) pour ne pas
 // saturer indéfiniment le stockage du téléphone du visiteur.
 //
+// [DL-SW3] CORRECTIF — la branche réseau-d'abord pour les requêtes non-
+// navigation ne met plus en cache les réponses HTML. Pendant un déploiement
+// (ou sur une route absente), le serveur renvoie le fallback SPA
+// (index.html) avec un statut 200 pour une URL de fichier statique
+// (ex. /icons/icon-192.png) : cette page était alors stockée sous l'URL
+// du fichier et resservie hors ligne à la place de l'image.
+// Bump v4 → v5 pour purger les entrées déjà polluées à l'activation.
+//
 // Le reste (assets JS/CSS, autres pages, requêtes API/écriture) continue
 // de passer par la logique réseau-d'abord existante, inchangée.
 
-const CACHE_NAME = 'socialapp-cache-v4'; // [DL-SW] bump v3 → v4 : nouvelle logique de fetch
+const CACHE_NAME = 'socialapp-cache-v5'; // [DL-SW3] bump v4 → v5 : purge des entrées HTML parasites
 const PROFILE_CACHE_NAME = 'socialapp-profiles-v1'; // [DL-SW1]
 const IMAGE_CACHE_NAME   = 'socialapp-images-v1';   // [DL-SW2]
 const IMAGE_CACHE_MAX_ENTRIES = 80; // [DL-SW2]
@@ -164,7 +172,11 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok) {
+        // [DL-SW3] Ne jamais mettre en cache du HTML pour une requête non-
+        // navigation : c'est le fallback SPA (index.html) renvoyé à la place
+        // d'un fichier statique absent, pas la ressource demandée.
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && !contentType.includes('text/html')) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }

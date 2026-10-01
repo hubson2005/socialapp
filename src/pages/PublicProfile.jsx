@@ -3,17 +3,33 @@
  *
  * [ ... tout l'historique de révisions précédent est inchangé, voir la
  *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
- *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1 ... ]
+ *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, DL1-DL8 ... ]
  *
- * TRACKING (cette révision) :
- *  [TRK1] Garde anti-double appel (alreadyTracked) sur trackView,
- *         trackProfileVisit et l'insertion qr_scan : une seule écriture
- *         par onglet et par profil. La clé sessionStorage est posée AVANT
- *         tout await (la géoloc peut durer jusqu'à 3 s), sinon une double
- *         exécution de l'effet (StrictMode, re-rendu) passerait la garde
- *         deux fois.
- *  [TRK2] fetchCountry renvoie null (et non '') quand la géoloc échoue.
- *         Côté base, un trigger normalise aussi '' -> NULL.
+ * PERF2 (cette révision) — Affichage instantané via le pré-rendu serveur :
+ *  [PERF2a] api/profile.js injecte dans le HTML window.__PROFILE__ (profil) et
+ *        window.__PROFILE_EXTRAS__ (produits + documents visibles). Le composant
+ *        démarre avec ces données : plus de skeleton, plus de cascade
+ *        profil → produits/documents, plus de décalage de mise en page quand
+ *        la boutique / les documents arrivent au-dessus des liens.
+ *        Les données restent revalidées en arrière-plan (le CDN peut servir
+ *        une version vieille de 60 s à 10 min) ; le state n'est remplacé que
+ *        si le contenu a réellement changé.
+ *  [PERF2b] Image principale (LCP) : heroRawUrl() DOIT rester identique à celle
+ *        de api/profile.js. Toute image dont l'URL d'origine == hero est
+ *        demandée à HERO_WIDTH (même valeur côté serveur) pour que le
+ *        <link rel="preload"> du HTML soit réutilisé par le navigateur.
+ *        Le hero ignore donc le mode léger (une seule image, largeur 720) :
+ *        sinon le preload serait téléchargé en plus de la variante 480.
+ *  [PERF2c] Hero en loading eager + fetchPriority high. La bannière est
+ *        toujours eager (elle est en haut de page).
+ *  [PERF2d] images (slider événement) calculé par useMemo au lieu de
+ *        useState + useEffect : l'image est présente dès le 1er rendu au
+ *        lieu d'apparaître un rendu plus tard (gain LCP + CLS).
+ *  [PERF2e] trackView / trackProfileVisit différés (requestIdleCallback,
+ *        timeout 2 s) : l'appel ipapi.co ne concurrence plus l'image LCP.
+ *  [PERF2f] Recherche du profil : « _ » et « % » échappés dans ilike()
+ *        (jokers SQL), sinon « jean_luc » pouvait matcher « jeanxluc » et
+ *        maybeSingle() renvoyait une erreur → "Profil introuvable".
  *
  * MODE DATA-LIGHT :
  *  [DL1] Détection automatique via le hook useDataSaverMode() (header
@@ -63,7 +79,7 @@
  * existant quand la détection ne déclenche pas le mode léger.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -121,6 +137,7 @@ const FONT_LINK_ID          = 'pp-font-manrope';
 // une variante réduite au CDN. Sans effet si l'URL est vide, ou si le
 // projet Supabase n'a pas la transformation d'image activée (le CDN
 // ignore alors simplement ces paramètres et sert l'original).
+// ⚠️ [PERF2b] Copie identique dans api/profile.js — à garder synchronisées.
 function imgUrl(url, { width, quality = 70, format = 'webp' } = {}) {
   if (!url || !width) return url;
   const sep = url.includes('?') ? '&' : '?';
@@ -132,6 +149,50 @@ function imgUrl(url, { width, quality = 70, format = 'webp' } = {}) {
 const IMG_WIDTHS = {
   light: { avatar: 90,  banner: 480, product: 220, event: 480 },
   full:  { avatar: 212, banner: 960, product: 440, event: 960 },
+};
+
+// [PERF2b] Largeur unique de l'image principale (LCP), quel que soit le mode.
+// ⚠️ Doit rester identique à HERO_WIDTH dans api/profile.js.
+const HERO_WIDTH = 720;
+
+// [PERF2b] Image principale — MÊME RÈGLE que heroRawUrl() dans api/profile.js :
+// profil événement avec images → 1re image de l'événement ; sinon la bannière.
+function heroRawUrl(p) {
+  if (!p) return null;
+  const https = (u) => (typeof u === 'string' && /^https:\/\//i.test(u) ? u : null);
+  if (p.is_event) {
+    const list = p.event_images
+      ? (Array.isArray(p.event_images) ? p.event_images : [p.event_images])
+      : (p.event_image_url ? [p.event_image_url] : []);
+    if (list.length) return https(list[0]);
+  }
+  return https(p.banner_url);
+}
+
+// [PERF2a] Données injectées par api/profile.js (null si absentes ou si elles
+// concernent un autre profil, ex. navigation interne entre deux profils).
+function readSsrData(username) {
+  try {
+    const p = window.__PROFILE__;
+    if (!p || !p.username) return null;
+    if (String(p.username).toLowerCase() !== String(username || '').toLowerCase()) return null;
+    const x = window.__PROFILE_EXTRAS__;
+    const extras = x && String(x.profile_id) === String(p.id) ? x : null;
+    return { profile: p, extras };
+  } catch {
+    return null;
+  }
+}
+
+// N'écrase le state que si le contenu a réellement changé (évite des rendus inutiles)
+const sameJson = (a, b) => {
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+};
+
+// [PERF2e] Exécute fn quand le navigateur est au repos (repli : setTimeout)
+const deferIdle = (fn, timeout = 2000) => {
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn, { timeout });
+  else setTimeout(fn, 800);
 };
 
 // ─── [F1] Verrouillage du scroll body — mutualisé ──────────────
@@ -200,8 +261,6 @@ function cleanReferrer() {
   } catch { return 'direct'; }
 }
 
-// [TRK2] null (et non '') quand la géoloc échoue : un seul cas "inconnu"
-// côté base et côté dashboard.
 async function fetchCountry() {
   try {
     const ctrl = new AbortController();
@@ -210,26 +269,14 @@ async function fetchCountry() {
     clearTimeout(t);
     if (!res.ok) throw new Error();
     const d = await res.json();
-    return { country: d.country_code || null, country_name: d.country_name || null };
+    return { country: d.country_code || '', country_name: d.country_name || '' };
   } catch {
-    return { country: null, country_name: null };
+    return { country: '', country_name: '' };
   }
-}
-
-// [TRK1] Garde anti-double appel : une écriture par onglet et par clé.
-// La clé est posée immédiatement (avant tout await). Si sessionStorage
-// est indisponible (navigation privée stricte), on laisse passer.
-function alreadyTracked(key) {
-  try {
-    if (sessionStorage.getItem(key)) return true;
-    sessionStorage.setItem(key, '1');
-  } catch { /* stockage indisponible : on ne bloque pas le tracking */ }
-  return false;
 }
 
 // [C3] console.log de debug supprimés — erreurs Supabase uniquement en dev
 async function trackView(profileId) {
-  if (alreadyTracked(`pp-viewed:${profileId}`)) return; // [TRK1]
   try {
     // [C2] await direct, pas de Promise.all inutile
     const geo = await fetchCountry();
@@ -269,9 +316,7 @@ async function trackClick(profileId, platform) {
 // passer par le serveur qui reçoit la requête HTTP brute). Best-effort :
 // un échec ne doit jamais bloquer ou ralentir l'affichage du profil
 // public, d'où le .catch() silencieux plutôt qu'un throw.
-// [TRK1] Même garde que trackView pour ne pas doubler profile_visits.
 function trackProfileVisit(profileId) {
-  if (alreadyTracked(`pp-visited:${profileId}`)) return;
   supabase.functions.invoke('track-profile-visit', {
     body: {
       profile_id: profileId,
@@ -383,11 +428,25 @@ function ProfileSkeleton() {
   );
 }
 
-function LazyImg({ src, alt, style }) {
+// [PERF2c] eager : charge sans attendre (images en haut de page) ;
+// priority : eager + fetchPriority high (image LCP uniquement).
+// Le test img.complete évite de rester à opacity 0 si l'image était déjà
+// disponible (préchargée / en cache) avant l'attache du onLoad.
+function LazyImg({ src, alt, style, eager = false, priority = false }) {
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) setLoaded(true);
+  }, [src]);
+
   return (
     <img
-      src={src} alt={alt} loading="lazy" decoding="async"
+      ref={imgRef}
+      src={src} alt={alt}
+      loading={eager || priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : undefined}
+      decoding="async"
       onLoad={() => setLoaded(true)}
       style={{ ...style, opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
     />
@@ -678,16 +737,19 @@ function LightModeToggle({ isLight, setManual }) {
 // ─── Composant principal ──────────────────────────────────────
 export default function PublicProfile() {
   const { username } = useParams();
-  const [profile, setProfile]               = useState(null);
-  const [loading, setLoading]               = useState(true);
+
+  // [PERF2a] Données pré-rendues par api/profile.js (lues une seule fois au montage)
+  const [ssrInit] = useState(() => readSsrData(username));
+
+  const [profile, setProfile]               = useState(ssrInit?.profile || null);
+  const [loading, setLoading]               = useState(!ssrInit);
   const [notFound, setNotFound]             = useState(false);
   const [countdown, setCountdown]           = useState(null);
-  const [images, setImages]                 = useState([]);
   const [currentIndex, setCurrentIndex]     = useState(0);
   const [isAutoPlay, setIsAutoPlay]         = useState(true);
-  const [products, setProducts]             = useState([]);
+  const [products, setProducts]             = useState(ssrInit?.extras?.products || []);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [documents, setDocuments]           = useState([]);
+  const [documents, setDocuments]           = useState(ssrInit?.extras?.documents || []);
   const [lightboxSrc, setLightboxSrc]       = useState(null);
 
   // [DL1] Détection du mode data-light
@@ -778,46 +840,72 @@ export default function PublicProfile() {
   }, []);
 
   // ── Chargement initial ───────────────────────────────────────
+  // [PERF2a] Avec les données pré-rendues : produits/documents et tracking
+  // démarrent immédiatement (plus de cascade), et le profil est revalidé
+  // en arrière-plan. Sans données pré-rendues : comportement d'origine.
   useEffect(() => {
+    const ssr = readSsrData(username);
+
+    const loadExtras = (profileId) => {
+      Promise.all([
+        supabase
+          .from('marketplace_products')
+          .select('id,title,price,original_price,description,image_url,is_available')
+          .eq('profile_id', profileId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('profile_documents')
+          .select('id,name,file_url,file_size,is_visible')
+          .eq('profile_id', profileId)
+          .eq('is_visible', true)
+          .order('created_at', { ascending: false }),
+      ]).then(([prod, docs]) => {
+        if (!isMounted.current) return; // [C8]
+        const nextProducts = prod?.data || [];
+        const nextDocs     = docs?.data || [];
+        setProducts(prev  => (sameJson(prev, nextProducts) ? prev : nextProducts));
+        setDocuments(prev => (sameJson(prev, nextDocs)     ? prev : nextDocs));
+      });
+    };
+
+    // [PERF2e] Tracking différé : l'appel ipapi.co ne concurrence plus l'image LCP
+    const startTracking = (id) => deferIdle(() => {
+      trackView(id);
+      trackProfileVisit(id); // [DL8] Tracking CRM — adresse IP du visiteur via Edge Function
+    });
+
+    if (ssr) {
+      loadExtras(ssr.profile.id);
+      startTracking(ssr.profile.id);
+    }
+
     const init = async () => {
+      // [PERF2f] « _ » et « % » sont des jokers SQL dans ilike : on les échappe
+      const pattern = String(username || '').replace(/[\\%_]/g, '\\$&');
       const { data, error } = await supabase
         .from('link_profiles')
         .select('*')
-        .ilike('username', username)
+        .ilike('username', pattern)
         .maybeSingle();
 
       if (!isMounted.current) return; // [C8]
 
       if (error || !data) {
-        setNotFound(true);
-        setLoading(false);
+        // Avec des données pré-rendues, on garde l'affichage existant
+        if (!ssr) {
+          setNotFound(true);
+          setLoading(false);
+        }
         return;
       }
 
-      setProfile(data);
+      setProfile(prev => (sameJson(prev, data) ? prev : data));
       setLoading(false);
 
-      // [TRK1] Protégés par alreadyTracked : une seule écriture par onglet/profil
-      trackView(data.id);
-      trackProfileVisit(data.id); // [DL8] Tracking CRM — adresse IP du visiteur via Edge Function
-
-      Promise.all([
-        supabase
-          .from('marketplace_products')
-          .select('id,title,price,original_price,description,image_url,is_available')
-          .eq('profile_id', data.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('profile_documents')
-          .select('id,name,file_url,file_size,is_visible')
-          .eq('profile_id', data.id)
-          .eq('is_visible', true)
-          .order('created_at', { ascending: false }),
-      ]).then(([prod, docs]) => {
-        if (!isMounted.current) return; // [C8]
-        setProducts(prod?.data || []);
-        setDocuments(docs?.data || []);
-      });
+      if (!ssr) {
+        startTracking(data.id);
+        loadExtras(data.id);
+      }
     };
     init();
   }, [username]);
@@ -827,7 +915,6 @@ export default function PublicProfile() {
     if (!profile?.id) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('source') !== 'qr') return;
-    if (alreadyTracked(`pp-qr:${profile.id}`)) return; // [TRK1]
     const medium = params.get('medium');
 
     supabase.from('profile_stats')
@@ -843,11 +930,13 @@ export default function PublicProfile() {
   }, [profile?.id]);
 
   // ── Images slider ────────────────────────────────────────────
-  useEffect(() => {
-    if (profile?.event_images)         setImages(Array.isArray(profile.event_images) ? profile.event_images : [profile.event_images]);
-    else if (profile?.event_image_url) setImages([profile.event_image_url]);
-    else                               setImages([]);
-  }, [profile]);
+  // [PERF2d] Calculé directement (useMemo) au lieu de useState + useEffect :
+  // l'image événement est présente dès le premier rendu.
+  const images = useMemo(() => {
+    if (profile?.event_images)         return Array.isArray(profile.event_images) ? profile.event_images : [profile.event_images];
+    if (profile?.event_image_url)      return [profile.event_image_url];
+    return [];
+  }, [profile?.event_images, profile?.event_image_url]);
 
   useEffect(() => {
     if (!images.length || !isAutoPlay) return;
@@ -1052,6 +1141,10 @@ export default function PublicProfile() {
   const bannerW = isLight ? IMG_WIDTHS.light.banner : IMG_WIDTHS.full.banner;
   const eventW  = isLight ? IMG_WIDTHS.light.event  : IMG_WIDTHS.full.event;
 
+  // [PERF2b] Image principale : même URL que le <link rel="preload"> du HTML
+  const heroRaw = heroRawUrl(profile);
+  const srcFor  = (url, w) => imgUrl(url, { width: url && url === heroRaw ? HERO_WIDTH : w });
+
   const avatarBlock = (
     <div style={{ position:'relative' }}>
       <div
@@ -1119,7 +1212,14 @@ export default function PublicProfile() {
           <>
             <div className="pp-content-col" style={{ position:'relative' }}>
               <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
-                <LazyImg src={imgUrl(profile.banner_url, { width: bannerW })} alt="Bannière du profil" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                {/* [PERF2c] Bannière en haut de page : jamais lazy ; prioritaire si c'est le hero */}
+                <LazyImg
+                  eager
+                  priority={!!heroRaw && heroRaw === profile.banner_url}
+                  src={srcFor(profile.banner_url, bannerW)}
+                  alt="Bannière du profil"
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                />
               </div>
               <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(65%)' }}>
                 {avatarBlock}
@@ -1190,7 +1290,15 @@ export default function PublicProfile() {
           <div className="pp-content-col" style={{ marginBottom:'20px' }}>
             {images.length > 0 && (
               <div style={{ position:'relative', borderRadius:'20px', overflow:'hidden', marginBottom:'12px', boxShadow:'0 8px 32px rgba(0,0,0,0.3)', touchAction:'pan-y' }} onTouchStart={handleTouchStart}>
-                <img src={imgUrl(images[currentIndex], { width: eventW })} alt="event" style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }} onClick={() => setLightboxSrc(images[currentIndex])} />
+                {/* [PERF2b][PERF2c] Image LCP : même URL que le preload, fetchPriority high sur la 1re */}
+                <img
+                  src={srcFor(images[currentIndex], eventW)}
+                  alt={profile.event_name || "Image de l'événement"}
+                  fetchPriority={currentIndex === 0 ? 'high' : undefined}
+                  decoding="async"
+                  style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }}
+                  onClick={() => setLightboxSrc(images[currentIndex])}
+                />
                 <div style={{ position:'absolute', bottom:'14px', right:'12px', display:'flex', gap:'6px', zIndex:10 }}>
                   <button onClick={e => { e.stopPropagation(); setLightboxSrc(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.9)', color:'white', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', touchAction:'manipulation', minHeight:'36px' }}>
                     <ZoomIn size={12} /> Afficher

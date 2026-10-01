@@ -138,10 +138,18 @@ const FONT_LINK_ID          = 'pp-font-manrope';
 // projet Supabase n'a pas la transformation d'image activée (le CDN
 // ignore alors simplement ces paramètres et sert l'original).
 // ⚠️ [PERF2b] Copie identique dans api/profile.js — à garder synchronisées.
-function imgUrl(url, { width, quality = 70, format = 'webp' } = {}) {
-  if (!url || !width) return url;
-  const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}width=${width}&quality=${quality}&format=${format}`;
+// Transformation d'image Supabase INDISPONIBLE sur ce projet (render/image → 403,
+// plan Pro requis). Tant que ce drapeau est false, imgUrl() renvoie l'URL
+// d'origine inchangée : même URL pour le preload, le mode léger et le mode complet.
+// Après passage au plan Pro : mettre true (la requête passe alors par
+// /render/image/public/ ; le WebP est négocié automatiquement par Supabase).
+const IMG_TRANSFORM = false;
+function imgUrl(url, { width, quality = 70 } = {}) {
+  if (!IMG_TRANSFORM || !url || !width) return url;
+  if (!url.includes('/storage/v1/object/public/')) return url;
+  const base = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}width=${width}&quality=${quality}`;
 }
 
 // Largeurs demandées selon le mode — mode léger nettement plus bas, mode

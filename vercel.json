@@ -16,7 +16,7 @@
       "destination": "/api/profile?username=:username"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|fonts/|.*\\.).*)",
       "destination": "/index.html"
     }
   ],

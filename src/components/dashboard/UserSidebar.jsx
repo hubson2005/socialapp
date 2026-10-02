@@ -9,44 +9,61 @@ import {
 import { useTranslation } from 'react-i18next';
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
+// Aligné sur la grille tarifaire de la page d'accueil :
+//  • BASIC    : carte, liens, marketplace, imports, formulaires, calendrier
+//  • PRO      : + analytics détaillées + temps réel
+//  • BUSINESS : + CRM, CRM WhatsApp, automatisations, intégrations, tracking IP
+//  • ÉVÉNEMENT: option à 3 500 FCFA, disponible quel que soit le plan
+//               → l'entrée "Événement" n'est donc plus verrouillée par plan
+//               (avant : locked: 'pro').
 export const USER_NAV = [
-  { id: 'overview',      label: 'Dashboard',       icon: LayoutDashboard, group: 'main',      locked: null,       path: null                        },
-  { id: 'platforms',     label: 'Plateformes',     icon: Link2,           group: 'content',   locked: null,       path: null                        },
-  { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: 'pro',      path: null                        },
-  { id: 'marketplace',   label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null,       path: null                        },
-  { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null                        },
-  { id: 'booking',       label: 'Calendrier',      icon: CalendarClock,   group: 'content',   locked: null,       path: null                        },
-  { id: 'forms',         label: 'Formulaires',     icon: FileText,        group: 'content',   locked: null,       path: null                        },
-  { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null                        },
-  { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null                        },
+  { id: 'overview',      label: 'Dashboard',       icon: LayoutDashboard, group: 'main',      locked: null,       path: null },
+  { id: 'platforms',     label: 'Plateformes',     icon: Link2,           group: 'content',   locked: null,       path: null },
+  { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: null,       path: null }, // option payante par événement, tous plans
+  { id: 'marketplace',   label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null,       path: null },
+  { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null },
+  { id: 'booking',       label: 'Calendrier',      icon: CalendarClock,   group: 'content',   locked: null,       path: null },
+  { id: 'forms',         label: 'Formulaires',     icon: FileText,        group: 'content',   locked: null,       path: null },
+  { id: 'analytics',     label: 'Analytics',       icon: BarChart2,       group: 'analytics', locked: 'pro',      path: null },
+  { id: 'realtime',      label: 'Temps réel',      icon: Activity,        group: 'analytics', locked: 'pro',      path: null },
   // ── Masqués côté Dashboard utilisateur : en cours de test sur le Dashboard admin ──
-  { id:'meta', label:'Connexion Meta', icon:Zap, group:'crm', hidden: true },
-  { id: 'crm',           label: 'CRM / Leads',     icon: Users,           group: 'business',  locked: 'business', path: null                        },
-  { id: 'whatsapp-crm',  label: 'WhatsApp CRM',    icon: MessageCircle,   group: 'business',  locked: 'business', path: null                        },
-  { id: 'profile-visits', label: 'Visiteurs',       icon: Eye,             group: 'business',  locked: 'business', path: null                       },
-  { id: 'automations',   label: 'Automatisations', icon: Zap,             group: 'business',  locked: 'business', path: null                        },
-  { id: 'integrations',  label: 'Intégrations',    icon: GitBranch,       group: 'business',  locked: 'business', path: null                        },
+  // (Sponsoring Facebook/Instagram = "BIENTÔT DISPONIBLE" dans la grille BUSINESS)
+  { id: 'meta', label: 'Connexion Meta', icon: Zap, group: 'crm', hidden: true },
+  { id: 'crm',            label: 'CRM / Leads',     icon: Users,         group: 'business', locked: 'business', path: null },
+  { id: 'whatsapp-crm',   label: 'WhatsApp CRM',    icon: MessageCircle, group: 'business', locked: 'business', path: null },
+  { id: 'profile-visits', label: 'Visiteurs',       icon: Eye,           group: 'business', locked: 'business', path: null }, // Tracking IP
+  { id: 'automations',    label: 'Automatisations', icon: Zap,           group: 'business', locked: 'business', path: null },
+  { id: 'integrations',   label: 'Intégrations',    icon: GitBranch,     group: 'business', locked: 'business', path: null },
   { id: 'boost', label: 'Boost & Promo', icon: Zap, group: 'crm', badge: 'NEW', hidden: true },
   { id: 'boost-analytics', label: 'Analytics Boost', icon: BarChart3, group: 'crm', hidden: true },
   { id: 'promotions', label: 'Promotions', icon: Zap, group: 'crm', badge: 'NEW', hidden: true },
-  { id: 'settings',      label: 'Paramètres',      icon: Settings,        group: 'admin',     locked: null,       path: null                        },
+  { id: 'settings',      label: 'Paramètres',      icon: Settings,        group: 'admin',     locked: null,       path: null },
 ];
 
 export const USER_GROUPS = [
   { id: 'main',      label: 'Menu'      },
   { id: 'content',   label: 'Contenu'   },
   { id: 'analytics', label: 'Analytics' },
-  { id: 'crm',       label: 'Boost & CRM' },  // ← ligne ajoutée
+  { id: 'crm',       label: 'Boost & CRM' },
   { id: 'business',  label: 'Business'  },
   { id: 'admin',     label: 'Compte'    },
 ];
 
-export const PLAN_ORDER = { basic: 0, événement: 0, pro: 1, business: 2 };
+export const PLAN_ORDER = { basic: 0, 'événement': 0, evenement: 0, pro: 1, business: 2 };
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
-// FIX — doublon supprimé : le rendu de l'avatar (photo ou initiale) était
-// copié-collé identique dans le bloc "profil replié" et "profil déplié".
-// Extrait ici une bonne fois pour toutes.
+// Normalise la valeur de plan venant de la base (casse, accents, vide).
+export function normalizePlan(plan) {
+  const p = String(plan || 'basic').trim().toLowerCase();
+  return PLAN_ORDER[p] === undefined ? 'basic' : p;
+}
+
+// Message d'invitation à la mise à niveau selon le niveau courant.
+const UPGRADE_HINT = {
+  0: { title: 'Passer à PRO ou BUSINESS', sub: 'Analytics, temps réel, CRM…' },
+  1: { title: 'Passer à BUSINESS',        sub: 'CRM, WhatsApp IA, automatisations…' },
+};
+
 function AvatarBubble({ profile, limits, size = 32, radius = 9 }) {
   return (
     <div style={{
@@ -75,28 +92,20 @@ export default function UserSidebar({
   isMobile,
   isTablet = false,
   isAdmin = false,
-  // [DÉPLACÉ] onBgUpload / onBgRemove / bgImageUrl / uploadingBg retirés :
-  // le contrôle d'image de fond vit maintenant dans OverviewPanel (carte
-  // Profil). UserDashboard peut continuer à les passer sans problème,
-  // ils seront simplement ignorés par React.
   userEmail,
   onSignOut,
-  // Déjà transmis par UserDashboard (onUpgrade={()=>handleOpenUpgrade()})
-  // mais jusqu'ici non déclaré ici, donc ignoré silencieusement par React.
   onUpgrade,
 }) {
-  const currentOrder = PLAN_ORDER[plan] ?? 0;
+  // FIX — plan normalisé (casse / accents) : "Business", "ÉVÉNEMENT"… ne
+  // retombent plus silencieusement sur un mauvais niveau.
+  const planKey = normalizePlan(plan);
+  const currentOrder = PLAN_ORDER[planKey] ?? 0;
   const isMaxPlan = currentOrder >= MAX_PLAN_ORDER;
+  const upgradeHint = UPGRADE_HINT[currentOrder] || UPGRADE_HINT[0];
 
-  // Cible tactile agrandie sur mobile et tablette (écrans tactiles) : les
-  // petits boutons icône (toggle, retirer le fond) passent de 28px à une
-  // taille conforme aux recommandations Apple/Material.
   const touchDevice = isMobile || isTablet;
   const utilityBtnSize = touchDevice ? 40 : 28;
 
-  // FIX iOS/Android — quand le tiroir mobile est ouvert, on bloque le
-  // scroll du body pour éviter l'effet de "double scroll" / bounce
-  // élastique qui laisse apparaître le contenu du dashboard derrière.
   useEffect(() => {
     if (!isMobile) return;
     if (collapsed) return;
@@ -106,22 +115,13 @@ export default function UserSidebar({
   }, [isMobile, collapsed]);
 
   const isNavLocked = (item) => {
-    if (isAdmin) return false; // FIX — un compte admin n'est jamais restreint par le plan
+    if (isAdmin) return false;
     if (!item.locked) return false;
     return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
   };
 
-  // [SIMPLIFICATION PAR PLAN] Auparavant, une entrée non incluse dans le
-  // plan (Événement, Analytics, CRM…) restait dans le menu, grisée avec
-  // un cadenas + badge PRO/BUSINESS. On la retire désormais complètement
-  // de la navigation — cohérent avec le filtrage déjà appliqué dans
-  // OverviewPanel : le menu Basic est plus court que celui de Pro,
-  // lui-même plus court que celui de Business, plutôt que la même liste
-  // pour les trois avec plus ou moins de cadenas. Un admin garde le menu
-  // complet (isNavLocked renvoie toujours false pour lui).
-  // Pour revenir à l'ancien comportement (entrées verrouillées visibles),
-  // il suffit de retirer `&& !isNavLocked(n)` ci-dessous — le rendu sait
-  // encore afficher l'état verrouillé si besoin (voir plus bas).
+  // Les entrées non incluses dans le plan sont retirées du menu (Basic < Pro < Business).
+  // Pour réafficher les entrées verrouillées (cadenas + badge), retirer `&& !isNavLocked(n)`.
   const visibleNav = USER_NAV.filter(n => !n.hidden && !isNavLocked(n));
 
   const handleNav = (id, locked) => {
@@ -141,8 +141,6 @@ export default function UserSidebar({
         transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
         zIndex: 20,
-        // Évite que le logo passe sous l'encoche iOS et que le pied de
-        // tiroir passe sous le home indicator.
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
         boxSizing: 'border-box',
@@ -171,9 +169,6 @@ export default function UserSidebar({
         />
       )}
 
-      {/* Fond bleu nuit foncé (remplace l'ancien dégradé magenta→orange +
-          voile noir). Dégradé vertical très sombre, cohérent avec la
-          topbar "bleu nuit" du dashboard. */}
       <div style={{
         ...sidebarStyle,
         background: 'linear-gradient(180deg, #060a1a 0%, #0d1730 60%, #142140 100%)',
@@ -260,13 +255,7 @@ export default function UserSidebar({
           </div>
         )}
 
-        {/* ── Navigation ──
-            [SIMPLIFICATION PAR PLAN] `visibleNav` exclut maintenant les
-            items masqués (hidden) ET verrouillés (isNavLocked) : plus
-            aucune entrée du menu n'est jamais dans un état "locked" ici,
-            le bloc `locked`/badge/cadenas ci-dessous est donc du code
-            mort défensif (conservé volontairement au cas où le filtre
-            serait retiré plus tard pour revenir à l'ancien comportement). */}
+        {/* ── Navigation ── */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
@@ -290,7 +279,7 @@ export default function UserSidebar({
                 }
 
                 {items.map(item => {
-                  const locked    = isNavLocked(item); // toujours false ici (voir visibleNav), conservé pour robustesse
+                  const locked    = isNavLocked(item);
                   const isActive  = activeSection === item.id;
                   const lockColor = item.locked === 'business' ? '#f7c948' : '#ff8c00';
                   const lockLabel = item.locked === 'business' ? 'BUSINESS' : 'PRO';
@@ -393,11 +382,8 @@ export default function UserSidebar({
             );
           })}
 
-          {/* Rappel d'upgrade en bas de menu — visible seulement si le plan
-              a des sections masquées (donc jamais pour Business). Évite
-              que l'utilisateur Basic/Pro ne sache même pas que d'autres
-              fonctionnalités existent, maintenant qu'elles ont disparu
-              du menu plutôt que d'y apparaître verrouillées. */}
+          {/* Rappel d'upgrade : message adapté au plan (BASIC → PRO/BUSINESS,
+              PRO → BUSINESS). Jamais affiché pour BUSINESS ni pour un admin. */}
           {!isAdmin && !isMaxPlan && (!collapsed || isMobile) && (
             <button
               onClick={() => onUpgrade?.()}
@@ -409,21 +395,21 @@ export default function UserSidebar({
               }}
             >
               <Crown size={14} color="#ff8c42" style={{ flexShrink: 0 }} />
-              <span style={{ color: '#ffb673', fontSize: '11px', fontWeight: 600 }}>
-                Plus de fonctionnalités en {plan === 'basic' ? 'PRO/BUSINESS' : 'BUSINESS'}
+              <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span style={{ color: '#ffb673', fontSize: '11px', fontWeight: 700 }}>
+                  {upgradeHint.title}
+                </span>
+                <span style={{ color: 'rgba(255,182,115,0.65)', fontSize: '9.5px', fontWeight: 500 }}>
+                  {upgradeHint.sub}
+                </span>
               </span>
             </button>
           )}
         </div>
 
-        {/* ── Footer (déplié) : email + déconnexion ──
-            [DÉPLACÉ] Le bouton "Image de fond" a été retiré d'ici et vit
-            désormais dans la carte Profil (OverviewPanel.jsx), au plus
-            près de l'aperçu du profil qu'il modifie. */}
+        {/* ── Footer (déplié) ── */}
         {(!collapsed || isMobile) && (
           <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-
-            {/* ✅ email du compte + bouton de déconnexion */}
             {onSignOut && (
               <div>
                 {userEmail && (
@@ -451,7 +437,7 @@ export default function UserSidebar({
           </div>
         )}
 
-        {/* ── Footer (replié, desktop/tablette) : icône déconnexion seule ── */}
+        {/* ── Footer (replié) ── */}
         {collapsed && !isMobile && onSignOut && (
           <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
             <button

@@ -101,10 +101,10 @@ function useWindowWidth() {
 // NB : la page d'accueil ne précise pas de plafond de liens pour BUSINESS —
 // la valeur 17 d'origine est conservée (à ajuster ici si besoin).
 const PLAN_LIMITS = {
-  basic:      { maxLinks:9,  maxProfiles:1, hasStats:false, maxMarketplace:7,        maxDocs:2,  maxForms:5,        hasEvent:false, hasRealtime:false, hasCRM:false,  hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'BASIC',      color:'#6366f1', emoji:'⚡',  price:'10 000 FCFA' },
-  pro:        { maxLinks:12, maxProfiles:1, hasStats:true,  maxMarketplace:10,       maxDocs:5,  maxForms:Infinity, hasEvent:true,  hasRealtime:true,  hasCRM:false,  hasAutomations:false, hasIntegrations:'partial',  hasAdvancedAnalytics:false, qrType:'premium',  colorCustom:'advanced', badge:true,  label:'PRO',        color:'#ff8c00', emoji:'🚀',  price:'15 000 FCFA' },
-  business:   { maxLinks:17, maxProfiles:1, hasStats:true,  maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true,  hasRealtime:true,  hasCRM:true,   hasAutomations:true,  hasIntegrations:true,       hasAdvancedAnalytics:true,  qrType:'dynamic',  colorCustom:'complete', badge:true,  label:'BUSINESS',   color:'#f7c948', emoji:'💼',  price:'39 900 FCFA', priceMonthly:'3 990 FCFA' },
-  événement:  { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:0,        maxDocs:0,  hasEvent:true,     hasRealtime:false, hasCRM:false,   hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'ÉVÉNEMENT',  color:'#22c55e', emoji:'🎉',  price:'3 500 FCFA' },
+  basic:      { maxLinks:9,  maxProfiles:1, hasStats:false, maxMarketplace:7,        maxDocs:2,  maxForms:5,        hasEvent:true, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:false, hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'standard', colorCustom:'basic',    badge:false, label:'BASIC',     color:'#6366f1', emoji:'⚡', price:'10 000 FCFA' },
+  pro:        { maxLinks:12, maxProfiles:1, hasStats:true,  maxMarketplace:10,       maxDocs:5,  maxForms:Infinity, hasEvent:true, hasRealtime:true,  hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:true,  hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'premium',  colorCustom:'advanced', badge:true,  label:'PRO',       color:'#ff8c00', emoji:'🚀', price:'15 000 FCFA' },
+  business:   { maxLinks:17, maxProfiles:1, hasStats:true,  maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true, hasRealtime:true,  hasCRM:true,  hasAutomations:true,  hasIntegrations:true,  hasAdvancedAnalytics:true,  hasNFC:true,  hasIPTracking:true,  hasWhatsAppAI:true,  support:'vip',      qrType:'dynamic',  colorCustom:'complete', badge:true,  label:'BUSINESS',  color:'#f7c948', emoji:'💼', price:'39 900 FCFA', priceMonthly:'3 990 FCFA' },
+  événement:  { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:0,        maxDocs:0,  maxForms:0,        hasEvent:true, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:false, hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'standard', colorCustom:'basic',    badge:false, label:'ÉVÉNEMENT', color:'#22c55e', emoji:'🎉', price:'3 500 FCFA' },
 };
 
 const isVideoUrl   = (url) => /\.(mp4|webm|ogg|mov|avi|mkv|quicktime)$/i.test(url || '');
@@ -146,7 +146,7 @@ function BillingToggle({ value, onChange, compact = false }) {
   );
 }
 
-function PlanModal({ onClose, onSelect, billing = 'annual', setBilling }) {
+function PlanModal({ onClose, onSelect, billing = 'annual', setBilling, currentPlan = null }) {
   const plans = [
     {
       name:'BASIC', emoji:'⚡', price:'10 000', color:'#4f46e5',
@@ -204,6 +204,13 @@ function PlanModal({ onClose, onSelect, billing = 'annual', setBilling }) {
       ],
     },
   ];
+
+    // Upgrade : on ne propose que les offres au-dessus de l'offre actuelle.
+  // Si aucune (BUSINESS / admin) ou pas de currentPlan : on affiche tout.
+  const currentOrder = currentPlan ? (PLAN_ORDER[currentPlan] ?? 0) : -1;
+  const higher = plans.filter(p => (PLAN_ORDER[p.name.toLowerCase()] ?? 0) > currentOrder);
+  const shownPlans = higher.length ? higher : plans;
+
   return (
     <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}
       style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(15,17,30,.55)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
@@ -219,8 +226,8 @@ function PlanModal({ onClose, onSelect, billing = 'annual', setBilling }) {
           {setBilling && <BillingToggle value={billing} onChange={setBilling} compact />}
           {setBilling && <div style={{ fontSize:'11px', color:'#a2a7b5', marginTop:'8px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>}
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px' }} className="plan-modal-grid">
-          {plans.map((p,i) => {
+        <div style={{ display:'grid', gridTemplateColumns:`repeat(${shownPlans.length},1fr)`, gap:'14px', maxWidth: shownPlans.length === 1 ? '360px' : undefined, margin:'0 auto' }} className="plan-modal-grid">
+  {shownPlans.map((p,i) => {
             const isMonthly = !!p.monthly && billing === 'monthly';
             return (
               <div key={i} onClick={()=>onSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual')} className="plan-modal-card"
@@ -265,7 +272,8 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }
   const color = isPro ? '#d9591f' : '#b8860b';
   const planLabel = isPro ? 'PRO' : 'BUSINESS';
   // [PLANS 2026] Prix lu depuis PLAN_LIMITS (source unique) plutôt qu'en dur.
-  const price = (PLAN_LIMITS[isPro ? 'pro' : 'business'].price) + ' / an';
+  const planInfo = PLAN_LIMITS[isPro ? 'pro' : 'business'];
+  const price = planInfo.price + ' / an';
   return (
     <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'360px', gap:'20px', textAlign:'center', padding:'40px 32px', background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'20px' }}>
       <div style={{ position:'relative' }}>
@@ -278,7 +286,7 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }
         <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:color+'14', border:'1px solid '+color+'40', borderRadius:'100px', padding:'5px 14px', marginBottom:'6px' }}>
           <span style={{ color, fontSize:'13px', fontWeight:700 }}>{planLabel}</span>
         </div>
-        <p style={{ color:'#9095a5', fontSize:'12px', margin:'6px 0 0' }}>{price}</p>
+        <p style={{ color:'#9095a5', fontSize:'12px', margin:'6px 0 0' }}>{price}{planInfo.priceMonthly ? ` · ou ${planInfo.priceMonthly} / mois` : ''}</p>
       </div>
       <button type="button" onClick={onUpgrade} style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'linear-gradient(135deg,'+color+','+color+'cc)', borderRadius:'14px', padding:'12px 28px', color:'white', fontSize:'14px', fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 8px 20px '+color+'33' }}>
         <Crown size={15} /> Passer en {planLabel} — {price}
@@ -886,7 +894,7 @@ export default function UserDashboard() {
             billing={billing}
             setBilling={setBilling}
           />
-          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />}</AnimatePresence>
+         <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} currentPlan={effectivePlan} />}</AnimatePresence>
         </>
       );
     } else {
@@ -927,9 +935,9 @@ export default function UserDashboard() {
               <MarketplacePanel profileId={localProfile.id} maxProducts={limits.maxMarketplace === Infinity ? 9999 : limits.maxMarketplace} />
             </div>
           );
-          case 'documents':       return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} /></div>;
+          case 'documents':  return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} maxDocs={limits.maxDocs} onUpgrade={()=>handleOpenUpgrade()} /></div>;
           case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={()=>handleOpenUpgrade()} /></div>;
-          case 'analytics':       return limits.hasStats    ? <AnalyticsPanel profileId={localProfile.id} /> : null;
+          case 'analytics':  return limits.hasStats ? <AnalyticsPanel profileId={localProfile.id} advanced={limits.hasAdvancedAnalytics} /> : null;
           case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
           case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
           case 'profile-visits': return <ProfileVisitsPanel profileId={localProfile.id} />;

@@ -91,11 +91,20 @@ function useWindowWidth() {
   return width;
 }
 
+// [PLANS 2026] Grille tarifaire alignée sur la page d'accueil (Home.jsx) :
+//  - BASIC    10 000 FCFA/an  · 9 liens  · 2 imports  · 7 articles  · 5 formulaires
+//  - PRO      15 000 FCFA/an  · 12 liens · 5 imports  · 10 articles · formulaires illimités
+//  - BUSINESS 39 900 FCFA/an (10 mois payés sur 12) ou 3 990 FCFA/mois
+//             · 10 imports · articles et formulaires illimités
+//  - ÉVÉNEMENT 3 500 FCFA (module à l'unité, quel que soit le plan)
+// `price` = tarif annuel (ou unique) ; `priceMonthly` n'existe que pour BUSINESS.
+// NB : la page d'accueil ne précise pas de plafond de liens pour BUSINESS —
+// la valeur 17 d'origine est conservée (à ajuster ici si besoin).
 const PLAN_LIMITS = {
-  basic:      { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:4,        maxDocs:1,  maxForms:1,        hasEvent:false, hasRealtime:false, hasCRM:false,  hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'BASIC',      color:'#6366f1', emoji:'⚡',  price:'10 000 FCFA' },
-  pro:        { maxLinks:8,  maxProfiles:1, hasStats:true,  maxMarketplace:10,       maxDocs:3,  maxForms:5,        hasEvent:true,  hasRealtime:true,  hasCRM:false,  hasAutomations:false, hasIntegrations:'partial',  hasAdvancedAnalytics:false, qrType:'premium',  colorCustom:'advanced', badge:true,  label:'PRO',        color:'#ff8c00', emoji:'🚀',  price:'15 000 FCFA' },
-  business:   { maxLinks:17, maxProfiles:1, hasStats:true,  maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true,  hasRealtime:true,  hasCRM:true,   hasAutomations:true,  hasIntegrations:true,       hasAdvancedAnalytics:true,  qrType:'dynamic',  colorCustom:'complete', badge:true,  label:'BUSINESS',   color:'#f7c948', emoji:'💼',  price:'25 000 FCFA' },
-  événement:  { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:0,        maxDocs:0,  hasEvent:true,     hasRealtime:false, hasCRM:false,   hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'ÉVÉNEMENT',  color:'#22c55e', emoji:'🎉',  price:'' },
+  basic:      { maxLinks:9,  maxProfiles:1, hasStats:false, maxMarketplace:7,        maxDocs:2,  maxForms:5,        hasEvent:false, hasRealtime:false, hasCRM:false,  hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'BASIC',      color:'#6366f1', emoji:'⚡',  price:'10 000 FCFA' },
+  pro:        { maxLinks:12, maxProfiles:1, hasStats:true,  maxMarketplace:10,       maxDocs:5,  maxForms:Infinity, hasEvent:true,  hasRealtime:true,  hasCRM:false,  hasAutomations:false, hasIntegrations:'partial',  hasAdvancedAnalytics:false, qrType:'premium',  colorCustom:'advanced', badge:true,  label:'PRO',        color:'#ff8c00', emoji:'🚀',  price:'15 000 FCFA' },
+  business:   { maxLinks:17, maxProfiles:1, hasStats:true,  maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true,  hasRealtime:true,  hasCRM:true,   hasAutomations:true,  hasIntegrations:true,       hasAdvancedAnalytics:true,  qrType:'dynamic',  colorCustom:'complete', badge:true,  label:'BUSINESS',   color:'#f7c948', emoji:'💼',  price:'39 900 FCFA', priceMonthly:'3 990 FCFA' },
+  événement:  { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:0,        maxDocs:0,  hasEvent:true,     hasRealtime:false, hasCRM:false,   hasAutomations:false, hasIntegrations:false,      hasAdvancedAnalytics:false, qrType:'standard', colorCustom:'basic',    badge:false, label:'ÉVÉNEMENT',  color:'#22c55e', emoji:'🎉',  price:'3 500 FCFA' },
 };
 
 const isVideoUrl   = (url) => /\.(mp4|webm|ogg|mov|avi|mkv|quicktime)$/i.test(url || '');
@@ -111,39 +120,131 @@ const db = {
   update: async (id, data) => { const { data: updated, error } = await supabase.from('link_profiles').update(data).eq('id', id).select().maybeSingle(); if (error) throw error; return updated; },
 };
 
-function PlanModal({ onClose, onSelect }) {
+// [PLANS 2026] Bascule Mensuel / Annuel (thème clair du dashboard).
+// Le paiement mensuel n'existe que pour l'offre BUSINESS.
+function BillingToggle({ value, onChange, compact = false }) {
+  const btn = (active) => ({
+    padding: compact ? '6px 14px' : '8px 18px',
+    borderRadius: '100px',
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    fontWeight: 700,
+    fontSize: compact ? '11px' : '12px',
+    color: active ? '#ffffff' : '#6b7280',
+    background: active ? 'linear-gradient(135deg,#ff8c42,#f7c948)' : 'transparent',
+    transition: 'all .2s',
+    whiteSpace: 'nowrap',
+  });
+  return (
+    <div style={{ display:'inline-flex', alignItems:'center', gap:'4px', padding:'4px', borderRadius:'100px', background:'#f1f2f7', border:'1px solid #e2e4ee' }}>
+      <button type="button" style={btn(value === 'monthly')} onClick={(e) => { e.stopPropagation(); onChange('monthly'); }}>Mensuel</button>
+      <button type="button" style={btn(value === 'annual')} onClick={(e) => { e.stopPropagation(); onChange('annual'); }}>
+        Annuel <span style={{ marginLeft:'4px', fontSize:'10px', color: value === 'annual' ? '#ffffff' : '#16a34a' }}>2 mois offerts</span>
+      </button>
+    </div>
+  );
+}
+
+function PlanModal({ onClose, onSelect, billing = 'annual', setBilling }) {
   const plans = [
-    { name:'BASIC', emoji:'⚡', price:'10 000', color:'#4f46e5', subtitle:'Particulier, petit commerce, entrepreneur débutant', bg:'#f5f6ff', border:'1px solid #d9dcfb', features:['1 profil · 3 liens sociaux','Page publique','QR Code standard','1 import PDF','Marketplace (4 produits)'] },
-    { name:'PRO', emoji:'🚀', price:'15 000', color:'#d9591f', popular:true, subtitle:'Professionnels, influenceurs, restaurants, boutiques', bg:'#fff6ef', border:'2px solid #f3b183', features:['1 profil · 8 liens sociaux','1 Carte NFC ou PVC','Analytics & stats détaillées','Temps réel — visiteurs live','Mode Événement inclus','Marketplace (10 produits)','Support standard'] },
-    { name:'BUSINESS', emoji:'💼', price:'25 000', color:'#b8860b', subtitle:'Grandes entreprises, agences com, marques établies', bg:'#fffaf0', border:'1px solid #f0dca3', features:['1 profil · 17 liens sociaux','1 Carte NFC ou PVC','CRM & Pipeline de leads','CRM WHATSAPP','Automatisations','Marketplace illimitée','Support VIP prioritaire'] },
+    {
+      name:'BASIC', emoji:'⚡', price:'10 000', color:'#4f46e5',
+      subtitle:'Particulier, petit commerce, Étudiants, Freelances',
+      bg:'#f5f6ff', border:'1px solid #d9dcfb',
+      features:[
+        'Une carte de visite digitale',
+        '09 liens sociaux',
+        'QR Code personnalisable',
+        '02 imports autorisés (PDF, plaquette, brochure, etc.)',
+        "Marketplace : ajout jusqu'à 07 articles",
+        '05 formulaires personnalisés',
+        'Calendrier de réservation',
+      ],
+    },
+    {
+      name:'PRO', emoji:'🚀', price:'15 000', color:'#d9591f', popular:true,
+      subtitle:'Prestataires de services, Professions libérales, Créateurs de contenu, Automobile, Commerçants, Événementiel',
+      bg:'#fff6ef', border:'2px solid #f3b183',
+      features:[
+        'Une carte de visite digitale',
+        '12 liens sociaux',
+        'Carte NFC (logo + QR CODE)',
+        'Analytics & statistiques détaillées',
+        'Stat temps réel — flux visiteurs live',
+        'Calendrier de réservation (RDV en ligne)',
+        'Formulaires personnalisés illimités',
+        "Marketplace : ajout jusqu'à 10 articles",
+        '5 imports autorisés (flyers, plaquettes, brochures, etc.)',
+        'QR Code personnalisable',
+        'Support standard',
+      ],
+    },
+    {
+      name:'BUSINESS', emoji:'💼', price:'39 900', monthly:'3 990', offer:'2 mois offerts', color:'#b8860b',
+      subtitle:'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances',
+      bg:'#fffaf0', border:'1px solid #f0dca3',
+      features:[
+        'Une carte de visite digitale',
+        'Carte NFC (logo + QR CODE)',
+        'Analytics avancés complets',
+        'CRM & Pipeline de leads',
+        'CRM WhatsApp complet',
+        'Campagnes WhatsApp IA (génération automatique)',
+        'Calendrier de réservation illimité',
+        'Formulaires illimités',
+        'Automatisations',
+        'Toutes les intégrations (HubSpot, Pipedrive, Google Analytics, Shopify, PostgreSQL, Mailchimp, Notion, Salesforce, etc.)',
+        "Marketplace : ajout d'articles illimité",
+        '10 imports autorisés (flyers, plaquettes, brochures, etc.)',
+        'QR Code personnalisable',
+        'Tracking IP',
+        'Sponsoring SocialApp : lancez vos campagnes Facebook & Instagram depuis votre tableau de bord, synchronisées avec votre CRM (BIENTÔT DISPONIBLE)',
+        'Support VIP prioritaire',
+      ],
+    },
   ];
   return (
     <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}
       style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(15,17,30,.55)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
       <motion.div initial={{ opacity:0, scale:0.93, y:20 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.93 }} transition={{ type:'spring', stiffness:300, damping:25 }} onClick={e=>e.stopPropagation()}
-        style={{ background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'28px', padding:'36px 28px', maxWidth:'900px', width:'100%', boxShadow:'0 30px 80px rgba(15,23,42,.25)', maxHeight:'90vh', overflowY:'auto', position:'relative' }}>
+        style={{ background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'28px', padding:'36px 28px', maxWidth:'940px', width:'100%', boxShadow:'0 30px 80px rgba(15,23,42,.25)', maxHeight:'90vh', overflowY:'auto', position:'relative' }}>
         <button onClick={onClose} style={{ position:'absolute', top:'16px', right:'16px', background:'#f1f2f7', border:'1px solid #e2e4ee', borderRadius:'50%', width:'32px', height:'32px', color:'#6b7280', fontSize:'18px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit', lineHeight:1 }}>×</button>
         <div style={{ textAlign:'center', marginBottom:'28px' }}>
           <div style={{ display:'inline-flex', alignItems:'center', gap:'7px', background:'#fff1e8', border:'1px solid #f3c8a8', borderRadius:'100px', padding:'5px 14px', fontSize:'11px', color:'#c2530f', fontWeight:'700', marginBottom:'12px' }}>
             <span style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#c2530f' }} />Choisissez votre nouvelle offre
           </div>
           <h2 style={{ fontSize:'22px', fontWeight:'900', color:'#161a2e', margin:'0 0 6px', letterSpacing:'-0.5px' }}>Passez à la vitesse supérieure</h2>
-          <p style={{ color:'#6b7280', fontSize:'13px', margin:0 }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
+          <p style={{ color:'#6b7280', fontSize:'13px', margin:'0 0 16px' }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
+          {setBilling && <BillingToggle value={billing} onChange={setBilling} compact />}
+          {setBilling && <div style={{ fontSize:'11px', color:'#a2a7b5', marginTop:'8px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>}
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px' }} className="plan-modal-grid">
-          {plans.map((p,i) => (
-            <div key={i} onClick={()=>onSelect(p.name.toLowerCase())} className="plan-modal-card"
-              style={{ background:p.bg, border:p.border, borderRadius:'20px', padding:p.popular?'32px 20px 20px':'20px', position:'relative', cursor:'pointer', transition:'transform .18s, box-shadow .18s', marginTop:p.popular?'14px':'0', boxShadow:'0 1px 3px rgba(15,23,42,.06)' }}>
-              {p.popular && <div style={{ position:'absolute', top:'-13px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#ff8c42,#f7c948)', borderRadius:'100px', padding:'4px 14px', fontSize:'10px', fontWeight:'700', color:'#fff', whiteSpace:'nowrap', boxShadow:'0 4px 12px rgba(217,89,31,.3)' }}>⭐ Plus populaire</div>}
-              <div style={{ fontSize:'10px', fontWeight:'700', color:p.color, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'10px' }}>{p.emoji} {p.name}</div>
-              <div style={{ display:'flex', alignItems:'baseline', gap:'3px', marginBottom:'3px' }}><span style={{ fontSize:'28px', fontWeight:'900', color:'#161a2e', letterSpacing:'-1px' }}>{p.price}</span><span style={{ fontSize:'12px', color:'#9095a5' }}>FCFA</span></div>
-              <div style={{ fontSize:'10px', color:'#a2a7b5', marginBottom:'5px' }}>/ Paiement annuel</div>
-              <div style={{ fontSize:'11px', color:'#5c6270', marginBottom:'14px', lineHeight:'1.5', minHeight:'28px' }}>{p.subtitle}</div>
-              <hr style={{ border:'none', borderTop:'1px solid rgba(15,23,42,.08)', marginBottom:'12px' }} />
-              {p.features.map((f,j) => <div key={j} style={{ display:'flex', gap:'6px', marginBottom:'6px', fontSize:'11px', color:'#454b5a', alignItems:'flex-start' }}><span style={{ color:p.color, flexShrink:0, marginTop:'1px' }}>✓</span>{f}</div>)}
-              <button type="button" className="plan-modal-btn" style={{ display:'block', width:'100%', marginTop:'14px', padding:'11px', borderRadius:'11px', border:'none', background:p.popular?'linear-gradient(135deg,#ff8c42,#f7c948)':'#161a2e', color:'#fff', fontWeight:'700', fontSize:'12px', cursor:'pointer', fontFamily:'inherit' }}>Choisir {p.name} →</button>
-            </div>
-          ))}
+          {plans.map((p,i) => {
+            const isMonthly = !!p.monthly && billing === 'monthly';
+            return (
+              <div key={i} onClick={()=>onSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual')} className="plan-modal-card"
+                style={{ background:p.bg, border:p.border, borderRadius:'20px', padding:p.popular?'32px 20px 20px':'20px', position:'relative', cursor:'pointer', transition:'transform .18s, box-shadow .18s', marginTop:p.popular?'14px':'0', boxShadow:'0 1px 3px rgba(15,23,42,.06)' }}>
+                {p.popular && <div style={{ position:'absolute', top:'-13px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#ff8c42,#f7c948)', borderRadius:'100px', padding:'4px 14px', fontSize:'10px', fontWeight:'700', color:'#fff', whiteSpace:'nowrap', boxShadow:'0 4px 12px rgba(217,89,31,.3)' }}>⭐ Plus populaire</div>}
+                <div style={{ fontSize:'10px', fontWeight:'700', color:p.color, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'10px' }}>{p.emoji} {p.name}</div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:'3px', marginBottom:'3px' }}><span style={{ fontSize:'28px', fontWeight:'900', color:'#161a2e', letterSpacing:'-1px' }}>{isMonthly ? p.monthly : p.price}</span><span style={{ fontSize:'12px', color:'#9095a5' }}>FCFA</span></div>
+                <div style={{ fontSize:'10px', color:'#a2a7b5', marginBottom:'5px' }}>{isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel'}</div>
+                {p.monthly && !isMonthly && (
+                  <div style={{ marginBottom:'8px' }}>
+                    <div style={{ fontSize:'10px', color:'#5c6270', marginBottom:'4px' }}>soit 10 mois payés sur 12 (au lieu de {p.monthly} F × 12)</div>
+                    <span style={{ display:'inline-block', fontSize:'10px', fontWeight:'700', color:'#16a34a', background:'#ecfdf3', border:'1px solid #bbf7d0', borderRadius:'100px', padding:'3px 10px' }}>🎁 {p.offer}</span>
+                  </div>
+                )}
+                {p.monthly && isMonthly && (
+                  <div style={{ fontSize:'10px', color:'#5c6270', marginBottom:'8px' }}>Passez à l'annuel : <strong style={{ color:'#16a34a' }}>{p.price} F</strong> ({p.offer})</div>
+                )}
+                <div style={{ fontSize:'11px', color:'#5c6270', marginBottom:'14px', lineHeight:'1.5', minHeight:'28px' }}>{p.subtitle}</div>
+                <hr style={{ border:'none', borderTop:'1px solid rgba(15,23,42,.08)', marginBottom:'12px' }} />
+                {p.features.map((f,j) => <div key={j} style={{ display:'flex', gap:'6px', marginBottom:'6px', fontSize:'11px', color:'#454b5a', alignItems:'flex-start' }}><span style={{ color:p.color, flexShrink:0, marginTop:'1px' }}>✓</span>{f}</div>)}
+                <button type="button" className="plan-modal-btn" style={{ display:'block', width:'100%', marginTop:'14px', padding:'11px', borderRadius:'11px', border:'none', background:p.popular?'linear-gradient(135deg,#ff8c42,#f7c948)':'#161a2e', color:'#fff', fontWeight:'700', fontSize:'12px', cursor:'pointer', fontFamily:'inherit' }}>Choisir {p.name}{isMonthly ? ' (mensuel)' : ''} →</button>
+              </div>
+            );
+          })}
         </div>
         <p style={{ textAlign:'center', color:'#a2a7b5', fontSize:'11px', marginTop:'20px' }}>💬 Besoin d'aide ? WhatsApp <strong style={{ color:'#5c6270' }}>+225 05 76 03 12 12</strong></p>
       </motion.div>
@@ -163,7 +264,8 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }
   const isPro = requiredPlan === 'pro';
   const color = isPro ? '#d9591f' : '#b8860b';
   const planLabel = isPro ? 'PRO' : 'BUSINESS';
-  const price = isPro ? '15 000 FCFA / an' : '25 000 FCFA / an';
+  // [PLANS 2026] Prix lu depuis PLAN_LIMITS (source unique) plutôt qu'en dur.
+  const price = (PLAN_LIMITS[isPro ? 'pro' : 'business'].price) + ' / an';
   return (
     <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'360px', gap:'20px', textAlign:'center', padding:'40px 32px', background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'20px' }}>
       <div style={{ position:'relative' }}>
@@ -285,8 +387,12 @@ function PlatformsPanel({ localProfile, updateLocal, limits, showAddDialog, setS
   );
 }
 
-function PaymentRequiredGate({ plan, onPay, loading, onChangePlan, onSignOut, userEmail }) {
+function PaymentRequiredGate({ plan, onPay, loading, onChangePlan, onSignOut, userEmail, billing = 'annual', setBilling }) {
   const info = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
+  // [PLANS 2026] BUSINESS peut se payer au mois (3 990 FCFA) ou à l'année (39 900 FCFA).
+  const hasMonthly = !!info.priceMonthly;
+  const isMonthly = hasMonthly && billing === 'monthly';
+  const displayPrice = isMonthly ? info.priceMonthly : info.price;
   return (
     <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f4f5fa', padding:'24px' }}>
       <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', maxWidth:'380px', width:'100%', background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'24px', padding:'36px 28px', boxShadow:'0 20px 50px rgba(15,23,42,.08)' }}>
@@ -295,12 +401,18 @@ function PaymentRequiredGate({ plan, onPay, loading, onChangePlan, onSignOut, us
         <p style={{ color:'#6b7280', fontSize:'14px', margin:'0 0 24px', lineHeight:1.6 }}>
           Un dernier pas avant d'accéder à votre espace : réglez votre abonnement <strong style={{ color:info.color }}>{info.label}</strong> pour activer votre profil.
         </p>
+        {hasMonthly && setBilling && (
+          <div style={{ marginBottom:'16px' }}>
+            <BillingToggle value={billing} onChange={setBilling} compact />
+          </div>
+        )}
         <div style={{ background:'#f6f7fb', border:'1px solid #e6e8f0', borderRadius:'16px', padding:'20px', marginBottom:'20px' }}>
-          <p style={{ color:'#161a2e', fontSize:'30px', fontWeight:900, margin:'0 0 4px' }}>{info.price}</p>
+          <p style={{ color:'#161a2e', fontSize:'30px', fontWeight:900, margin:'0 0 4px' }}>{displayPrice}</p>
+          {hasMonthly && <p style={{ color:'#8a90a2', fontSize:'12px', margin:'0 0 4px' }}>{isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel · 2 mois offerts'}</p>}
           <p style={{ color:'#8a90a2', fontSize:'12px', margin:0 }}>Mobile Money · Wave · Orange Money</p>
         </div>
         <button onClick={onPay} disabled={loading} type="button" style={{ width:'100%', padding:'14px', borderRadius:'14px', border:'none', background:loading?'#e6e8f0':`linear-gradient(135deg,${info.color},${info.color}cc)`, color:'white', fontWeight:800, fontSize:'15px', cursor:loading?'default':'pointer', marginBottom:'12px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit' }}>
-          {loading ? <Loader2 size={16} className="animate-spin" /> : `Payer ${info.price} →`}
+          {loading ? <Loader2 size={16} className="animate-spin" /> : `Payer ${displayPrice} →`}
         </button>
         <button onClick={onChangePlan} type="button" style={{ width:'100%', padding:'11px', background:'transparent', border:'1px solid #dde0ea', borderRadius:'12px', color:'#6b7280', fontSize:'13px', cursor:'pointer', marginBottom:'20px', fontFamily:'inherit' }}>
           Changer d'offre
@@ -332,6 +444,9 @@ export default function UserDashboard() {
   const [showPreview, setShowPreview]       = useState(false);
   const [showWaveModal, setShowWaveModal]   = useState(false);
   const [showPlanModal, setShowPlanModal]   = useState(false);
+  // [PLANS 2026] Cycle de facturation choisi ('annual' | 'monthly').
+  // Ne s'applique qu'à BUSINESS ; les autres offres sont toujours annuelles.
+  const [billing, setBilling]               = useState('annual');
   // Modale d'upgrade ciblée par feature — null quand fermée, sinon
   // { featureName, requiredPlan } pour afficher le bon libellé/montant.
   const [featureUpgrade, setFeatureUpgrade] = useState(null);
@@ -406,12 +521,19 @@ export default function UserDashboard() {
   // (souscription initiale via PlanModal, ou renouvellement via la
   // bannière). Redirige vers le lien de paiement Wave/Orange Money/Free
   // Money renvoyé par la fonction Edge `geniuspay-checkout`.
-  const startGeniusPayCheckout = async (planSlug, mode = 'new') => {
+  //
+  // [PLANS 2026] `billingCycle` ('annual' | 'monthly') est transmis à la
+  // fonction Edge dans le champ `billing`. Seul BUSINESS accepte 'monthly'
+  // (3 990 FCFA) ; pour tout autre plan on force 'annual'. La fonction Edge
+  // doit lire `billing` pour choisir le montant (39 900 vs 3 990 FCFA) et
+  // la durée de l'abonnement (1 an vs 1 mois).
+  const startGeniusPayCheckout = async (planSlug, mode = 'new', billingCycle = 'annual') => {
     if (!localProfile?.id || checkoutLoading) return;
+    const cycle = planSlug === 'business' && billingCycle === 'monthly' ? 'monthly' : 'annual';
     setCheckoutLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('geniuspay-checkout', {
-        body: { profile_id: localProfile.id, plan: planSlug, mode },
+        body: { profile_id: localProfile.id, plan: planSlug, mode, billing: cycle },
       });
       if (error) throw error;
       if (!data?.checkoutUrl) throw new Error('Lien de paiement indisponible');
@@ -422,7 +544,7 @@ export default function UserDashboard() {
     }
   };
 
-  const handlePlanSelect = (planSlug) => { setShowPlanModal(false); startGeniusPayCheckout(planSlug, 'new'); };
+  const handlePlanSelect = (planSlug, billingCycle = 'annual') => { setShowPlanModal(false); startGeniusPayCheckout(planSlug, 'new', billingCycle); };
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['userProfiles', user?.id],
@@ -756,13 +878,15 @@ export default function UserDashboard() {
         <>
           <PaymentRequiredGate
             plan={rawPlan}
-            onPay={() => startGeniusPayCheckout(rawPlan, 'new')}
+            onPay={() => startGeniusPayCheckout(rawPlan, 'new', billing)}
             loading={checkoutLoading}
             onChangePlan={() => setShowPlanModal(true)}
             onSignOut={handleSignOut}
             userEmail={user?.email}
+            billing={billing}
+            setBilling={setBilling}
           />
-          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
+          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />}</AnimatePresence>
         </>
       );
     } else {
@@ -923,11 +1047,15 @@ export default function UserDashboard() {
                       composant gère lui-même sa visibilité (déjà installé,
                       fermé récemment, plateforme iOS vs Android/desktop). */}
                   <InstallPrompt />
+                  {/* [PLANS 2026] Renouvellement : on réutilise le cycle de
+                      facturation de l'abonnement en cours (colonne `billing`
+                      supposée sur `subscriptions` — à adapter si le nom
+                      diffère), 'annual' par défaut. */}
                   <SubscriptionRenewalBanner
                     subscription={subscription}
                     isActivated={isActivated}
                     loading={checkoutLoading}
-                    onRenew={() => startGeniusPayCheckout(effectivePlan, 'renewal')}
+                    onRenew={() => startGeniusPayCheckout(effectivePlan, 'renewal', subscription?.billing || 'annual')}
                   />
                   {renderSection()}
                 </div>
@@ -963,14 +1091,14 @@ export default function UserDashboard() {
                 onClose={()=>setFeatureUpgrade(null)}
                 featureName={featureUpgrade.featureName}
                 requiredPlan={featureUpgrade.requiredPlan}
-                onUpgrade={() => startGeniusPayCheckout(featureUpgrade.requiredPlan, 'new')}
+                onUpgrade={() => startGeniusPayCheckout(featureUpgrade.requiredPlan, 'new', billing)}
                 loading={checkoutLoading}
               />
             )}
           </AnimatePresence>
 
           {/* Comparatif complet des 3 offres — limites de quota (liens, formulaires…) */}
-          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} />}</AnimatePresence>
+          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />}</AnimatePresence>
 
           <style>{`
             @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }

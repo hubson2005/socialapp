@@ -14,36 +14,9 @@ import profilMockup from '../assets/INTERFACE_SOCIALAPP.png';
 import EventQuickCreateModal from '../components/EventQuickCreateModal';
 
 /* ─────────────────────────────────────────────
-   TOGGLE MENSUEL / ANNUEL
-───────────────────────────────────────────── */
-function BillingToggle({ value, onChange, compact = false }) {
-  const btn = (active) => ({
-    padding: compact ? '7px 16px' : '10px 22px',
-    borderRadius: '100px',
-    border: 'none',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    fontWeight: '700',
-    fontSize: compact ? '12px' : '13px',
-    color: active ? '#fff' : 'rgba(255,255,255,.55)',
-    background: active ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'transparent',
-    transition: 'all .2s',
-    whiteSpace: 'nowrap',
-  });
-  return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px', borderRadius: '100px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)' }}>
-      <button type="button" style={btn(value === 'monthly')} onClick={(e) => { e.stopPropagation(); onChange('monthly'); }}>Mensuel</button>
-      <button type="button" style={btn(value === 'annual')} onClick={(e) => { e.stopPropagation(); onChange('annual'); }}>
-        Annuel <span style={{ marginLeft: '4px', fontSize: compact ? '10px' : '11px', color: value === 'annual' ? '#fff' : '#22c55e' }}>2 mois offerts</span>
-      </button>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
    MODAL DE SÉLECTION D'OFFRE
 ───────────────────────────────────────────── */
-function PlanModal({ onClose, onSelect, billing, setBilling }) {
+function PlanModal({ onClose, onSelect }) {
   const plans = [
     {
       name: "BASIC", emoji: "⚡", price: "10 000", color: "#a78bfa",
@@ -78,7 +51,7 @@ function PlanModal({ onClose, onSelect, billing, setBilling }) {
       ],
     },
     {
-      name: "BUSINESS", emoji: "💼", price: "39 900", monthly: "3 990", offer: "2 mois offerts", color: "#f7c948",
+      name: "BUSINESS", emoji: "💼", price: "25 000", color: "#f7c948",
       subtitle: "PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances",
       bg: "rgba(247,201,72,.06)",
       border: "1px solid rgba(247,201,72,.28)",
@@ -109,44 +82,30 @@ function PlanModal({ onClose, onSelect, billing, setBilling }) {
     <div onClick={handleBackdrop} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ background: '#0a0818', border: '1px solid rgba(255,255,255,.1)', borderRadius: '28px', padding: '40px 36px', maxWidth: '940px', width: '100%', boxShadow: '0 40px 120px rgba(0,0,0,.8)', maxHeight: '92vh', overflowY: 'auto', position: 'relative' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: '18px', right: '20px', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.1)', borderRadius: '50%', width: '34px', height: '34px', color: 'rgba(255,255,255,.6)', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', lineHeight: 1 }}>×</button>
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,107,53,.1)', border: '1px solid rgba(255,107,53,.3)', borderRadius: '100px', padding: '5px 14px', fontSize: '11px', color: '#ff6b35', fontWeight: '700', marginBottom: '14px' }}>
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff6b35' }} />
             Choisissez votre offre
           </div>
           <h2 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-1px', color: '#fff', marginBottom: '8px' }}>Démarrez avec l'offre qui vous convient</h2>
-          <p style={{ color: 'rgba(255,255,255,.45)', fontSize: '14px', marginBottom: '18px' }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
-          <BillingToggle value={billing} onChange={setBilling} compact />
-          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.35)', marginTop: '8px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
+          <p style={{ color: 'rgba(255,255,255,.45)', fontSize: '14px' }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '18px' }} className="sa-modal-plans">
-          {plans.map((p, i) => {
-            const isMonthly = !!p.monthly && billing === 'monthly';
-            return (
-              <div key={i} style={{ background: p.bg, border: p.border, borderRadius: '22px', padding: p.popular ? '36px 24px 24px' : '24px', position: 'relative', cursor: 'pointer', transition: 'transform .2s, box-shadow .2s', marginTop: p.popular ? '14px' : '0' }} className="sa-modal-plan" onClick={() => onSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual')}>
-                {p.popular && (<div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '5px 16px', fontSize: '11px', fontWeight: '700', color: '#fff', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(255,107,53,.4)' }}>⭐ Plus populaire</div>)}
-                <div style={{ fontSize: '11px', fontWeight: '700', color: p.color, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '12px' }}>{p.emoji} {p.name}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#fff', letterSpacing: '-1px' }}>{isMonthly ? p.monthly : p.price}</span>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.4)' }}>FCFA</span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)', marginBottom: '6px' }}>{isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel'}</div>
-                {p.monthly && !isMonthly && (
-                  <div style={{ marginBottom: '8px' }}>
-                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.5)', marginBottom: '5px' }}>soit 10 mois payés sur 12 (au lieu de {p.monthly} F × 12)</div>
-                    <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: '700', color: '#22c55e', background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', borderRadius: '100px', padding: '3px 10px' }}>🎁 {p.offer}</span>
-                  </div>
-                )}
-                {p.monthly && isMonthly && (
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.5)', marginBottom: '8px' }}>Passez à l'annuel : <strong style={{ color: '#22c55e' }}>39 900 F</strong> ({p.offer})</div>
-                )}
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', marginBottom: '18px', lineHeight: '1.5', minHeight: '32px' }}>{p.subtitle}</div>
-                <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '14px' }} />
-                {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', gap: '7px', marginBottom: '8px', fontSize: '12px', color: 'rgba(255,255,255,.7)', alignItems: 'flex-start' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span>{f}</div>))}
-                <button type="button" style={{ display: 'block', width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px', border: 'none', background: p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,.1)', color: '#fff', fontWeight: '700', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', transition: 'transform .15s, box-shadow .15s' }} className="sa-modal-btn">Choisir {p.name} →</button>
+          {plans.map((p, i) => (
+            <div key={i} style={{ background: p.bg, border: p.border, borderRadius: '22px', padding: p.popular ? '36px 24px 24px' : '24px', position: 'relative', cursor: 'pointer', transition: 'transform .2s, box-shadow .2s', marginTop: p.popular ? '14px' : '0' }} className="sa-modal-plan" onClick={() => onSelect(p.name.toLowerCase())}>
+              {p.popular && (<div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '5px 16px', fontSize: '11px', fontWeight: '700', color: '#fff', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(255,107,53,.4)' }}>⭐ Plus populaire</div>)}
+              <div style={{ fontSize: '11px', fontWeight: '700', color: p.color, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '12px' }}>{p.emoji} {p.name}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '32px', fontWeight: '900', color: '#fff', letterSpacing: '-1px' }}>{p.price}</span>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.4)' }}>FCFA</span>
               </div>
-            );
-          })}
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)', marginBottom: '6px' }}>/ Paiement annuel</div>
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', marginBottom: '18px', lineHeight: '1.5', minHeight: '32px' }}>{p.subtitle}</div>
+              <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '14px' }} />
+              {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', gap: '7px', marginBottom: '8px', fontSize: '12px', color: 'rgba(255,255,255,.7)', alignItems: 'flex-start' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span>{f}</div>))}
+              <button type="button" style={{ display: 'block', width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px', border: 'none', background: p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,.1)', color: '#fff', fontWeight: '700', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', transition: 'transform .15s, box-shadow .15s' }} className="sa-modal-btn">Choisir {p.name} →</button>
+            </div>
+          ))}
         </div>
         <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.25)', fontSize: '12px', marginTop: '24px' }}>💬 Besoin d'aide ? WhatsApp <strong style={{ color: 'rgba(255,255,255,.5)' }}>+225 05 76 03 12 12</strong></p>
       </div>
@@ -271,14 +230,9 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
-  const [billing, setBilling] = useState('annual'); // 'annual' | 'monthly'
 
   const handleCTA = () => { if (user) { navigate('/dashboard'); } else { setShowPlanModal(true); } };
-  const handlePlanSelect = (planSlug, billingCycle = 'annual') => {
-    setShowPlanModal(false);
-    const extra = billingCycle === 'monthly' ? '&billing=monthly' : '';
-    navigate(`/login?plan=${encodeURIComponent(planSlug)}${extra}`);
-  };
+  const handlePlanSelect = (planSlug) => { setShowPlanModal(false); navigate(`/login?plan=${encodeURIComponent(planSlug)}`); };
 
   useEffect(() => {
     const obs = new IntersectionObserver(entries => entries.forEach(e => e.target.classList.toggle('sa-vis', e.isIntersecting)), { threshold: 0.08 });
@@ -309,7 +263,7 @@ export default function Home() {
       'QR Code personnalisable',
       'Support standard',
     ] },
-    { name: 'BUSINESS', emoji: '💼', price: '39 900', monthly: '3 990', offer: '2 mois offerts', color: '#f7c948', subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: [
+    { name: 'BUSINESS', emoji: '💼', price: '25 000', color: '#f7c948', subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: [
       'Une carte de visite digitale',
       'Carte NFC (logo + QR CODE)',
       'Analytics avancés complets',
@@ -340,7 +294,7 @@ export default function Home() {
 
   const faqs = [
     { q: "C'est quoi exactement SocialApp ?", a: "SocialApp est votre profil digital tout-en-un : un lien unique et un QR code qui regroupe tous vos réseaux sociaux, WhatsApp, votre boutique et vos événements. Un seul scan, vos clients trouvent tout." },
-    { q: "Combien ça coûte ?", a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO). L'offre BUSINESS est à 3 990 FCFA/mois ou 39 900 FCFA/an (10 mois payés pour 12 : 2 mois offerts). Module Événement disponible à 3 500 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
+    { q: "Combien ça coûte ?", a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO), 25 000 FCFA/an (BUSINESS). Module Événement disponible à 3 500 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
     { q: "Qu'est-ce que le CRM ?", a: "Le CRM intégré (offre BUSINESS) vous permet de capturer et gérer vos prospects. Tags intelligents (Prospect, Chaud, Client, Froid), notes, historique et export CSV. Transformez chaque visiteur en opportunité." },
     { q: "Je peux vendre mes produits ?", a: "Oui ! La marketplace affiche vos produits avec photos, prix et description. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS). Vos clients commandent via WhatsApp. Zéro commission." },
     { q: "Le QR code peut-il être modifié sans le réimprimer ?", a: "Oui ! Modifiez vos liens, votre boutique ou votre WhatsApp à tout moment — votre QR code sur vos flyers et cartes reste valide à vie." },
@@ -394,7 +348,7 @@ export default function Home() {
   };
 
   const GradText = ({ children, from = '#ff6b35', to = '#f7c948' }) => (
-    <span style={{ background: `linear-gradient(135deg,${from},${to})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{children}</span>
+    <span style={{ background: `linear-gradient(135deg,from,{to})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{children}</span>
   );
 
   const SectionLabel = ({ children, bg, border, color, dotBg }) => (
@@ -431,14 +385,13 @@ export default function Home() {
           "offers": [
             { "@type": "Offer", "name": "BASIC", "price": "10000", "priceCurrency": "XOF" },
             { "@type": "Offer", "name": "PRO", "price": "15000", "priceCurrency": "XOF" },
-            { "@type": "Offer", "name": "BUSINESS (annuel)", "price": "39900", "priceCurrency": "XOF" },
-            { "@type": "Offer", "name": "BUSINESS (mensuel)", "price": "3990", "priceCurrency": "XOF" },
+            { "@type": "Offer", "name": "BUSINESS", "price": "25000", "priceCurrency": "XOF" },
           ]
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org", "@type": "FAQPage",
           "mainEntity": [
-            { "@type": "Question", "name": "Combien coûte SocialApp en Côte d'Ivoire ?", "acceptedAnswer": { "@type": "Answer", "text": "Les offres commencent à 10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO) et BUSINESS à 3 990 FCFA/mois ou 39 900 FCFA/an (2 mois offerts). Paiement Mobile Money." } },
+            { "@type": "Question", "name": "Combien coûte SocialApp en Côte d'Ivoire ?", "acceptedAnswer": { "@type": "Answer", "text": "Les offres commencent à 10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO) et 25 000 FCFA/an (BUSINESS). Paiement Mobile Money." } },
             { "@type": "Question", "name": "Puis-je vendre mes produits sur SocialApp ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, marketplace intégrée avec 0% de commission. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS)." } },
             { "@type": "Question", "name": "C'est quoi le CRM SocialApp ?", "acceptedAnswer": { "@type": "Answer", "text": "Gestion de leads avec tags, notes, pipeline et export CSV. Disponible avec l'offre BUSINESS." } },
           ]
@@ -508,7 +461,7 @@ export default function Home() {
         `}</style>
 
         {/* ── Modal sélection d'offre ── */}
-        {showPlanModal && (<PlanModal onClose={() => setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />)}
+        {showPlanModal && (<PlanModal onClose={() => setShowPlanModal(false)} onSelect={handlePlanSelect} />)}
         {showEventModal && (<EventQuickCreateModal onClose={() => setShowEventModal(false)} />)}
 
         {/* ════════════ NAV ════════════ */}
@@ -590,6 +543,7 @@ export default function Home() {
                 <a key={h} href={h} onClick={() => setMobileMenuOpen(false)} style={{ color: 'rgba(255,255,255,.75)', textDecoration: 'none', fontSize: '15px', fontWeight: '600', padding: '12px 4px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>{l}</a>
               ))}
               <button
+
                 type="button"
                 style={{ ...S.navCta, marginTop: '14px', padding: '13px', fontSize: '14px' }}
                 onClick={() => { setMobileMenuOpen(false); handleCTA(); }}
@@ -642,7 +596,7 @@ export default function Home() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {['#ff6b35', '#a78bfa', '#22c55e', '#f7c948', '#0ea5e9'].map((c, i) => (
-                    <div key={i} style={{ width: '32px', height: '32px', borderRadius: '50%', background: `linear-gradient(135deg,${c},${c}99)`, border: '2px solid #04020e', marginLeft: i === 0 ? 0 : '-10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#fff', zIndex: 5 - i, position: 'relative', flexShrink: 0 }}>
+                    <div key={i} style={{ width: '32px', height: '32px', borderRadius: '50%', background: `linear-gradient(135deg,c,{c}99)`, border: '2px solid #04020e', marginLeft: i === 0 ? 0 : '-10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#fff', zIndex: 5 - i, position: 'relative', flexShrink: 0 }}>
                       {['K', 'D', 'J', 'A', 'M'][i]}
                     </div>
                   ))}
@@ -890,39 +844,23 @@ export default function Home() {
         {/* ════════════ OFFRES ════════════ */}
         <section id="pricing" style={{ ...S.sec, background: 'rgba(255,255,255,.01)' }} className="sa-sec">
           <div style={S.secInner}>
-            <div style={{ ...S.secHead, marginBottom: '40px' }} className="sa-rv">
+            <div style={S.secHead} className="sa-rv">
               <h2 style={S.secTitle}>Des prix faits pour <GradText>l'Afrique</GradText></h2>
-              <p style={{ ...S.secSub, marginBottom: '24px' }}>Paiement Mobile Money · Pas de carte bancaire nécessaire</p>
-              <BillingToggle value={billing} onChange={setBilling} />
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginTop: '10px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
+              <p style={S.secSub}>Paiement Mobile Money · Pas de carte bancaire nécessaire</p>
             </div>
             <div className="sa-plans sa-rv" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '20px', alignItems: 'start', paddingTop: '16px' }}>
-              {[...plans, eventPlan].map((p, i) => {
-                const isMonthly = !!p.monthly && billing === 'monthly';
-                return (
-                  <div key={i} className={`sa-plan${p.popular ? ' sa-plan-pro' : ''}`} style={{ borderRadius: '26px', padding: p.popular ? '44px 32px 32px' : '32px', position: 'relative', background: p.bg, border: p.border, transition: 'transform .25s,box-shadow .25s', overflow: 'visible', marginTop: p.popular ? '14px' : '0' }}>
-                    {p.popular && (<div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '6px 20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: '#fff', boxShadow: '0 4px 16px rgba(255,107,53,.4)', zIndex: 2 }}>⭐ Plus populaire</div>)}
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: p.color, letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: '16px' }}>{p.emoji} {p.name}</div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginBottom: '6px' }}><span style={{ fontSize: '38px', fontWeight: '900', letterSpacing: '-1.5px' }}>{isMonthly ? p.monthly : p.price}</span><span style={{ fontSize: '14px', color: 'rgba(255,255,255,.4)' }}>FCFA</span></div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginBottom: p.monthly ? '6px' : '8px' }}>{p.isEvent ? 'par événement · Quel que soit votre plan' : (isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel')}</div>
-                    {p.monthly && !isMonthly && (
-                      <div style={{ marginBottom: '10px' }}>
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.55)', marginBottom: '6px' }}>10 mois payés sur 12 · au lieu de <strong style={{ color: '#fff' }}>{p.monthly} F</strong> × 12</div>
-                        <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: '700', color: '#22c55e', background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', borderRadius: '100px', padding: '4px 12px' }}>🎁 {p.offer}</span>
-                      </div>
-                    )}
-                    {p.monthly && isMonthly && (
-                      <div style={{ marginBottom: '10px', fontSize: '12px', color: 'rgba(255,255,255,.55)' }}>
-                        Passez à l'annuel : <strong style={{ color: '#22c55e' }}>39 900 F</strong> ({p.offer})
-                      </div>
-                    )}
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', lineHeight: '1.55', marginBottom: '22px', minHeight: '36px' }}>{p.subtitle}</div>
-                    <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '20px' }} />
-                    {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,.75)' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span><span>{f}</span></div>))}
-                    <button type="button" onClick={() => (p.isEvent ? setShowEventModal(true) : handlePlanSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual'))} style={{ display: 'block', width: '100%', padding: '14px', border: p.btnBorder, borderRadius: '14px', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', background: p.btnBg, marginTop: '8px', transition: 'transform .2s,box-shadow .2s' }}>{p.isEvent ? 'Créer mon événement →' : `Choisir ${p.name}${isMonthly ? ' (mensuel)' : ''} →`}</button>
-                  </div>
-                );
-              })}
+              {[...plans, eventPlan].map((p, i) => (
+                <div key={i} className={`sa-plan${p.popular ? ' sa-plan-pro' : ''}`} style={{ borderRadius: '26px', padding: p.popular ? '44px 32px 32px' : '32px', position: 'relative', background: p.bg, border: p.border, transition: 'transform .25s,box-shadow .25s', overflow: 'visible', marginTop: p.popular ? '14px' : '0' }}>
+                  {p.popular && (<div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '6px 20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: '#fff', boxShadow: '0 4px 16px rgba(255,107,53,.4)', zIndex: 2 }}>⭐ Plus populaire</div>)}
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: p.color, letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: '16px' }}>{p.emoji} {p.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginBottom: '6px' }}><span style={{ fontSize: '38px', fontWeight: '900', letterSpacing: '-1.5px' }}>{p.price}</span><span style={{ fontSize: '14px', color: 'rgba(255,255,255,.4)' }}>FCFA</span></div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginBottom: '8px' }}>{p.isEvent ? 'par événement · Quel que soit votre plan' : '/ Paiement annuel'}</div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', lineHeight: '1.55', marginBottom: '22px', minHeight: '36px' }}>{p.subtitle}</div>
+                  <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '20px' }} />
+                  {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,.75)' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span><span>{f}</span></div>))}
+                  <button type="button" onClick={() => (p.isEvent ? setShowEventModal(true) : handlePlanSelect(p.name.toLowerCase()))} style={{ display: 'block', width: '100%', padding: '14px', border: p.btnBorder, borderRadius: '14px', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', background: p.btnBg, marginTop: '8px', transition: 'transform .2s,box-shadow .2s' }}>{p.isEvent ? 'Créer mon événement →' : `Choisir ${p.name} →`}</button>
+                </div>
+              ))}
             </div>
             <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.3)', fontSize: '13px', marginTop: '24px' }} className="sa-rv">💬 Questions ? WhatsApp <strong style={{ color: 'rgba(255,255,255,.6)' }}>+225 05 76 03 12 12</strong></p>
           </div>
@@ -972,7 +910,7 @@ export default function Home() {
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '28px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {['#ff6b35', '#a78bfa', '#22c55e', '#f7c948', '#0ea5e9'].map((c, i) => (<div key={i} style={{ width: '34px', height: '34px', borderRadius: '50%', background: `linear-gradient(135deg,${c},${c}99)`, border: '2.5px solid rgba(10,8,24,.9)', marginLeft: i === 0 ? 0 : '-10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#fff', zIndex: 5 - i, position: 'relative', flexShrink: 0 }}>{['K', 'D', 'J', 'A', 'M'][i]}</div>))}
+                  {['#ff6b35', '#a78bfa', '#22c55e', '#f7c948', '#0ea5e9'].map((c, i) => (<div key={i} style={{ width: '34px', height: '34px', borderRadius: '50%', background: `linear-gradient(135deg,c,{c}99)`, border: '2.5px solid rgba(10,8,24,.9)', marginLeft: i === 0 ? 0 : '-10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#fff', zIndex: 5 - i, position: 'relative', flexShrink: 0 }}>{['K', 'D', 'J', 'A', 'M'][i]}</div>))}
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: '14px', fontWeight: '800', color: '#fff', lineHeight: 1.2 }}>+500 utilisateurs sur SocialApp</div>
@@ -1072,3 +1010,4 @@ export default function Home() {
     </>
   );
 }
+

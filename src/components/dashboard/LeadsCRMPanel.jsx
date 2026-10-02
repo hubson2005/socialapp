@@ -17,76 +17,46 @@ import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus
 import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
 import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
 import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
+import { normalizePhone, isValidPhone }      from '../../lib/phone';                   // [C2]
 
 
+// ─── CORRECTIONS DU PLAN DU 2 OCTOBRE 2026 (cette révision) ───────────────────
+//  [C2] normalizePhone/isValidPhone importés depuis lib/phone.js (format
+//       ivoirien : +225 + 10 chiffres, le 0 est conservé). Bouton WhatsApp
+//       corrigé. addLead gère le doublon renvoyé par la base (code 23505).
+//  [C3] saveEdit et bulkChangeStatus déclenchent désormais
+//       triggerLeadStatusChanged (statut en édition + action groupée).
+//  [C4] Realtime : spinner uniquement au 1er chargement, événements
+//       INSERT/UPDATE/DELETE appliqués localement (plus de rechargements).
+//  [C5] Tâches : colonne done_at sur la tâche elle-même (plus de state
+//       doneTasks). Icônes task / task_done ajoutées.
+//  [C6] fetchAllLeads : chargement par lots de 1000 (plus de plafond).
+//  [C7] Export CSV : protection contre l'injection de formules (csvCell).
+//  [C8] 8a notes saisissables en édition ; 8b handleStatusChange contrôle
+//       l'erreur ; 8c score initial `?? 0`.
+//
 // ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
-//  [FIX1] BUG BLOQUANT : commentaire JSX mal fermé dans la modale "Nouveau
-//         lead" — `{/* [tablet] */>` au lieu de `{/* [tablet] */}` avant le
-//         `>`. C'était une erreur de syntaxe qui empêchait le fichier de
-//         compiler, sur TOUS les appareils.
-//  [FIX2] BUG FONCTIONNEL MAJEUR (tablette/iOS/Android) : la vue Pipeline
-//         utilisait l'API HTML5 drag-and-drop native (`draggable`,
-//         `onDragStart`/`onDragOver`/`onDrop`). Cette API ne fonctionne PAS
-//         sur écrans tactiles — Safari iOS ne la supporte pas du tout, et
-//         Android Chrome seulement très partiellement. Résultat : impossible
-//         de glisser une carte lead d'une colonne à l'autre sur tablette ou
-//         téléphone. Réécrit avec Pointer Events (souris + tactile unifiés).
-//  [FIX3] `height: 100vh` sur le tiroir latéral (LeadModal) → remplacé par
-//         un pattern `100vh` puis `100dvh` (fallback CSS) pour éviter que la
-//         barre d'adresse Safari iOS ne coupe le bas du panneau.
-//  [FIX4] `maxHeight: 90vh` sur la modale "Nouveau lead" → même correction.
-//  [FIX5] Cibles tactiles agrandies (Checkbox, bouton WhatsApp compact) sans
-//         changer le rendu visuel.
-//  [FIX6] `whileHover` de Framer Motion sur les lignes de la liste
-//         désactivé sur appareils sans support du survol (tactile), pour
-//         éviter un état "survolé" qui reste collé après un tap.
-//  [FIX7] Couleur des champs (`inpDark`) — fond sombre teinté indigo,
-//         cohérent avec le style déjà utilisé pour les <select> du panneau
-//         (#1a1a2e), + halo au focus dans la couleur d'accent de l'app.
-//  [FIX8] Refonte visuelle de la vue Pipeline : les colonnes vides étaient
-//         invisibles (aucun fond, juste "Aucun lead" flottant), donnant
-//         l'impression d'un board cassé/inachevé dès qu'une colonne était
-//         beaucoup plus remplie que les autres. Toutes les colonnes ont
-//         désormais un fond visible en permanence, un point de couleur +
-//         badge de comptage dans le header, une icône dédiée par statut
-//         dans l'état vide, et un scroll interne (au lieu de laisser une
-//         colonne pleine pousser la page en hauteur pendant que les autres
-//         restent vides à côté).
+//  [FIX1] Commentaire JSX mal fermé dans la modale "Nouveau lead".
+//  [FIX2] Pipeline en Pointer Events (souris + tactile) au lieu du
+//         drag-and-drop HTML5 natif.
+//  [FIX3] 100vh → 100dvh (fallback CSS) sur le tiroir latéral.
+//  [FIX4] 90vh → 90dvh sur la modale "Nouveau lead".
+//  [FIX5] Cibles tactiles agrandies (Checkbox, bouton WhatsApp compact).
+//  [FIX6] `whileHover` désactivé sur appareils sans survol.
+//  [FIX7] Champs `inpDark` teintés indigo + halo au focus.
+//  [FIX8] Vue Pipeline : colonnes toujours visibles, badge de comptage,
+//         icône d'état vide, scroll interne.
 //
-// ─── GRILLE + PAGINATION VUE LISTE (cette révision) ───────────────────────────
-//  [G1] La vue "Liste" affichait les leads en lignes pleine largeur, un par
-//       ligne, sans pagination — demande utilisateur : passage à une grille
-//       de cartes 4 colonnes x 4 lignes (16 leads/page), avec pagination
-//       pour la suite. `LEADS_PAGE_SIZE = 16`.
-//  [G2] Ajout d'un composant `Pagination` réutilisable (précédent/suivant +
-//       numéros de page, "…" si trop de pages) et d'un helper
-//       `getPageNumbers` qui compresse l'affichage au-delà de quelques pages.
-//  [G3] Nouveau composant `LeadGridCard` : reprend les informations de
-//       l'ancienne ligne (checkbox, statut, téléphone/entreprise, tags,
-//       score, WhatsApp) dans un format carte verticale compact, adapté à
-//       une grille plutôt qu'à une ligne pleine largeur.
-//  [G4] La grille utilise `repeat(auto-fill, minmax(240px, 1fr))` : 4
-//       colonnes sur desktop/tablette large, mais se réduit proprement à 2
-//       ou 1 colonne(s) sur mobile plutôt que d'écraser les cartes en
-//       dessous d'une largeur lisible. La pagination reste fixée à 16
-//       leads/page quel que soit le nombre de colonnes réellement affiché.
-//  [G5] Le changement de vue/filtre/tag/recherche réinitialise `page` à 1
-//       (même effet que pour la sélection), et un garde-fou (`useEffect`)
-//       ramène `page` sur la dernière page valide si des leads sont
-//       supprimés entre-temps.
+// ─── GRILLE + PAGINATION VUE LISTE ────────────────────────────────────────────
+//  [G1] Grille de cartes, 16 leads/page (LEADS_PAGE_SIZE).
+//  [G2] Composant Pagination + getPageNumbers.
+//  [G3] Composant LeadGridCard.
+//  [G4] auto-fill/minmax(240px, 1fr) : 4 colonnes desktop, 2/1 sur mobile.
+//  [G5] Reset de `page` au changement de vue/filtre/tag/recherche + garde-fou.
 //
-// ─── THÈME (cette révision) ───────────────────────────────────────────────────
-//  [T1] [FIX THÈME] Le panneau principal (header, barre de recherche,
-//       filtres, tags, barre d'actions groupées, vue Pipeline, vue Liste,
-//       pagination) était calqué sur l'ancien fond sombre du dashboard
-//       (rgba(255,255,255,0.0x) + texte blanc), posé directement sur le
-//       fond clair (#f4f5fa) désormais utilisé par le dashboard — d'où
-//       l'effet délavé. Repassé en thème clair. Les deux panneaux modaux
-//       (fiche lead LeadModal, "Nouveau lead") restent inchangés : overlay
-//       sombre plein écran avec fond opaque #0f0f1a, cohérent avec les
-//       autres modales de l'app (AddPlatformDialog, ProductModal…). Le
-//       style de champ `inp` est donc scindé en deux : `inpDark` (modales,
-//       inchangé) et `inp` (barre de recherche du panneau, thème clair).
+// ─── THÈME ────────────────────────────────────────────────────────────────────
+//  [T1] Panneau principal en thème clair ; modales (LeadModal, "Nouveau
+//       lead") en overlay sombre #0f0f1a. `inp` (clair) / `inpDark` (modales).
 
 const STATUSES = [
   { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: UserPlus    },
@@ -107,15 +77,16 @@ const SOURCES = [
   { id: 'calendrier',     label: '📅 Calendly / RDV'   },
 ];
 
+// [C5] clés task et task_done ajoutées
 const ACTIVITY_ICONS = {
-  created:  '🆕',
-  edited:   '✏️',
-  note:     '📝',
-  whatsapp: '💬',
-  status:   '🔄',
+  created:   '🆕',
+  edited:    '✏️',
+  note:      '📝',
+  whatsapp:  '💬',
+  status:    '🔄',
+  task:      '📋',
+  task_done: '✅',
 };
-
-const normalizePhone = (phone = '') => phone.replace(/\D/g, '');
 
 const EMPTY_LEAD = {
   name: '', phone: '', email: '', company: '',
@@ -124,6 +95,32 @@ const EMPTY_LEAD = {
 
 // [G1] Pagination de la vue liste : 16 leads par page (4 colonnes x 4 lignes)
 const LEADS_PAGE_SIZE = 16;
+
+// [C6] Supabase renvoie max 1000 lignes par requête : on récupère par lots.
+const BATCH = 1000;
+const fetchAllLeads = async (profileId) => {
+  let all = [], from = 0;
+  while (true) {
+    const { data, error } = await supabase.from('leads').select('*')
+      .eq('profile_id', profileId)
+      .order('created_at', { ascending: false }).order('id')   // ordre stable
+      .range(from, from + BATCH - 1);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < BATCH) break;
+    from += BATCH;
+  }
+  return all;
+};
+
+// [C7] Neutralise l'injection de formules Excel (=, +, -, @, tab, CR) sauf
+// pour les numéros de téléphone (pour que +225... reste lisible).
+const csvCell = (v) => {
+  let s = String(v ?? '');
+  const looksLikePhone = /^\+?[\d\s().-]+$/.test(s);
+  if (!looksLikePhone && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return `"${s.replace(/"/g, '""')}"`;
+};
 
 const scoreLabel = (s) =>
   s <= 30  ? { label: 'Froid',    color: '#06b6d4', icon: '❄️'  } :
@@ -139,7 +136,6 @@ const tagColor = (tag) => {
 };
 
 // [G2] Génère une liste compacte de numéros de page avec "…" si besoin
-// (évite d'afficher des dizaines de boutons quand il y a beaucoup de pages)
 function getPageNumbers(current, total) {
   const delta = 1;
   const range = [];
@@ -154,8 +150,7 @@ function getPageNumbers(current, total) {
   return withDots;
 }
 
-// [G2] Barre de pagination réutilisée sous la grille de leads — thème clair
-// (sur la page principale, pas dans une modale).
+// [G2] Barre de pagination — thème clair.
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
   const pages = getPageNumbers(page, totalPages);
@@ -178,8 +173,7 @@ function Pagination({ page, totalPages, onChange }) {
   );
 }
 
-// [T1] Champ clair — utilisé uniquement pour la barre de recherche du
-// panneau principal (page claire).
+// [T1] Champ clair — barre de recherche du panneau principal.
 const inp = {
   width: '100%', background: '#f6f7fb',
   border: '1px solid #e6e8f0', borderRadius: '12px',
@@ -188,9 +182,7 @@ const inp = {
   transition: 'border-color .15s, background .15s',
 };
 
-// [FIX7] Champ sombre — utilisé exclusivement dans les modales à fond
-// opaque (#0f0f1a) : fiche lead (LeadModal) et "Nouveau lead". Fond
-// légèrement teinté indigo, cohérent avec l'accent violet/indigo de l'app.
+// [FIX7] Champ sombre — modales à fond opaque (#0f0f1a).
 const inpDark = {
   width: '100%', background: '#181830',
   border: '1px solid rgba(129,140,248,0.18)', borderRadius: '12px',
@@ -199,8 +191,7 @@ const inpDark = {
   transition: 'border-color .15s, background .15s',
 };
 
-// [FIX5] Zone de tap agrandie (padding + marge négative) sans changer
-// l'apparence visuelle de la case à cocher (17x17).
+// [FIX5] Zone de tap agrandie sans changer l'apparence (17x17).
 function Checkbox({ checked, indeterminate, onChange, style = {} }) {
   return (
     <div
@@ -225,8 +216,7 @@ function Checkbox({ checked, indeterminate, onChange, style = {} }) {
   );
 }
 
-// Utilisé dans LeadGridCard (page claire) ET dans LeadModal (modale sombre) —
-// le libellé "Score prospect" et le track de fond s'adaptent via `dark`.
+// Utilisé dans LeadGridCard (clair) ET LeadModal (sombre) via `dark`.
 function ScoreBar({ score, onChange, dark = false }) {
   const { color, label, icon } = scoreLabel(score);
   return (
@@ -278,10 +268,8 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
   );
 }
 
-// [FIX5] Hauteur/largeur minimales relevées à 40px (compact et normal).
-// Utilisé sur page claire (LeadGridCard, PipelineCard) ET dans LeadModal
-// (modale sombre) — les couleurs actives (vert WhatsApp) restent identiques
-// dans les deux contextes ; seul l'état désactivé (numéro manquant) diffère.
+// [FIX5] Hauteur/largeur minimales 40px. [C2] validation via isValidPhone,
+// lien wa.me avec le numéro normalisé (225 + 10 chiffres).
 function WhatsAppBtn({ phone, leadId, onContact, compact = false, dark = false }) {
   const hasPhone = !!phone?.trim();
   return (
@@ -290,9 +278,8 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false, dark = false }
       onClick={e => {
         e.stopPropagation();
         if (!hasPhone) return;
-        const cleanPhone = normalizePhone(phone);
-        if (cleanPhone.length < 8) { toast.error('Numéro invalide'); return; }
-        window.open(`https://wa.me/${cleanPhone}`, '_blank', 'noopener,noreferrer');
+        if (!isValidPhone(phone)) { toast.error('Numéro invalide'); return; }
+        window.open(`https://wa.me/${normalizePhone(phone)}`, '_blank', 'noopener,noreferrer');
         onContact && onContact(leadId);
       }}
       title={hasPhone ? `WhatsApp: ${phone}` : 'Numéro manquant'}
@@ -318,7 +305,7 @@ const actionBtn = (bg) => ({
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
 });
 
-// Utilisé uniquement dans LeadModal (modale sombre) — inchangé.
+// Utilisé uniquement dans LeadModal (modale sombre).
 function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 22 }}>
@@ -328,7 +315,7 @@ function Section({ title, children }) {
   );
 }
 
-// Utilisé uniquement dans LeadModal (modale sombre) — inchangé, utilise inpDark.
+// Utilisé uniquement dans LeadModal (modale sombre), utilise inpDark.
 function Field({ icon, label, value, editing, onChange, type, options, valueRaw }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -347,16 +334,16 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
   );
 }
 
-// ─── LeadModal — tiroir latéral, overlay sombre volontaire, inchangé ─────────
+// ─── LeadModal — tiroir latéral, overlay sombre volontaire ───────────────────
 function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState(() => ({ ...lead, score: lead?.score ?? 50 }));
+  // [C8c] score initial `?? 0` (avant : `?? 50`, qui faussait la 1re modif)
+  const [form, setForm] = useState(() => ({ ...lead, score: lead?.score ?? 0 }));
   const [note, setNote] = useState('');
   const [newTag, setNewTag] = useState('');
   const [activities, setActivities]   = useState([]);
   const [loadingAct, setLoadingAct]   = useState(true);
-  const [doneTasks, setDoneTasks]      = useState(new Set()); // [A10] IDs des tâches marquées faites
 
   useEffect(() => { loadActivities(); }, [lead.id]);
 
@@ -367,45 +354,49 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     setLoadingAct(false);
   };
 
-  // [A10] Marquer une tâche comme terminée
+  // [A10][C5] Marquer une tâche comme terminée : done_at sur la tâche elle-même
   const markTaskDone = async (activity) => {
-    if (doneTasks.has(activity.id)) return;
-    setDoneTasks(prev => new Set([...prev, activity.id]));
-    await supabase.from('lead_activities').insert([{
-      lead_id:     lead.id,
-      type:        'task_done',
-      description: `✅ Terminée : ${activity.description}`,
-    }]);
-    loadActivities();
-    if (profileId) triggerTaskCompleted(profileId, {
-      leadId:          lead.id,
-      leadName:        lead.name,
-      taskDescription: activity.description,
+    if (activity.done_at) return;
+    const doneAt = new Date().toISOString();
+    setActivities(prev => prev.map(a => a.id === activity.id ? { ...a, done_at: doneAt } : a));
+    const { error } = await supabase.from('lead_activities')
+      .update({ done_at: doneAt }).eq('id', activity.id);
+    if (error) { toast.error(error.message); loadActivities(); return; }
+    if (profileId) triggerTaskCompleted(profileId, {           // [A10]
+      leadId: lead.id, leadName: lead.name, taskDescription: activity.description,
     });
   };
 
+  // [C3] saveEdit : déclenche aussi lead_status_changed ; [C2] doublon 23505
   const saveEdit = async () => {
+    const statusChanged = form.status !== lead.status;
+    const scoreChanged  = form.score  !== (lead.score ?? 0);
     const { error } = await supabase.from('leads').update({
       name: form.name, phone: form.phone, email: form.email,
       company: form.company, status: form.status, source: form.source,
       notes: form.notes, score: form.score, updated_at: new Date().toISOString(),
     }).eq('id', lead.id);
-    if (error) { toast.error(error.message); return; }
-    await supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'edited', description: 'Fiche modifiée' }]);
+    if (error) {
+      toast.error(error.code === '23505' ? 'Ce numéro existe déjà' : error.message);
+      return;
+    }
+    const rows = [{ lead_id: lead.id, type: 'edited', description: 'Fiche modifiée' }];
+    if (statusChanged) rows.push({
+      lead_id: lead.id, type: 'status',
+      description: `Statut → ${STATUSES.find(s => s.id === form.status)?.label || form.status}`,
+    });
+    await supabase.from('lead_activities').insert(rows);
     onUpdate({ ...lead, ...form });
     setEditing(false);
     toast.success('Lead mis à jour');
     loadActivities();
 
-    // [A9] Déclencher lead_score_reached si un seuil est franchi
-    if (profileId && form.score !== (lead.score ?? 0)) {
-      triggerLeadScoreReachedIfThreshold(profileId, {
-        leadId:   lead.id,
-        leadName: lead.name,
-        oldScore: lead.score ?? 0,
-        newScore: form.score,
-      });
-    }
+    if (profileId && statusChanged) triggerLeadStatusChanged(profileId, {   // [A7]
+      leadId: lead.id, leadName: form.name, oldStatus: lead.status, newStatus: form.status,
+    });
+    if (profileId && scoreChanged) triggerLeadScoreReachedIfThreshold(profileId, {   // [A9]
+      leadId: lead.id, leadName: form.name, oldScore: lead.score ?? 0, newScore: form.score,
+    });
   };
 
   const addNote = async () => {
@@ -416,8 +407,12 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     toast.success('Note ajoutée');
   };
 
+  // [C8b] contrôle d'erreur avant d'afficher le nouveau statut
   const handleStatusChange = async (newStatus) => {
-    await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', lead.id);
+    if (newStatus === lead.status) return;
+    const { error } = await supabase.from('leads')
+      .update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', lead.id);
+    if (error) { toast.error(error.message); return; }
     await supabase.from('lead_activities').insert([{
       lead_id: lead.id, type: 'status',
       description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label || newStatus}`,
@@ -551,15 +546,17 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             <ScoreBar score={editing ? form.score : (lead.score ?? 0)} onChange={editing ? v => setForm(f => ({ ...f, score: v })) : null} dark />
           </Section>
 
+          {/* [C8a] En édition, le champ texte apparaît même sans note existante */}
           <Section title="Notes">
-            {current.notes && (
+            {editing ? (
+              <textarea value={form.notes || ''} rows={3}
+                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                className="crm-field-dark" style={{ ...inpDark, resize: 'none' }} />
+            ) : current.notes ? (
               <p style={{ margin: '0 0 8px', color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.6 }}>
-                {editing
-                  ? <textarea value={form.notes} rows={3} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="crm-field-dark" style={{ ...inpDark, resize: 'none' }} />
-                  : current.notes
-                }
+                {current.notes}
               </p>
-            )}
+            ) : null}
             {!editing && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." className="crm-field-dark" style={{ ...inpDark, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
@@ -579,8 +576,8 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <p style={{ margin: 0, color: 'rgba(255,255,255,0.75)', fontSize: 13, flex: 1 }}>{a.description}</p>
-                      {/* [A10] Bouton "Fait" uniquement sur les tâches non terminées */}
-                      {a.type === 'task' && !doneTasks.has(a.id) && (
+                      {/* [A10][C5] Bouton "Fait" uniquement sur les tâches non terminées */}
+                      {a.type === 'task' && !a.done_at && (
                         <button
                           onClick={() => markTaskDone(a)}
                           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
@@ -588,7 +585,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
                           ✓ Fait
                         </button>
                       )}
-                      {a.type === 'task' && doneTasks.has(a.id) && (
+                      {a.type === 'task' && a.done_at && (
                         <span style={{ fontSize: 11, color: '#22c55e', opacity: 0.6 }}>✓ Terminée</span>
                       )}
                     </div>
@@ -606,15 +603,8 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
   );
 }
 
-// [tablet] useIsMobile remplacé par useBreakpoint (voir src/hooks/useBreakpoint.js)
-
-// [FIX2] Carte pipeline pilotée par Pointer Events (souris + tactile unifiés).
-// Un simple tap ouvre la fiche ; un déplacement au-delà d'un petit seuil
-// démarre un drag, qui fonctionne aussi bien à la souris qu'au doigt sur
-// iOS/Android — contrairement à l'ancienne API HTML5 drag-and-drop native.
-// [FIX8] Poignée de drag visible (icône grip) — signale que la carte est
-// déplaçable au lieu de le laisser deviner par un curseur "grab" seul.
-// [T1] Carte blanche — la vue Pipeline vit dans le panneau principal (clair).
+// [FIX2] Carte pipeline pilotée par Pointer Events (souris + tactile).
+// [FIX8] Poignée de drag visible. [T1] Carte blanche.
 function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDragEnd }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   const startRef = useRef({ x: 0, y: 0, dragging: false, pointerId: null });
@@ -650,7 +640,7 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
     startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
   };
 
-  const handlePointerCancel = (e) => {
+  const handlePointerCancel = () => {
     if (startRef.current.dragging) onDragEnd(null, null);
     startRef.current = { x: 0, y: 0, dragging: false, pointerId: null };
   };
@@ -690,12 +680,8 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
   );
 }
 
-// [FIX8] Colonnes toujours visibles (fond permanent, pas seulement au survol
-// de drag), point de couleur + badge de comptage dans le header, icône
-// dédiée par statut dans l'état vide, et scroll interne par colonne (plutôt
-// que de laisser une colonne pleine étirer toute la page verticalement
-// pendant que les colonnes vides restent minuscules à côté).
-// [T1] Colonnes blanches — cohérentes avec le panneau principal clair.
+// [FIX8] Colonnes toujours visibles, badge de comptage, état vide, scroll interne.
+// [T1] Colonnes blanches.
 function PipelineView({ leads, onCardClick, onStatusChange }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [draggedId, setDraggedId] = useState(null);
@@ -707,8 +693,7 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
     return map;
   }, [leads]);
 
-  // [FIX2] Détecte la colonne survolée via elementFromPoint — fonctionne
-  // identiquement pour un pointeur souris ou un doigt.
+  // [FIX2] Colonne survolée via elementFromPoint (souris ou doigt).
   const findColumnAt = (x, y) => {
     if (x == null || y == null) return null;
     const el = document.elementFromPoint(x, y);
@@ -777,11 +762,7 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
   );
 }
 
-// [G3] Carte compacte pour la vue liste en grille (4 colonnes desktop).
-// Reprend les mêmes informations que l'ancienne ligne pleine largeur
-// (statut, contact, tags, score, WhatsApp), condensées verticalement pour
-// tenir dans une case de grille au lieu d'une ligne pleine largeur.
-// [T1] Carte blanche — vit dans le panneau principal clair.
+// [G3] Carte compacte pour la vue liste en grille. [T1] Carte blanche.
 function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   return (
@@ -840,48 +821,60 @@ export default function LeadsCRMPanel({ profileId }) {
   const [adding, setAdding]             = useState(false);
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [bulkStatus, setBulkStatus]     = useState('');
-  const [page, setPage]                 = useState(1); // [G1] page courante de la vue liste
-  // [FIX6] Détecté une seule fois : évite un état "survolé" collé après un
-  // tap sur les lignes de la liste, sur les appareils tactiles.
+  const [page, setPage]                 = useState(1); // [G1]
+  // [FIX6] Détecté une seule fois (appareils tactiles : pas de hover collé).
   const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
 
+  // [C4][C6] Spinner uniquement au premier chargement ; `silent` pour les rechargements.
+  const loadLeads = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    try { setLeads(await fetchAllLeads(profileId)); }
+    catch (e) { toast.error(e.message); }
+    finally { setLoading(false); }
+  };
+
+  // [C4] Realtime : chaque événement met à jour l'état localement.
   useEffect(() => {
     if (!profileId) return;
     loadLeads();
     const channel = supabase
       .channel(`leads-${profileId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `profile_id=eq.${profileId}` }, () => loadLeads())
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'leads', filter: `profile_id=eq.${profileId}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setLeads(prev => prev.some(l => l.id === payload.new.id) ? prev : [payload.new, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setLeads(prev => prev.map(l => l.id === payload.new.id ? { ...l, ...payload.new } : l));
+            setSelectedLead(cur => cur && cur.id === payload.new.id ? { ...cur, ...payload.new } : cur);
+          } else if (payload.eventType === 'DELETE') {
+            setLeads(prev => prev.filter(l => l.id !== payload.old.id));
+          }
+        })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [profileId]);
+  }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // [G5] Réinitialise aussi la page courante quand la vue/le filtre/le tag/
-  // la recherche changent (même logique que pour la sélection existante).
+  // [G5] Reset sélection + page au changement de vue/filtre/tag/recherche.
   useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setPage(1); }, [view, filter, tagFilter, search]);
-
-  const loadLeads = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('leads').select('*').eq('profile_id', profileId).order('created_at', { ascending: false });
-    if (error) { toast.error(error.message); setLoading(false); return; }
-    setLeads(data || []);
-    setLoading(false);
-  };
 
   // ── [A4] Ajout d'un lead avec déclencheur automatisation ─────────
   const addLead = async () => {
     if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
     setAdding(true);
+    // Contrôle client (retour immédiat) — la base fait foi (index unique).
     const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
     if (exists) { toast.error('Ce numéro existe déjà'); setAdding(false); return; }
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([{ ...newLead, profile_id: profileId, score: 0 }])
-      .select()
-      .maybeSingle();
-    if (error) { toast.error(error.message); setAdding(false); return; }
+    // [C2] doublon renvoyé par la base (23505)
+    const { data, error } = await supabase.from('leads')
+      .insert([{ ...newLead, profile_id: profileId, score: 0 }]).select().single();
+    if (error) {
+      toast.error(error.code === '23505' ? 'Ce numéro existe déjà' : error.message);
+      setAdding(false); return;
+    }
     await supabase.from('lead_activities').insert([{ lead_id: data.id, type: 'created', description: 'Lead créé' }]);
 
-    // [A4] Déclencher les automatisations new_lead (fire-and-forget — ne bloque pas l'UI)
+    // [A4] Automatisations new_lead (fire-and-forget)
     triggerNewLead(profileId, {
       leadId: data.id,    // évite qu'une action create_lead crée un doublon
       name:   data.name,
@@ -890,7 +883,7 @@ export default function LeadsCRMPanel({ profileId }) {
       source: data.source,
     });
 
-    setLeads(p => [data, ...p]);
+    setLeads(p => p.some(l => l.id === data.id) ? p : [data, ...p]);
     setNewLead({ ...EMPTY_LEAD });
     setShowAdd(false);
     setAdding(false);
@@ -928,13 +921,30 @@ export default function LeadsCRMPanel({ profileId }) {
     setSelectedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
 
+  // [C3] Action groupée : ne traite que les leads dont le statut change,
+  // rollback en cas d'erreur, un déclenchement + une ligne d'historique par lead.
   const bulkChangeStatus = async (newStatus) => {
     if (!newStatus) return;
-    const ids = [...selectedIds];
-    setLeads(prev => prev.map(l => selectedIds.has(l.id) ? { ...l, status: newStatus } : l));
-    const { error } = await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).in('id', ids);
-    if (error) { toast.error(error.message); loadLeads(); return; }
-    await supabase.from('lead_activities').insert(ids.map(id => ({ lead_id: id, type: 'status', description: `Statut → ${STATUSES.find(s => s.id === newStatus)?.label} (action groupée)` })));
+    const targets = leads.filter(l => selectedIds.has(l.id) && l.status !== newStatus);
+    if (!targets.length) { setBulkStatus(''); return; }
+    const ids = targets.map(l => l.id);
+    const previous = new Map(targets.map(l => [l.id, l.status]));
+    const label = STATUSES.find(s => s.id === newStatus)?.label || newStatus;
+
+    setLeads(prev => prev.map(l => ids.includes(l.id) ? { ...l, status: newStatus } : l));
+    const { error } = await supabase.from('leads')
+      .update({ status: newStatus, updated_at: new Date().toISOString() }).in('id', ids);
+    if (error) { toast.error(error.message); loadLeads({ silent: true }); return; }
+
+    await supabase.from('lead_activities').insert(ids.map(id => ({
+      lead_id: id, type: 'status', description: `Statut → ${label} (action groupée)`,
+    })));
+
+    // [A7] un déclenchement par lead modifié
+    targets.forEach(l => triggerLeadStatusChanged(profileId, {
+      leadId: l.id, leadName: l.name, oldStatus: previous.get(l.id), newStatus,
+    }));
+
     setSelectedIds(new Set());
     setBulkStatus('');
     toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} mis à jour`);
@@ -959,7 +969,8 @@ export default function LeadsCRMPanel({ profileId }) {
       l.score ?? '', (l.tags || []).join('; '), (l.notes || '').replace(/\n/g, ' '),
       l.created_at ? new Date(l.created_at).toLocaleDateString('fr-FR') : '',
     ]);
-    return [headers, ...data].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    // [C7] csvCell neutralise l'injection de formules
+    return [headers, ...data].map(r => r.map(csvCell).join(',')).join('\n');
   };
 
   const exportCSV = () => {
@@ -989,23 +1000,19 @@ export default function LeadsCRMPanel({ profileId }) {
   const someSelected = filteredLeads.some(l => selectedIds.has(l.id));
   const toggleSelectAll = () => { if (allSelected) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(filteredLeads.map(l => l.id))); } };
 
-  // [G1] Pagination : 16 leads (4x4) par page pour la vue liste
+  // [G1] Pagination : 16 leads (4x4) par page
   const totalPages     = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PAGE_SIZE));
   const paginatedLeads  = filteredLeads.slice((page - 1) * LEADS_PAGE_SIZE, page * LEADS_PAGE_SIZE);
 
-  // [G5] Garde-fou : si des leads sont supprimés et que la page courante
-  // n'existe plus, on retombe sur la dernière page valide.
+  // [G5] Garde-fou si la page courante n'existe plus.
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: '#a2a7b5', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* [FIX4] classe crm-modal : max-height 90vh puis 90dvh (fallback CSS)
-          [FIX7] crm-field-dark : halo indigo au focus pour les champs des
-          modales (fiche lead, nouveau lead, tags, notes...).
-          [T1] crm-field-light : même halo, adapté au thème clair, pour la
-          barre de recherche du panneau principal. */}
+      {/* [FIX4] crm-modal : 90vh puis 90dvh. [FIX7] crm-field-dark : halo indigo.
+          [T1] crm-field-light : halo thème clair (recherche). */}
       <style>{`
         .crm-modal{max-height:90vh;max-height:90dvh;}
         .crm-field-dark:focus{border-color:rgba(129,140,248,0.6)!important;background:#1c1c38!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
@@ -1123,12 +1130,7 @@ export default function LeadsCRMPanel({ profileId }) {
                 )}
               </div>
 
-              {/* [G1][G3][G4] Grille de cartes — 4 colonnes sur desktop/tablette
-                  large (4x4 = 16 leads/page), qui se réduit à 2 ou 1 colonne(s)
-                  sur écrans plus étroits via auto-fill/minmax plutôt que de
-                  forcer 4 colonnes illisibles sur mobile. La pagination reste
-                  fixée à 16 leads/page quel que soit le nombre de colonnes
-                  réellement affichées. */}
+              {/* [G1][G3][G4] Grille de cartes — 16 leads/page */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
                 {paginatedLeads.map(lead => (
                   <LeadGridCard

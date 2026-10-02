@@ -246,6 +246,22 @@ function useBodyScrollLock() {
 }
 
 // ─── Tracking ─────────────────────────────────────────────────
+// [TRK] Bloc corrigé — remplace tout ce qui se trouve entre
+// « // ─── Tracking ─── » et « // ─── Utilitaires ─── » dans PublicProfile.jsx.
+//
+// [TRK1] fetchCountry() renvoie null (et non '') quand la géoloc échoue :
+//        un seul « Inconnu » côté stats au lieu de deux lignes distinctes.
+// [TRK2] isAutomated() : ignore les clients automatisés (PageSpeed Insights /
+//        Lighthouse, GTmetrix, Googlebot, navigateurs headless...). Ils exécutent
+//        le JS, tournent depuis des datacenters (souvent US) et testent mobile +
+//        desktop simultanément → vues « US » en double.
+// [TRK3] alreadyTracked() : une seule vue par profil et par session d'onglet
+//        (un rechargement ne recompte plus).
+// [TRK4] isTrackingDisabled() : exclusion manuelle du propriétaire. Ouvrir une
+//        fois https://www.socialapp.work/TON_USERNAME?notrack=1 dans un
+//        navigateur → ses visites/clics ne sont plus comptés (?notrack=0 pour
+//        réactiver). Ne fonctionne qu'en navigation normale : une fenêtre
+//        privée est comptée, ce qui permet de tester le tracking.
 
 function detectDevice() {
   const ua = navigator.userAgent.toLowerCase();
@@ -269,6 +285,41 @@ function cleanReferrer() {
   } catch { return 'direct'; }
 }
 
+// [TRK2] Liste volontairement précise : « \bbot\b » et non « bot » seul, pour ne
+// pas bloquer de vrais téléphones dont le modèle contient « bot » (ex. Cubot).
+const AUTOMATED_UA = /googlebot|bingbot|\bbot\b|crawler|spider|slurp|lighthouse|pagespeed|gtmetrix|headlesschrome|phantomjs/i;
+
+function isAutomated() {
+  try {
+    return navigator.webdriver === true || AUTOMATED_UA.test(navigator.userAgent || '');
+  } catch { return false; }
+}
+
+// [TRK4]
+function isTrackingDisabled() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('notrack') === '1') localStorage.setItem('pp_notrack', '1');
+    if (p.get('notrack') === '0') localStorage.removeItem('pp_notrack');
+    return localStorage.getItem('pp_notrack') === '1';
+  } catch { return false; }
+}
+
+function shouldTrack() {
+  return !isTrackingDisabled() && !isAutomated();
+}
+
+// [TRK3] Renvoie true si ce profil a déjà été compté dans cette session d'onglet.
+function alreadyTracked(profileId) {
+  try {
+    const key = `pp_view_${profileId}`;
+    if (sessionStorage.getItem(key)) return true;
+    sessionStorage.setItem(key, '1');
+  } catch { /* storage indisponible : on laisse passer */ }
+  return false;
+}
+
+// [TRK1] null (et non '') en cas d'échec.
 async function fetchCountry() {
   try {
     const ctrl = new AbortController();
@@ -277,9 +328,9 @@ async function fetchCountry() {
     clearTimeout(t);
     if (!res.ok) throw new Error();
     const d = await res.json();
-    return { country: d.country_code || '', country_name: d.country_name || '' };
+    return { country: d.country_code || null, country_name: d.country_name || null };
   } catch {
-    return { country: '', country_name: '' };
+    return { country: null, country_name: null };
   }
 }
 
@@ -304,6 +355,7 @@ async function trackView(profileId) {
 }
 
 async function trackClick(profileId, platform) {
+  if (!shouldTrack()) return; // [TRK2][TRK4]
   try {
     const payload = {
       profile_id: profileId,
@@ -333,6 +385,13 @@ function trackProfileVisit(profileId) {
   }).catch((err) => {
     if (process.env.NODE_ENV !== 'production') console.error('[trackProfileVisit]', err);
   });
+}
+
+// [TRK] Point d'entrée unique pour une visite : filtre + une fois par session.
+function trackVisitOnce(profileId) {
+  if (!shouldTrack() || alreadyTracked(profileId)) return;
+  trackView(profileId);
+  trackProfileVisit(profileId);
 }
 
 // ─── Utilitaires ──────────────────────────────────────────────
@@ -876,11 +935,8 @@ export default function PublicProfile() {
       });
     };
 
-    // [PERF2e] Tracking différé : l'appel ipapi.co ne concurrence plus l'image LCP
-    const startTracking = (id) => deferIdle(() => {
-      trackView(id);
-      trackProfileVisit(id); // [DL8] Tracking CRM — adresse IP du visiteur via Edge Function
-    });
+  // [PERF2e][TRK] Tracking différé + filtré (bots, ?notrack, une fois par session)
+const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
     if (ssr) {
       loadExtras(ssr.profile.id);

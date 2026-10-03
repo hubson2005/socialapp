@@ -72,7 +72,7 @@ class PanelErrorBoundary extends React.Component {
 // (iPad portrait ≈ 768–834, iPad landscape ≈ 1024–1194, la plupart des
 // tablettes Android tombent dans la même plage.)
 const MOBILE_BREAKPOINT = 768;
-const TABLET_BREAKPOINT = 1024;
+const TABLET_BREAKPOINT = 1100;
 
 function useWindowWidth() {
   const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -455,6 +455,7 @@ export default function UserDashboard() {
   const isMobile  = windowWidth < MOBILE_BREAKPOINT;
   const isTablet  = windowWidth >= MOBILE_BREAKPOINT && windowWidth < TABLET_BREAKPOINT;
   const isDesktop = windowWidth >= TABLET_BREAKPOINT;
+  const useBottomNav = isMobile || isTablet; // barre du bas sur mobile ET tablette
   const { t } = useTranslation();
 
   const [activeSection, setActiveSection]   = useState('overview');
@@ -1000,7 +1001,7 @@ export default function UserDashboard() {
               UserSidebar n'est donc jamais déclenché en pratique — on ne la
               monte que sur tablette/desktop pour éviter du code et des
               abonnements (upload de fond, etc.) inutiles sur mobile. */}
-          {!isMobile && (
+          {!useBottomNav && (
             <div style={{ position:'relative', zIndex:10, flexShrink:0 }}>
               <UserSidebar
                 activeSection={activeSection} onNavigate={setActiveSection}
@@ -1032,7 +1033,7 @@ export default function UserDashboard() {
             <div style={{ flexShrink:0, position:'sticky', top:0, zIndex:15, background:TOPBAR_BG, borderBottom:'1px solid #e6e8f0', boxShadow:'0 1px 2px rgba(15,23,42,.04)', paddingTop:'env(safe-area-inset-top)' }}>
               <div style={{ padding:isMobile?'10px 14px':'10px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:'8px', minWidth:0 }}>
-                  {isMobile && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
+                  {useBottomNav && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
                   <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Tableau de bord'}</h2>
                   <AnimatePresence>
                     {hasChanges && (
@@ -1060,7 +1061,7 @@ export default function UserDashboard() {
 
             {/* paddingBottom additionnel = hauteur de la MobileNav + zone
                 d'accueil du geste iOS (home indicator) / navigation Android. */}
-            <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':(isTablet?'20px':'24px'), paddingBottom:isMobile?'calc(100px + env(safe-area-inset-bottom))':'24px' }}>
+            <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:isMobile?'16px':(isTablet?'20px':'24px'), paddingBottom:useBottomNav?`calc(${isMobile?100:130}px + env(safe-area-inset-bottom))`:'24px' }}>
               <PanelErrorBoundary>
                 <div style={{ animation:'fadeIn 0.18s ease' }}>
                   {/* Bannière d'installation PWA — affichée en haut du contenu,
@@ -1085,9 +1086,9 @@ export default function UserDashboard() {
 
           </div>{/* ← ferme le div flex colonne */}
 
-          {isMobile && (
-            <MobileNav
-              activeSection={activeSection} onNavigate={setActiveSection}
+          {useBottomNav && (
+            <MobileNav
+              activeSection={activeSection === 'crm' ? 'leads' : activeSection} onNavigate={(id) => setActiveSection(id === 'leads' ? 'crm' : id)}
               profile={localProfile} plan={effectivePlan} limits={limits}
               isAdmin={isAdmin}
               onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}

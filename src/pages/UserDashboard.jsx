@@ -122,7 +122,9 @@ const db = {
 
 // [PLANS 2026] Bascule Mensuel / Annuel (thème clair du dashboard).
 // Le paiement mensuel n'existe que pour l'offre BUSINESS.
-function BillingToggle({ value, onChange, compact = false }) {
+// - `block`      : occupe toute la largeur du conteneur (utilisé dans la carte BUSINESS)
+// - `showOffer`  : affiche « 2 mois offerts » dans le bouton Annuel
+function BillingToggle({ value, onChange, compact = false, block = false, showOffer = true }) {
   const btn = (active) => ({
     padding: compact ? '6px 14px' : '8px 18px',
     borderRadius: '100px',
@@ -135,12 +137,13 @@ function BillingToggle({ value, onChange, compact = false }) {
     background: active ? 'linear-gradient(135deg,#ff8c42,#f7c948)' : 'transparent',
     transition: 'all .2s',
     whiteSpace: 'nowrap',
+    flex: block ? 1 : undefined,
   });
   return (
-    <div style={{ display:'inline-flex', alignItems:'center', gap:'4px', padding:'4px', borderRadius:'100px', background:'#f1f2f7', border:'1px solid #e2e4ee' }}>
+    <div style={{ display: block ? 'flex' : 'inline-flex', width: block ? '100%' : undefined, alignItems:'center', gap:'4px', padding:'4px', borderRadius:'100px', background:'#f1f2f7', border:'1px solid #e2e4ee' }}>
       <button type="button" style={btn(value === 'monthly')} onClick={(e) => { e.stopPropagation(); onChange('monthly'); }}>Mensuel</button>
       <button type="button" style={btn(value === 'annual')} onClick={(e) => { e.stopPropagation(); onChange('annual'); }}>
-        Annuel <span style={{ marginLeft:'4px', fontSize:'10px', color: value === 'annual' ? '#ffffff' : '#16a34a' }}>2 mois offerts</span>
+        Annuel{showOffer && <span style={{ marginLeft:'4px', fontSize:'10px', color: value === 'annual' ? '#ffffff' : '#16a34a' }}>2 mois offerts</span>}
       </button>
     </div>
   );
@@ -205,7 +208,7 @@ function PlanModal({ onClose, onSelect, billing = 'annual', setBilling, currentP
     },
   ];
 
-    // Upgrade : on ne propose que les offres au-dessus de l'offre actuelle.
+  // Upgrade : on ne propose que les offres au-dessus de l'offre actuelle.
   // Si aucune (BUSINESS / admin) ou pas de currentPlan : on affiche tout.
   const currentOrder = currentPlan ? (PLAN_ORDER[currentPlan] ?? 0) : -1;
   const higher = plans.filter(p => (PLAN_ORDER[p.name.toLowerCase()] ?? 0) > currentOrder);
@@ -222,18 +225,26 @@ function PlanModal({ onClose, onSelect, billing = 'annual', setBilling, currentP
             <span style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#c2530f' }} />Choisissez votre nouvelle offre
           </div>
           <h2 style={{ fontSize:'22px', fontWeight:'900', color:'#161a2e', margin:'0 0 6px', letterSpacing:'-0.5px' }}>Passez à la vitesse supérieure</h2>
-          <p style={{ color:'#6b7280', fontSize:'13px', margin:'0 0 16px' }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
-          {setBilling && <BillingToggle value={billing} onChange={setBilling} compact />}
-          {setBilling && <div style={{ fontSize:'11px', color:'#a2a7b5', marginTop:'8px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>}
+          <p style={{ color:'#6b7280', fontSize:'13px', margin:0 }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:`repeat(${shownPlans.length},1fr)`, gap:'14px', maxWidth: shownPlans.length === 1 ? '360px' : undefined, margin:'0 auto' }} className="plan-modal-grid">
-  {shownPlans.map((p,i) => {
+        {/* alignItems:'start' → chaque carte garde la hauteur de son propre contenu
+            (plus d'espace vide sous BASIC et PRO qui s'étiraient à la hauteur de BUSINESS). */}
+        <div style={{ display:'grid', gridTemplateColumns:`repeat(${shownPlans.length},1fr)`, gap:'14px', alignItems:'start', maxWidth: shownPlans.length === 1 ? '360px' : undefined, margin:'0 auto' }} className="plan-modal-grid">
+          {shownPlans.map((p,i) => {
             const isMonthly = !!p.monthly && billing === 'monthly';
             return (
               <div key={i} onClick={()=>onSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual')} className="plan-modal-card"
                 style={{ background:p.bg, border:p.border, borderRadius:'20px', padding:p.popular?'32px 20px 20px':'20px', position:'relative', cursor:'pointer', transition:'transform .18s, box-shadow .18s', marginTop:p.popular?'14px':'0', boxShadow:'0 1px 3px rgba(15,23,42,.06)' }}>
                 {p.popular && <div style={{ position:'absolute', top:'-13px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#ff8c42,#f7c948)', borderRadius:'100px', padding:'4px 14px', fontSize:'10px', fontWeight:'700', color:'#fff', whiteSpace:'nowrap', boxShadow:'0 4px 12px rgba(217,89,31,.3)' }}>⭐ Plus populaire</div>}
                 <div style={{ fontSize:'10px', fontWeight:'700', color:p.color, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'10px' }}>{p.emoji} {p.name}</div>
+
+                {/* [PLANS 2026] Choix Mensuel / Annuel directement dans la carte BUSINESS */}
+                {p.monthly && setBilling && (
+                  <div style={{ marginBottom:'12px' }}>
+                    <BillingToggle value={billing} onChange={setBilling} compact block showOffer={false} />
+                  </div>
+                )}
+
                 <div style={{ display:'flex', alignItems:'baseline', gap:'3px', marginBottom:'3px' }}><span style={{ fontSize:'28px', fontWeight:'900', color:'#161a2e', letterSpacing:'-1px' }}>{isMonthly ? p.monthly : p.price}</span><span style={{ fontSize:'12px', color:'#9095a5' }}>FCFA</span></div>
                 <div style={{ fontSize:'10px', color:'#a2a7b5', marginBottom:'5px' }}>{isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel'}</div>
                 {p.monthly && !isMonthly && (
@@ -245,7 +256,7 @@ function PlanModal({ onClose, onSelect, billing = 'annual', setBilling, currentP
                 {p.monthly && isMonthly && (
                   <div style={{ fontSize:'10px', color:'#5c6270', marginBottom:'8px' }}>Passez à l'annuel : <strong style={{ color:'#16a34a' }}>{p.price} F</strong> ({p.offer})</div>
                 )}
-                <div style={{ fontSize:'11px', color:'#5c6270', marginBottom:'14px', lineHeight:'1.5', minHeight:'28px' }}>{p.subtitle}</div>
+                <div style={{ fontSize:'11px', color:'#5c6270', marginBottom:'14px', lineHeight:'1.5' }}>{p.subtitle}</div>
                 <hr style={{ border:'none', borderTop:'1px solid rgba(15,23,42,.08)', marginBottom:'12px' }} />
                 {p.features.map((f,j) => <div key={j} style={{ display:'flex', gap:'6px', marginBottom:'6px', fontSize:'11px', color:'#454b5a', alignItems:'flex-start' }}><span style={{ color:p.color, flexShrink:0, marginTop:'1px' }}>✓</span>{f}</div>)}
                 <button type="button" className="plan-modal-btn" style={{ display:'block', width:'100%', marginTop:'14px', padding:'11px', borderRadius:'11px', border:'none', background:p.popular?'linear-gradient(135deg,#ff8c42,#f7c948)':'#161a2e', color:'#fff', fontWeight:'700', fontSize:'12px', cursor:'pointer', fontFamily:'inherit' }}>Choisir {p.name}{isMonthly ? ' (mensuel)' : ''} →</button>
@@ -894,7 +905,9 @@ export default function UserDashboard() {
             billing={billing}
             setBilling={setBilling}
           />
-         <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} currentPlan={effectivePlan} />}</AnimatePresence>
+          {/* Avant le 1er paiement : « Changer d'offre » doit proposer TOUTES les offres
+              (pas de currentPlan ici, sinon BASIC/PRO disparaissent du choix). */}
+          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />}</AnimatePresence>
         </>
       );
     } else {
@@ -1105,8 +1118,9 @@ export default function UserDashboard() {
             )}
           </AnimatePresence>
 
-          {/* Comparatif complet des 3 offres — limites de quota (liens, formulaires…) */}
-          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />}</AnimatePresence>
+          {/* Comparatif des offres — limites de quota (liens, formulaires…).
+              Upgrade depuis le dashboard : seules les offres supérieures à l'offre actuelle sont proposées. */}
+          <AnimatePresence>{showPlanModal && <PlanModal onClose={()=>setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} currentPlan={effectivePlan} />}</AnimatePresence>
 
           <style>{`
             @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }

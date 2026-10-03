@@ -284,7 +284,7 @@ export default function Home() {
   }, []);
 
   const plans = [
-    { name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa', subtitle: 'Particulier, petit commerce, Étudiants, Freelances', bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)', btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)', features: [
+    { name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa', subtitle: 'Particulier, Petit commerce, Étudiants, Freelances', bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)', btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)', features: [
       'Une carte de visite digitale',
       '09 liens sociaux',
       'QR Code personnalisable',
@@ -306,7 +306,7 @@ export default function Home() {
       'QR Code personnalisable',
       'Support standard',
     ] },
-    { name: 'BUSINESS', emoji: '💼', price: '39 900', monthly: '3 990', offer: '2 mois offerts', color: '#f7c948', subtitle: 'PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: [
+    { name: 'BUSINESS', emoji: '💼', price: '39 900', monthly: '3 990', offer: '2 mois offerts', color: '#f7c948', subtitle: 'PME, Grandes entreprises, Agences de communication, Événementiel, institutions, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: [
       'Une carte de visite digitale',
       'Carte NFC (logo + QR CODE)',
       'Analytics avancés complets',
@@ -316,12 +316,11 @@ export default function Home() {
       'Calendrier de réservation illimité',
       'Formulaires illimités',
       'Automatisations',
-      'Toutes les intégrations (HubSpot, Pipedrive, Google Analytics, Shopify, PostgreSQL, Mailchimp, Notion, Salesforce, etc.)',
+      'Toutes les intégrations (HubSpot, Pipedrive, Google Analytics, Shopify, PostgreSQL, Salesforce, etc.)',
       "Marketplace : ajout d'articles illimité",
       '10 imports autorisés (flyers, plaquettes, brochures, etc.)',
       'QR Code personnalisable',
       'Tracking IP',
-      'Sponsoring SocialApp : lancez vos campagnes Facebook & Instagram depuis votre tableau de bord, synchronisées avec votre CRM (BIENTÔT DISPONIBLE)',
       'Support VIP prioritaire',
     ] },
   ];

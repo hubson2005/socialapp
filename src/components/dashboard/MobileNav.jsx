@@ -370,7 +370,16 @@ export default function MobileNav({
   const avatarInitial = profile?.display_name?.charAt(0)?.toUpperCase() || '?';
 
   // [C21] Groupes visibles : on retire "Administration" si isAdmin est faux.
-  const visibleGroups = SIDEBAR_GROUPS.filter(group => !group.adminOnly || isAdmin);
+  // [C23] Les fonctionnalites verrouillees par le plan (PRO / BUSINESS) ne sont
+  // plus affichees du tout : on retire les items verrouilles, puis les groupes
+  // devenus vides. isNavLocked() renvoie toujours false pour un admin.
+  const visibleGroups = SIDEBAR_GROUPS
+    .filter(group => !group.adminOnly || isAdmin)
+    .map(group => ({ ...group, items: group.items.filter(item => !isNavLocked(item.id)) }))
+    .filter(group => group.items.length > 0);
+
+  // [C23] Meme regle pour la tab bar (l'onglet "Menu" est toujours conserve).
+  const visibleTabs = TAB_ITEMS.filter(item => item.id === NAV_IDS.MENU || !isNavLocked(item.id));
 
   // ─────────────────────────────────────────────────────────────
   return (
@@ -729,7 +738,7 @@ export default function MobileNav({
         className={`mn-bar${drawerOpen ? ' is-hidden' : ''}`}
       >
         <div className="mn-bar-inner">
-          {TAB_ITEMS.map(item => {
+          {visibleTabs.map(item => {
             const isMenu   = item.id === NAV_IDS.MENU;
             const locked   = !isMenu && isNavLocked(item.id);
             const isActive = isMenu ? drawerOpen : (activeSection === item.id && !locked);

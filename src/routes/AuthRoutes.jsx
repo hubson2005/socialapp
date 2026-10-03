@@ -2,8 +2,6 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
-import Dashboard     from '../pages/Dashboard';
-import UserDashboard from '../pages/UserDashboard';
 
 // ─── Écran de chargement ─────────────────────────────────────────────────────
 function AuthLoadingScreen() {

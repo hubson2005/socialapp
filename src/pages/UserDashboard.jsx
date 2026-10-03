@@ -949,7 +949,7 @@ export default function UserDashboard() {
             </div>
           );
           case 'documents':  return <div style={{ maxWidth:'640px' }}><DocumentsPanel profileId={localProfile.id} userPlan={effectivePlan} maxDocs={limits.maxDocs} onUpgrade={()=>handleOpenUpgrade()} /></div>;
-          case 'forms':           return <div style={{ maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={()=>handleOpenUpgrade()} /></div>;
+          case 'forms': return (<div style={isDesktop ? undefined : { maxWidth:'900px' }}><FormsPanel profileId={localProfile.id} maxForms={limits.maxForms} onUpgrade={()=>handleOpenUpgrade()} /></div>);
           case 'analytics':  return limits.hasStats ? <AnalyticsPanel profileId={localProfile.id} advanced={limits.hasAdvancedAnalytics} /> : null;
           case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
           case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;

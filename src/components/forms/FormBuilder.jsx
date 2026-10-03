@@ -225,18 +225,25 @@ export default function FormBuilder({ fields = [], onChange }) {
           <p style={{ color:'#9a9db0', fontSize:'12.5px', margin:0 }}>Aucun champ pour l'instant — ajoutez-en un ci-dessous</p>
         </div>
       ) : (
-        fields.map((field, idx) => (
-          <FieldCard
-            key={field.id}
-            field={field}
-            index={idx}
-            total={fields.length}
-            onUpdate={(updated) => updateField(idx, updated)}
-            onRemove={() => removeField(idx)}
-            onMove={moveField}
-          />
-        ))
-      )}
+  <div style={{
+    display:'grid',
+    gridTemplateColumns:'repeat(auto-fill, minmax(min(100%, 380px), 1fr))',
+    gap:'10px',
+    alignItems:'start',
+  }}>
+    {fields.map((field, idx) => (
+      <FieldCard
+        key={field.id}
+        field={field}
+        index={idx}
+        total={fields.length}
+        onUpdate={(updated) => updateField(idx, updated)}
+        onRemove={() => removeField(idx)}
+        onMove={moveField}
+      />
+    ))}
+  </div>
+)}
       <AddFieldMenu onAdd={addField} />
     </div>
   );

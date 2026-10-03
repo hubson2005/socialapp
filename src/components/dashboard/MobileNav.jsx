@@ -43,6 +43,11 @@
  *        - Tiroir centré (640px max) dès 768px via la classe `mn-drawer`.
  *        - Id du <style> changé ('mobile-nav-styles') pour que le nouveau
  *          CSS soit bien injecté même après un rechargement à chaud.
+ *
+ *  [C23] Les fonctionnalités PRO / BUSINESS verrouillées ne sont plus
+ *        visibles du tout pour un plan inférieur (tab bar + tiroir) :
+ *        items filtrés via isNavLocked(), groupes vides retirés.
+ *        Le lien "Changer d'offre" du footer reste le point d'entrée upgrade.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -370,16 +375,29 @@ export default function MobileNav({
   const avatarInitial = profile?.display_name?.charAt(0)?.toUpperCase() || '?';
 
   // [C21] Groupes visibles : on retire "Administration" si isAdmin est faux.
-  // [C23] Les fonctionnalites verrouillees par le plan (PRO / BUSINESS) ne sont
-  // plus affichees du tout : on retire les items verrouilles, puis les groupes
+  // [C23] Les fonctionnalités verrouillées par le plan (PRO / BUSINESS) ne sont
+  // plus affichées du tout : on retire les items verrouillés, puis les groupes
   // devenus vides. isNavLocked() renvoie toujours false pour un admin.
   const visibleGroups = SIDEBAR_GROUPS
     .filter(group => !group.adminOnly || isAdmin)
     .map(group => ({ ...group, items: group.items.filter(item => !isNavLocked(item.id)) }))
     .filter(group => group.items.length > 0);
 
-  // [C23] Meme regle pour la tab bar (l'onglet "Menu" est toujours conserve).
-  const visibleTabs = TAB_ITEMS.filter(item => item.id === NAV_IDS.MENU || !isNavLocked(item.id));
+  // [C23] Même règle pour la tab bar (l'onglet "Menu" est toujours conservé).
+  // [C24] La barre est complétée par des fonctionnalités accessibles : on prend
+  // les 4 premiers onglets NON verrouillés de la liste de candidats (ordre de
+  // priorité) + "Menu". BASIC : Dashboard, Liens, Boutique, Formulaires, Menu.
+  const TAB_MAX = 4;
+  const tabCandidates = [
+    ...TAB_ITEMS.filter(item => item.id !== NAV_IDS.MENU),
+    { id: NAV_IDS.MARKETPLACE, label: 'Boutique',    icon: ShoppingBag },
+    { id: NAV_IDS.FORMS,       label: 'Formulaires', icon: FileText    },
+    { id: NAV_IDS.DOCUMENTS,   label: 'Documents',   icon: FileText    },
+  ];
+  const visibleTabs = [
+    ...tabCandidates.filter(item => !isNavLocked(item.id)).slice(0, TAB_MAX),
+    ...TAB_ITEMS.filter(item => item.id === NAV_IDS.MENU),
+  ];
 
   // ─────────────────────────────────────────────────────────────
   return (

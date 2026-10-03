@@ -5,12 +5,29 @@
  * SocialApp (souscription initiale OU rappel de renouvellement
  * automatique).
  *
- * Body attendu : { profile_id: number, plan: 'basic'|'pro'|'business'|'evenement', mode?: 'new'|'renewal' }
+ * Body attendu : {
+ *   profile_id: number,
+ *   plan: 'basic'|'pro'|'business'|'business_monthly'|'evenement',
+ *   mode?: 'new'|'renewal',
+ *   billing?: 'annual'|'monthly'   // ne s'applique qu'à BUSINESS
+ * }
+ *
+ * Tarification (table `plans`, jamais en dur) :
+ *   - plan 'business' + billing 'monthly' → ligne `business_monthly` (3 990 FCFA / mois)
+ *   - plan 'business' (annual ou absent)  → ligne `business`         (39 900 FCFA / an)
+ *   - 'business_monthly' envoyé tel quel (appel serveur / renouvellement) → accepté
+ *   - basic / pro / evenement             → inchangés (billing ignoré)
+ * L'identifiant EXACT de la ligne `plans` retenue est envoyé dans
+ * metadata.plan : c'est lui que lit geniuspay-webhook pour fixer la durée
+ * de l'abonnement (1 mois vs 1 an).
  *
  * Autorisation (une des deux preuves est exigée) :
  *   1. En-tête x-internal-secret = INTERNAL_FUNCTION_SECRET   (appels serveur)
  *   2. Authorization: Bearer <session utilisateur> dont l'utilisateur
  *      est propriétaire du profile_id                         (dashboard)
+ * → La fonction fait elle-même cette vérification : elle doit rester
+ *   déployée avec verify_jwt = false (config.toml), sinon les appels
+ *   serveur (x-internal-secret, sans JWT utilisateur) seraient rejetés.
  *
  * Secrets requis (Supabase secrets) :
  *   GENIUSPAY_API_KEY        (X-API-Key,    ex: pk_sandbox_/pk_live_)
@@ -45,6 +62,13 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Libellé de la période pour la description du paiement
+function periodLabel(billingPeriod: string): string {
+  if (billingPeriod === 'monthly') return 'mensuel';
+  if (billingPeriod === 'annual') return 'annuel';
+  return 'unique';
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -54,11 +78,15 @@ serve(async (req: Request) => {
   );
 
   try {
-    const { profile_id, plan, mode = 'new' } = await req.json();
+    const { profile_id, plan, mode = 'new', billing } = await req.json();
 
     if (!profile_id || !plan) {
       return _json({ error: 'profile_id et plan sont requis' }, 400);
     }
+
+    // ── Choisir la ligne `plans` à facturer ──
+    // Seul BUSINESS existe en mensuel : business + monthly → business_monthly.
+    const planId: string = plan === 'business' && billing === 'monthly' ? 'business_monthly' : plan;
 
     // ── Récupérer le profil + son propriétaire ──
     const { data: profile, error: profileErr } = await supabase
@@ -93,12 +121,12 @@ serve(async (req: Request) => {
     const { data: planRow, error: planErr } = await supabase
       .from('plans')
       .select('*')
-      .eq('id', plan)
+      .eq('id', planId)
       .eq('is_active', true)
       .maybeSingle();
 
     if (planErr || !planRow) {
-      return _json({ error: `Plan inconnu ou inactif: ${plan}` }, 400);
+      return _json({ error: `Plan inconnu ou inactif: ${planId}` }, 400);
     }
 
     // ── Créer le paiement GeniusPay (checkout hébergé) ──
@@ -114,7 +142,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         amount: planRow.price_amount,
         currency: planRow.currency,
-        description: `Abonnement SocialApp — ${planRow.label} (${planRow.billing_period === 'annual' ? 'annuel' : 'mensuel'})`,
+        description: `Abonnement SocialApp — ${planRow.label} (${periodLabel(planRow.billing_period)})`,
         customer: {
           name: profile.display_name || undefined,
           phone: profile.whatsapp_phone || undefined,
@@ -125,7 +153,9 @@ serve(async (req: Request) => {
         metadata: {
           profile_id: String(profile_id),
           user_id: profile.user_id,
-          plan,
+          // Identifiant EXACT de la ligne `plans` (ex. 'business_monthly') :
+          // le webhook s'en sert pour déterminer la durée de l'abonnement.
+          plan: planRow.id,
           billing_period: planRow.billing_period,
         },
       }),
@@ -147,7 +177,7 @@ serve(async (req: Request) => {
     await supabase.from('payments').insert({
       user_id: profile.user_id,
       profile_id,
-      plan,
+      plan: planRow.id,
       amount: planRow.price_amount,
       currency: planRow.currency,
       status: 'pending',

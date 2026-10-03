@@ -450,6 +450,9 @@ entrypoint = "./functions/generate-post/index.ts"
 [functions.geniuspay-webhook]
 verify_jwt = false
 
-# geniuspay-checkout : volontairement ABSENT de ce fichier. Le dashboard l'appelle via
-# supabase.functions.invoke (JWT de l'utilisateur envoyé automatiquement), donc le défaut
-# verify_jwt = true s'applique et protège la fonction.
+# geniuspay-checkout : appelé par le dashboard (JWT du propriétaire) ET par des fonctions
+# serveur (x-internal-secret, sans JWT utilisateur, ex. rappels de renouvellement).
+# La fonction vérifie elle-même l'autorisation dans index.ts : verify_jwt doit rester à false,
+# sinon le gateway rejetterait les appels serveur.
+[functions.geniuspay-checkout]
+verify_jwt = false

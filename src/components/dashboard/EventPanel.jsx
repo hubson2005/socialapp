@@ -298,7 +298,7 @@ export default function EventPanel({ eventId, onChange }) {
 
       <div className="mt-4">
         <label className={labelClass}>Description</label>
-        <textarea rows={3} className={`${inputClass} resize-none`} value={form.description} onChange={(e) => set({ description: e.target.value })} placeholder="Quelques mots sur l'événement..." />
+        <textarea rows={3} className={`${inputClass} resize-none`} value={form.description} onChange={(e) => set({ description: e.target.value })} placeholder={(EVENT_PLACEHOLDERS[form.type] || EVENT_PLACEHOLDERS.mariage).description} />
       </div>
 
       {form.type !== 'expo_temp' ? (

@@ -2,13 +2,13 @@
 // Edge Function : envoi de notifications WhatsApp via Whapi.cloud
 //
 // Variables d'environnement à définir dans Supabase Dashboard → Secrets :
-//   WHAPI_TOKEN → ton token API Whapi.cloud
+//   WHAPI_TOKEN              → ton token API Whapi.cloud
+//   INTERNAL_FUNCTION_SECRET → secret partagé pour les appels serveur → serveur
 //
-// Configuration :
-//   1. Crée un compte sur whapi.cloud (essai gratuit 5 jours)
-//   2. Crée un channel → scanne le QR code avec WhatsApp
-//   3. Copie le "API Token" du channel
-//   4. Ajoute-le dans Supabase → Settings → Edge Functions → Secrets
+// Autorisation (une des deux preuves est exigée) :
+//   1. En-tête x-internal-secret = INTERNAL_FUNCTION_SECRET   (autres Edge Functions)
+//   2. Authorization: Bearer <session utilisateur> dont l'utilisateur est
+//      propriétaire du profile_id envoyé dans le body        (dashboard)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -16,8 +16,23 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret',
 };
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+// Comparaison en temps constant (évite de révéler le secret par le temps de réponse)
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -29,16 +44,14 @@ serve(async (req: Request) => {
     const WHAPI_TOKEN     = Deno.env.get('WHAPI_TOKEN');
     const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const INTERNAL_SECRET  = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
 
     if (!WHAPI_TOKEN) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'WHAPI_TOKEN non configuré',
-          hint: 'Ajoutez WHAPI_TOKEN dans Supabase → Settings → Edge Functions → Secrets',
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return json({
+        success: false,
+        error: 'WHAPI_TOKEN non configuré',
+        hint: 'Ajoutez WHAPI_TOKEN dans Supabase → Settings → Edge Functions → Secrets',
+      }, 500);
     }
 
     // ── 2. Lecture du body ───────────────────────────────────────────────────
@@ -46,27 +59,55 @@ serve(async (req: Request) => {
     const {
       phone,             // string  — numéro destinataire sans +
       message,           // string  — texte du message
-      profile_id,        // string  — UUID du profil link_profiles
+      profile_id,        // number|string — id du profil link_profiles
       boost_id,          // string? — optionnel
       notification_type, // string  — type de notification
     } = body;
 
     if (!phone || !message || !profile_id || !notification_type) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Champs requis manquants : phone, message, profile_id, notification_type',
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return json({
+        success: false,
+        error: 'Champs requis manquants : phone, message, profile_id, notification_type',
+      }, 400);
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE);
+
+    // ── 3. Autorisation ──────────────────────────────────────────────────────
+    let authorized = false;
+
+    // 3a. Appel serveur → serveur (secret interne)
+    const internalHeader = req.headers.get('x-internal-secret') ?? '';
+    if (INTERNAL_SECRET && internalHeader && safeEqual(internalHeader, INTERNAL_SECRET)) {
+      authorized = true;
+    }
+
+    // 3b. Appel depuis le dashboard (session utilisateur propriétaire du profil)
+    if (!authorized) {
+      const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+      if (token) {
+        const { data: userData } = await supabase.auth.getUser(token);
+        const userId = userData?.user?.id;
+        if (userId) {
+          const { data: owned } = await supabase
+            .from('link_profiles')
+            .select('id')
+            .eq('id', profile_id)
+            .eq('user_id', userId)
+            .maybeSingle();
+          authorized = !!owned;
+        }
+      }
+    }
+
+    if (!authorized) {
+      return json({ success: false, error: 'Non autorisé' }, 401);
     }
 
     // Normalisation du numéro (supprime +, espaces, tirets)
-    const cleanPhone = phone.replace(/[\s\-\+]/g, '');
+    const cleanPhone = String(phone).replace(/[\s\-\+]/g, '');
 
-    // ── 3. Enregistrement BDD (statut pending) ───────────────────────────────
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE);
-
+    // ── 4. Enregistrement BDD (statut pending) ───────────────────────────────
     const { data: notifRow, error: insertErr } = await supabase
       .from('wa_boost_notifications')
       .insert({
@@ -86,7 +127,7 @@ serve(async (req: Request) => {
 
     const notifId = notifRow?.id;
 
-    // ── 4. Appel Whapi.cloud ─────────────────────────────────────────────────
+    // ── 5. Appel Whapi.cloud ─────────────────────────────────────────────────
     // Doc : https://whapi.readme.io/reference/sendmessagetext
     const whapiUrl = 'https://gate.whapi.cloud/messages/text';
 
@@ -108,7 +149,7 @@ serve(async (req: Request) => {
 
     console.log(`Whapi → HTTP ${whapiRes.status} : ${JSON.stringify(whapiJson)}`);
 
-    // ── 5. Mise à jour statut BDD ────────────────────────────────────────────
+    // ── 6. Mise à jour statut BDD ────────────────────────────────────────────
     if (notifId) {
       await supabase
         .from('wa_boost_notifications')
@@ -122,29 +163,20 @@ serve(async (req: Request) => {
         .eq('id', notifId);
     }
 
-    // ── 6. Réponse ───────────────────────────────────────────────────────────
+    // ── 7. Réponse ───────────────────────────────────────────────────────────
     if (!whapiSuccess) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error:   `Whapi erreur (HTTP ${whapiRes.status})`,
-          detail:  whapiJson,
-          hint:    'Vérifiez que votre channel Whapi est connecté (QR scanné) et le token correct',
-        }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return json({
+        success: false,
+        error:   `Whapi erreur (HTTP ${whapiRes.status})`,
+        detail:  whapiJson,
+        hint:    'Vérifiez que votre channel Whapi est connecté (QR scanné) et le token correct',
+      }, 502);
     }
 
-    return new Response(
-      JSON.stringify({ success: true, notif_id: notifId, provider: 'whapi', detail: whapiJson }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return json({ success: true, notif_id: notifId, provider: 'whapi', detail: whapiJson });
 
   } catch (err) {
     console.error('send-whatsapp error:', err);
-    return new Response(
-      JSON.stringify({ success: false, error: err.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return json({ success: false, error: (err as Error).message }, 500);
   }
 });

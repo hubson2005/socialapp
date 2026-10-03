@@ -231,15 +231,28 @@ async function _executeAction({
     }
 
     case 'send_whatsapp': {
-      const phone   = (context.phone || config.phone) as string | undefined;
+      const to      = String(context.phone || config.phone || '').replace(/\D/g, '');
       const message = String(config.message || 'Bonjour ! Merci de votre intérêt. 👋');
-      if (!phone) { console.warn('[send_whatsapp] Aucun numéro de téléphone'); return null; }
+      if (to.length < 8) { console.warn('[send_whatsapp] Numéro absent ou invalide'); return null; }
 
-      // Délègue l'envoi à l'Edge Function `webhooks` (même contrat que le client)
-      const { error: fnError } = await supabase.functions.invoke('webhooks', {
-        body: { action: 'send_whatsapp', profile_id: profileId, phone, message },
+      // Envoi direct via l'intégration WhatsApp du profil (API Meta Cloud)
+      const { data: wa } = await supabase.from('profile_integrations')
+        .select('config, is_connected')
+        .eq('profile_id', profileId).eq('integration_id', 'whatsapp').maybeSingle();
+      const { phone_id, access_token } = (wa?.config || {}) as Record<string, string>;
+      if (!wa?.is_connected || !phone_id || !access_token) {
+        throw new Error('send_whatsapp: WhatsApp non connecté sur ce profil');
+      }
+
+      const res = await fetch(`https://graph.facebook.com/v21.0/${phone_id}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: message } }),
       });
-      if (fnError) throw new Error(`send_whatsapp: ${fnError.message}`);
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`send_whatsapp: API WhatsApp ${res.status} ${t.slice(0, 200)}`);
+      }
 
       // Trace dans la timeline du lead (non bloquant), uniquement si l'envoi a réussi
       const leadId = context.leadId || context.create_lead_id;
@@ -251,7 +264,7 @@ async function _executeAction({
         });
         if (actErr) console.warn('[send_whatsapp] activité non tracée :', actErr.message);
       }
-      return { phone, sent: true };
+      return { phone: to, sent: true };
     }
 
     default:

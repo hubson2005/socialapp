@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Plus, Save, Loader2, Sparkles, Trash2, Check, ChevronLeft, ChevronRight,
   CalendarClock, LogOut, AtSign, Eye, CalendarDays, MapPin, BadgeCheck,
-  Palette, ImagePlus, X, GripVertical, Bell, BellOff, Search,
+  Palette, ImagePlus, X, GripVertical, Search,
   ShieldCheck, Clock, Users, RefreshCw, Activity, BarChart3, TrendingUp,
   Zap, UserPlus, Globe, Link2, Settings, LayoutDashboard, FileText,
   ShoppingBag, MousePointerClick, ArrowUpRight, ArrowDownRight, Radio,
@@ -21,7 +21,6 @@ import CreateProfileWizard from "@/components/dashboard/CreateProfileWizard";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
-import ProfilePreview from "@/components/dashboard/ProfilePreview";
 import MarketplacePanel from "@/components/dashboard/MarketplacePanel";
 import DocumentsPanel from "@/components/dashboard/DocumentsPanel";
 import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
@@ -37,7 +36,7 @@ import { useTranslation } from "react-i18next";
 import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels";
 import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
-import { subscribeToPush, ensurePushSubscription } from '../lib/push';
+import { ensurePushSubscription } from '../lib/push';
 import NotificationBell from "@/pages/NotificationBell";
 
 // ── Imports optionnels ──────────────────────────────────────────────────────
@@ -201,14 +200,6 @@ const EVENT_COLOR_PRESETS = [
   { label: 'Rouge',             c1: '#ef4444', c2: '#b91c1c' },
 ];
 
-const PROFILE_TEMPLATES = [
-  { id: 'artiste',   label: 'Artiste',   emoji: '🎨', desc: 'Instagram, TikTok, YouTube, Spotify',       theme_color: '#7c3aed|#db2777', bio: 'Artiste & créateur de contenu ✨',             platformKeys: ['instagram','tiktok','youtube','spotify'] },
-  { id: 'business',  label: 'Business',  emoji: '💼', desc: 'LinkedIn, Calendly, Email, Site web',       theme_color: '#0f172a|#1e40af', bio: 'Entrepreneur & consultant professionnel',      platformKeys: ['linkedin','calendly','email','website'] },
-  { id: 'createur',  label: 'Créateur',  emoji: '📱', desc: 'YouTube, TikTok, Instagram, X',            theme_color: '#0f0a1e|#2d1b69', bio: 'Créateur de contenu | Suivez mon aventure 🚀', platformKeys: ['youtube','tiktok','instagram','twitter'] },
-  { id: 'evenement', label: 'Événement', emoji: '🎉', desc: 'Mode événement activé + compte à rebours', theme_color: '#1a0a00|#7c2d12', bio: 'Rejoins-nous pour un événement exceptionnel !', platformKeys: ['instagram','facebook','whatsapp'], is_event: true, event_color1: '#ff6b35', event_color2: '#f7c948' },
-  { id: 'musique',   label: 'Musique',   emoji: '🎵', desc: 'Spotify, Apple Music, SoundCloud',         theme_color: '#064e3b|#065f46', bio: 'Musicien | Écoutez mes derniers titres 🎶',    platformKeys: ['spotify','applemusic','soundcloud','youtube'] },
-  { id: 'gaming',    label: 'Gaming',    emoji: '🎮', desc: 'Twitch, Discord, TikTok, YouTube',         theme_color: '#0d0221|#4a0e8f', bio: "Gamer & streamer 🎮 | Let's play together",   platformKeys: ['twitch','discord','tiktok','youtube'] },
-];
 
 // ─── Composant placeholder pour modules optionnels ────────────────────────────
 function ComingSoon({ label }) {
@@ -968,42 +959,6 @@ function EventPanel({ localProfile, updateLocal }) {
   );
 }
 
-// ─── TemplatesModal ───────────────────────────────────────────────────────────
-function TemplatesModal({ onClose, onApply }) {
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:9999,background:'rgba(15,23,42,0.55)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}} onClick={onClose}>
-      <motion.div initial={{opacity:0,scale:0.95,y:16}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.95}} transition={{duration:0.2}}
-        style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'24px',width:'100%',maxWidth:'580px',maxHeight:'82vh',overflow:'hidden',display:'flex',flexDirection:'column',boxShadow:'0 30px 80px rgba(15,23,42,.25)'}}
-        onClick={e=>e.stopPropagation()}>
-        <div style={{padding:'22px 24px 14px',borderBottom:`1px solid ${UI.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div>
-            <h2 style={{color:UI.text,fontSize:'18px',fontWeight:800,margin:0}}>Templates</h2>
-            <p style={{color:UI.textFaint,fontSize:'12px',margin:'3px 0 0'}}>Configurez votre profil en un seul clic</p>
-          </div>
-          <button onClick={onClose} style={{background:'#f1f2f7',border:'1px solid #e2e4ee',cursor:'pointer',color:UI.textMuted,width:'34px',height:'34px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={16}/></button>
-        </div>
-        <div style={{overflowY:'auto',padding:'16px 24px 24px',display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'12px'}}>
-          {PROFILE_TEMPLATES.map(t=>{
-            const [c1,c2]=t.theme_color.split('|');
-            return (
-              <button key={t.id} onClick={()=>onApply(t)} style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:'18px',padding:'16px',textAlign:'left',cursor:'pointer',transition:'all 0.15s',boxShadow:UI.shadow}}>
-                <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
-                  <div style={{width:'44px',height:'44px',borderRadius:'13px',background:'linear-gradient(135deg,'+c1+','+c2+')',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',flexShrink:0}}>{t.emoji}</div>
-                  <div>
-                    <p style={{color:UI.text,fontWeight:800,fontSize:'14px',margin:0}}>{t.label}</p>
-                    <p style={{color:UI.textFaint,fontSize:'10px',margin:0}}>{t.platformKeys.length} plateformes</p>
-                  </div>
-                </div>
-                <p style={{color:UI.textMuted,fontSize:'10px',margin:0}}>{t.desc}</p>
-              </button>
-            );
-          })}
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -1022,14 +977,10 @@ export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showAddDialog,    setShowAddDialog]    = useState(false);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
-  const [showPreview,      setShowPreview]      = useState(false);
   const [localProfile,     setLocalProfile]     = useState(null);
   const [hasChanges,       setHasChanges]       = useState(false);
   const [activeProfileId,  setActiveProfileId]  = useState(null);
-  const [showTemplates,    setShowTemplates]    = useState(false);
-  const [showNotifPanel,   setShowNotifPanel]   = useState(false);
   const [uploadingBg,      setUploadingBg]      = useState(false);
-  const notifPanelRef = useRef(null);
   const notifCountRef = useRef(0);
 
   const [notifPrefs, setNotifPrefs] = useState({ notif_view: true, notif_click: true, notif_expiry: true, notif_threshold: 10 });
@@ -1094,11 +1045,6 @@ export default function Dashboard() {
     return () => { ['backgroundImage','backgroundSize','backgroundPosition','backgroundAttachment','background'].forEach(k => { html.style[k] = ''; }); };
   }, [localProfile?.theme_color, localProfile?.bg_image_url]);
 
-  useEffect(() => {
-    const handler = (e) => { if (notifPanelRef.current && !notifPanelRef.current.contains(e.target)) setShowNotifPanel(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
 
   useEffect(() => {
     if (!localProfile?.id || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
@@ -1198,12 +1144,6 @@ export default function Dashboard() {
 
   const updateLocal = useCallback((updates) => { setLocalProfile(prev => ({ ...prev, ...updates })); setHasChanges(true); }, []);
 
-  const applyTemplate = useCallback((template) => {
-    const newLinks = template.platformKeys.map(key => ({ id: crypto.randomUUID(), platform: key, url: '', label: '', enabled: true }));
-    updateLocal({ theme_color: template.theme_color, bio: template.bio, links: newLinks, is_event: template.is_event||false, event_color1: template.event_color1||null, event_color2: template.event_color2||null });
-    setShowTemplates(false);
-    toast.success('Template "' + template.label + '" appliqué !');
-  }, [updateLocal]);
 
   const handleSave = () => {
     if (!localProfile || updateMutation.isPending || !hasChanges) return;
@@ -1281,7 +1221,6 @@ export default function Dashboard() {
 
   if (!localProfile) return null;
 
-  const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
   const currentNav   = SIDEBAR_NAV.find(n => n.id === activeSection);
 
   const renderSection = () => {
@@ -1331,34 +1270,8 @@ export default function Dashboard() {
             {hasChanges && <span style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600 }}>{t('unsaved')}</span>}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-            <button onClick={()=>setShowTemplates(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:'#eef0ff', border:'1px solid #c7cdfb', borderRadius:'9px', color:'#4338ca', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
-              <Sparkles size={13}/>{!isMobile && 'Templates'}
-            </button>
             <ThemeColorPicker profile={localProfile} onUpdate={updateLocal}/>
-            <button onClick={()=>setShowPreview(true)} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', background:UI.inputBg, border:`1px solid ${UI.border}`, borderRadius:'9px', color:'#374151', fontSize:'11px', fontWeight:600, cursor:'pointer' }}>
-              <Eye size={13}/>{!isMobile && t('preview')}
-            </button>
             <NotificationBell />
-            <div ref={notifPanelRef} style={{ position:'relative' }}>
-              <button onClick={()=>setShowNotifPanel(v=>!v)} style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', background:UI.inputBg, border:`1px solid ${UI.border}`, borderRadius:'9px', cursor:'pointer' }}>
-                {notifGranted ? <Bell size={14} color={UI.accent}/> : <BellOff size={14} color={UI.textFainter}/>}
-              </button>
-              <AnimatePresence>
-                {showNotifPanel && (
-                  <motion.div initial={{ opacity:0, y:-8, scale:0.96 }} animate={{ opacity:1, y:0, scale:1 }} exit={{ opacity:0, y:-8 }} transition={{ duration:0.15 }}
-                    style={{ position:'absolute', top:'calc(100% + 10px)', right:0, background:UI.panel, border:`1px solid ${UI.border}`, borderRadius:'18px', padding:'18px', minWidth:'260px', zIndex:50, boxShadow:'0 16px 48px rgba(15,23,42,.16)' }}>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-                      <span style={{ color:UI.text, fontSize:'13px', fontWeight:600 }}>Notifications push</span>
-                      <button onClick={()=>setShowNotifPanel(false)} style={{ background:'#f1f2f7', border:'none', cursor:'pointer', color:UI.textMuted, width:'24px', height:'24px', borderRadius:'6px', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={13}/></button>
-                    </div>
-                    {!notifGranted
-                      ? <button onClick={async()=>{ const ok=await subscribeToPush(localProfile?.id); if(ok){ toast.success('Notifications activées !'); setShowNotifPanel(false); } else { toast.error('Abonnement push échoué'); } }} style={{ width:'100%', padding:'10px', background:`linear-gradient(135deg,${UI.accent},${UI.accent2})`, border:'none', borderRadius:'10px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>🔔 Activer les notifications</button>
-                      : <p style={{ color:UI.textMuted, fontSize:'12px', margin:0, textAlign:'center' }}>✅ Notifications actives</p>
-                    }
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
             <button onClick={handleSave} disabled={!hasChanges||updateMutation.isPending}
               style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?`linear-gradient(135deg,${UI.accent},${UI.accent2})`:UI.inputBg, border:'1px solid '+(hasChanges?'transparent':UI.border), borderRadius:'9px', color:hasChanges?'white':UI.textFainter, fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}>
               {updateMutation.isPending ? <Loader2 size={13} className="animate-spin"/> : <Save size={13}/>}{!isMobile && t('save')}
@@ -1392,10 +1305,6 @@ export default function Dashboard() {
           uploadingBg={uploadingBg}
         />
       )}
-      {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)}/>}
-      <AnimatePresence>
-        {showTemplates && <TemplatesModal onClose={()=>setShowTemplates(false)} onApply={applyTemplate}/>}
-      </AnimatePresence>
       <AnimatePresence>
         {showCreateWizard && (
           <CreateProfileWizard

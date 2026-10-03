@@ -1,27 +1,24 @@
 /**
  * actions/createTask.js
  * ─────────────────────────────────────────────────────────────────
- * Crée une tâche sous forme d'activité dans `lead_activities`
- * avec type = 'task'.
+ * Crée une vraie tâche CRM dans `crm_tasks` (échéance, priorité,
+ * rappel automatique via pg_cron) rattachée au lead du contexte.
  *
- * La tâche est rattachée au lead créé juste avant dans la même
- * automatisation (context.leadId) ou au lead passé en contexte.
- * Si aucun lead n'est disponible, la tâche est ignorée avec un
- * avertissement — il faut toujours placer create_lead avant
- * create_task dans le tableau `actions`.
+ * Config reconnue :
+ *   taskTitle | task | taskDescription  → titre (clés legacy gérées)
+ *   dueInHours | dueInDays              → échéance relative (optionnel)
+ *   priority                            → 'low' | 'normal' | 'high'
+ *
+ * Il faut toujours placer create_lead avant create_task dans la
+ * liste d'actions si le lead n'existe pas encore.
  * ─────────────────────────────────────────────────────────────────
  */
 
 import { supabase } from '../../supabase';
 
-/**
- * @param {Object} params
- * @param {Object} params.config    - { taskTitle, taskDescription }
- * @param {Object} params.context   - { leadId, create_lead_id, lastEntityId }
- * @returns {Object|null}
- */
-export async function createTaskAction({ config, context }) {
-  // Récupérer le lead_id depuis le contexte (injecté par createLead si exécuté avant)
+const PRIORITIES = ['low', 'normal', 'high'];
+
+export async function createTaskAction({ config, profileId, context }) {
   const leadId =
     context.leadId          ||
     context.create_lead_id  ||
@@ -34,24 +31,39 @@ export async function createTaskAction({ config, context }) {
     return null;
   }
 
-  const description =
-    config.taskTitle     ||   // clé moteur courante
-    config.task          ||   // clé legacy (ancienne UI)
+  const title = (
+    config.taskTitle      ||   // clé moteur courante
+    config.task           ||   // clé legacy (ancienne UI)
     config.taskDescription ||
-    'Tâche créée automatiquement';
+    'Tâche créée automatiquement'
+  ).toString().trim().slice(0, 200);
+
+  // Échéance relative : « relancer dans 2 jours », « rappeler dans 4 h »
+  const hours = Number(config.dueInHours) || (Number(config.dueInDays) || 0) * 24;
+  const dueAt = hours > 0 ? new Date(Date.now() + hours * 3600 * 1000).toISOString() : null;
+
+  const priority = PRIORITIES.includes(config.priority) ? config.priority : 'normal';
 
   const { data, error } = await supabase
-    .from('lead_activities')
+    .from('crm_tasks')
     .insert({
-      lead_id:     leadId,
-      type:        'task',
-      description,
+      profile_id: profileId,
+      lead_id:    leadId,
+      title,
+      due_at:     dueAt,
+      priority,
+      source:     'automation',
     })
     .select()
     .single();
 
   if (error) throw new Error(`createTask : ${error.message}`);
 
-  console.log(`[Action:createTask] Tâche créée → id=${data.id}, lead=${leadId}`);
+  // Trace dans la timeline du lead (non bloquant)
+  await supabase.from('lead_activities')
+    .insert({ lead_id: leadId, type: 'task_created', description: title })
+    .then(({ error: e }) => { if (e) console.warn('[Action:createTask] activité non tracée :', e.message); });
+
+  console.log(`[Action:createTask] Tâche créée → id=${data.id}, lead=${leadId}, échéance=${dueAt ?? 'aucune'}`);
   return data;
 }

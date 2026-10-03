@@ -157,14 +157,36 @@ async function _executeAction({
     }
 
     case 'create_task': {
-      const leadId = context.leadId || context.create_lead_id || context.lastEntityId;
+      const leadId = context.leadId || context.create_lead_id || context.lastEntityId || config.leadId;
       if (!leadId) { console.warn('[create_task] Aucun lead_id'); return null; }
-      const { data, error } = await supabase.from('lead_activities').insert({
-        lead_id:     leadId,
-        type:        'task',
-        description: config.taskTitle || config.task || config.taskDescription || 'Tâche automatique',
+
+      const title = String(config.taskTitle || config.task || config.taskDescription || 'Tâche créée automatiquement')
+        .trim().slice(0, 200);
+
+      // Échéance : dueInHours prioritaire, sinon dueInDays converti en heures
+      const hours = Number(config.dueInHours) || (Number(config.dueInDays) || 0) * 24;
+      const dueAt = hours > 0 ? new Date(Date.now() + hours * 3600e3).toISOString() : null;
+
+      const priority = ['low', 'normal', 'high'].includes(config.priority as string)
+        ? (config.priority as string)
+        : 'normal';
+
+      const { data, error } = await supabase.from('crm_tasks').insert({
+        profile_id: profileId,
+        lead_id:    leadId,
+        title,
+        due_at:     dueAt,
+        priority,
+        source:     'automation',
       }).select().single();
+
       if (error) throw new Error(`create_task: ${error.message}`);
+
+      // Trace dans la timeline du lead (non bloquant)
+      const { error: actErr } = await supabase.from('lead_activities')
+        .insert({ lead_id: leadId, type: 'task_created', description: title });
+      if (actErr) console.warn('[create_task] activité non tracée :', actErr.message);
+
       return data;
     }
 
@@ -206,6 +228,30 @@ async function _executeAction({
       }).select().single();
       if (error) { console.warn('[notify_owner]', error.message); return null; }
       return data;
+    }
+
+    case 'send_whatsapp': {
+      const phone   = (context.phone || config.phone) as string | undefined;
+      const message = String(config.message || 'Bonjour ! Merci de votre intérêt. 👋');
+      if (!phone) { console.warn('[send_whatsapp] Aucun numéro de téléphone'); return null; }
+
+      // Délègue l'envoi à l'Edge Function `webhooks` (même contrat que le client)
+      const { error: fnError } = await supabase.functions.invoke('webhooks', {
+        body: { action: 'send_whatsapp', profile_id: profileId, phone, message },
+      });
+      if (fnError) throw new Error(`send_whatsapp: ${fnError.message}`);
+
+      // Trace dans la timeline du lead (non bloquant), uniquement si l'envoi a réussi
+      const leadId = context.leadId || context.create_lead_id;
+      if (leadId) {
+        const { error: actErr } = await supabase.from('lead_activities').insert({
+          lead_id:     leadId,
+          type:        'whatsapp',
+          description: `Message WhatsApp envoyé : "${message.slice(0, 80)}${message.length > 80 ? '…' : ''}"`,
+        });
+        if (actErr) console.warn('[send_whatsapp] activité non tracée :', actErr.message);
+      }
+      return { phone, sent: true };
     }
 
     default:

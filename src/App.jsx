@@ -14,6 +14,7 @@ const Dashboard         = lazy(() => import("./pages/Dashboard"));
 const UserDashboard     = lazy(() => import("./pages/UserDashboard"));
 const PublicProfile      = lazy(() => import("./pages/PublicProfile"));
 const ProfilePreviewFrame = lazy(() => import("./pages/ProfilePreviewFrame"));
+const PublicBookingPage   = lazy(() => import("./pages/PublicBookingPage"));
 const PublicForm        = lazy(() => import("./components/forms/PublicForm"));
 const PublicEventPage   = lazy(() => import("./pages/PublicEventPage"));
 const EventsDashboard   = lazy(() => import("./pages/EventsDashboard"));

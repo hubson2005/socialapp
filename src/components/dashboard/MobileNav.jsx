@@ -18,92 +18,31 @@
  *  [C13] Fond du tiroir/tab bar aligné sur UserSidebar (dégradé + voile noir)
  *
  * REFONTE VISUELLE :
- *  [C14] Nouvelle charte sombre indigo/violet (maquette fournie) :
- *        - Fond du tiroir et de la tab bar : bleu-nuit quasi opaque au lieu
- *          du dégradé magenta→orange (l'ancien fond restait spécifique à
- *          UserSidebar et n'était plus jugé cohérent avec la nouvelle
- *          identité mobile).
- *        - En-tête restructuré en colonne (avatar au-dessus du nom, plus
- *          large) au lieu d'une ligne avatar+nom. LE BLOC DE RENDU DE LA
- *          PHOTO DE PROFIL (avatar_url ? <img> : initiale) N'A PAS ÉTÉ
- *          MODIFIÉ — seule sa taille/son emplacement dans le layout changent.
- *        - Ajout d'un badge d'offre ("Premium+"…) dérivé de la prop `limits`
- *          existante, et d'une ligne email (prop `profile.email`, optionnelle).
- *        - Ajout d'une rangée de statistiques (prop `stats`, optionnelle —
- *          tableau de { icon, value, label, color }), affichée uniquement
- *          si fournie pour ne rien casser chez les appelants existants.
- *        - Chaque item de navigation affiche désormais un sous-titre
- *          descriptif (label + description), comme sur la maquette.
- *        - "Image de fond" déplacée dans un groupe PERSONNALISATION, sous
- *          forme d'item de liste avec bouton pilule "Modifier" (au lieu de
- *          la zone d'upload permanente) — logique d'upload/suppression
- *          inchangée (toujours [C4]/[C7]/[C8]).
- *        - Nouveau groupe PARAMÈTRES : "Paramètres du compte" (ancien item
- *          Settings, renommé) + "Se déconnecter" (nouvelle prop `onLogout`,
- *          optionnelle, bouton rouge en bas de liste).
- *        - Tab bar flottante réalignée sur la même palette indigo pour la
- *          cohérence visuelle drawer/tab bar.
+ *  [C14] Nouvelle charte sombre indigo/violet (maquette fournie) : fond
+ *        bleu-nuit, en-tête, badge d'offre, rangée de stats optionnelle,
+ *        sous-titres descriptifs, groupe PERSONNALISATION (image de fond),
+ *        groupe PARAMÈTRES.
+ *  [C15] En-tête en ligne ; tab bar masquée tant que le tiroir est ouvert.
+ *  [C16] Footer nettoyé : email + "Se déconnecter" déplacés en bas du tiroir.
+ *  [C17] Props alignées sur UserDashboard.jsx : userEmail / onSignOut.
+ *  [C18] Bouton "Se déconnecter" : largeur naturelle, fond rouge plein,
+ *        placé sous la ligne email.
+ *  [C19] Calendrier (booking) verrouillé : plans Pro et Business uniquement.
+ *  [C20] FIX — NAV_IDS.CRM 'crm' → 'leads' (aligné sur le `case 'leads'`
+ *        du switch de rendu du dashboard).
+ *  [C21] FIX — Groupe "Administration" (Gestion des comptes) ajouté,
+ *        `adminOnly`, filtré selon la prop `isAdmin`.
  *
- *  [C15] Ajustements demandés après retour :
- *        - En-tête repassé en ligne (avatar à côté du nom, comme la
- *          version d'origine) au lieu de la mise en page verticale.
- *        - Tab bar flottante masquée (fade + léger décalage vers le bas,
- *          pointer-events désactivés) tant que le tiroir est ouvert, pour
- *          éviter la superposition visuelle avec le tiroir plein écran.
- *
- *  [C16] Footer nettoyé :
- *        - Suppression du bloc "X liens · Y produits" (retour utilisateur).
- *        - Email et bouton "Se déconnecter" déplacés du header/de la liste
- *          vers ce même footer, en bas du tiroir. Le lien "Changer
- *          d'offre" reste affiché à côté quand applicable.
- *
- *  [C17] Alignement des noms de props sur UserDashboard.jsx : celui-ci
- *        passait déjà `userEmail={user?.email}` et `onSignOut={handleSignOut}`
- *        à <MobileNav /> (mêmes noms que pour <UserSidebar />), alors que
- *        ce composant attendait encore `profile.email` / `onLogout`
- *        (issus d'une itération précédente, jamais branchés côté parent).
- *        Résultat : email et bouton "Se déconnecter" ne s'affichaient
- *        jamais malgré des props bien passées depuis le Dashboard. Fix :
- *        `onLogout` → `onSignOut`, `profile.email` → `userEmail` (prop
- *        dédiée, plus besoin de la faire transiter par `profile`).
- *
- *  [C18] Footer — bouton "Se déconnecter" trop imposant (pleine largeur,
- *        fond quasi transparent) : réduit à sa largeur naturelle, fond
- *        rouge plein (opaque) pour un meilleur contraste, et repositionné
- *        sous la ligne email au lieu d'être aligné à côté d'elle sur une
- *        rangée horizontale forcée en pleine largeur.
- *
- *  [C19] Verrouillage du Calendrier (booking) : ajout de l'entrée
- *        NAV_LOCK[NAV_IDS.BOOKING] = 'pro', pour que seuls les plans
- *        Pro et Business (currentOrder >= PLAN_ORDER.pro) y aient accès —
- *        auparavant l'item n'était soumis à aucune restriction de plan.
- *
- *  [C20] FIX — NAV_IDS.CRM valait 'crm', un id qui ne correspond à aucun
- *        `case` dans le switch de rendu du dashboard (celui-ci n'a qu'un
- *        `case 'leads'` pour afficher <LeadsCRMPanel .../>, hérité de la
- *        convention utilisée côté Sidebar desktop / SIDEBAR_NAV). Résultat :
- *        taper sur "Leads" (tab bar ou tiroir) appelait onNavigate('crm'),
- *        qui tombait dans le `default: return null` du switch → panneau
- *        vide, comme si le lien n'existait pas du tout. NAV_IDS.CRM est
- *        utilisé partout dans ce fichier (TAB_ITEMS, SIDEBAR_GROUPS,
- *        NAV_LOCK) via la constante, jamais en chaîne 'crm' en dur ailleurs
- *        — un seul changement de valeur ('crm' → 'leads') suffit donc à
- *        tout resynchroniser sans toucher au reste du fichier.
- *
- *  [C21] FIX — Section "Gestion des comptes" absente du tiroir mobile côté
- *        admin. Le Dashboard.jsx desktop a sa propre <Sidebar> avec un item
- *        `accounts` (groupe 'admin', icône Users) → son switch de rendu a
- *        un `case 'accounts': return <UserActivationPanel/>`. Mais côté
- *        mobile, Dashboard.jsx monte CE composant (<MobileNav />), qui
- *        n'avait jamais eu d'entrée `accounts` ni dans NAV_IDS ni dans
- *        SIDEBAR_GROUPS — alors que la prop `isAdmin` lui était déjà
- *        transmise (`<MobileNav isAdmin={isAdmin} ... />`), sans rien à
- *        conditionner dessus. Résultat : impossible d'accéder à la gestion
- *        des comptes depuis un mobile admin, quelle que soit la valeur de
- *        `isAdmin`. Fix : ajout de NAV_IDS.ACCOUNTS = 'accounts' (même
- *        valeur que le `case` du dashboard) et d'un groupe "Administration"
- *        dans SIDEBAR_GROUPS, marqué `adminOnly: true` et filtré au rendu
- *        selon la prop `isAdmin` déjà reçue par ce composant.
+ *  [C22] Tab bar "pilule" mobile + tablette :
+ *        - Nouveau design (barre arrondie, onglet actif = anneau + icône
+ *          colorée, point "Live", focus clavier visible, hover uniquement
+ *          sur souris, prefers-reduced-motion).
+ *        - Les media queries étant impossibles en styles inline, le CSS de
+ *          la barre est injecté une seule fois (NAV_CSS), comme [C9].
+ *          Mobile (≤500px) : barre 78px. Tablette (≥501px) : barre 92px.
+ *        - Tiroir centré (640px max) dès 768px via la classe `mn-drawer`.
+ *        - Id du <style> changé ('mobile-nav-styles') pour que le nouveau
+ *          CSS soit bien injecté même après un rechargement à chaud.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -169,16 +108,52 @@ const T = {
 // UserSidebar comme unique source de vérité.
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
+// ─── [C22] Styles de la tab bar (injectés une seule fois) ────
+// Anneau de l'onglet actif : rouge comme sur l'aperçu.
+// Pour rester dans l'indigo du tiroir, remplace par : const NAV_ACCENT = T.accent;
+const NAV_ACCENT = '#e51b3e';
+const NAV_ACCENT_GLOW = 'rgba(229,27,62,.15)'; // à ajuster si NAV_ACCENT change
+const NAV_BAR_BG = T.panel;
+
+const NAV_CSS = `
+.mn-bar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:calc(100% - 24px);max-width:650px;height:78px;z-index:38;transition:transform .25s ease,opacity .25s ease}
+.mn-bar.is-hidden{transform:translateX(-50%) translateY(24px);opacity:0;pointer-events:none}
+.mn-bar-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:space-around;padding:5px 6px;background:${NAV_BAR_BG};border:1px solid rgba(255,255,255,.08);border-radius:40px;box-shadow:0 18px 35px rgba(0,0,0,.28),0 5px 12px rgba(0,0,0,.18);box-sizing:border-box}
+.mn-item{position:relative;width:20%;height:68px;border:none;background:transparent;color:#aeb0b5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-family:inherit;transition:color .25s ease,transform .25s ease;-webkit-tap-highlight-color:transparent}
+@media (hover:hover){.mn-item:hover{color:#fff}}
+.mn-item:focus-visible .mn-icon{outline:2px solid #fff;outline-offset:2px}
+.mn-icon{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .25s ease}
+.mn-icon svg{width:22px;height:22px}
+.mn-item.active{color:#fff}
+.mn-item.active .mn-icon{width:52px;height:52px;margin-top:-3px;border:2px solid ${NAV_ACCENT};background:${NAV_BAR_BG};box-shadow:0 0 0 1px ${NAV_ACCENT_GLOW}}
+.mn-item.active .mn-icon svg{color:${NAV_ACCENT}}
+.mn-item.locked{opacity:.55}
+.mn-label{font-size:10px;line-height:1;white-space:nowrap}
+.mn-dot{position:absolute;top:7px;right:6px;width:7px;height:7px;border-radius:50%;background:${T.green};border:2px solid ${NAV_BAR_BG};box-sizing:content-box}
+
+@media (min-width:501px){
+  .mn-bar{bottom:calc(22px + env(safe-area-inset-bottom,0px));width:min(92%,650px);height:92px}
+  .mn-bar-inner{padding:8px 14px;border-radius:46px}
+  .mn-item{width:100px;height:76px}
+  .mn-icon{width:48px;height:48px}
+  .mn-icon svg{width:24px;height:24px}
+  .mn-item.active .mn-icon{width:62px;height:62px;border-width:3px}
+  .mn-label{font-size:12px}
+  .mn-dot{top:9px;right:8px}
+}
+@media (min-width:768px){
+  .mn-drawer{width:min(640px,100%);margin-left:auto;margin-right:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .mn-bar,.mn-item,.mn-icon{transition:none}
+}
+`;
+
 // ─── Config navigation ────────────────────────────────────────
 const NAV_IDS = {
   OVERVIEW:     'overview',
-  // [FIX C20] 'crm' → 'leads' : aligné sur le `case 'leads'` utilisé par le
-  // switch de rendu du dashboard (celui qui affiche <LeadsCRMPanel .../>).
-  // Avec l'ancienne valeur 'crm', taper sur "Leads" (tab bar ou tiroir)
-  // appelait onNavigate('crm'), qui ne correspondait à aucun `case` côté
-  // dashboard → panneau vide, comme si le lien n'existait pas. NAV_IDS.CRM
-  // est utilisé partout dans ce fichier (TAB_ITEMS, SIDEBAR_GROUPS,
-  // NAV_LOCK) donc ce seul changement suffit à tout resynchroniser.
+  // [FIX C20] 'crm' → 'leads' : aligné sur le `case 'leads'` du switch de
+  // rendu du dashboard (<LeadsCRMPanel />).
   CRM:          'leads',
   PLATFORMS:    'platforms',
   REALTIME:     'realtime',
@@ -191,20 +166,15 @@ const NAV_IDS = {
   FORMS:        'forms',
   ANALYTICS:    'analytics',
   SETTINGS:     'settings',
-  // [C21] Aligné sur le `case 'accounts'` du switch de rendu de
-  // Dashboard.jsx (celui qui affiche <UserActivationPanel/>, "Gestion des
-  // comptes"). Cette section existait déjà côté Sidebar desktop
-  // (SIDEBAR_NAV, groupe 'admin') mais n'avait jamais été répliquée ici —
-  // MobileNav ignorait donc totalement cette entrée, malgré la prop
-  // `isAdmin` déjà transmise par Dashboard.jsx.
+  // [C21] Aligné sur le `case 'accounts'` de Dashboard.jsx
+  // (<UserActivationPanel/>, "Gestion des comptes").
   ACCOUNTS:     'accounts',
   MENU:         '__menu__',
 };
 
 // Verrouillage par plan, aligné sur USER_NAV (UserSidebar.jsx).
-// [C19] Calendrier (BOOKING) désormais réservé aux plans Pro et Business.
-// NAV_IDS.ACCOUNTS n'y figure pas : ce n'est pas un item soumis au plan,
-// mais réservé aux comptes admin (filtré directement dans SIDEBAR_GROUPS).
+// [C19] Calendrier (BOOKING) réservé aux plans Pro et Business.
+// NAV_IDS.ACCOUNTS n'y figure pas : réservé aux admins (filtré via SIDEBAR_GROUPS).
 const NAV_LOCK = {
   [NAV_IDS.EVENT]:        'pro',
   [NAV_IDS.ANALYTICS]:    'pro',
@@ -224,11 +194,8 @@ const TAB_ITEMS = [
   { id: NAV_IDS.MENU,      label: 'Menu',      icon: Menu             },
 ];
 
-// [C14] Chaque item porte désormais une `description` (sous-titre affiché
-// dans le tiroir, comme sur la maquette).
-// [C21] Groupe "Administration" ajouté, marqué `adminOnly: true` — filtré
-// au rendu selon la prop `isAdmin`. Icône Users alignée sur l'item
-// "Comptes" du SIDEBAR_NAV desktop (Dashboard.jsx).
+// [C14] Chaque item porte une `description` (sous-titre dans le tiroir).
+// [C21] Groupe "Administration" marqué `adminOnly: true`.
 const SIDEBAR_GROUPS = [
   {
     label: 'Navigation',
@@ -247,12 +214,12 @@ const SIDEBAR_GROUPS = [
   {
     label: 'Contenu',
     items: [
-      { id: NAV_IDS.PLATFORMS,   label: 'Plateformes', icon: Link2,        description: 'Vos réseaux et liens connectés' },
-      { id: NAV_IDS.EVENT,       label: 'Événement',   icon: CalendarDays, description: 'Créez et gérez vos événements' },
-      { id: NAV_IDS.MARKETPLACE, label: 'Marketplace', icon: ShoppingBag,  description: 'Vendez vos produits et services' },
-      { id: NAV_IDS.DOCUMENTS,   label: 'Documents',   icon: FileText,     description: 'Vos fichiers et ressources' },
+      { id: NAV_IDS.PLATFORMS,   label: 'Plateformes', icon: Link2,         description: 'Vos réseaux et liens connectés' },
+      { id: NAV_IDS.EVENT,       label: 'Événement',   icon: CalendarDays,  description: 'Créez et gérez vos événements' },
+      { id: NAV_IDS.MARKETPLACE, label: 'Marketplace', icon: ShoppingBag,   description: 'Vendez vos produits et services' },
+      { id: NAV_IDS.DOCUMENTS,   label: 'Documents',   icon: FileText,      description: 'Vos fichiers et ressources' },
       { id: NAV_IDS.BOOKING,     label: 'Calendrier',  icon: CalendarClock, description: 'Réservations et disponibilités' },
-      { id: NAV_IDS.FORMS,       label: 'Formulaires', icon: FileText,     description: 'Collectez des informations' },
+      { id: NAV_IDS.FORMS,       label: 'Formulaires', icon: FileText,      description: 'Collectez des informations' },
     ],
   },
   {
@@ -290,8 +257,8 @@ export default function MobileNav({
   bgImageUrl,
   uploadingBg,
   onUpgrade,
-  userEmail,    // [C17] optionnel — email affiché dans le footer (aligné sur la prop envoyée par UserDashboard.jsx, ex-profile.email)
-  onSignOut,    // [C17] optionnel — () => void, affiche "Se déconnecter" si fourni (aligné sur la prop envoyée par UserDashboard.jsx, ex-onLogout)
+  userEmail,    // [C17] optionnel — email affiché dans le footer
+  onSignOut,    // [C17] optionnel — () => void, affiche "Se déconnecter" si fourni
   isAdmin = false,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -352,13 +319,15 @@ export default function MobileNav({
     return () => { document.body.style.overflow = ''; };
   }, [drawerOpen]);
 
-  // ── [C9] Injection unique du keyframe spin ───────────────────
+  // ── [C9] + [C22] Injection unique des styles (keyframe + tab bar) ──
   useEffect(() => {
-    const styleId = 'mobile-nav-spin-keyframe';
+    const styleId = 'mobile-nav-styles';
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
       style.id = styleId;
-      style.textContent = '@keyframes mobile-nav-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+      style.textContent =
+        '@keyframes mobile-nav-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
+        NAV_CSS;
       document.head.appendChild(style);
     }
   }, []);
@@ -397,8 +366,7 @@ export default function MobileNav({
   };
 
   // ── Avatar initiale ──────────────────────────────────────────
-  // [C14] LOGIQUE DE RENDU DE LA PHOTO DE PROFIL INCHANGÉE — seuls la
-  // taille et l'emplacement dans le layout ont été adaptés à la maquette.
+  // [C14] LOGIQUE DE RENDU DE LA PHOTO DE PROFIL INCHANGÉE.
   const avatarInitial = profile?.display_name?.charAt(0)?.toUpperCase() || '?';
 
   // [C21] Groupes visibles : on retire "Administration" si isAdmin est faux.
@@ -420,9 +388,10 @@ export default function MobileNav({
         }}
       />
 
-      {/* Drawer */}
+      {/* Drawer — [C22] classe mn-drawer : centré sur tablette (≥768px) */}
       <div
         ref={drawerRef}
+        className="mn-drawer"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -446,7 +415,7 @@ export default function MobileNav({
           <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)' }} />
         </div>
 
-        {/* Header — [C14] mise en page verticale, logique avatar inchangée */}
+        {/* Header — [C15] en ligne, logique avatar inchangée */}
         <div style={{
           padding: '4px 20px 16px',
           borderBottom: `1px solid ${T.borderSubtle}`,
@@ -706,15 +675,7 @@ export default function MobileNav({
           )}
         </div>
 
-        {/* Footer — [C16] email + "Se déconnecter" (déplacés depuis le
-            header / la liste) ; le bloc "X liens · Y produits" a été
-            retiré à la demande. Le lien "Changer d'offre" est conservé
-            s'il y a lieu.
-            [C18] Bouton "Se déconnecter" réduit à sa largeur naturelle
-            (au lieu de flex:1 pleine largeur), fond rouge plein/opaque
-            (au lieu de quasi transparent), et positionné sous l'email
-            au lieu d'être aligné à côté d'elle sur une rangée horizontale
-            forcée en pleine largeur. */}
+        {/* Footer — [C16]/[C18] email + "Se déconnecter" + "Changer d'offre" */}
         {(userEmail || onSignOut || (!isMaxPlan && onUpgrade)) && (
           <div style={{
             padding: '12px 20px calc(16px + env(safe-area-inset-bottom))',
@@ -761,75 +722,42 @@ export default function MobileNav({
         )}
       </div>
 
-      {/* Floating Tab Bar */}
+      {/* Floating Tab Bar — [C22] design pilule, mobile + tablette */}
       <nav
         ref={navRef}
         aria-label="Navigation principale"
-        style={{
-          position: 'fixed',
-          bottom: 'calc(16px + env(safe-area-inset-bottom))',
-          left: '50%',
-          // [C15] Tab bar masquée (translate + fade) quand le tiroir est
-          // ouvert, pour ne pas se superposer visuellement au tiroir.
-          transform: drawerOpen ? 'translateX(-50%) translateY(24px)' : 'translateX(-50%) translateY(0)',
-          opacity: drawerOpen ? 0 : 1,
-          pointerEvents: drawerOpen ? 'none' : 'auto',
-          transition: 'transform 0.25s ease, opacity 0.25s ease',
-          zIndex: 38,
-          background: T.bg,
-          border: '1px solid rgba(255,255,255,0.14)',
-          borderRadius: T.radiusPill,
-          padding: '8px 10px',
-          display: 'flex', alignItems: 'center', gap: '4px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          minWidth: '280px', maxWidth: 'calc(100vw - 32px)',
-          justifyContent: 'space-around',
-        }}
+        className={`mn-bar${drawerOpen ? ' is-hidden' : ''}`}
       >
-        {TAB_ITEMS.map(item => {
-          const isMenu   = item.id === NAV_IDS.MENU;
-          const locked   = !isMenu && isNavLocked(item.id);
-          const isActive = isMenu ? drawerOpen : (activeSection === item.id && !locked);
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleTab(item.id)}
-              aria-label={item.label + (locked ? ' (verrouillé)' : '')}
-              aria-current={!isMenu && isActive ? 'page' : undefined}
-              aria-expanded={isMenu ? drawerOpen : undefined}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
-                padding: '6px 10px', borderRadius: T.radiusPill, border: 'none',
-                background: isActive
-                  ? (isMenu ? 'rgba(239,68,68,0.2)' : T.activeBgSoft)
-                  : 'transparent',
-                cursor: 'pointer',
-                transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                position: 'relative', minWidth: '48px', minHeight: '44px',
-                opacity: locked ? 0.55 : 1,
-              }}
-            >
-              {item.badge && !isMenu && !locked && (
-                <span style={{
-                  position: 'absolute', top: '4px', right: '8px',
-                  width: '7px', height: '7px', borderRadius: '50%',
-                  background: T.green,
-                }} />
-              )}
-              {locked
-                ? <Lock size={18} color="rgba(255,255,255,0.4)" />
-                : <item.icon size={20} color={isActive ? (isMenu ? T.red : 'white') : 'rgba(255,255,255,0.55)'} />
-              }
-              <span style={{
-                fontSize: '9px', fontWeight: isActive ? 700 : 500,
-                color: isActive ? (isMenu ? T.red : 'white') : 'rgba(255,255,255,0.45)',
-                lineHeight: 1,
-              }}>
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+        <div className="mn-bar-inner">
+          {TAB_ITEMS.map(item => {
+            const isMenu   = item.id === NAV_IDS.MENU;
+            const locked   = !isMenu && isNavLocked(item.id);
+            const isActive = isMenu ? drawerOpen : (activeSection === item.id && !locked);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`mn-item${isActive ? ' active' : ''}${locked ? ' locked' : ''}`}
+                onClick={() => handleTab(item.id)}
+                tabIndex={drawerOpen ? -1 : 0}
+                aria-label={item.label + (locked ? ' (verrouillé)' : '')}
+                aria-current={!isMenu && isActive ? 'page' : undefined}
+                aria-expanded={isMenu ? drawerOpen : undefined}
+              >
+                <span className="mn-icon">
+                  {locked
+                    ? <Lock aria-hidden="true" strokeWidth={1.8} />
+                    : <item.icon aria-hidden="true" strokeWidth={isActive ? 2.2 : 1.8} />
+                  }
+                  {item.badge && !isMenu && !locked && (
+                    <span className="mn-dot" role="status" aria-label="En direct" />
+                  )}
+                </span>
+                <span className="mn-label">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
     </>
   );

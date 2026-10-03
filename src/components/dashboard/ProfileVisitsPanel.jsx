@@ -47,42 +47,44 @@ export default function ProfileVisitsPanel({ profileId }) {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  // Thème clair aligné sur Dashboard.jsx / UserDashboard.jsx :
+  // carte #ffffff, bordures #e6e8f0, texte #161a2e / #6b7280, accent #6366f1.
   return (
-    <div className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
+    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#e6e8f0] shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <h3 className="text-lg font-semibold">Visiteurs du profil</h3>
+        <h3 className="text-lg font-extrabold text-[#161a2e]">Visiteurs du profil</h3>
         <input
           type="text"
           value={searchIp}
           onChange={(e) => setSearchIp(e.target.value)}
           placeholder="Rechercher une IP..."
-          className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-orange-500"
+          className="w-full sm:w-64 bg-[#f6f7fb] border border-[#e6e8f0] rounded-xl px-3 py-2 text-sm text-[#161a2e] placeholder-[#9095a5] focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20"
         />
       </div>
 
       {loading ? (
-        <div className="p-4 text-sm text-gray-400">Chargement des visites...</div>
+        <div className="p-4 text-sm text-[#6b7280]">Chargement des visites...</div>
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-neutral-800">
-                  <th className="py-2 pr-4">Date</th>
-                  <th className="py-2 pr-4">Adresse IP</th>
-                  <th className="py-2 pr-4">Appareil / Navigateur</th>
-                  <th className="py-2 pr-4">Provenance</th>
+                <tr className="text-left text-[#6b7280] border-b border-[#e6e8f0]">
+                  <th className="py-2.5 pr-4 font-semibold">Date</th>
+                  <th className="py-2.5 pr-4 font-semibold">Adresse IP</th>
+                  <th className="py-2.5 pr-4 font-semibold">Appareil / Navigateur</th>
+                  <th className="py-2.5 pr-4 font-semibold">Provenance</th>
                 </tr>
               </thead>
               <tbody>
                 {visits.map((v) => (
-                  <tr key={v.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/30">
-                    <td className="py-2 pr-4 text-gray-300">
+                  <tr key={v.id} className="border-b border-[#eef0f6] hover:bg-[#f6f7fb] transition-colors">
+                    <td className="py-2.5 pr-4 text-[#161a2e] whitespace-nowrap">
                       {new Date(v.visited_at).toLocaleString("fr-FR")}
                     </td>
-                    <td className="py-2 pr-4 font-mono text-orange-400">{v.ip_address}</td>
-                    <td className="py-2 pr-4 text-gray-300">{parseUserAgent(v.user_agent)}</td>
-                    <td className="py-2 pr-4 text-gray-400 truncate max-w-[200px]">
+                    <td className="py-2.5 pr-4 font-mono text-[#c2410c] whitespace-nowrap">{v.ip_address}</td>
+                    <td className="py-2.5 pr-4 text-[#374151]">{parseUserAgent(v.user_agent)}</td>
+                    <td className="py-2.5 pr-4 text-[#6b7280] truncate max-w-[200px]">
                       {v.referrer || "Direct"}
                     </td>
                   </tr>
@@ -90,14 +92,14 @@ export default function ProfileVisitsPanel({ profileId }) {
               </tbody>
             </table>
             {visits.length === 0 && (
-              <p className="text-gray-500 text-sm py-4">
+              <p className="text-[#6b7280] text-sm py-4">
                 {searchIp ? "Aucune visite ne correspond à cette recherche." : "Aucune visite enregistrée pour le moment."}
               </p>
             )}
           </div>
 
           {totalCount > PAGE_SIZE && (
-            <div className="flex items-center justify-between mt-4 text-sm text-gray-400">
+            <div className="flex items-center justify-between mt-4 text-sm text-[#6b7280] gap-3 flex-wrap">
               <span>
                 Page {page + 1} sur {totalPages} · {totalCount} visite{totalCount > 1 ? "s" : ""}
               </span>
@@ -105,14 +107,14 @@ export default function ProfileVisitsPanel({ profileId }) {
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="px-3 py-1 rounded-lg border border-neutral-700 disabled:opacity-40 hover:bg-neutral-800"
+                  className="px-3 py-1.5 rounded-lg border border-[#e6e8f0] bg-[#f6f7fb] text-[#161a2e] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceefb]"
                 >
                   Précédent
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
-                  className="px-3 py-1 rounded-lg border border-neutral-700 disabled:opacity-40 hover:bg-neutral-800"
+                  className="px-3 py-1.5 rounded-lg border border-[#e6e8f0] bg-[#f6f7fb] text-[#161a2e] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceefb]"
                 >
                   Suivant
                 </button>

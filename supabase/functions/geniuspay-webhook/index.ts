@@ -184,13 +184,14 @@ serve(async (req: Request) => {
       updated_at: now.toISOString(),
     }, { onConflict: 'user_id' });
 
-    // ── Mettre à jour le profil (respecte le CHECK basic/pro/business) ──
-    if (['basic', 'pro', 'business'].includes(plan)) {
-      await supabase.from('link_profiles').update({ plan, is_activated: true }).eq('id', profileId);
+        // ── Mettre à jour le profil (respecte le CHECK basic/pro/business) ──
+    const profilePlan = String(plan).replace(/_(monthly|annual)$/, '');
+    if (['basic', 'pro', 'business'].includes(profilePlan)) {
+      await supabase.from('link_profiles').update({ plan: profilePlan, is_activated: true }).eq('id', profileId);
     } else if (plan === 'evenement') {
       await supabase.from('link_profiles').update({ is_event: true, is_activated: true }).eq('id', profileId);
     }
-
+    
     // ── Déclencher les automatisations existantes (WhatsApp, notify_owner, etc.) ──
     await runAutomations({
       trigger: 'payment_received',

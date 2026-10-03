@@ -444,3 +444,12 @@ entrypoint = "./functions/generate-post/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/generate-post/*.html" ]
+
+# Webhook appelé par GeniusPay (pas de JWT Supabase) : le code de la fonction
+# doit vérifier la signature / le secret du webhook.
+[functions.geniuspay-webhook]
+verify_jwt = false
+
+# geniuspay-checkout : volontairement ABSENT de ce fichier. Le dashboard l'appelle via
+# supabase.functions.invoke (JWT de l'utilisateur envoyé automatiquement), donc le défaut
+# verify_jwt = true s'applique et protège la fonction.

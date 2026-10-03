@@ -3,15 +3,21 @@
  * ─────────────────────────────────────────────────────────────
  * Crée un paiement GeniusPay (checkout hébergé) pour un abonnement
  * SocialApp (souscription initiale OU rappel de renouvellement
- * automatique appelé par le cron `process_senepay_renewals`).
+ * automatique).
  *
  * Body attendu : { profile_id: number, plan: 'basic'|'pro'|'business'|'evenement', mode?: 'new'|'renewal' }
+ *
+ * Autorisation (une des deux preuves est exigée) :
+ *   1. En-tête x-internal-secret = INTERNAL_FUNCTION_SECRET   (appels serveur)
+ *   2. Authorization: Bearer <session utilisateur> dont l'utilisateur
+ *      est propriétaire du profile_id                         (dashboard)
  *
  * Secrets requis (Supabase secrets) :
  *   GENIUSPAY_API_KEY        (X-API-Key,    ex: pk_sandbox_/pk_live_)
  *   GENIUSPAY_API_SECRET     (X-API-Secret, ex: sk_sandbox_/sk_live_)
  *   GENIUSPAY_WEBHOOK_SECRET (utilisé par geniuspay-webhook pour vérifier
  *                             le header X-Webhook-Signature)
+ *   INTERNAL_FUNCTION_SECRET (secret partagé entre Edge Functions)
  *
  * NOTE : l'URL de webhook n'est PAS envoyée dans cette requête — elle se
  * configure une seule fois dans le dashboard GeniusPay (onglet Webhooks).
@@ -23,12 +29,21 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret',
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const GENIUSPAY_API_KEY = Deno.env.get('GENIUSPAY_API_KEY') ?? '';
 const GENIUSPAY_API_SECRET = Deno.env.get('GENIUSPAY_API_SECRET') ?? '';
+const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
+
+// Comparaison en temps constant (évite de révéler le secret par le temps de réponse)
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -45,6 +60,35 @@ serve(async (req: Request) => {
       return _json({ error: 'profile_id et plan sont requis' }, 400);
     }
 
+    // ── Récupérer le profil + son propriétaire ──
+    const { data: profile, error: profileErr } = await supabase
+      .from('link_profiles')
+      .select('id, user_id, display_name, whatsapp_phone')
+      .eq('id', profile_id)
+      .maybeSingle();
+
+    // ── Autorisation : secret interne OU session du propriétaire du profil ──
+    const internalHeader = req.headers.get('x-internal-secret') ?? '';
+    const internalOk = !!INTERNAL_SECRET && !!internalHeader && safeEqual(internalHeader, INTERNAL_SECRET);
+
+    let userOk = false;
+    if (!internalOk) {
+      const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+      if (token && profile) {
+        const { data: userData } = await supabase.auth.getUser(token);
+        userOk = !!userData?.user?.id && userData.user.id === profile.user_id;
+      }
+    }
+
+    if (!internalOk && !userOk) {
+      // Même réponse que le profil existe ou non : ne révèle pas les ids valides
+      return _json({ error: 'Non autorisé' }, 401);
+    }
+
+    if (profileErr || !profile) {
+      return _json({ error: 'Profil introuvable' }, 404);
+    }
+
     // ── Récupérer le prix du plan depuis la table `plans` (jamais en dur) ──
     const { data: planRow, error: planErr } = await supabase
       .from('plans')
@@ -55,17 +99,6 @@ serve(async (req: Request) => {
 
     if (planErr || !planRow) {
       return _json({ error: `Plan inconnu ou inactif: ${plan}` }, 400);
-    }
-
-    // ── Récupérer le profil + son propriétaire ──
-    const { data: profile, error: profileErr } = await supabase
-      .from('link_profiles')
-      .select('id, user_id, display_name, whatsapp_phone')
-      .eq('id', profile_id)
-      .maybeSingle();
-
-    if (profileErr || !profile) {
-      return _json({ error: 'Profil introuvable' }, 404);
     }
 
     // ── Créer le paiement GeniusPay (checkout hébergé) ──
@@ -129,7 +162,10 @@ serve(async (req: Request) => {
       const message = `Bonjour ${profile.display_name || ''} ! 👋 Votre abonnement SocialApp (${planRow.label}) arrive à expiration. Renouvelez en un clic (${planRow.price_amount.toLocaleString('fr-FR')} FCFA) : ${checkoutUrl}`;
       fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-secret': INTERNAL_SECRET,
+        },
         body: JSON.stringify({
           phone: profile.whatsapp_phone,
           message,

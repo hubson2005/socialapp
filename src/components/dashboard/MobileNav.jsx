@@ -118,7 +118,7 @@ const NAV_BAR_BG = T.panel;
 const NAV_CSS = `
 .mn-bar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:calc(100% - 24px);max-width:650px;height:78px;z-index:38;transition:transform .25s ease,opacity .25s ease}
 .mn-bar.is-hidden{transform:translateX(-50%) translateY(24px);opacity:0;pointer-events:none}
-.mn-bar-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:space-around;padding:5px 6px;background:${NAV_BAR_BG};border:1px solid rgba(255,255,255,.08);border-radius:40px;box-shadow:0 18px 35px rgba(0,0,0,.28),0 5px 12px rgba(0,0,0,.18);box-sizing:border-box}
+.mn-bar-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:space-around;padding:5px 6px;background:${NAV_BAR_BG};border:none;border-radius:40px;box-shadow:none;box-sizing:border-box}
 .mn-item{position:relative;width:20%;height:68px;border:none;background:transparent;color:#aeb0b5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-family:inherit;transition:color .25s ease,transform .25s ease;-webkit-tap-highlight-color:transparent}
 @media (hover:hover){.mn-item:hover{color:#fff}}
 .mn-item:focus-visible .mn-icon{outline:2px solid #fff;outline-offset:2px}
@@ -189,7 +189,7 @@ const NAV_LOCK = {
 const TAB_ITEMS = [
   { id: NAV_IDS.OVERVIEW,  label: 'Dashboard', icon: LayoutDashboard },
   { id: NAV_IDS.CRM,       label: 'Leads',     icon: Users            },
-  { id: NAV_IDS.PLATFORMS, label: 'Profils',   icon: Link2            },
+  { id: NAV_IDS.PLATFORMS, label: 'Liens',     icon: Link2            },
   { id: NAV_IDS.REALTIME,  label: 'Live',      icon: Radio, badge: '●' },
   { id: NAV_IDS.MENU,      label: 'Menu',      icon: Menu             },
 ];

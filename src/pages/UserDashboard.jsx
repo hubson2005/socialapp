@@ -1076,7 +1076,7 @@ export default function UserDashboard() {
                     subscription={subscription}
                     isActivated={isActivated}
                     loading={checkoutLoading}
-                    onRenew={() => startGeniusPayCheckout(effectivePlan, 'renewal', subscription?.billing || 'annual')}
+                    onRenew={() => startGeniusPayCheckout(effectivePlan, 'renewal', String(subscription?.plan || '').endsWith('_monthly') ? 'monthly' : 'annual')}
                   />
                   {renderSection()}
                 </div>

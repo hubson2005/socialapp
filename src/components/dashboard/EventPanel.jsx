@@ -2,7 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { useAuth } from '../../AuthContext';
-import { makeSlug } from '../../lib/eventDraft';
+import { makeSlug } from '../../lib/eventDraft';
+
+const EVENT_PLACEHOLDERS = {
+  mariage: {
+    title: 'Mariage Awa & Yves',
+    location: 'Sofitel Abidjan Hôtel Ivoire',
+    description: 'Nous avons la joie de vous convier à notre mariage…',
+  },
+  custom: {
+    title: 'Anniversaire de Fatou – 30 ans',
+    location: 'Terrasse Le Wafou, Cocody',
+    description: 'Rejoignez-nous pour une soirée de célébration. Tenue libre, ambiance garantie !',
+  },
+  expo_temp: {
+    title: 'Salon Made in CI 2026 – Stand B12',
+    location: 'Parc des Expositions, Abidjan',
+    description: 'Retrouvez-nous au stand B12 : démonstrations, offres du salon et prise de rendez-vous.',
+  },
+};
 
 const TYPES = [
   { id: 'mariage', label: 'Mariage / soirée' },
@@ -270,11 +288,11 @@ export default function EventPanel({ eventId, onChange }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className={labelClass}>Titre</label>
-          <input className={inputClass} value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="Mariage Awa & Yves" />
+          <input className={inputClass} value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder={(EVENT_PLACEHOLDERS[type] || EVENT_PLACEHOLDERS.mariage).title} />
         </div>
         <div>
           <label className={labelClass}>Lieu</label>
-          <input className={inputClass} value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder="Sofitel Abidjan Hôtel Ivoire" />
+          <input className={inputClass} value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder={(EVENT_PLACEHOLDERS[type] || EVENT_PLACEHOLDERS.mariage).location} />
         </div>
       </div>
 

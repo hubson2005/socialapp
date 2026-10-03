@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 export const USER_NAV = [
   { id: 'overview',      label: 'Dashboard',       icon: LayoutDashboard, group: 'main',      locked: null,       path: null },
   { id: 'platforms',     label: 'Plateformes',     icon: Link2,           group: 'content',   locked: null,       path: null },
+  { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: null,       path: null }, // option payante par événement, tous plans
   { id: 'marketplace',   label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null,       path: null },
   { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null },
   { id: 'booking',       label: 'Calendrier',      icon: CalendarClock,   group: 'content',   locked: null,       path: null },

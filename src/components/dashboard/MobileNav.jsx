@@ -265,7 +265,6 @@ export default function MobileNav({
   userEmail,    // [C17] optionnel — email affiché dans le footer
   onSignOut,    // [C17] optionnel — () => void, affiche "Se déconnecter" si fourni
   isAdmin = false,
-  showEvent = false, // entree Evenement : reservee au dashboard admin (Dashboard.jsx)
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef  = useRef(null);
@@ -381,7 +380,7 @@ export default function MobileNav({
   // devenus vides. isNavLocked() renvoie toujours false pour un admin.
   const visibleGroups = SIDEBAR_GROUPS
     .filter(group => !group.adminOnly || isAdmin)
-    .map(group => ({ ...group, items: group.items.filter(item => !isNavLocked(item.id) && (item.id !== NAV_IDS.EVENT || showEvent)) }))
+    .map(group => ({ ...group, items: group.items.filter(item => !isNavLocked(item.id)) }))
     .filter(group => group.items.length > 0);
 
   // [C23] Même règle pour la tab bar (l'onglet "Menu" est toujours conservé).

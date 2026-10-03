@@ -43,7 +43,7 @@ import { normalizePhone, isValidPhone }      from '../../lib/phone';            
 //  [FIX4] 90vh → 90dvh sur la modale "Nouveau lead".
 //  [FIX5] Cibles tactiles agrandies (Checkbox, bouton WhatsApp compact).
 //  [FIX6] `whileHover` désactivé sur appareils sans survol.
-//  [FIX7] Champs `inpDark` teintés indigo + halo au focus.
+//  [FIX7] Champs de modale teintés indigo + halo au focus.
 //  [FIX8] Vue Pipeline : colonnes toujours visibles, badge de comptage,
 //         icône d'état vide, scroll interne.
 //
@@ -55,15 +55,21 @@ import { normalizePhone, isValidPhone }      from '../../lib/phone';            
 //  [G5] Reset de `page` au changement de vue/filtre/tag/recherche + garde-fou.
 //
 // ─── THÈME ────────────────────────────────────────────────────────────────────
-//  [T1] Panneau principal en thème clair ; modales (LeadModal, "Nouveau
-//       lead") en overlay sombre #0f0f1a. `inp` (clair) / `inpDark` (modales).
+//  [T1] Panneau principal en thème clair.
+//  [T2] Modales (LeadModal, "Nouveau lead") passées en thème clair elles
+//       aussi : tout le module suit désormais les tokens du dashboard
+//       (carte #ffffff, bordures #e6e8f0, texte #161a2e / #6b7280, accent
+//       indigo #6366f1). Overlay en voile sombre translucide. Couleurs de
+//       statuts, scores, tags et WhatsApp assombries pour garder un bon
+//       contraste en texte sur fond blanc. `inp` (recherche) / `inpModal`
+//       (champs des modales).
 
 const STATUSES = [
-  { id: 'prospect', label: 'Prospect',   color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: UserPlus    },
-  { id: 'chaud',    label: '🔥 Chaud',   color: '#f97316', bg: 'rgba(249,115,22,0.15)', icon: Flame       },
-  { id: 'client',   label: '✅ Client',  color: '#22c55e', bg: 'rgba(34,197,94,0.15)',  icon: CheckCircle2 },
-  { id: 'froid',    label: '❄️ Froid',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',  icon: Snowflake   },
-  { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.15)', icon: Ban        },
+  { id: 'prospect', label: 'Prospect',   color: '#4f46e5', bg: 'rgba(99,102,241,0.12)', icon: UserPlus    },
+  { id: 'chaud',    label: '🔥 Chaud',   color: '#ea580c', bg: 'rgba(249,115,22,0.13)', icon: Flame       },
+  { id: 'client',   label: '✅ Client',  color: '#16a34a', bg: 'rgba(34,197,94,0.13)',  icon: CheckCircle2 },
+  { id: 'froid',    label: '❄️ Froid',   color: '#0891b2', bg: 'rgba(6,182,212,0.13)',  icon: Snowflake   },
+  { id: 'perdu',    label: 'Perdu',      color: '#6b7280', bg: 'rgba(107,114,128,0.13)', icon: Ban        },
 ];
 
 const SOURCES = [
@@ -123,12 +129,13 @@ const csvCell = (v) => {
 };
 
 const scoreLabel = (s) =>
-  s <= 30  ? { label: 'Froid',    color: '#06b6d4', icon: '❄️'  } :
-  s <= 60  ? { label: 'Tiède',    color: '#f59e0b', icon: '🌡️'  } :
-  s <= 80  ? { label: 'Chaud',    color: '#f97316', icon: '🔥'  } :
-             { label: 'Brûlant',  color: '#ef4444', icon: '🚀'  };
+  s <= 30  ? { label: 'Froid',    color: '#0891b2', icon: '❄️'  } :
+  s <= 60  ? { label: 'Tiède',    color: '#d97706', icon: '🌡️'  } :
+  s <= 80  ? { label: 'Chaud',    color: '#ea580c', icon: '🔥'  } :
+             { label: 'Brûlant',  color: '#dc2626', icon: '🚀'  };
 
-const TAG_PALETTE = ['#a78bfa', '#22d3ee', '#f472b6', '#fbbf24', '#34d399', '#fb7185', '#818cf8'];
+// [T2] Palette assombrie : lisible en texte sur fond blanc.
+const TAG_PALETTE = ['#7c3aed', '#0891b2', '#db2777', '#b45309', '#059669', '#e11d48', '#4f46e5'];
 const tagColor = (tag) => {
   let hash = 0;
   for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
@@ -182,13 +189,14 @@ const inp = {
   transition: 'border-color .15s, background .15s',
 };
 
-// [FIX7] Champ sombre — modales à fond opaque (#0f0f1a).
-const inpDark = {
-  width: '100%', background: '#181830',
-  border: '1px solid rgba(129,140,248,0.18)', borderRadius: '12px',
-  padding: '11px 13px', color: 'white', outline: 'none',
-  fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit',
-  transition: 'border-color .15s, background .15s',
+// [T2] Champ des modales — même thème clair (remplace l'ancien `inpDark`).
+const inpModal = { ...inp };
+
+// [T2] Bouton de fermeture clair (croix) pour les modales.
+const closeBtn = {
+  width: 36, height: 36, borderRadius: 10, border: '1px solid #e6e8f0',
+  background: '#f6f7fb', color: '#6b7280', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
 // [FIX5] Zone de tap agrandie sans changer l'apparence (17x17).
@@ -210,22 +218,22 @@ function Checkbox({ checked, indeterminate, onChange, style = {} }) {
         transition: 'all .15s', ...style,
       }}>
         {checked && <Check size={10} color="white" strokeWidth={3} />}
-        {!checked && indeterminate && <div style={{ width: 7, height: 2, background: '#818cf8', borderRadius: 1 }} />}
+        {!checked && indeterminate && <div style={{ width: 7, height: 2, background: '#6366f1', borderRadius: 1 }} />}
       </div>
     </div>
   );
 }
 
-// Utilisé dans LeadGridCard (clair) ET LeadModal (sombre) via `dark`.
-function ScoreBar({ score, onChange, dark = false }) {
+// Utilisé dans LeadGridCard et LeadModal.
+function ScoreBar({ score, onChange }) {
   const { color, label, icon } = scoreLabel(score);
   return (
     <div style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ color: dark ? 'rgba(255,255,255,0.5)' : '#8a90a2', fontSize: 12 }}>Score prospect</span>
+        <span style={{ color: '#8a90a2', fontSize: 12 }}>Score prospect</span>
         <span style={{ color, fontWeight: 700, fontSize: 13 }}>{icon} {score} — {label}</span>
       </div>
-      <div style={{ position: 'relative', height: 6, background: dark ? 'rgba(255,255,255,0.08)' : '#e6e8f0', borderRadius: 99 }}>
+      <div style={{ position: 'relative', height: 6, background: '#e6e8f0', borderRadius: 99 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${score}%`, background: color, borderRadius: 99, transition: 'width .3s, background .3s' }} />
       </div>
       {onChange && (
@@ -257,7 +265,7 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
         <span key={tag} style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
           padding: isSmall ? '1px 6px' : '2px 8px', borderRadius: 99,
-          background: `${tagColor(tag)}1f`, border: `1px solid ${tagColor(tag)}44`,
+          background: `${tagColor(tag)}1a`, border: `1px solid ${tagColor(tag)}44`,
           color: tagColor(tag), fontSize: isSmall ? 9.5 : 10.5, fontWeight: 700,
         }}>
           #{tag}
@@ -270,7 +278,7 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
 
 // [FIX5] Hauteur/largeur minimales 40px. [C2] validation via isValidPhone,
 // lien wa.me avec le numéro normalisé (225 + 10 chiffres).
-function WhatsAppBtn({ phone, leadId, onContact, compact = false, dark = false }) {
+function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
   const hasPhone = !!phone?.trim();
   return (
     <button
@@ -287,8 +295,8 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false, dark = false }
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 0 : 6,
         height: 40, width: compact ? 40 : 'auto', padding: compact ? 0 : '0 14px',
         borderRadius: 10, border: 'none', cursor: hasPhone ? 'pointer' : 'not-allowed',
-        background: hasPhone ? 'rgba(37,211,102,0.15)' : (dark ? 'rgba(255,255,255,0.05)' : '#eef0f5'),
-        color: hasPhone ? '#25d366' : (dark ? 'rgba(255,255,255,0.2)' : '#a2a7b5'), fontWeight: 700, fontSize: 12, transition: 'all .2s',
+        background: hasPhone ? 'rgba(37,211,102,0.15)' : '#eef0f5',
+        color: hasPhone ? '#15803d' : '#a2a7b5', fontWeight: 700, fontSize: 12, transition: 'all .2s',
         flexShrink: 0,
       }}
     >
@@ -305,36 +313,36 @@ const actionBtn = (bg) => ({
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
 });
 
-// Utilisé uniquement dans LeadModal (modale sombre).
+// Utilisé uniquement dans LeadModal.
 function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 22 }}>
-      <h4 style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>{title}</h4>
+      <h4 style={{ color: '#8a90a2', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>{title}</h4>
       {children}
     </div>
   );
 }
 
-// Utilisé uniquement dans LeadModal (modale sombre), utilise inpDark.
+// Utilisé uniquement dans LeadModal, utilise inpModal.
 function Field({ icon, label, value, editing, onChange, type, options, valueRaw }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-      <span style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>{icon}</span>
-      <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, width: 80, flexShrink: 0 }}>{label}</span>
+      <span style={{ color: '#9095a5', flexShrink: 0 }}>{icon}</span>
+      <span style={{ color: '#8a90a2', fontSize: 12, width: 80, flexShrink: 0 }}>{label}</span>
       {editing ? (
         type === 'select'
-          ? <select value={valueRaw} onChange={e => onChange(e.target.value)} className="crm-field-dark" style={{ ...inpDark, padding: '7px 10px' }}>
+          ? <select value={valueRaw} onChange={e => onChange(e.target.value)} className="crm-field-light" style={{ ...inpModal, padding: '7px 10px' }}>
               {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
             </select>
-          : <input value={value || ''} onChange={e => onChange(e.target.value)} className="crm-field-dark" style={{ ...inpDark, padding: '7px 10px' }} />
+          : <input value={value || ''} onChange={e => onChange(e.target.value)} className="crm-field-light" style={{ ...inpModal, padding: '7px 10px' }} />
       ) : (
-        <span style={{ color: value ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)', fontSize: 13 }}>{value || '—'}</span>
+        <span style={{ color: value ? '#161a2e' : '#a2a7b5', fontSize: 13 }}>{value || '—'}</span>
       )}
     </div>
   );
 }
 
-// ─── LeadModal — tiroir latéral, overlay sombre volontaire ───────────────────
+// ─── LeadModal — tiroir latéral, thème clair ─────────────────────────────────
 function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
@@ -463,7 +471,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
     >
       {/* [FIX3] classe crm-drawer : hauteur 100vh puis 100dvh (fallback CSS) */}
       <style>{`.crm-drawer{height:100vh;height:100dvh;}`}</style>
@@ -472,43 +480,43 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         onClick={e => e.stopPropagation()}
         className="crm-drawer"
-        style={{ width: '100%', maxWidth: isTablet ? 580 : 460, background: '#0f0f1a', borderLeft: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        style={{ width: '100%', maxWidth: isTablet ? 580 : 460, background: '#ffffff', borderLeft: '1px solid #e6e8f0', boxShadow: '-12px 0 40px rgba(15,23,42,0.12)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
-        <div style={{ padding: '20px 24px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
+        <div style={{ padding: '20px 24px 18px', borderBottom: '1px solid #e6e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9fafc' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 46, height: 46, borderRadius: '50%', background: `linear-gradient(135deg, ${sc}44, ${sc}22)`, border: `2px solid ${sc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: sc }}>
               {(current.name || '?')[0].toUpperCase()}
             </div>
             <div>
               {editing
-                ? <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="crm-field-dark" style={{ ...inpDark, padding: '6px 10px', fontSize: 15, fontWeight: 700, width: 180 }} />
-                : <h3 style={{ margin: 0, color: 'white', fontSize: 16, fontWeight: 700 }}>{lead.name}</h3>
+                ? <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="crm-field-light" style={{ ...inpModal, padding: '6px 10px', fontSize: 15, fontWeight: 700, width: 180 }} />
+                : <h3 style={{ margin: 0, color: '#161a2e', fontSize: 16, fontWeight: 700 }}>{lead.name}</h3>
               }
               <StatusBadge status={current.status} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {editing
-              ? <button onClick={saveEdit} style={actionBtn('#22c55e')}><Check size={14} /></button>
+              ? <button onClick={saveEdit} style={actionBtn('#16a34a')}><Check size={14} /></button>
               : <button onClick={() => setEditing(true)} style={actionBtn('#6366f1')}><Pencil size={14} /></button>
             }
-            <button onClick={onClose} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>
+            <button onClick={onClose} style={closeBtn}><X size={14} /></button>
           </div>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <WhatsAppBtn phone={current.phone} leadId={lead.id} dark onContact={async (id) => {
+            <WhatsAppBtn phone={current.phone} leadId={lead.id} onContact={async (id) => {
               await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
               onContact && onContact();
               loadActivities();
             }} />
             {current.email && (
-              <a href={`mailto:${current.email}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 14px', borderRadius: 10, textDecoration: 'none', background: 'rgba(99,102,241,0.12)', color: '#818cf8', fontWeight: 700, fontSize: 12, border: 'none' }}>
+              <a href={`mailto:${current.email}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 14px', borderRadius: 10, textDecoration: 'none', background: 'rgba(99,102,241,0.10)', color: '#4f46e5', fontWeight: 700, fontSize: 12, border: 'none' }}>
                 <Mail size={14} /> Email
               </a>
             )}
-            <button onClick={() => { if (window.confirm('Supprimer ce lead ?')) { onDelete(lead.id); onClose(); } }} style={{ ...actionBtn('#ef4444'), marginLeft: 'auto' }}>
+            <button onClick={() => { if (window.confirm('Supprimer ce lead ?')) { onDelete(lead.id); onClose(); } }} style={{ ...actionBtn('#dc2626'), marginLeft: 'auto' }}>
               <Trash2 size={14} />
             </button>
           </div>
@@ -525,9 +533,9 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
               {STATUSES.map(s => (
                 <button key={s.id} onClick={() => editing ? setForm(f => ({ ...f, status: s.id })) : handleStatusChange(s.id)} style={{
                   padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
-                  border: `1px solid ${(editing ? form : lead).status === s.id ? s.color : 'rgba(255,255,255,0.08)'}`,
+                  border: `1px solid ${(editing ? form : lead).status === s.id ? s.color : '#e6e8f0'}`,
                   background: (editing ? form : lead).status === s.id ? s.bg : 'transparent',
-                  color: (editing ? form : lead).status === s.id ? s.color : 'rgba(255,255,255,0.45)',
+                  color: (editing ? form : lead).status === s.id ? s.color : '#6b7280',
                   fontSize: 12, fontWeight: 600,
                 }}>{s.label}</button>
               ))}
@@ -537,13 +545,13 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
           <Section title="Tags">
             <TagChips tags={lead.tags || []} onRemove={removeTag} />
             <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
-              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field-dark" style={{ ...inpDark, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
+              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field-light" style={{ ...inpModal, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
               <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
             </div>
           </Section>
 
           <Section title="Score commercial">
-            <ScoreBar score={editing ? form.score : (lead.score ?? 0)} onChange={editing ? v => setForm(f => ({ ...f, score: v })) : null} dark />
+            <ScoreBar score={editing ? form.score : (lead.score ?? 0)} onChange={editing ? v => setForm(f => ({ ...f, score: v })) : null} />
           </Section>
 
           {/* [C8a] En édition, le champ texte apparaît même sans note existante */}
@@ -551,15 +559,15 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             {editing ? (
               <textarea value={form.notes || ''} rows={3}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                className="crm-field-dark" style={{ ...inpDark, resize: 'none' }} />
+                className="crm-field-light" style={{ ...inpModal, resize: 'none' }} />
             ) : current.notes ? (
-              <p style={{ margin: '0 0 8px', color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 8px', color: '#454b5a', fontSize: 13, lineHeight: 1.6 }}>
                 {current.notes}
               </p>
             ) : null}
             {!editing && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." className="crm-field-dark" style={{ ...inpDark, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
+                <input value={note} onChange={e => setNote(e.target.value)} placeholder="Ajouter une note..." className="crm-field-light" style={{ ...inpModal, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addNote()} />
                 <button onClick={addNote} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
               </div>
             )}
@@ -567,29 +575,29 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
           <Section title="Historique">
             {loadingAct
-              ? <div style={{ textAlign: 'center', padding: 20 }}><Loader2 size={16} color="rgba(255,255,255,0.3)" className="animate-spin" /></div>
+              ? <div style={{ textAlign: 'center', padding: 20 }}><Loader2 size={16} color="#a2a7b5" className="animate-spin" /></div>
               : activities.length === 0
-              ? <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activité</p>
+              ? <p style={{ color: '#a2a7b5', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activité</p>
               : activities.map(a => (
-                <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid #eef0f5' }}>
                   <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || '📌'}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.75)', fontSize: 13, flex: 1 }}>{a.description}</p>
+                      <p style={{ margin: 0, color: '#161a2e', fontSize: 13, flex: 1 }}>{a.description}</p>
                       {/* [A10][C5] Bouton "Fait" uniquement sur les tâches non terminées */}
                       {a.type === 'task' && !a.done_at && (
                         <button
                           onClick={() => markTaskDone(a)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(22,163,74,0.35)', background: 'rgba(22,163,74,0.1)', color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
                         >
                           ✓ Fait
                         </button>
                       )}
                       {a.type === 'task' && a.done_at && (
-                        <span style={{ fontSize: 11, color: '#22c55e', opacity: 0.6 }}>✓ Terminée</span>
+                        <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>✓ Terminée</span>
                       )}
                     </div>
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                    <span style={{ fontSize: 11, color: '#9095a5' }}>
                       {new Date(a.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
                   </div>
@@ -1011,12 +1019,10 @@ export default function LeadsCRMPanel({ profileId }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* [FIX4] crm-modal : 90vh puis 90dvh. [FIX7] crm-field-dark : halo indigo.
-          [T1] crm-field-light : halo thème clair (recherche). */}
+      {/* [FIX4] crm-modal : 90vh puis 90dvh.
+          [T2] crm-field-light : champs clairs (recherche + modales), halo indigo au focus. */}
       <style>{`
         .crm-modal{max-height:90vh;max-height:90dvh;}
-        .crm-field-dark:focus{border-color:rgba(129,140,248,0.6)!important;background:#1c1c38!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
-        .crm-field-dark::placeholder{color:rgba(255,255,255,0.28);}
         .crm-field-light:focus{border-color:#8b5cf6!important;background:#ffffff!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
         .crm-field-light::placeholder{color:#a2a7b5;}
       `}</style>
@@ -1094,7 +1100,7 @@ export default function LeadsCRMPanel({ profileId }) {
               <button onClick={exportSelectedCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                 <Download size={11} /> CSV
               </button>
-              <button onClick={bulkDelete} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
+              <button onClick={bulkDelete} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.08)', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
                 <Trash2 size={11} /> Supprimer
               </button>
             </div>
@@ -1153,13 +1159,13 @@ export default function LeadsCRMPanel({ profileId }) {
       <AnimatePresence>
         {showAdd && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAdd(false)}
-            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
               className="crm-modal"
-              style={{ width: '100%', maxWidth: isTablet ? 540 : 420, background: '#0f0f1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: isTablet ? 28 : 24, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+              style={{ width: '100%', maxWidth: isTablet ? 540 : 420, background: '#ffffff', border: '1px solid #e6e8f0', boxShadow: '0 30px 80px rgba(15,23,42,0.25)', borderRadius: 20, padding: isTablet ? 28 : 24, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 style={{ color: 'white', fontSize: 16, fontWeight: 800, margin: 0 }}>Nouveau lead</h3>
-                <button onClick={() => setShowAdd(false)} style={actionBtn('rgba(255,255,255,0.15)')}><X size={14} /></button>
+                <h3 style={{ color: '#161a2e', fontSize: 16, fontWeight: 800, margin: 0 }}>Nouveau lead</h3>
+                <button onClick={() => setShowAdd(false)} style={closeBtn}><X size={14} /></button>
               </div>
               {[
                 { key: 'name',    label: 'Nom *',      ph: 'Nom complet'         },
@@ -1168,19 +1174,19 @@ export default function LeadsCRMPanel({ profileId }) {
                 { key: 'company', label: 'Entreprise',  ph: "Nom de l'entreprise" },
               ].map(f => (
                 <div key={f.key}>
-                  <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} className="crm-field-dark" style={inpDark} placeholder={f.ph} />
+                  <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>{f.label}</label>
+                  <input value={newLead[f.key]} onChange={e => setNewLead(p => ({ ...p, [f.key]: e.target.value }))} className="crm-field-light" style={inpModal} placeholder={f.ph} />
                 </div>
               ))}
               <div>
-                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Source</label>
-                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} className="crm-field-dark" style={inpDark}>
+                <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Source</label>
+                <select value={newLead.source} onChange={e => setNewLead(p => ({ ...p, source: e.target.value }))} className="crm-field-light" style={inpModal}>
                   {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
-                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field-dark" style={{ ...inpDark, resize: 'none' }} placeholder="Notes additionnelles..." />
+                <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
+                <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field-light" style={{ ...inpModal, resize: 'none' }} placeholder="Notes additionnelles..." />
               </div>
               <button onClick={addLead} disabled={adding} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 13, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 12, color: 'white', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer', opacity: adding ? 0.7 : 1, marginTop: 4 }}>
                 {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}

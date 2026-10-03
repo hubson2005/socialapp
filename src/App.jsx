@@ -12,8 +12,8 @@ import {
 const Login             = lazy(() => import("./pages/Login"));
 const Dashboard         = lazy(() => import("./pages/Dashboard"));
 const UserDashboard     = lazy(() => import("./pages/UserDashboard"));
-const PublicProfile     = lazy(() => import("./pages/PublicProfile"));
-const PublicBookingPage = lazy(() => import("./pages/PublicBookingPage"));
+const PublicProfile      = lazy(() => import("./pages/PublicProfile"));
+const ProfilePreviewFrame = lazy(() => import("./pages/ProfilePreviewFrame"));
 const PublicForm        = lazy(() => import("./components/forms/PublicForm"));
 const PublicEventPage   = lazy(() => import("./pages/PublicEventPage"));
 const EventsDashboard   = lazy(() => import("./pages/EventsDashboard"));
@@ -147,6 +147,7 @@ function PublicApp() {
        aussi être déclaré avant "/:username" pour la même raison. */}
       <Route path="/book/:profileId/:type/:itemId" element={<PublicBookingPage />} />
 
+      <Route path="/preview-profile" element={<ProfilePreviewFrame />} />
       <Route path="/:username" element={<PublicProfile />} />
       {/* Blog — doit aussi être déclaré avant "/:username" pour la même raison */}
       <Route path="/blog" element={<Blog />} />

@@ -802,14 +802,15 @@ function LightModeToggle({ isLight, setManual }) {
 }
 
 // ─── Composant principal ──────────────────────────────────────
-export default function PublicProfile() {
+export default function PublicProfile({ previewProfile = null }) {
   const { username } = useParams();
 
   // [PERF2a] Données pré-rendues par api/profile.js (lues une seule fois au montage)
-  const [ssrInit] = useState(() => readSsrData(username));
+  const isPreview = !!previewProfile;
+  const [ssrInit] = useState(() => (isPreview ? null : readSsrData(username)));
 
-  const [profile, setProfile]               = useState(ssrInit?.profile || null);
-  const [loading, setLoading]               = useState(!ssrInit);
+  const [profile, setProfile]               = useState(ssrInit?.profile || previewProfile || null);
+  const [loading, setLoading]               = useState(!ssrInit && !previewProfile);
   const [notFound, setNotFound]             = useState(false);
   const [countdown, setCountdown]           = useState(null);
   const [currentIndex, setCurrentIndex]     = useState(0);
@@ -821,6 +822,10 @@ export default function PublicProfile() {
 
   // [DL1] Détection du mode data-light
   const { isLight, setManual, clearManual } = useDataSaverMode();
+  // [PREVIEW] Resynchronise le brouillon envoye par le dashboard (iframe /preview-profile)
+  useEffect(() => {
+    if (previewProfile) setProfile(previewProfile);
+  }, [previewProfile]);
 
   // [C8] Guard isMounted pour éviter setState après démontage
   const isMounted = useRef(true);
@@ -937,6 +942,11 @@ export default function PublicProfile() {
 
   // [PERF2e][TRK] Tracking différé + filtré (bots, ?notrack, une fois par session)
 const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
+    // [PREVIEW] En apercu : seulement boutique + documents, aucun tracking ni fetch du profil
+    if (isPreview) {
+      if (previewProfile?.id) loadExtras(previewProfile.id);
+      return;
+    }
 
     if (ssr) {
       loadExtras(ssr.profile.id);
@@ -972,11 +982,11 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
       }
     };
     init();
-  }, [username]);
+  }, [username, isPreview, previewProfile?.id]);
 
   // ── [C1][A2] QR scan isolé + déclencheur automatisation ─────
   useEffect(() => {
-    if (!profile?.id) return;
+    if (isPreview || !profile?.id) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('source') !== 'qr') return;
     const medium = params.get('medium');
@@ -1133,7 +1143,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
   // ── [A1] Clic sur lien — avec déclencheur automatisation WhatsApp ──
   const handleLinkClick = useCallback((link) => {
-    if (!profile) return;
+    if (!profile || isPreview) return;
     trackClick(profile.id, link.platform);
 
     if ((link.platform || '').toLowerCase() === 'whatsapp') {
@@ -1147,7 +1157,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
     if      (link.platform === 'phone') window.location.href = 'tel:'    + url.replace(/^tel:/i,    '').trim();
     else if (link.platform === 'email') window.location.href = 'mailto:' + url.replace(/^mailto:/i, '').trim();
     else window.open(url, '_blank', 'noopener,noreferrer');
-  }, [profile]);
+  }, [profile, isPreview]);
 
   if (loading)  return <ProfileSkeleton />;
   if (notFound) return (
@@ -1234,6 +1244,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
   return (
   <>
+    {!isPreview && (
     <SEO
       title={`${profile.display_name} | SocialApp`}
       description={profile.bio}
@@ -1248,6 +1259,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
         image: profile.avatar_url,
       }}
     />
+    )}
       <div id="__bg_layer__" className={isLight ? 'pp-light-mode' : undefined} />
       <div id="__bg_overlay__" />
 
@@ -1437,7 +1449,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
                   isLight={isLight}
                   onOpen={(product) => {
                     setSelectedProduct(product);
-                    if (profile?.id) triggerMarketplaceClick(profile.id, { productId: product.id, productTitle: product.title, price: product.price });
+                    if (profile?.id && !isPreview) triggerMarketplaceClick(profile.id, { productId: product.id, productTitle: product.title, price: product.price });
                   }}
                 />
               ))}
@@ -1558,7 +1570,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
         <ProductDetailModal
           product={selectedProduct}
           whatsappNumber={profile.phone || ''}
-          profileId={profile.id}
+          profileId={isPreview ? null : profile.id}
           isLight={isLight}
           onClose={() => setSelectedProduct(null)}
         />,

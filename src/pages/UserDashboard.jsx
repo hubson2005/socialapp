@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -1045,6 +1045,15 @@ export default function UserDashboard() {
                   </AnimatePresence>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(v => !v)}
+                    title="Aperçu du profil public"
+                    style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 12px', background:showPreview?'#eef0ff':'#ffffff', border:'1px solid '+(showPreview?'#c7cdfb':'#dde0ea'), borderRadius:'9px', color:showPreview?'#4338ca':'#454b5a', fontSize:'11px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}
+                  >
+                    <Eye size={13} />
+                    {!isMobile && 'Aperçu'}
+                  </button>
                   <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
                   <NotificationBell />
                   <button
@@ -1098,7 +1107,11 @@ export default function UserDashboard() {
             />
           )}
 
-          {showPreview && <ProfilePreview profile={localProfile} onClose={()=>setShowPreview(false)} />}
+          <AnimatePresence>
+            {showPreview && (
+              <ProfilePreview profile={localProfile} isMobile={isMobile} onClose={() => setShowPreview(false)} />
+            )}
+          </AnimatePresence>
 
           {/* Modale d'activation de compte (Wave manuel) — DÉSACTIVÉE pour le
               moment : GeniusPay active désormais le compte automatiquement via

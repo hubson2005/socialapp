@@ -1296,7 +1296,7 @@ export default function Dashboard() {
           activeSection={activeSection}
           onNavigate={setActiveSection}
           profile={localProfile}
-          isAdmin={isAdmin}
+          isAdmin={isAdmin} showEvent
           userEmail={user?.email}
           onSignOut={handleSignOut}
           onBgUpload={uploadBgFile}

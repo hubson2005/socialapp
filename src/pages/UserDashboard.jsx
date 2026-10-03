@@ -32,7 +32,6 @@ import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/dashboard/UserSidebar";
 import OverviewPanel from "@/components/dashboard/OverviewPanel";
-import EventPanel from "@/components/dashboard/EventPanel";
 import { useTranslation } from 'react-i18next';
 import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
 import ProfileVisitsPanel from "@/components/dashboard/ProfileVisitsPanel";
@@ -936,7 +935,6 @@ export default function UserDashboard() {
           // même pattern que ci-dessus pour la bannière de couverture.
           case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrl={localProfile?.banner_url} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFile} onBannerRemove={()=>updateLocal({ banner_url:null })} />;
           case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
-          case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
           // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,
           // quelle que soit la largeur d'écran : c'est ce qui empêchait Marketplace
           // de profiter de l'espace disponible sur desktop, même après avoir élargi

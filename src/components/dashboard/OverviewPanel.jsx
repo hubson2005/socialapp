@@ -50,7 +50,6 @@ export default function OverviewPanel({
   // il suffit de ne pas filtrer sur `locked` ci-dessous.
   const quickActions = [
     { label:'Plateformes',  icon:Link2,         color:'#3b4bf0', section:'platforms',   desc:links.length+' lien(s)',                                                       locked:false },
-    { label:'Événement',    icon:CalendarClock, color:'#7b3ff2', section:'event',        desc:profile?.is_event?'Activé':'Désactivé',                                        locked:!limits.hasEvent },
     { label:'Analytics',    icon:BarChart2,     color:'#a52ee0', section:'analytics',    desc:'Actifs',                                                                       locked:!limits.hasStats },
     { label:'Marketplace',  icon:ShoppingBag,   color:'#d81f9e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max', locked:false },
     { label:'CRM',          icon:Users,         color:'#ef2f6b', section:'crm',          desc:'Actif',                                                                        locked:!limits.hasCRM },
@@ -270,7 +269,7 @@ export default function OverviewPanel({
 
       {/* Quick actions — uniquement les sections incluses dans le plan
           (voir le filtre `locked` plus haut). Basic : Plateformes,
-          Marketplace, Documents. Pro : + Événement, Analytics.
+          Marketplace, Documents. Pro : + Analytics.
           Business : + CRM. Chaque plan a donc sa propre grille, sans
           cartes grisées à combler. */}
       <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr 1fr':'repeat(3,1fr)', gap:'10px' }}>
@@ -301,7 +300,7 @@ export default function OverviewPanel({
           <Crown size={16} color="#d97600" style={{ flexShrink:0 }}/>
           <p style={{ flex:1, minWidth:'200px', margin:0, color:'#7c4a03', fontSize:'12px', lineHeight:1.5 }}>
             {plan === 'basic'
-              ? "Passez à l'offre PRO ou BUSINESS pour débloquer Événement, Analytics, CRM et plus de liens."
+              ? "Passez à l'offre PRO ou BUSINESS pour débloquer Analytics, CRM et plus de liens."
               : "Passez à l'offre BUSINESS pour débloquer le CRM et les automatisations."}
           </p>
           <button type="button" onClick={()=>onUpgrade?.()}

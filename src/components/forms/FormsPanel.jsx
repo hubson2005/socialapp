@@ -722,7 +722,18 @@ export default function FormsPanel({ profileId, maxForms = 1, onUpgrade }) {
                 <p style={{ color: '#8a90a2', fontSize: '11.5px', marginBottom: '16px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Aperçu du formulaire
                 </p>
-                <FormPreview form={formData} mode="preview" />
+                <div style={{background: '#0f0a1e', borderRadius: '20px', padding: 'clamp(12px, 3vw, 24px)',
+  boxShadow: '0 12px 32px rgba(15,23,42,0.18)',}}>
+  {/* [FIX APERCU] fond sombre : FormPreview est ecrit pour un fond sombre (texte blanc) */}
+  <div style={{
+    background: '#0f0a1e',
+    borderRadius: '20px',
+    padding: 'clamp(12px, 3vw, 24px)',
+    boxShadow: '0 12px 32px rgba(15,23,42,0.18)',
+  }}>
+    <FormPreview form={formData} mode="preview" />
+  </div>
+</div>
               </div>
             )}
 

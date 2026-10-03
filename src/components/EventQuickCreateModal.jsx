@@ -10,10 +10,9 @@ const TYPES = [
   { id: 'expo_temp', label: 'Exposant' },
 ];
 
-// À terme, remplacer par un fetch sur event_editions (active = true).
-const EDITIONS = [
-  { id: null, label: 'Sélectionner un salon...' },
-];
+// Suggestions facultatives pour le champ « Édition du salon » (datalist).
+// L'utilisateur peut toujours saisir librement. À terme : fetch sur event_editions (active = true).
+const EDITION_SUGGESTIONS = [];
 
 export default function EventQuickCreateModal({ onClose }) {
   const { user } = useAuth();
@@ -24,7 +23,8 @@ export default function EventQuickCreateModal({ onClose }) {
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
-  const [editionId, setEditionId] = useState('');
+  // Saisie libre du nom de l'édition (remplace l'ancien <select> + editionId).
+  const [editionName, setEditionName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,9 +32,16 @@ export default function EventQuickCreateModal({ onClose }) {
 
   const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
 
+  // Brouillon commun : editionId reste null (plus de sélection dans une liste),
+  // le texte saisi est transmis dans editionName.
+  const makeDraft = () => ({
+    ...buildEventDraft({ type, title, location, eventDate, editionId: null }),
+    editionName: type === 'expo_temp' ? editionName.trim() : null,
+  });
+
   const validateForm = () => {
     if (!title.trim()) { setError('Ajoutez au moins un titre.'); return false; }
-    if (type === 'expo_temp' && !editionId) { setError('Choisissez une édition de salon.'); return false; }
+    if (type === 'expo_temp' && !editionName.trim()) { setError("Saisissez l'édition du salon."); return false; }
     setError('');
     return true;
   };
@@ -42,7 +49,7 @@ export default function EventQuickCreateModal({ onClose }) {
   const handlePrimarySubmit = async () => {
     if (!validateForm()) return;
 
-    const draft = buildEventDraft({ type, title, location, eventDate, editionId });
+    const draft = makeDraft();
 
     if (user) {
       setLoading(true);
@@ -64,7 +71,7 @@ export default function EventQuickCreateModal({ onClose }) {
     if (!email || !password) { setError('Renseignez un email et un mot de passe.'); return; }
     if (password.length < 6) { setError('6 caractères minimum.'); return; }
 
-    const draft = buildEventDraft({ type, title, location, eventDate, editionId });
+    const draft = makeDraft();
     setLoading(true);
     setError('');
     try {
@@ -123,9 +130,17 @@ export default function EventQuickCreateModal({ onClose }) {
             ) : (
               <>
                 <label style={label}>Édition du salon</label>
-                <select style={input} value={editionId} onChange={(e) => setEditionId(e.target.value)}>
-                  {EDITIONS.map((ed) => (<option key={ed.id || ''} value={ed.id || ''}>{ed.label}</option>))}
-                </select>
+                <input
+                  style={input}
+                  list="sa-edition-suggestions"
+                  value={editionName}
+                  onChange={(e) => setEditionName(e.target.value)}
+                  placeholder="Sélectionner ou saisir une édition…"
+                  autoComplete="off"
+                />
+                <datalist id="sa-edition-suggestions">
+                  {EDITION_SUGGESTIONS.map((name) => (<option key={name} value={name} />))}
+                </datalist>
               </>
             )}
 

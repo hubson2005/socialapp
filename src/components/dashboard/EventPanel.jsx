@@ -288,11 +288,11 @@ export default function EventPanel({ eventId, onChange }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className={labelClass}>Titre</label>
-          <input className={inputClass} value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder={(EVENT_PLACEHOLDERS[type] || EVENT_PLACEHOLDERS.mariage).title} />
+          <input className={inputClass} value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder={(EVENT_PLACEHOLDERS[form.type] || EVENT_PLACEHOLDERS.mariage).title} />
         </div>
         <div>
           <label className={labelClass}>Lieu</label>
-          <input className={inputClass} value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder={(EVENT_PLACEHOLDERS[type] || EVENT_PLACEHOLDERS.mariage).location} />
+          <input className={inputClass} value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder={(EVENT_PLACEHOLDERS[form.type] || EVENT_PLACEHOLDERS.mariage).location} />
         </div>
       </div>
 

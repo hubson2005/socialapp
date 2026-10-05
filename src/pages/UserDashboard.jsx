@@ -29,6 +29,7 @@ import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
+import TasksCRMPanel from "@/components/dashboard/TasksCRMPanel";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/dashboard/UserSidebar";
 import OverviewPanel from "@/components/dashboard/OverviewPanel";
@@ -954,6 +955,7 @@ export default function UserDashboard() {
           case 'analytics':  return limits.hasStats ? <AnalyticsPanel profileId={localProfile.id} advanced={limits.hasAdvancedAnalytics} /> : null;
           case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
           case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
+          case 'tasks':           return limits.hasCRM      ? <TasksCRMPanel  profileId={localProfile.id} /> : null;
           case 'profile-visits': return <ProfileVisitsPanel profileId={localProfile.id} />;
           case 'whatsapp-crm':    return limits.hasCRM      ? <WhatsappCRMPanel profileId={localProfile.id} /> : null;
           case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
@@ -1016,7 +1018,7 @@ export default function UserDashboard() {
             </div>
           )}
 
-          <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
+          <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1, marginRight: showPreview && isDesktop ? 400 : 0, transition:'margin-right .25s ease' }}>
 
             {/* Topbar — blanc, alignée sur la zone de contenu claire.
                 [T2] paddingTop remplacé par un fond peint jusque dans la

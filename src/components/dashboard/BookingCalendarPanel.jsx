@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from "../../supabase";
 
 // ============================================================
@@ -112,16 +113,6 @@ const RESPONSIVE_CSS = `
 .bcp-wrap, .bcp-wrap *, .bcp-wrap *::before, .bcp-wrap *::after { box-sizing: border-box; }
 .bcp-wrap { overflow-x: hidden; max-width: 100%; }
 
-.bcp-wrap input[type="time"],
-.bcp-wrap input[type="date"] {
-  color-scheme: light;
-}
-.bcp-wrap input[type="time"]::-webkit-calendar-picker-indicator,
-.bcp-wrap input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.65;
-}
-
 .bcp-stats { display: grid; grid-template-columns: repeat(4, 1fr); min-width: 0; }
 .bcp-main { display: grid; grid-template-columns: minmax(0,1fr) 320px; min-width: 0; }
 .bcp-main > * { min-width: 0; }
@@ -158,6 +149,14 @@ const RESPONSIVE_CSS = `
 @media (max-width: 380px) {
   .bcp-stats { grid-template-columns: 1fr; }
 }
+
+/* Sélecteurs date / heure personnalisés (thème clair du dashboard) */
+.bcp-pk-overlay, .bcp-pk-overlay * { box-sizing: border-box; }
+.bcp-pk-overlay { -webkit-tap-highlight-color: transparent; }
+.bcp-pk-cell { transition: background .12s, color .12s; }
+@media (hover: hover) {
+  .bcp-pk-cell:hover { background: rgba(99,102,241,0.10); }
+}
 `;
 
 const dateKey = (d) => {
@@ -165,6 +164,226 @@ const dateKey = (d) => {
   return dt.toISOString().slice(0, 10);
 };
 const fmtDateFr = (d) => (d instanceof Date ? d : new Date(d)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+
+// Date locale -> 'YYYY-MM-DD' (sans décalage UTC) pour les sélecteurs
+const localKey = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// ============================================================
+// SÉLECTEURS DATE / HEURE — thème clair (remplacent les <input type="date|time">
+// natifs dont la fenêtre suivait le mode sombre d'Android au lieu du dashboard)
+// ============================================================
+const pk = {
+  overlay: {
+    position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(15,23,42,0.45)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+  },
+  dialog: {
+    background: COLORS.panel, color: COLORS.text, borderRadius: 20, width: '100%', maxWidth: 360,
+    maxHeight: '90dvh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(15,23,42,.28)',
+    border: `1px solid ${COLORS.border}`, fontFamily: 'inherit',
+  },
+  head: { padding: '18px 20px 12px', borderBottom: `1px solid ${COLORS.border}` },
+  headSmall: { fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 4 },
+  headBig: { fontSize: 26, fontWeight: 800, color: COLORS.text, lineHeight: 1.15 },
+  body: { padding: 16 },
+  footer: { display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '4px 16px 16px', flexWrap: 'wrap' },
+  textBtn: {
+    background: 'transparent', border: 'none', color: COLORS.accent, fontWeight: 700, fontSize: 14,
+    padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+  },
+  okBtn: {
+    background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})`, border: 'none', color: '#fff',
+    fontWeight: 700, fontSize: 14, padding: '10px 18px', borderRadius: 10, cursor: 'pointer',
+  },
+  sectionLabel: { fontSize: 12, color: COLORS.textMuted, fontWeight: 700, margin: '4px 0 8px' },
+  cell: (selected, muted) => ({
+    textAlign: 'center', padding: '10px 0', borderRadius: 10, cursor: 'pointer', fontSize: 14,
+    fontWeight: selected ? 700 : 500, userSelect: 'none',
+    background: selected ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accent2})` : 'transparent',
+    color: selected ? '#fff' : (muted ? 'rgba(22,26,46,0.28)' : COLORS.text),
+  }),
+};
+
+function PickerModal({ onClose, children }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="bcp-pk-overlay" style={pk.overlay} onMouseDown={onClose}>
+      <div style={pk.dialog} onMouseDown={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// Bouton qui ressemble à un champ de saisie
+function PickerTrigger({ style, label, placeholder, icon, onClick }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      style={{
+        ...s.input,
+        ...style,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        cursor: 'pointer', userSelect: 'none', minWidth: 0,
+      }}
+    >
+      <span style={{ color: label ? COLORS.text : COLORS.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {label || placeholder}
+      </span>
+      <span style={{ fontSize: 14, opacity: 0.7, flexShrink: 0 }}>{icon}</span>
+    </div>
+  );
+}
+
+function DateField({ value, onChange, style, placeholder = 'jj/mm/aaaa' }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value || '');
+  const [month, setMonth] = useState(() => {
+    const base = value ? new Date(`${value}T00:00:00`) : new Date();
+    return new Date(base.getFullYear(), base.getMonth(), 1);
+  });
+
+  const openPicker = () => {
+    const base = value ? new Date(`${value}T00:00:00`) : new Date();
+    setDraft(value || '');
+    setMonth(new Date(base.getFullYear(), base.getMonth(), 1));
+    setOpen(true);
+  };
+
+  const label = value
+    ? new Date(`${value}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '';
+
+  const year = month.getFullYear();
+  const m = month.getMonth();
+  const firstWeekday = (new Date(year, m, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const todayKey = (() => { const t = new Date(); return localKey(t.getFullYear(), t.getMonth(), t.getDate()); })();
+  const monthLabel = month.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const draftLabel = draft
+    ? new Date(`${draft}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+    : 'Aucune date';
+
+  return (
+    <>
+      <PickerTrigger style={style} label={label} placeholder={placeholder} icon="📅" onClick={openPicker} />
+      {open && (
+        <PickerModal onClose={() => setOpen(false)}>
+          <div style={pk.head}>
+            <div style={pk.headSmall}>Sélectionnez une date</div>
+            <div style={{ ...pk.headBig, fontSize: 22, textTransform: 'capitalize' }}>{draftLabel}</div>
+          </div>
+          <div style={pk.body}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <strong style={{ textTransform: 'capitalize', fontSize: 15 }}>{monthLabel}</strong>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={s.btnIcon} onClick={() => setMonth(new Date(year, m - 1, 1))}>‹</div>
+                <div style={s.btnIcon} onClick={() => setMonth(new Date(year, m + 1, 1))}>›</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+              {DAYS_MON_FIRST.map((d) => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 11, color: COLORS.textMuted, fontWeight: 700 }}>{d.charAt(0)}</div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+              {cells.map((d, i) => {
+                if (d === null) return <div key={`e${i}`} />;
+                const k = localKey(year, m, d);
+                const selected = draft === k;
+                return (
+                  <div
+                    key={k}
+                    className="bcp-pk-cell"
+                    onClick={() => setDraft(k)}
+                    style={{
+                      ...pk.cell(selected, false),
+                      boxShadow: !selected && k === todayKey ? `inset 0 0 0 1.5px ${COLORS.accent}` : 'none',
+                    }}
+                  >
+                    {d}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div style={pk.footer}>
+            <button type="button" style={pk.textBtn} onClick={() => { onChange(''); setOpen(false); }}>Effacer</button>
+            <button type="button" style={pk.textBtn} onClick={() => setOpen(false)}>Annuler</button>
+            <button type="button" style={pk.okBtn} onClick={() => { if (draft) onChange(draft); setOpen(false); }}>OK</button>
+          </div>
+        </PickerModal>
+      )}
+    </>
+  );
+}
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
+
+function TimeField({ value, onChange, style, placeholder = '--:--' }) {
+  const [open, setOpen] = useState(false);
+  const [h, setH] = useState(9);
+  const [mi, setMi] = useState(0);
+
+  const openPicker = () => {
+    const [hh, mm] = (value || '09:00').split(':').map(Number);
+    setH(Number.isFinite(hh) ? hh : 9);
+    setMi(Number.isFinite(mm) ? mm : 0);
+    setOpen(true);
+  };
+
+  const label = value ? value.slice(0, 5) : '';
+  // Si la minute actuelle n'est pas un multiple de 5, on l'affiche aussi pour ne pas la perdre
+  const minuteOptions = MINUTES.includes(mi) ? MINUTES : [...MINUTES, mi].sort((a, b) => a - b);
+
+  return (
+    <>
+      <PickerTrigger style={style} label={label} placeholder={placeholder} icon="🕒" onClick={openPicker} />
+      {open && (
+        <PickerModal onClose={() => setOpen(false)}>
+          <div style={{ ...pk.head, textAlign: 'center' }}>
+            <div style={pk.headSmall}>Sélectionnez une heure</div>
+            <div style={{ ...pk.headBig, fontSize: 44, letterSpacing: 1 }}>{pad2(h)}:{pad2(mi)}</div>
+          </div>
+          <div style={pk.body}>
+            <div style={pk.sectionLabel}>Heures</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, marginBottom: 14 }}>
+              {HOURS.map((x) => (
+                <div key={x} className="bcp-pk-cell" style={pk.cell(h === x, false)} onClick={() => setH(x)}>{pad2(x)}</div>
+              ))}
+            </div>
+            <div style={pk.sectionLabel}>Minutes</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+              {minuteOptions.map((x) => (
+                <div key={x} className="bcp-pk-cell" style={pk.cell(mi === x, false)} onClick={() => setMi(x)}>{pad2(x)}</div>
+              ))}
+            </div>
+          </div>
+          <div style={pk.footer}>
+            <button type="button" style={pk.textBtn} onClick={() => { onChange(''); setOpen(false); }}>Effacer</button>
+            <button type="button" style={pk.textBtn} onClick={() => setOpen(false)}>Annuler</button>
+            <button type="button" style={pk.okBtn} onClick={() => { onChange(`${pad2(h)}:${pad2(mi)}`); setOpen(false); }}>Définir</button>
+          </div>
+        </PickerModal>
+      )}
+    </>
+  );
+}
 
 // ============================================================
 // COMPOSANT PRINCIPAL
@@ -760,6 +979,7 @@ function AvailabilityTab({ profileId }) {
   };
 
   const updateSlot = async (id, field, currentSlot, value) => {
+    if (!value) return; // "Effacer" ignoré : un créneau doit garder ses deux heures
     const next = { ...currentSlot, [field]: value };
     if (next.end_time && next.start_time && next.end_time <= next.start_time) {
       setSlots((prev) => prev.map((sl) => (sl.id === id ? next : sl)));
@@ -808,9 +1028,9 @@ function AvailabilityTab({ profileId }) {
             {slotsByDay(day).length === 0 && <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Fermé</div>}
             {slotsByDay(day).map((sl) => (
               <div key={sl.id} style={{ ...s.row, marginBottom: 6 }}>
-                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.start_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'start_time', sl, e.target.value)} />
+                <TimeField style={{ flex: '0 1 110px' }} value={sl.start_time?.slice(0, 5)} onChange={(v) => updateSlot(sl.id, 'start_time', sl, v)} />
                 <span style={{ color: COLORS.textMuted }}>à</span>
-                <input style={{ ...s.input, flex: '0 1 110px' }} type="time" value={sl.end_time?.slice(0, 5)} onChange={(e) => updateSlot(sl.id, 'end_time', sl, e.target.value)} />
+                <TimeField style={{ flex: '0 1 110px' }} value={sl.end_time?.slice(0, 5)} onChange={(v) => updateSlot(sl.id, 'end_time', sl, v)} />
                 <div style={s.btnDanger} onClick={() => removeSlot(sl.id)}>✕</div>
               </div>
             ))}
@@ -821,7 +1041,7 @@ function AvailabilityTab({ profileId }) {
       <div style={s.card}>
         <strong style={{ display: 'block', marginBottom: 12, color: COLORS.text }}>Jours bloqués / congés</strong>
         <div style={s.row}>
-          <input style={s.input} type="date" value={newBlock.blocked_date} onChange={(e) => setNewBlock({ ...newBlock, blocked_date: e.target.value })} />
+          <DateField value={newBlock.blocked_date} onChange={(v) => setNewBlock({ ...newBlock, blocked_date: v })} />
           <input style={s.input} placeholder="Raison (optionnel)" value={newBlock.reason} onChange={(e) => setNewBlock({ ...newBlock, reason: e.target.value })} />
           <button style={s.btn} onClick={addBlock}>Bloquer ce jour</button>
         </div>
@@ -913,15 +1133,15 @@ function EventsTab({ profileId, onDataChanged }) {
           <div style={{ ...s.row, marginTop: 10 }}>
             <div style={{ flex: '1 1 140px' }}>
               <label style={s.label}>Date *</label>
-              <input style={s.input} type="date" value={form.event_date || ''} onChange={(e) => setForm({ ...form, event_date: e.target.value })} />
+              <DateField style={{ width: '100%', flex: 'none' }} value={form.event_date || ''} onChange={(v) => setForm({ ...form, event_date: v })} />
             </div>
             <div style={{ flex: '1 1 110px' }}>
               <label style={s.label}>Heure début *</label>
-              <input style={s.input} type="time" value={form.start_time || ''} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+              <TimeField style={{ width: '100%', flex: 'none' }} value={form.start_time || ''} onChange={(v) => setForm({ ...form, start_time: v })} />
             </div>
             <div style={{ flex: '1 1 110px' }}>
               <label style={s.label}>Heure fin</label>
-              <input style={s.input} type="time" value={form.end_time || ''} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+              <TimeField style={{ width: '100%', flex: 'none' }} value={form.end_time || ''} onChange={(v) => setForm({ ...form, end_time: v })} />
             </div>
           </div>
           <div style={{ ...s.row, marginTop: 10 }}>
@@ -1074,11 +1294,11 @@ function BookingsTab({ profileId, services, onDataChanged, quickForm, setQuickFo
           <div style={{ ...s.row, marginTop: 10 }}>
             <div style={{ flex: '1 1 140px' }}>
               <label style={s.label}>Date *</label>
-              <input style={s.input} type="date" value={quickForm.booking_date || ''} onChange={(e) => setQuickForm({ ...quickForm, booking_date: e.target.value })} />
+              <DateField style={{ width: '100%', flex: 'none' }} value={quickForm.booking_date || ''} onChange={(v) => setQuickForm({ ...quickForm, booking_date: v })} />
             </div>
             <div style={{ flex: '1 1 110px' }}>
               <label style={s.label}>Heure *</label>
-              <input style={s.input} type="time" value={quickForm.start_time || ''} onChange={(e) => setQuickForm({ ...quickForm, start_time: e.target.value })} />
+              <TimeField style={{ width: '100%', flex: 'none' }} value={quickForm.start_time || ''} onChange={(v) => setQuickForm({ ...quickForm, start_time: v })} />
             </div>
             <div style={{ flex: '1 1 160px' }}>
               <label style={s.label}>Téléphone</label>

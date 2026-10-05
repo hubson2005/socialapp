@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Lock, Crown, BarChart3,
   LayoutDashboard, Link2, CalendarDays, ShoppingBag, FileText,
   Settings, BarChart2, Activity, Users, Zap, GitBranch, MessageCircle,
-  LogOut, CalendarClock, Eye,
+  LogOut, CalendarClock, Eye, CheckSquare,
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
@@ -30,6 +30,7 @@ export const USER_NAV = [
   // (Sponsoring Facebook/Instagram = "BIENTÔT DISPONIBLE" dans la grille BUSINESS)
   { id: 'meta', label: 'Connexion Meta', icon: Zap, group: 'crm', hidden: true },
   { id: 'crm',            label: 'CRM / Leads',     icon: Users,         group: 'business', locked: 'business', path: null },
+  { id: 'tasks',          label: 'Tâches',          icon: CheckSquare,   group: 'business', locked: 'business', path: null }, // relances & rappels
   { id: 'whatsapp-crm',   label: 'WhatsApp CRM',    icon: MessageCircle, group: 'business', locked: 'business', path: null },
   { id: 'profile-visits', label: 'Visiteurs',       icon: Eye,           group: 'business', locked: 'business', path: null }, // Tracking IP
   { id: 'automations',    label: 'Automatisations', icon: Zap,           group: 'business', locked: 'business', path: null },

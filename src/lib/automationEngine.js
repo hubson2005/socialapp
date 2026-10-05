@@ -73,8 +73,27 @@ async function _executeAutomation({ automation, trigger, profileId, context }) {
     // Résoudre la liste d'actions (jsonb `actions[]` prioritaire sur le champ legacy `action`)
     const actionsList = _resolveActions(automation);
 
-    for (const actionDef of actionsList) {
+    for (const [actionIndex, actionDef] of actionsList.entries()) {
       const actionType = typeof actionDef === 'string' ? actionDef : actionDef.type;
+
+      // ⏳ 'wait' : la suite est mise en file d'attente côté serveur (pg_cron, toutes les 5 min)
+      if (actionType === 'wait') {
+        const waitLeadId = runningContext.leadId || runningContext.create_lead_id || runningContext.lastEntityId;
+        if (!waitLeadId) {
+          console.warn('[AutomationEngine] wait ignoré : aucun lead dans le contexte (placez create_lead avant).');
+          break;
+        }
+        const { data: waitRes, error: waitErr } = await supabase.rpc('automation_enqueue_from', {
+          p_automation_id: automation.id,
+          p_lead_id:       waitLeadId,
+          p_from_index:    actionIndex,
+        });
+        if (waitErr || waitRes?.ok === false) {
+          throw new Error(`wait : ${waitErr?.message || waitRes?.error}`);
+        }
+        break;
+      }
+
       const actionConfig = {
         // Config de base de l'automatisation
         score: automation.score ?? null,

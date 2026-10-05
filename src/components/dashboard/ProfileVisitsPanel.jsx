@@ -10,14 +10,28 @@ export default function ProfileVisitsPanel({ profileId }) {
   const [searchIp, setSearchIp] = useState("");
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  // Les visites de robots (Lighthouse, aperçus de liens, crawlers…) sont marquées is_bot par la base :
+  // masquées par défaut pour ne pas fausser les statistiques, mais conservées et consultables.
+  const [includeBots, setIncludeBots] = useState(false);
+  const [botCount, setBotCount] = useState(0);
 
   useEffect(() => {
     setPage(0);
-  }, [searchIp]);
+  }, [searchIp, includeBots]);
+
+  useEffect(() => {
+    if (!profileId) return;
+    supabase
+      .from("profile_visits")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", profileId)
+      .eq("is_bot", true)
+      .then(({ count }) => setBotCount(count ?? 0));
+  }, [profileId]);
 
   useEffect(() => {
     fetchVisits();
-  }, [profileId, searchIp, page]);
+  }, [profileId, searchIp, page, includeBots]);
 
   async function fetchVisits() {
     setLoading(true);
@@ -27,6 +41,8 @@ export default function ProfileVisitsPanel({ profileId }) {
       .select("*", { count: "exact" })
       .eq("profile_id", profileId)
       .order("visited_at", { ascending: false });
+
+    if (!includeBots) query = query.eq("is_bot", false);
 
     if (searchIp.trim()) {
       // recherche partielle sur l'IP (ex: "192.168" retrouve toutes les IP contenant ce fragment)
@@ -62,6 +78,18 @@ export default function ProfileVisitsPanel({ profileId }) {
         />
       </div>
 
+      {botCount > 0 && (
+        <label className="flex items-center gap-2 text-xs text-[#6b7280] mb-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={includeBots}
+            onChange={(e) => setIncludeBots(e.target.checked)}
+            className="accent-[#6366f1]"
+          />
+          Afficher les robots et tests automatiques ({botCount} {includeBots ? "inclus" : `masquée${botCount > 1 ? "s" : ""}`})
+        </label>
+      )}
+
       {loading ? (
         <div className="p-4 text-sm text-[#6b7280]">Chargement des visites...</div>
       ) : (
@@ -78,12 +106,22 @@ export default function ProfileVisitsPanel({ profileId }) {
               </thead>
               <tbody>
                 {visits.map((v) => (
-                  <tr key={v.id} className="border-b border-[#eef0f6] hover:bg-[#f6f7fb] transition-colors">
+                  <tr key={v.id} className={`border-b border-[#eef0f6] hover:bg-[#f6f7fb] transition-colors ${v.is_bot ? "opacity-60" : ""}`}>
                     <td className="py-2.5 pr-4 text-[#161a2e] whitespace-nowrap">
                       {new Date(v.visited_at).toLocaleString("fr-FR")}
                     </td>
                     <td className="py-2.5 pr-4 font-mono text-[#c2410c] whitespace-nowrap">{v.ip_address}</td>
-                    <td className="py-2.5 pr-4 text-[#374151]">{parseUserAgent(v.user_agent)}</td>
+                    <td className="py-2.5 pr-4 text-[#374151]">
+                      {parseUserAgent(v.user_agent)}
+                      {v.is_bot && (
+                        <span
+                          title={v.bot_reason ? `Détecté : ${v.bot_reason}` : "Robot"}
+                          className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#fef3c7] text-[#b45309] align-middle"
+                        >
+                          Robot
+                        </span>
+                      )}
+                    </td>
                     <td className="py-2.5 pr-4 text-[#6b7280] truncate max-w-[200px]">
                       {v.referrer || "Direct"}
                     </td>

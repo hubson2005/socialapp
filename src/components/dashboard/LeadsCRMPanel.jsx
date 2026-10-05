@@ -9,6 +9,8 @@ import {
   GripVertical, Flame, Snowflake, CheckCircle2, Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import TasksCRMPanel  from './TasksCRMPanel';   // fiche contact : tâches
+import ContactTimeline from './ContactTimeline'; // fiche contact : timeline unifiée
 import { supabase } from '../../supabase';
 // [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
 import { triggerNewLead }                    from '../../lib/triggers/newLead';
@@ -17,7 +19,7 @@ import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus
 import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
 import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
 import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
-import { normalizePhone, isValidPhone }      from '../../lib/phone';                   // [C2]
+import { normalizePhone, isValidPhone, checkPhone } from '../../lib/phone';                   // [C2]
 
 
 // ─── CORRECTIONS DU PLAN DU 2 OCTOBRE 2026 (cette révision) ───────────────────
@@ -91,6 +93,7 @@ const ACTIVITY_ICONS = {
   whatsapp:  '💬',
   status:    '🔄',
   task:      '📋',
+  task_created: '📋',
   task_done: '✅',
 };
 
@@ -377,6 +380,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
   // [C3] saveEdit : déclenche aussi lead_status_changed ; [C2] doublon 23505
   const saveEdit = async () => {
+    if (form.phone?.trim() && !checkPhone(form.phone).ok) { toast.error(checkPhone(form.phone).reason); return; }
     const statusChanged = form.status !== lead.status;
     const scoreChanged  = form.score  !== (lead.score ?? 0);
     const { error } = await supabase.from('leads').update({
@@ -523,6 +527,9 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
           <Section title="Informations">
             <Field icon={<Phone size={13} />} label="Téléphone" value={current.phone} editing={editing} onChange={v => setForm(f => ({ ...f, phone: v }))} />
+            {!editing && current.phone && !isValidPhone(current.phone) && (
+              <p style={{ margin: '-4px 0 10px', fontSize: 12, color: '#fbbf24', lineHeight: 1.4 }}>⚠ {checkPhone(current.phone).reason}. Modifiez la fiche pour la corriger.</p>
+            )}
             <Field icon={<Mail size={13} />} label="Email" value={current.email} editing={editing} onChange={v => setForm(f => ({ ...f, email: v }))} />
             <Field icon={<Building2 size={13} />} label="Entreprise" value={current.company} editing={editing} onChange={v => setForm(f => ({ ...f, company: v }))} />
             <Field icon={<Globe size={13} />} label="Source" value={SOURCES.find(s => s.id === current.source)?.label || current.source} valueRaw={current.source} editing={editing} type="select" options={SOURCES} onChange={v => setForm(f => ({ ...f, source: v }))} />
@@ -573,37 +580,17 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             )}
           </Section>
 
-          <Section title="Historique">
-            {loadingAct
-              ? <div style={{ textAlign: 'center', padding: 20 }}><Loader2 size={16} color="#a2a7b5" className="animate-spin" /></div>
-              : activities.length === 0
-              ? <p style={{ color: '#a2a7b5', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activité</p>
-              : activities.map(a => (
-                <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid #eef0f5' }}>
-                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || '📌'}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <p style={{ margin: 0, color: '#161a2e', fontSize: 13, flex: 1 }}>{a.description}</p>
-                      {/* [A10][C5] Bouton "Fait" uniquement sur les tâches non terminées */}
-                      {a.type === 'task' && !a.done_at && (
-                        <button
-                          onClick={() => markTaskDone(a)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(22,163,74,0.35)', background: 'rgba(22,163,74,0.1)', color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-                        >
-                          ✓ Fait
-                        </button>
-                      )}
-                      {a.type === 'task' && a.done_at && (
-                        <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>✓ Terminée</span>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 11, color: '#9095a5' }}>
-                      {new Date(a.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
-                    </span>
-                  </div>
-                </div>
-              ))
-            }
+          <Section title="Tâches">
+            <TasksCRMPanel profileId={profileId || lead.profile_id} leadId={lead.id} compact />
+          </Section>
+
+          <Section title="Historique complet">
+            {/* refreshKey : se recharge quand une note / un statut est ajouté (loadActivities) */}
+            <ContactTimeline
+              leadId={lead.id}
+              createdAt={lead.created_at}
+              refreshKey={`${activities.length}:${activities[0]?.id || ''}`}
+            />
           </Section>
         </div>
       </motion.div>
@@ -676,7 +663,7 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
       </div>
       {(lead.phone || lead.company) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {lead.phone && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}</span>}
+          {lead.phone && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}{!isValidPhone(lead.phone) && <span title="Numéro à vérifier" style={{ color: '#f59e0b' }}>⚠</span>}</span>}
           {lead.company && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={9} /> {lead.company}</span>}
         </div>
       )}
@@ -798,7 +785,7 @@ function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
 
       {(lead.phone || lead.company) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}</span>}
+          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}{!isValidPhone(lead.phone) && <span title="Numéro à vérifier" style={{ color: '#f59e0b' }}>⚠</span>}</span>}
           {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Building2 size={10} /> {lead.company}</span>}
         </div>
       )}
@@ -869,6 +856,7 @@ export default function LeadsCRMPanel({ profileId }) {
   // ── [A4] Ajout d'un lead avec déclencheur automatisation ─────────
   const addLead = async () => {
     if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
+    if (newLead.phone?.trim() && !checkPhone(newLead.phone).ok) { toast.error(checkPhone(newLead.phone).reason); return; }
     setAdding(true);
     // Contrôle client (retour immédiat) — la base fait foi (index unique).
     const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
@@ -996,13 +984,15 @@ export default function LeadsCRMPanel({ profileId }) {
   const allTags = useMemo(() => { const set = new Set(); leads.forEach(l => (l.tags || []).forEach(t => set.add(t))); return Array.from(set).sort(); }, [leads]);
 
   const filteredLeads = leads.filter(l => {
-    const matchesFilter = filter === 'all' || l.status === filter;
+    const matchesFilter = filter === 'all'
+      || (filter === 'phone_check' ? (!!l.phone && !isValidPhone(l.phone)) : l.status === filter);
     const matchesTag = !tagFilter || (l.tags || []).includes(tagFilter);
     const q = search.trim().toLowerCase();
     const matchesSearch = !q || l.name?.toLowerCase().includes(q) || l.phone?.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q) || l.company?.toLowerCase().includes(q) || (l.tags || []).some(t => t.toLowerCase().includes(q));
     return matchesFilter && matchesTag && matchesSearch;
   });
 
+  const invalidPhoneCount = leads.filter(l => l.phone && !isValidPhone(l.phone)).length;
   const statusCounts = STATUSES.reduce((acc, s) => { acc[s.id] = leads.filter(l => l.status === s.id).length; return acc; }, {});
   const allSelected  = filteredLeads.length > 0 && filteredLeads.every(l => selectedIds.has(l.id));
   const someSelected = filteredLeads.some(l => selectedIds.has(l.id));
@@ -1068,6 +1058,11 @@ export default function LeadsCRMPanel({ profileId }) {
                 {s.label} ({statusCounts[s.id] || 0})
               </button>
             ))}
+            {invalidPhoneCount > 0 && (
+              <button onClick={() => setFilter('phone_check')} title="Leads dont le numéro est incomplet ou invalide" style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === 'phone_check' ? '#f59e0b' : '#dde0ea'}`, background: filter === 'phone_check' ? 'rgba(245,158,11,0.12)' : 'transparent', color: filter === 'phone_check' ? '#b45309' : '#6b7280', fontSize: 12, fontWeight: 600 }}>
+                ⚠ N° à vérifier ({invalidPhoneCount})
+              </button>
+            )}
           </div>
         )}
 

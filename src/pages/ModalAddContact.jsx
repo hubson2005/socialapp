@@ -1,4 +1,5 @@
 import React from 'react';
+import { checkPhone } from '../lib/phone';
 
 // ✅ Valeur par défaut sur S pour éviter un crash si le parent oublie de passer la prop
 export default function ModalAddContact({
@@ -10,13 +11,9 @@ export default function ModalAddContact({
 }) {
   const NAME_MAX = 80;
 
-  // ✅ FIX Risque 1 : regex renforcée — exige au moins 6 chiffres réels en plus des caractères autorisés
-  const isPhoneValid =
-    !newC.phone ||
-    (
-      /^[+\d\s()-]{8,20}$/.test(newC.phone.trim()) &&
-      newC.phone.replace(/\D/g, '').length >= 6
-    );
+  // Validation centralisée (lib/phone) : 10 chiffres pour la Côte d'Ivoire, indicatif requis ailleurs
+  const phoneCheck = checkPhone(newC.phone);
+  const isPhoneValid = !newC.phone || phoneCheck.ok;
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isEmailValid =
@@ -94,7 +91,7 @@ export default function ModalAddContact({
           />
           {newC.phone && !isPhoneValid && (
             <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
-              Numéro invalide (minimum 6 chiffres requis)
+              {phoneCheck.reason}
             </div>
           )}
         </div>

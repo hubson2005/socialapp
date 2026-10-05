@@ -4,6 +4,7 @@ import { Loader2, FileX, Clock3 } from 'lucide-react';
 import { supabase } from '../../supabase';
 import FormPreview from "./FormPreview";
 import { triggerFormSubmit } from "../../lib/triggers/form";
+import { extractFormContact } from "../../lib/formContact";
 
 export default function PublicForm() {
   const { formId } = useParams();
@@ -48,10 +49,12 @@ export default function PublicForm() {
     if (insertError) throw insertError;
 
     // 2. Déclencher les automations liées au formulaire
+    // Les réponses sont indexées par id de champ : on retrouve nom / e-mail / téléphone par type de champ
+    const contact = extractFormContact(form.fields, values);
     await triggerFormSubmit(form.profile_id, {
-      name:      values.name  || '',
-      email:     values.email || '',
-      phone:     values.phone || '',
+      name:      contact.name,
+      email:     contact.email,
+      phone:     contact.phone,
       formId:    form.id,
       formTitle: form.title,
     });

@@ -1342,34 +1342,35 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
         {topSocialLinks.length > 0 && (
-          <div style={{
-            display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
-            marginBottom:'14px', padding:'6px 11px', borderRadius:'999px',
-            background:LINK_BG_IDLE, border:`1px solid ${LINK_BORDER_COLOR}`,
-            backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
-          }}>
-            {topSocialLinks.map((link, i) => {
-              const platform = resolvePlatform(link);
-              return (
-                <button
-                  key={i}
-                  onClick={() => handleLinkClick(link)}
-                  aria-label={link.label || platform.label}
-                  className="pp-link-btn-el"
-                  style={{
-                    '--pp-hover-bg': LINK_BG_HOVER,
-                    width:'38px', height:'32px', borderRadius:'50%', overflow:'hidden',
-                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                    background:LINK_ICON_BG, border:`1px solid ${LINK_BORDER_COLOR}`,
-                    cursor:'pointer', padding:0, touchAction:'manipulation',
-                  }}
-                >
-                  {platform.icon ? React.cloneElement(platform.icon, { width: 32, height: 32 }) : null}
-                </button>
-              );
-            })}
-          </div>
-        )}
+  <div style={{
+    display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+    marginBottom:'14px', padding:'6px 11px', borderRadius:'999px',
+    background:LINK_BG_IDLE, border:`1px solid ${LINK_BORDER_COLOR}`,
+    backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+  }}>
+    {topSocialLinks.map((link, i) => {
+      const platform = resolvePlatform(link);
+      return (
+        <button
+          key={i}
+          onClick={() => handleLinkClick(link)}
+          aria-label={link.label || platform.label}
+          className="pp-link-btn-el"
+          style={{
+            '--pp-hover-bg': LINK_BG_HOVER,
+            width:'38px', height:'38px', borderRadius:'50%', overflow:'hidden',
+            boxSizing:'border-box', lineHeight:0,
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+            background:LINK_ICON_BG, border:`1px solid ${LINK_BORDER_COLOR}`,
+            cursor:'pointer', padding:0, touchAction:'manipulation',
+          }}
+        >
+          {platform.icon ? React.cloneElement(platform.icon, { width: 36, height: 36 }) : null}
+        </button>
+      );
+    })}
+  </div>
+)}
 
         {/* Événement */}
         {hasEventContent && (

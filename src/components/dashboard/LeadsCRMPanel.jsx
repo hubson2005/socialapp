@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import TasksCRMPanel  from './TasksCRMPanel';   // fiche contact : tâches
 import ContactTimeline from './ContactTimeline'; // fiche contact : timeline unifiée
+import FollowUpsPanel  from './FollowUpsPanel';  // [R1] panneau « À relancer »
 import { supabase } from '../../supabase';
 // [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
 import { triggerNewLead }                    from '../../lib/triggers/newLead';
@@ -50,6 +51,17 @@ import { normalizePhone, isValidPhone, checkPhone } from '../../lib/phone';     
 //        n'existe plus.
 //  [TG6] Correctif : addTag appelé via onClick recevait l'événement comme
 //        valeur ; remplacé par une fonction fléchée.
+//
+// ─── RAPPELS DE RELANCE (cette révision) ──────────────────────────────────────
+//  [R1] Panneau « À relancer » (FollowUpsPanel) au-dessus des filtres : tâches
+//       ouvertes de crm_tasks en retard / du jour / à venir (7 j), avec
+//       WhatsApp, Reporter (+1/+3/+7 j) et Terminé. Les rappels eux-mêmes
+//       (notification à l'échéance) restent envoyés par le cron
+//       `crm-task-reminders` côté base.
+//       « À relancer » se recharge aussi à la fermeture de la fiche lead (tâches
+//       ajoutées / terminées via TasksCRMPanel).
+//  [R2] Fiche lead : « Programmer une relance » en un clic (demain, 3 jours,
+//       1 semaine, 2 semaines, ou date précise) → insère dans crm_tasks.
 //
 // ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
 //  [FIX1] Commentaire JSX mal fermé dans la modale "Nouveau lead".
@@ -366,7 +378,7 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
 
 // ─── LeadModal — tiroir latéral, thème clair ─────────────────────────────────
 // [TG2] `allTags` : tags existants, proposés en suggestions cliquables.
-function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete, onContact }) {
+function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete, onContact, onTaskCreated }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
   // [C8c] score initial `?? 0` (avant : `?? 50`, qui faussait la 1re modif)
@@ -375,6 +387,7 @@ function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete,
   const [newTag, setNewTag] = useState('');
   const [activities, setActivities]   = useState([]);
   const [loadingAct, setLoadingAct]   = useState(true);
+  const [taskKey, setTaskKey]         = useState(0); // [R2] remonte TasksCRMPanel après création
 
   useEffect(() => { loadActivities(); }, [lead.id]);
 
@@ -487,6 +500,26 @@ function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete,
     const { error } = await supabase.from('leads').update({ tags: updatedTags }).eq('id', lead.id);
     if (error) { toast.error(error.message); return; }
     onUpdate({ ...lead, tags: updatedTags });
+  };
+
+  // [R2] Programme une relance : tâche ouverte dans crm_tasks, échéance 09:00.
+  // Les colonnes priority/status/source gardent leurs valeurs par défaut.
+  const scheduleFollowUp = async (when) => {
+    const due = when instanceof Date ? new Date(when) : new Date();
+    if (!(when instanceof Date)) due.setDate(due.getDate() + when);
+    due.setHours(9, 0, 0, 0);
+    const pid = profileId || lead.profile_id;
+    if (!pid) { toast.error('Profil introuvable'); return; }
+    const { error } = await supabase.from('crm_tasks').insert([{
+      profile_id: pid, lead_id: lead.id, title: `Relancer ${lead.name}`, due_at: due.toISOString(),
+    }]);
+    if (error) { toast.error(error.message); return; }
+    // Même trace que useCrmTasks.addTask : visible dans la timeline du lead
+    supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'task_created', description: `Relancer ${lead.name}` }])
+      .then(({ error: e }) => { if (e) console.warn('[relance] activité non tracée :', e.message); });
+    toast.success(`Relance programmée le ${due.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`);
+    setTaskKey(k => k + 1);
+    onTaskCreated && onTaskCreated();
   };
 
   const current = editing ? form : lead;
@@ -616,7 +649,24 @@ function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete,
           </Section>
 
           <Section title="Tâches">
-            <TasksCRMPanel profileId={profileId || lead.profile_id} leadId={lead.id} compact />
+            {/* [R2] Relance en un clic */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              <span style={{ color: '#9095a5', fontSize: 11 }}>Programmer une relance :</span>
+              {[['Demain', 1], ['3 jours', 3], ['1 semaine', 7], ['2 semaines', 14]].map(([label, n]) => (
+                <button key={n} onClick={() => scheduleFollowUp(n)} style={{ padding: '4px 10px', borderRadius: 99, cursor: 'pointer', border: '1px solid #c7d2fe', background: 'rgba(99,102,241,0.08)', color: '#4f46e5', fontSize: 11, fontWeight: 700 }}>
+                  {label}
+                </button>
+              ))}
+              <input
+                type="date"
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={e => { if (e.target.value) { scheduleFollowUp(new Date(`${e.target.value}T09:00:00`)); e.target.value = ''; } }}
+                title="Choisir une date"
+                className="crm-field-light"
+                style={{ ...inpModal, width: 'auto', padding: '4px 8px', fontSize: 11 }}
+              />
+            </div>
+            <TasksCRMPanel key={taskKey} profileId={profileId || lead.profile_id} leadId={lead.id} compact />
           </Section>
 
           <Section title="Historique complet">
@@ -854,6 +904,7 @@ export default function LeadsCRMPanel({ profileId }) {
   const [bulkStatus, setBulkStatus]     = useState('');
   const [bulkTagInput, setBulkTagInput] = useState('');   // [TG4]
   const [page, setPage]                 = useState(1); // [G1]
+  const [followRefresh, setFollowRefresh] = useState(0); // [R1] recharge « À relancer »
   // [FIX6] Détecté une seule fois (appareils tactiles : pas de hover collé).
   const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
 
@@ -1162,6 +1213,14 @@ export default function LeadsCRMPanel({ profileId }) {
         </div>
       </div>
 
+      {/* [R1] À relancer : en retard / aujourd'hui / à venir */}
+      <FollowUpsPanel
+        profileId={profileId}
+        leads={leads}
+        onOpenLead={setSelectedLead}
+        refreshKey={followRefresh}
+      />
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ position: 'relative' }}>
           <Search size={14} color="#9095a5" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
@@ -1355,7 +1414,8 @@ export default function LeadsCRMPanel({ profileId }) {
 
       <AnimatePresence>
         {selectedLead && (
-          <LeadModal lead={selectedLead} profileId={profileId} allTags={allTags} onClose={() => setSelectedLead(null)}
+          <LeadModal lead={selectedLead} profileId={profileId} allTags={allTags} onClose={() => { setSelectedLead(null); setFollowRefresh(k => k + 1); }}
+            onTaskCreated={() => setFollowRefresh(k => k + 1)}
             onUpdate={updated => { updateLeadLocal(updated); setSelectedLead(updated); }}
             onDelete={deleteLead} />
         )}

@@ -22,7 +22,7 @@ import { triggerTaskCompleted }              from '../../lib/triggers/taskComple
 import { normalizePhone, isValidPhone, checkPhone } from '../../lib/phone';                   // [C2]
 
 
-// ─── CORRECTIONS DU PLAN DU 2 OCTOBRE 2026 (cette révision) ───────────────────
+// ─── CORRECTIONS DU PLAN DU 2 OCTOBRE 2026 ────────────────────────────────────
 //  [C2] normalizePhone/isValidPhone importés depuis lib/phone.js (format
 //       ivoirien : +225 + 10 chiffres, le 0 est conservé). Bouton WhatsApp
 //       corrigé. addLead gère le doublon renvoyé par la base (code 23505).
@@ -36,6 +36,20 @@ import { normalizePhone, isValidPhone, checkPhone } from '../../lib/phone';     
 //  [C7] Export CSV : protection contre l'injection de formules (csvCell).
 //  [C8] 8a notes saisissables en édition ; 8b handleStatusChange contrôle
 //       l'erreur ; 8c score initial `?? 0`.
+//
+// ─── TAGS / SEGMENTS (cette révision) ─────────────────────────────────────────
+//  [TG1] normalizeTag : normalisation unique (minuscules, tirets, sans « # »,
+//        30 caractères max) pour fiche, création et actions groupées.
+//  [TG2] Fiche lead : suggestions de tags existants en un clic (addTag
+//        accepte une valeur) + autocomplétion (datalist).
+//  [TG3] « Nouveau lead » : champ Tags à la création (déclenche lead_tagged
+//        pour chaque tag, comme l'ajout depuis la fiche).
+//  [TG4] Actions groupées : « + Tag » / « − Tag » sur la sélection.
+//  [TG5] Filtre par tag : compteurs, tri par fréquence, bouton Effacer,
+//        export CSV du segment affiché ; le filtre se réinitialise si le tag
+//        n'existe plus.
+//  [TG6] Correctif : addTag appelé via onClick recevait l'événement comme
+//        valeur ; remplacé par une fonction fléchée.
 //
 // ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
 //  [FIX1] Commentaire JSX mal fermé dans la modale "Nouveau lead".
@@ -97,9 +111,10 @@ const ACTIVITY_ICONS = {
   task_done: '✅',
 };
 
+// [TG3] tags: [] ajouté (tableau, jamais muté — mises à jour immuables)
 const EMPTY_LEAD = {
   name: '', phone: '', email: '', company: '',
-  status: 'prospect', source: 'manuel', notes: '', score: 0,
+  status: 'prospect', source: 'manuel', notes: '', score: 0, tags: [],
 };
 
 // [G1] Pagination de la vue liste : 16 leads par page (4 colonnes x 4 lignes)
@@ -130,6 +145,10 @@ const csvCell = (v) => {
   if (!looksLikePhone && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return `"${s.replace(/"/g, '""')}"`;
 };
+
+// [TG1] Normalisation unique des tags : « #VIP Urgent » → « vip-urgent »
+const normalizeTag = (s) =>
+  String(s || '').trim().toLowerCase().replace(/^#+/, '').replace(/\s+/g, '-').slice(0, 30);
 
 const scoreLabel = (s) =>
   s <= 30  ? { label: 'Froid',    color: '#0891b2', icon: '❄️'  } :
@@ -346,7 +365,8 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
 }
 
 // ─── LeadModal — tiroir latéral, thème clair ─────────────────────────────────
-function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
+// [TG2] `allTags` : tags existants, proposés en suggestions cliquables.
+function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete, onContact }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
   // [C8c] score initial `?? 0` (avant : `?? 50`, qui faussait la 1re modif)
@@ -442,8 +462,9 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     });
   };
 
-  const addTag = async () => {
-    const tag = newTag.trim().toLowerCase().replace(/\s+/g, '-');
+  // [TG1][TG2] accepte une valeur (suggestion cliquée) ou, par défaut, le champ de saisie
+  const addTag = async (value = newTag) => {
+    const tag = normalizeTag(value);
     if (!tag) return;
     const currentTags = lead.tags || [];
     if (currentTags.includes(tag)) { setNewTag(''); return; }
@@ -470,6 +491,8 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
   const current = editing ? form : lead;
   const { color: sc } = scoreLabel(current.score || 0);
+  // [TG2] Tags existants pas encore sur ce lead (10 max)
+  const tagSuggestions = allTags.filter(t => !(lead.tags || []).includes(t)).slice(0, 10);
 
   return (
     <motion.div
@@ -528,7 +551,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
           <Section title="Informations">
             <Field icon={<Phone size={13} />} label="Téléphone" value={current.phone} editing={editing} onChange={v => setForm(f => ({ ...f, phone: v }))} />
             {!editing && current.phone && !isValidPhone(current.phone) && (
-              <p style={{ margin: '-4px 0 10px', fontSize: 12, color: '#fbbf24', lineHeight: 1.4 }}>⚠ {checkPhone(current.phone).reason}. Modifiez la fiche pour la corriger.</p>
+              <p style={{ margin: '-4px 0 10px', fontSize: 12, color: '#b45309', lineHeight: 1.4 }}>⚠ {checkPhone(current.phone).reason}. Modifiez la fiche pour la corriger.</p>
             )}
             <Field icon={<Mail size={13} />} label="Email" value={current.email} editing={editing} onChange={v => setForm(f => ({ ...f, email: v }))} />
             <Field icon={<Building2 size={13} />} label="Entreprise" value={current.company} editing={editing} onChange={v => setForm(f => ({ ...f, company: v }))} />
@@ -552,9 +575,21 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
           <Section title="Tags">
             <TagChips tags={lead.tags || []} onRemove={removeTag} />
             <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
-              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field-light" style={{ ...inpModal, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
-              <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
+              {/* [TG2] list="crm-tags-list" : autocomplétion avec les tags existants */}
+              <input list="crm-tags-list" value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field-light" style={{ ...inpModal, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
+              {/* [TG6] fonction fléchée : sans elle, l'événement de clic serait pris pour le tag */}
+              <button onClick={() => addTag()} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
             </div>
+            {tagSuggestions.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                <span style={{ color: '#9095a5', fontSize: 11 }}>Existants :</span>
+                {tagSuggestions.map(t => (
+                  <button key={t} onClick={() => addTag(t)} style={{ padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px dashed ${tagColor(t)}66`, background: 'transparent', color: tagColor(t), fontSize: 10.5, fontWeight: 600 }}>
+                    + #{t}
+                  </button>
+                ))}
+              </div>
+            )}
           </Section>
 
           <Section title="Score commercial">
@@ -813,9 +848,11 @@ export default function LeadsCRMPanel({ profileId }) {
   const [showAdd, setShowAdd]           = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [newLead, setNewLead]           = useState({ ...EMPTY_LEAD });
+  const [newLeadTag, setNewLeadTag]     = useState('');   // [TG3]
   const [adding, setAdding]             = useState(false);
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [bulkStatus, setBulkStatus]     = useState('');
+  const [bulkTagInput, setBulkTagInput] = useState('');   // [TG4]
   const [page, setPage]                 = useState(1); // [G1]
   // [FIX6] Détecté une seule fois (appareils tactiles : pas de hover collé).
   const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
@@ -851,7 +888,15 @@ export default function LeadsCRMPanel({ profileId }) {
   }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // [G5] Reset sélection + page au changement de vue/filtre/tag/recherche.
-  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setPage(1); }, [view, filter, tagFilter, search]);
+  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setBulkTagInput(''); setPage(1); }, [view, filter, tagFilter, search]);
+
+  // [TG3] Ajout d'un tag dans la modale « Nouveau lead » (immuable)
+  const addNewLeadTag = () => {
+    const tag = normalizeTag(newLeadTag);
+    if (!tag) return;
+    setNewLead(p => (p.tags || []).includes(tag) ? p : { ...p, tags: [...(p.tags || []), tag] });
+    setNewLeadTag('');
+  };
 
   // ── [A4] Ajout d'un lead avec déclencheur automatisation ─────────
   const addLead = async () => {
@@ -862,8 +907,13 @@ export default function LeadsCRMPanel({ profileId }) {
     const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
     if (exists) { toast.error('Ce numéro existe déjà'); setAdding(false); return; }
     // [C2] doublon renvoyé par la base (23505)
+    // [TG3] un tag saisi mais pas encore validé (Entrée/+) est pris en compte
+    const pendingTag = normalizeTag(newLeadTag);
+    const tags = pendingTag && !(newLead.tags || []).includes(pendingTag)
+      ? [...(newLead.tags || []), pendingTag]
+      : (newLead.tags || []);
     const { data, error } = await supabase.from('leads')
-      .insert([{ ...newLead, profile_id: profileId, score: 0 }]).select().single();
+      .insert([{ ...newLead, tags, profile_id: profileId, score: 0 }]).select().single();
     if (error) {
       toast.error(error.code === '23505' ? 'Ce numéro existe déjà' : error.message);
       setAdding(false); return;
@@ -879,8 +929,14 @@ export default function LeadsCRMPanel({ profileId }) {
       source: data.source,
     });
 
+    // [A8][TG3] lead_tagged pour chaque tag posé à la création
+    (data.tags || []).forEach(tag => triggerLeadTagged(profileId, {
+      leadId: data.id, leadName: data.name, tag,
+    }));
+
     setLeads(p => p.some(l => l.id === data.id) ? p : [data, ...p]);
     setNewLead({ ...EMPTY_LEAD });
+    setNewLeadTag('');
     setShowAdd(false);
     setAdding(false);
     toast.success('Lead ajouté ✅');
@@ -946,6 +1002,37 @@ export default function LeadsCRMPanel({ profileId }) {
     toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} mis à jour`);
   };
 
+  // [TG4] Action groupée : ajouter ou retirer un tag sur la sélection.
+  // Ne traite que les leads concernés, mise à jour optimiste, rechargement
+  // silencieux en cas d'erreur, lead_tagged déclenché à l'ajout (comme [A8]).
+  const bulkTag = async (mode) => {
+    const tag = normalizeTag(bulkTagInput);
+    if (!tag) { toast.error('Saisissez un tag'); return; }
+    const targets = leads.filter(l =>
+      selectedIds.has(l.id) && (l.tags || []).includes(tag) === (mode === 'remove'));
+    if (!targets.length) {
+      toast.info(mode === 'add' ? 'Tous les leads ont déjà ce tag' : 'Aucun lead sélectionné n\'a ce tag');
+      return;
+    }
+    const nextTags = new Map(targets.map(l => [
+      l.id,
+      mode === 'add' ? [...(l.tags || []), tag] : (l.tags || []).filter(t => t !== tag),
+    ]));
+
+    setLeads(prev => prev.map(l => nextTags.has(l.id) ? { ...l, tags: nextTags.get(l.id) } : l));
+    const results = await Promise.all(targets.map(l =>
+      supabase.from('leads').update({ tags: nextTags.get(l.id) }).eq('id', l.id)));
+    const failed = results.find(r => r.error);
+    if (failed) { toast.error(failed.error.message); loadLeads({ silent: true }); return; }
+
+    if (mode === 'add') targets.forEach(l => triggerLeadTagged(profileId, {
+      leadId: l.id, leadName: l.name, tag,
+    }));
+
+    setBulkTagInput('');
+    toast.success(`#${tag} ${mode === 'add' ? 'ajouté à' : 'retiré de'} ${targets.length} lead${targets.length > 1 ? 's' : ''}`);
+  };
+
   const bulkDelete = async () => {
     const ids = [...selectedIds];
     if (!window.confirm(`Supprimer définitivement ${ids.length} lead${ids.length > 1 ? 's' : ''} ?`)) return;
@@ -969,19 +1056,41 @@ export default function LeadsCRMPanel({ profileId }) {
     return [headers, ...data].map(r => r.map(csvCell).join(',')).join('\n');
   };
 
+  // [TG5] Téléchargement mutualisé (export complet, sélection, segment)
+  const downloadCSV = (rows, name) => {
+    const blob = new Blob(['\uFEFF' + buildCSV(rows)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${name}-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportCSV = () => {
     if (!leads.length) { toast.error('Aucun lead à exporter'); return; }
-    const blob = new Blob(['\uFEFF' + buildCSV(leads)], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `leads-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+    downloadCSV(leads, 'leads');
   };
 
   const exportSelectedCSV = () => {
     const selected = leads.filter(l => selectedIds.has(l.id)); if (!selected.length) return;
-    const blob = new Blob(['\uFEFF' + buildCSV(selected)], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `leads-selection-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+    downloadCSV(selected, 'leads-selection');
   };
 
-  const allTags = useMemo(() => { const set = new Set(); leads.forEach(l => (l.tags || []).forEach(t => set.add(t))); return Array.from(set).sort(); }, [leads]);
+  // [TG5] Export du segment affiché (tag actif + filtres en cours)
+  const exportSegmentCSV = () => {
+    if (!filteredLeads.length) { toast.error('Aucun lead à exporter'); return; }
+    downloadCSV(filteredLeads, `leads-${tagFilter || 'segment'}`);
+  };
+
+  // [TG5] Compteurs par tag, tags triés par fréquence puis alphabétique
+  const tagCounts = useMemo(() => {
+    const m = new Map();
+    leads.forEach(l => (l.tags || []).forEach(t => m.set(t, (m.get(t) || 0) + 1)));
+    return m;
+  }, [leads]);
+  const allTags = useMemo(
+    () => [...tagCounts.keys()].sort((a, b) => (tagCounts.get(b) - tagCounts.get(a)) || a.localeCompare(b)),
+    [tagCounts]
+  );
 
   const filteredLeads = leads.filter(l => {
     const matchesFilter = filter === 'all'
@@ -1005,7 +1114,15 @@ export default function LeadsCRMPanel({ profileId }) {
   // [G5] Garde-fou si la page courante n'existe plus.
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // [TG5] Si le tag filtré n'existe plus (retiré de tous les leads), on réinitialise le filtre.
+  useEffect(() => {
+    if (tagFilter && !tagCounts.has(tagFilter)) setTagFilter(null);
+  }, [tagFilter, tagCounts]);
+
   if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: '#a2a7b5', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
+
+  // Style commun aux petits boutons de la barre d'actions groupées
+  const bulkBtn = { display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -1016,6 +1133,11 @@ export default function LeadsCRMPanel({ profileId }) {
         .crm-field-light:focus{border-color:#8b5cf6!important;background:#ffffff!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
         .crm-field-light::placeholder{color:#a2a7b5;}
       `}</style>
+
+      {/* [TG2] Autocomplétion des tags existants (fiche, création, actions groupées) */}
+      <datalist id="crm-tags-list">
+        {allTags.map(t => <option key={t} value={t} />)}
+      </datalist>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
@@ -1071,9 +1193,20 @@ export default function LeadsCRMPanel({ profileId }) {
             <span style={{ color: '#9095a5', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}><TagIcon size={11} /> Tags :</span>
             {allTags.map(tag => (
               <button key={tag} onClick={() => setTagFilter(prev => prev === tag ? null : tag)} style={{ padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${tagFilter === tag ? tagColor(tag) : '#dde0ea'}`, background: tagFilter === tag ? `${tagColor(tag)}22` : 'transparent', color: tagFilter === tag ? tagColor(tag) : '#8a90a2', fontSize: 10.5, fontWeight: 600 }}>
-                #{tag}
+                #{tag} <span style={{ opacity: 0.7 }}>({tagCounts.get(tag)})</span>
               </button>
             ))}
+            {/* [TG5] Effacer le filtre + exporter le segment affiché */}
+            {tagFilter && (
+              <>
+                <button onClick={() => setTagFilter(null)} style={{ ...bulkBtn, padding: '3px 9px', borderRadius: 99, fontSize: 10.5 }}>
+                  <X size={10} /> Effacer
+                </button>
+                <button onClick={exportSegmentCSV} style={{ ...bulkBtn, padding: '3px 9px', borderRadius: 99, fontSize: 10.5 }}>
+                  <Download size={10} /> Exporter #{tagFilter} ({filteredLeads.length})
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1085,14 +1218,29 @@ export default function LeadsCRMPanel({ profileId }) {
               <span style={{ background: 'rgba(99,102,241,0.16)', color: '#4338ca', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 99 }}>
                 {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
               </span>
-              <button onClick={() => setSelectedIds(new Set())} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => setSelectedIds(new Set())} style={bulkBtn}>
                 <X size={11} /> Désélectionner
               </button>
               <select value={bulkStatus} onChange={e => { setBulkStatus(e.target.value); bulkChangeStatus(e.target.value); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#454b5a', fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
                 <option value="">Changer le statut…</option>
                 {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
-              <button onClick={exportSelectedCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+
+              {/* [TG4] Tags en action groupée */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input list="crm-tags-list" value={bulkTagInput} onChange={e => setBulkTagInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && bulkTag('add')}
+                  placeholder="Tag…" maxLength={30}
+                  style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#454b5a', fontSize: 11, fontWeight: 600, outline: 'none', width: 110 }} />
+                <button onClick={() => bulkTag('add')} style={bulkBtn} title="Ajouter ce tag à la sélection">
+                  <Plus size={11} /> Tag
+                </button>
+                <button onClick={() => bulkTag('remove')} style={bulkBtn} title="Retirer ce tag de la sélection">
+                  − Tag
+                </button>
+              </div>
+
+              <button onClick={exportSelectedCSV} style={bulkBtn}>
                 <Download size={11} /> CSV
               </button>
               <button onClick={bulkDelete} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.08)', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
@@ -1179,6 +1327,19 @@ export default function LeadsCRMPanel({ profileId }) {
                   {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
+
+              {/* [TG3] Tags à la création */}
+              <div>
+                <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Tags</label>
+                <TagChips tags={newLead.tags || []} onRemove={t => setNewLead(p => ({ ...p, tags: (p.tags || []).filter(x => x !== t) }))} />
+                <div style={{ display: 'flex', gap: 8, marginTop: (newLead.tags?.length ? 8 : 0) }}>
+                  <input list="crm-tags-list" value={newLeadTag} onChange={e => setNewLeadTag(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewLeadTag(); } }}
+                    className="crm-field-light" style={{ ...inpModal, flex: 1 }} placeholder="Ex: vip, urgent" maxLength={30} />
+                  <button type="button" onClick={addNewLeadTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
+                </div>
+              </div>
+
               <div>
                 <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
                 <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field-light" style={{ ...inpModal, resize: 'none' }} placeholder="Notes additionnelles..." />
@@ -1194,7 +1355,7 @@ export default function LeadsCRMPanel({ profileId }) {
 
       <AnimatePresence>
         {selectedLead && (
-          <LeadModal lead={selectedLead} profileId={profileId} onClose={() => setSelectedLead(null)}
+          <LeadModal lead={selectedLead} profileId={profileId} allTags={allTags} onClose={() => setSelectedLead(null)}
             onUpdate={updated => { updateLeadLocal(updated); setSelectedLead(updated); }}
             onDelete={deleteLead} />
         )}

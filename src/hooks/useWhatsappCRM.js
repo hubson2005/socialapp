@@ -4,6 +4,28 @@ import { supabase } from '../supabase'
 
 const ENV_WEBHOOK = import.meta.env.VITE_MAKE_WEBHOOK_URL || ''
 
+// ── TAGS / SEGMENTS ────────────────────────────────────────────────
+// [TAGS v2] Un contact porte désormais PLUSIEURS tags : colonne `tags text[]`
+// (même modèle que la table `leads`). L'ancienne colonne `tag` est conservée
+// et synchronisée avec le premier tag (compatibilité / retour arrière).
+export const DEFAULT_TAGS = ['client', 'prospect', 'vip']
+export const MAX_TAG = 30
+
+// Normalisation unique : « #VIP Urgent » → « vip-urgent »
+export const normalizeTag = (s) =>
+  String(s || '').trim().toLowerCase().replace(/^#+/, '').replace(/\s+/g, '-').slice(0, MAX_TAG)
+
+// Tableau de tags propre : normalisé, sans vide, sans doublon
+export const cleanTags = (tags) =>
+  [...new Set((Array.isArray(tags) ? tags : []).map(normalizeTag).filter(Boolean))]
+
+// Tags d'un contact : `tags` en priorité, sinon l'ancien `tag` (contacts non migrés)
+export const getContactTags = (c) => {
+  if (Array.isArray(c?.tags) && c.tags.length) return c.tags
+  const legacy = normalizeTag(c?.tag)
+  return legacy ? [legacy] : []
+}
+
 // ── Templates de notifications Boost (automatisations) ─────────────
 export const BOOST_NOTIF_TEMPLATES = [
   {
@@ -113,10 +135,12 @@ export function useWhatsappCRM(profileId) {
   }, [profileId])
 
   // ── Add contact ────────────────────────────────────────────────
-  const addContact = async ({ name, phone, email, tag }) => {
+  // [TAGS v2] reçoit `tags` (tableau). `tag` (ancien format) reste accepté.
+  const addContact = async ({ name, phone, email, tags, tag }) => {
+    const clean = cleanTags(tags ?? [tag])
     const { data, error } = await supabase
       .from('whatsapp_contacts')
-      .insert([{ name, phone, email: email || null, tag, status: 'actif' }])
+      .insert([{ name, phone, email: email || null, tags: clean, tag: clean[0] || null, status: 'actif' }])
       .select()
       .maybeSingle()
     if (error) throw error
@@ -125,10 +149,11 @@ export function useWhatsappCRM(profileId) {
   }
 
   // ── Update contact ─────────────────────────────────────────────
-  const updateContact = async (id, { name, phone, email, tag }) => {
+  const updateContact = async (id, { name, phone, email, tags, tag }) => {
+    const clean = cleanTags(tags ?? [tag])
     const { data, error } = await supabase
       .from('whatsapp_contacts')
-      .update({ name, phone, email: email || null, tag })
+      .update({ name, phone, email: email || null, tags: clean, tag: clean[0] || null })
       .eq('id', id)
       .select()
       .maybeSingle()

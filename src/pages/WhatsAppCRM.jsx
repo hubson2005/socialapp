@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useWhatsappCRM, BOOST_NOTIF_TEMPLATES } from '../hooks/useWhatsappCRM'
+import {
+  useWhatsappCRM, BOOST_NOTIF_TEMPLATES,
+  DEFAULT_TAGS, MAX_TAG, normalizeTag, cleanTags, getContactTags,
+} from '../hooks/useWhatsappCRM'
 // [FIX IMPORT] L'ancien code utilisait require(), qui n'existe pas côté
 // navigateur avec Vite/ESM : le try/catch échouait silencieusement à
 // CHAQUE fois et CampaignAIGenerator restait toujours `null`, désactivant
@@ -14,6 +17,19 @@ const TEMPLATES = [
   { id:4, name:'Promotion',      text:'🎉 Offre exclusive {{prénom}} : -20% ce week-end ! Code : PROMO20' },
 ]
 const MAX_MSG = 1000
+
+// ── TAGS / SEGMENTS ──────────────────────────────────────────────
+// [TAGS v2] Un contact porte PLUSIEURS tags (colonne `tags text[]`, comme les
+// leads). Les tags sont stockés normalisés (minuscules, tirets) et affichés
+// avec une majuscule. Helpers de normalisation exportés par le hook.
+const tagLabel = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : '')
+
+// Liste unique des tags : défauts + tags réellement utilisés
+const getAllTags = (contacts = []) => {
+  const out = [...DEFAULT_TAGS]
+  contacts.forEach(c => getContactTags(c).forEach(t => { if (!out.includes(t)) out.push(t) }))
+  return out
+}
 
 // ── DESIGN TOKENS ────────────────────────────────────────────────
 // [T1] [FIX THÈME] `purpleL` était une teinte "claire" pensée uniquement pour
@@ -38,7 +54,23 @@ const C = {
   amber:'#f59e0b', amberDim:'rgba(245,158,11,0.1)',
   red:'#ef4444', redDim:'rgba(239,68,68,0.1)',
 }
-const TAG_C  = { Client:[C.purpleDim,C.purpleL], Prospect:[C.blueDim,C.blue], VIP:[C.orangeDim,C.orange] }
+const TAG_C  = { client:[C.purpleDim,C.purpleL], prospect:[C.blueDim,C.blue], vip:[C.orangeDim,C.orange] }
+// [TAGS] Palette pour les tags personnalisés : couleur stable dérivée du nom
+const TAG_PALETTE = [
+  [C.greenDim,'#16a34a'],
+  [C.redDim,'#dc2626'],
+  [C.amberDim,'#b45309'],
+  ['rgba(236,72,153,0.1)','#db2777'],
+  ['rgba(20,184,166,0.12)','#0f766e'],
+  ['rgba(139,92,246,0.12)','#7c3aed'],
+]
+const tagColors = (t) => {
+  if (TAG_C[t]) return TAG_C[t]
+  if (!t) return ['#eef0f5', C.textMute]
+  let h = 0
+  for (const ch of String(t)) h = (h * 31 + ch.charCodeAt(0)) % 997
+  return TAG_PALETTE[h % TAG_PALETTE.length]
+}
 const STA_C  = { actif:[C.greenDim,C.green], attente:[C.orangeDim,C.orange], inactif:['#eef0f5',C.textMute] }
 const CAM_C  = { envoyé:[C.greenDim,C.green], planifié:[C.blueDim,C.blue], brouillon:['#eef0f5',C.textMute] }
 const NOTIF_TYPE_C = {
@@ -152,6 +184,17 @@ const S = {
   toast:    (t) => ({ position:'fixed', bottom:22, right:22, background:t==='success'?'#0d3b26':'#3b1a1a', border:`1px solid ${t==='success'?C.green:'#ef4444'}`, borderRadius:9, padding:'11px 16px', color:t==='success'?'#4ade80':'#f87171', fontSize:13, fontWeight:600, zIndex:2000, display:'flex', alignItems:'center', gap:8 }),
   loading:  { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh', fontSize:14, color:C.purple },
   errBox:   { background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:9, padding:'12px 16px', color:'#ef4444', fontSize:13, margin:'24px' },
+  // [TAGS] Pastille de filtre / sélecteur de tag (actif = rempli à la couleur du tag)
+  chip: (bg, fg, active) => ({
+    display:'inline-flex', alignItems:'center', gap:6, padding:'5px 11px', borderRadius:99,
+    border:`1px solid ${active ? fg : '#e6e8f0'}`, background: active ? bg : '#ffffff',
+    color: active ? fg : '#5b6072', fontSize:12, fontWeight: active ? 700 : 500,
+    cursor:'pointer', transition:'all .15s', fontFamily:'inherit', whiteSpace:'nowrap',
+  }),
+  chipN: (fg, active) => ({
+    fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:99,
+    background: active ? '#ffffff' : '#eef0f5', color: active ? fg : C.textMute,
+  }),
 }
 
 // ── ICÔNES ────────────────────────────────────────────────────────
@@ -168,6 +211,73 @@ const Spinner = () => (
     <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
   </svg>
 )
+
+// ── TagPicker ─────────────────────────────────────────────────────
+// [TAGS v2] Sélecteur multi-tags : pastilles à cocher + création d'un tag
+// personnalisé. `values` = tags du contact (tableau), `onChange` reçoit le
+// nouveau tableau.
+function TagPicker({ values = [], onChange, tags }) {
+  const [custom, setCustom] = useState('')
+  const list = [...tags, ...values.filter(v => !tags.includes(v))]
+  const toggle = (t) => onChange(values.includes(t) ? values.filter(x => x !== t) : [...values, t])
+  const addCustom = () => {
+    const t = normalizeTag(custom)
+    if (!t) return
+    if (!values.includes(t)) onChange([...values, t])
+    setCustom('')
+  }
+
+  return (
+    <div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
+        {list.map(t => {
+          const [bg, fg] = tagColors(t)
+          const on = values.includes(t)
+          return (
+            <button key={t} type="button" style={S.chip(bg, fg, on)} onClick={() => toggle(t)}>
+              {on ? '✓ ' : ''}{tagLabel(t)}
+            </button>
+          )
+        })}
+      </div>
+      <div style={{display:'flex',gap:6}}>
+        <input
+          style={{...S.inp, flex:1}}
+          placeholder="Nouveau tag (ex : fournisseur)"
+          value={custom}
+          maxLength={MAX_TAG}
+          onChange={e => setCustom(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom() } }}
+        />
+        <button
+          type="button"
+          style={{...S.btn('sm'), opacity:custom.trim()?1:0.4, pointerEvents:custom.trim()?'auto':'none'}}
+          onClick={addCustom}
+        >+ Ajouter</button>
+      </div>
+    </div>
+  )
+}
+
+// [TAGS v2] Badges des tags d'un contact (max N visibles + compteur du reste).
+// `onTagClick` rend chaque badge cliquable (filtre).
+function TagBadges({ contact, max = 3, onTagClick, fallback = '—' }) {
+  const list = getContactTags(contact)
+  if (!list.length) return <span style={{color:C.textMute,fontSize:12}}>{fallback}</span>
+  return (
+    <span style={{display:'inline-flex',flexWrap:'wrap',alignItems:'center',gap:4}}>
+      {list.slice(0, max).map(t => (
+        <span
+          key={t}
+          style={{...S.badge(...tagColors(t)), cursor:onTagClick?'pointer':'default'}}
+          title={onTagClick ? 'Filtrer sur ce tag' : undefined}
+          onClick={onTagClick ? (e) => { e.stopPropagation(); onTagClick(t) } : undefined}
+        >{tagLabel(t)}</span>
+      ))}
+      {list.length > max && <span style={{fontSize:10,color:C.textMute,fontWeight:700}}>+{list.length - max}</span>}
+    </span>
+  )
+}
 
 // ── BoostNotifsTab ────────────────────────────────────────────────
 function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected, flash }) {
@@ -311,7 +421,7 @@ function BoostNotifsTab({ boostNotifs, profile, sendBoostNotification, connected
 }
 
 // ── MODALS INLINE — [T2] thème clair, alignées sur le reste de la page ────
-function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
+function ModalAddContact({ newC, setNewC, tags, closeModal, handleAddContact }) {
   return (
     <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
       <div style={S.modal}>
@@ -323,10 +433,8 @@ function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
           </div>
         ))}
         <div style={S.fg}>
-          <label style={S.lbl}>Tag</label>
-          <select style={S.sel} value={newC.tag} onChange={e=>setNewC(v=>({...v,tag:e.target.value}))}>
-            {['Client','Prospect','VIP'].map(t=><option key={t}>{t}</option>)}
-          </select>
+          <label style={S.lbl}>Tags</label>
+          <TagPicker values={newC.tags||[]} tags={tags} onChange={t=>setNewC(v=>({...v,tags:t}))}/>
         </div>
         <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
           <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
@@ -343,7 +451,7 @@ function ModalAddContact({ newC, setNewC, closeModal, handleAddContact }) {
 }
 
 // ── MODAL EDIT CONTACT ────────────────────────────────────────────
-function ModalEditContact({ editC, setEditC, closeModal, handleEditContact, saving }) {
+function ModalEditContact({ editC, setEditC, tags, closeModal, handleEditContact, saving }) {
   if (!editC) return null
   return (
     <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeModal()}>
@@ -356,10 +464,8 @@ function ModalEditContact({ editC, setEditC, closeModal, handleEditContact, savi
           </div>
         ))}
         <div style={S.fg}>
-          <label style={S.lbl}>Tag</label>
-          <select style={S.sel} value={editC.tag} onChange={e=>setEditC(v=>({...v,tag:e.target.value}))}>
-            {['Client','Prospect','VIP'].map(t=><option key={t}>{t}</option>)}
-          </select>
+          <label style={S.lbl}>Tags</label>
+          <TagPicker values={editC.tags||[]} tags={tags} onChange={t=>setEditC(v=>({...v,tags:t}))}/>
         </div>
         <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
           <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
@@ -418,7 +524,7 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{msgTarget?.name}</div>
             <div style={{fontSize:12,color:C.textMute,marginTop:2}}>{msgTarget?.phone}</div>
           </div>
-          <span style={S.badge(...(TAG_C[msgTarget?.tag]||[C.purpleDim,C.purpleL]))}>{msgTarget?.tag||'Contact'}</span>
+          <TagBadges contact={msgTarget} fallback="Contact" max={2}/>
         </div>
         <div style={S.fg}>
           <label style={S.lbl}>Template rapide</label>
@@ -462,7 +568,8 @@ function ModalSendMsg({ contacts, msgTarget, msgText, setMsgText, selectedTpl, s
 
 // ── ModalCampaign ────────────────────────────────────────────────
 // ✅ FIX PRINCIPAL : bouton "Lancer" corrigé + disabled réel + selectAll helper
-function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, closeModal, handleLaunchCampaign }) {
+// [TAGS] Étape 2 : sélection d'un segment entier en un clic via les pastilles de tags.
+function ModalCampaign({ contacts, tags, newCam, setNewCam, camStep, setCamStep, closeModal, handleLaunchCampaign }) {
   // ✅ FIX: validation étape 1 — on passe à l'étape 2 seulement si nom + message remplis
   const canGoNext = newCam.name.trim() !== '' && newCam.message.trim() !== ''
   // ✅ FIX: validation étape 2 — au moins 1 destinataire
@@ -474,6 +581,24 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
     setNewCam(p => ({
       ...p,
       recipients: allSelected ? [] : contacts.map(c => c.id)
+    }))
+  }
+
+  // [TAGS] Ajoute ou retire d'un coup tous les contacts d'un tag
+  const idsOfTag = (t) => contacts.filter(c => getContactTags(c).includes(t)).map(c => c.id)
+  const tagFullySelected = (t) => {
+    const ids = idsOfTag(t)
+    return ids.length > 0 && ids.every(id => newCam.recipients.includes(id))
+  }
+  const toggleTag = (t) => {
+    const ids = idsOfTag(t)
+    if (ids.length === 0) return
+    const full = tagFullySelected(t)
+    setNewCam(p => ({
+      ...p,
+      recipients: full
+        ? p.recipients.filter(id => !ids.includes(id))
+        : [...new Set([...p.recipients, ...ids])]
     }))
   }
 
@@ -504,6 +629,11 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
               <span style={{fontSize:11,color:C.textMute}}>{newCam.message.length}/{MAX_MSG}</span>
             </div>
           </div>
+          {newCam.recipients.length > 0 && (
+            <div style={{fontSize:12,color:C.purpleL,fontWeight:600,marginBottom:12}}>
+              ✓ {newCam.recipients.length} destinataire(s) déjà sélectionné(s)
+            </div>
+          )}
           <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
             <button style={S.btn('ghost')} onClick={closeModal}>Annuler</button>
             {/* ✅ FIX: disabled + pointerEvents pour bloquer vraiment le clic */}
@@ -525,6 +655,24 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
               </button>
             )}
           </div>
+
+          {/* [TAGS] Segments : un clic = tous les contacts du tag */}
+          {contacts.length > 0 && (
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+              {tags.map(t => {
+                const n = idsOfTag(t).length
+                if (n === 0) return null
+                const [bg, fg] = tagColors(t)
+                const active = tagFullySelected(t)
+                return (
+                  <button key={t} type="button" style={S.chip(bg, fg, active)} onClick={()=>toggleTag(t)}>
+                    {active ? '✓ ' : ''}{tagLabel(t)} <span style={S.chipN(fg, active)}>{n}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           <div style={{maxHeight:220,overflow:'auto',display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
             {contacts.length===0 && (
               <div style={{textAlign:'center',color:C.textMute,padding:24,fontSize:13,background:C.bg,borderRadius:9,border:`1px solid ${C.border}`}}>
@@ -547,7 +695,7 @@ function ModalCampaign({ contacts, newCam, setNewCam, camStep, setCamStep, close
                     <div style={{fontSize:13,fontWeight:600}}>{c.name}</div>
                     <div style={{fontSize:11,color:C.textMute}}>{c.phone}</div>
                   </div>
-                  <span style={S.badge(...(TAG_C[c.tag]||['#eef0f5',C.textMute]))}>{c.tag}</span>
+                  <TagBadges contact={c} max={2}/>
                 </div>
               )
             })}
@@ -624,7 +772,7 @@ function ModalPickContact({ contacts, onSelect, closeModal }) {
                     <div style={{fontSize:13,fontWeight:600,color:C.text}}>{c.name}</div>
                     <div style={{fontSize:11,color:C.textMute}}>{c.phone}</div>
                   </div>
-                  <span style={S.badge(...(TAG_C[c.tag]||[C.purpleDim,C.purpleL]))}>{c.tag}</span>
+                  <TagBadges contact={c} max={2}/>
                 </div>
               ))}
             </div>
@@ -645,7 +793,7 @@ export default function WhatsAppCRM({ profile }) {
     addContact, updateContact, deleteContact, sendMessage, createCampaign,
     addNotification, toggleNotification, saveWebhook,
     sendBoostNotification,
-  } = useWhatsappCRM()
+  } = useWhatsappCRM(profile?.id)
 
   const [tab,          setTab]          = useState('dashboard')
   const [toast,        setToast]        = useState(null)
@@ -658,11 +806,14 @@ export default function WhatsAppCRM({ profile }) {
   const [sending,      setSending]      = useState(false)
   const [saving,       setSaving]       = useState(false)
   const [deleting,     setDeleting]     = useState(false)
-  const [newC,   setNewC]   = useState({ name:'', phone:'', email:'', tag:'Client' })
+  const [newC,   setNewC]   = useState({ name:'', phone:'', email:'', tags:['client'] })
   const [editC,  setEditC]  = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [newCam, setNewCam] = useState({ name:'', message:'', recipients:[] })
   const [newN,   setNewN]   = useState({ name:'', trigger_type:'Automatique' })
+  // [TAGS] Filtre par segment + recherche dans l'onglet Contacts
+  const [tagFilter, setTagFilter] = useState('all')
+  const [search,    setSearch]    = useState('')
 
   useEffect(() => { setWebhookInput(webhook||'') }, [webhook])
 
@@ -685,15 +836,15 @@ export default function WhatsAppCRM({ profile }) {
   const handleAddContact = async () => {
     if (!newC.name||!newC.phone) return
     try {
-      await addContact(newC)
+      await addContact({ ...newC, tags: cleanTags(newC.tags) })
       flash(`Contact "${newC.name}" ajouté ✓`)
       setModal(null)
-      setNewC({name:'',phone:'',email:'',tag:'Client'})
+      setNewC({name:'',phone:'',email:'',tags:['client']})
     } catch(e) { flash(e.message,'error') }
   }
 
   const handleOpenEdit = (c) => {
-    setEditC({ id:c.id, name:c.name, phone:c.phone, email:c.email||'', tag:c.tag })
+    setEditC({ id:c.id, name:c.name, phone:c.phone, email:c.email||'', tags:getContactTags(c) })
     setModal('edit_contact')
   }
 
@@ -701,7 +852,7 @@ export default function WhatsAppCRM({ profile }) {
     if (!editC?.name||!editC?.phone) return
     setSaving(true)
     try {
-      await updateContact(editC.id, { name:editC.name, phone:editC.phone, email:editC.email, tag:editC.tag })
+      await updateContact(editC.id, { name:editC.name, phone:editC.phone, email:editC.email, tags:cleanTags(editC.tags) })
       flash(`Contact "${editC.name}" modifié ✓`)
       closeModal()
     } catch(e) { flash(e.message,'error') }
@@ -765,8 +916,9 @@ export default function WhatsAppCRM({ profile }) {
   }
 
   // ✅ FIX: reset camStep à l'ouverture du modal campagne
-  const handleOpenCampaign = () => {
-    setNewCam({ name:'', message:'', recipients:[] })
+  // [TAGS] `recipientIds` permet de préremplir les destinataires (ex. segment filtré)
+  const handleOpenCampaign = (recipientIds = []) => {
+    setNewCam({ name:'', message:'', recipients:Array.isArray(recipientIds) ? recipientIds : [] })
     setCamStep(1)
     setModal('campaign')
   }
@@ -787,6 +939,18 @@ export default function WhatsAppCRM({ profile }) {
 
   if (loading) return <div style={S.loading}><Spinner/>&nbsp;Chargement...</div>
   if (error)   return <div style={S.errBox}>Erreur : {error}</div>
+
+  // [TAGS] Données dérivées (calculées après les early returns : ce ne sont pas des hooks)
+  const safeContacts = contacts || []
+  const tags         = getAllTags(safeContacts)
+  const countByTag   = (t) => safeContacts.filter(c => getContactTags(c).includes(t)).length
+  const q            = search.trim().toLowerCase()
+  const filteredContacts = safeContacts.filter(c => {
+    if (tagFilter !== 'all' && !getContactTags(c).includes(tagFilter)) return false
+    if (!q) return true
+    return [c.name, c.phone, c.email].some(v => (v || '').toLowerCase().includes(q))
+  })
+  const goToSegment = (t) => { setTagFilter(t); setSearch(''); setTab('contacts') }
 
   return (
     <div style={S.page}>
@@ -851,14 +1015,14 @@ export default function WhatsAppCRM({ profile }) {
           <div style={S.g2}>
             <div style={S.card}>
               <div style={S.cardT}>👥 Contacts récents</div>
-              {contacts.slice(0,5).map((c,i) => (
+              {safeContacts.slice(0,5).map((c,i) => (
                 <div key={c.id} style={{display:'flex',alignItems:'center',gap:9,padding:'8px 0',borderBottom:i<4?'1px solid #eef0f5':'none'}}>
-                  <div style={S.avat(AVAT[i%5])}>{c.name.slice(0,2).toUpperCase()}</div>
+                  <div style={S.avat(AVAT[i%5])}>{(c.name||'?').slice(0,2).toUpperCase()}</div>
                   <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{c.name}</div><div style={{fontSize:11,color:C.textMute}}>{c.phone}</div></div>
-                  <span style={S.badge(...(TAG_C[c.tag]||['#eef0f5','#8a90a2']))}>{c.tag}</span>
+                  <TagBadges contact={c} max={2}/>
                 </div>
               ))}
-              {contacts.length===0 && <div style={{fontSize:12,color:C.textMute,textAlign:'center',padding:'16px 0'}}>Aucun contact encore</div>}
+              {safeContacts.length===0 && <div style={{fontSize:12,color:C.textMute,textAlign:'center',padding:'16px 0'}}>Aucun contact encore</div>}
             </div>
             <div style={S.card}>
               <div style={S.cardT}>⚡ Actions rapides</div>
@@ -875,40 +1039,103 @@ export default function WhatsAppCRM({ profile }) {
               ))}
             </div>
           </div>
+
+          {/* [TAGS] Segments : répartition des contacts par tag, clic = liste filtrée */}
+          <div style={{...S.card, marginTop:12}}>
+            <div style={S.cardT}>🏷️ Segments</div>
+            {safeContacts.length===0
+              ? <div style={{fontSize:12,color:C.textMute}}>Ajoutez des contacts avec un tag pour créer vos segments.</div>
+              : <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                  {tags.map(t => {
+                    const n = countByTag(t)
+                    if (n === 0) return null
+                    const [bg, fg] = tagColors(t)
+                    return (
+                      <button key={t} type="button" style={S.chip(bg, fg, true)} onClick={()=>goToSegment(t)}>
+                        {tagLabel(t)} <span style={S.chipN(fg, true)}>{n}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+            }
+          </div>
         </>}
 
         {/* ── CONTACTS ── */}
         {tab==='contacts' && <>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-            <div style={{fontSize:13,color:C.textMute}}>{contacts.length} contacts</div>
-            <button style={S.btn('primary',false,true)} onClick={()=>setModal('contact')}>➕ Nouveau contact</button>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,gap:10,flexWrap:'wrap'}}>
+            <div style={{fontSize:13,color:C.textMute}}>
+              {filteredContacts.length===safeContacts.length
+                ? `${safeContacts.length} contacts`
+                : `${filteredContacts.length} sur ${safeContacts.length} contacts`}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+              {/* [TAGS] Lancer une campagne directement sur le segment affiché */}
+              {tagFilter!=='all' && filteredContacts.length>0 && (
+                <button style={S.btn('green',false,true)} onClick={()=>handleOpenCampaign(filteredContacts.map(c=>c.id))}>
+                  📢 Campagne « {tagLabel(tagFilter)} » ({filteredContacts.length})
+                </button>
+              )}
+              <button style={S.btn('primary',false,true)} onClick={()=>setModal('contact')}>➕ Nouveau contact</button>
+            </div>
           </div>
+
+          {/* [TAGS] Recherche + filtres par segment */}
+          <div style={{marginBottom:14}}>
+            <input
+              style={{...S.inp, maxWidth:320, marginBottom:10, background:'#ffffff'}}
+              placeholder="Rechercher par nom, téléphone ou email"
+              value={search}
+              onChange={e=>setSearch(e.target.value)}
+            />
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              <button type="button" style={S.chip(C.purpleDim, C.purpleL, tagFilter==='all')} onClick={()=>setTagFilter('all')}>
+                Tous <span style={S.chipN(C.purpleL, tagFilter==='all')}>{safeContacts.length}</span>
+              </button>
+              {tags.map(t => {
+                const n = countByTag(t)
+                if (n === 0 && tagFilter !== t) return null
+                const [bg, fg] = tagColors(t)
+                return (
+                  <button key={t} type="button" style={S.chip(bg, fg, tagFilter===t)} onClick={()=>setTagFilter(t)}>
+                    {tagLabel(t)} <span style={S.chipN(fg, tagFilter===t)}>{n}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div style={S.card}>
-            {contacts.length===0
+            {safeContacts.length===0
               ? <div style={{textAlign:'center',color:C.textMute,padding:32}}>Aucun contact. Ajoutez-en un !</div>
-              : <table style={S.tbl}>
-                  <thead><tr>{['Contact','Téléphone','Email','Tag','Statut','Action'].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-                  <tbody>
-                    {contacts.map((c,i) => (
-                      <tr key={c.id}>
-                        <td style={S.td}><div style={{display:'flex',alignItems:'center',gap:9}}><div style={S.avat(AVAT[i%5])}>{(c.name||'?').slice(0,2).toUpperCase()}</div><span style={{fontWeight:600}}>{c.name}</span></div></td>
-                        <td style={S.td}>{c.phone}</td>
-                        <td style={{...S.td,color:C.textMute}}>{c.email||'—'}</td>
-                        <td style={S.td}><span style={S.badge(...(TAG_C[c.tag]||['#eef0f5','#8a90a2']))}>{c.tag}</span></td>
-                        <td style={S.td}><span style={S.badge(...(STA_C[c.status]||['#eef0f5','#8a90a2']))}>{c.status}</span></td>
-                        <td style={S.td}>
-                          <div style={{display:'flex',alignItems:'center',gap:6}}>
-                            <button style={{...S.btn('green',false,true),padding:'5px 12px',fontSize:12,gap:5}} onClick={()=>{setMsgTarget(c);setModal('msg')}}>
-                              <WaIcon size={12} color="#16a34a"/> WA
-                            </button>
-                            <button style={S.iconBtn(C.purpleL)} title="Modifier" onClick={()=>handleOpenEdit(c)}>✏️</button>
-                            <button style={S.iconBtn(C.red)} title="Supprimer" onClick={()=>handleOpenDelete(c)}>🗑️</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              : filteredContacts.length===0
+                ? <div style={{textAlign:'center',color:C.textMute,padding:32}}>
+                    Aucun contact ne correspond.{' '}
+                    <button type="button" style={{...S.btn('sm'),marginLeft:6}} onClick={()=>{setTagFilter('all');setSearch('')}}>Réinitialiser les filtres</button>
+                  </div>
+                : <table style={S.tbl}>
+                    <thead><tr>{['Contact','Téléphone','Email','Tag','Statut','Action'].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {filteredContacts.map((c,i) => (
+                        <tr key={c.id}>
+                          <td style={S.td}><div style={{display:'flex',alignItems:'center',gap:9}}><div style={S.avat(AVAT[i%5])}>{(c.name||'?').slice(0,2).toUpperCase()}</div><span style={{fontWeight:600}}>{c.name}</span></div></td>
+                          <td style={S.td}>{c.phone}</td>
+                          <td style={{...S.td,color:C.textMute}}>{c.email||'—'}</td>
+                          <td style={S.td}><TagBadges contact={c} max={3} onTagClick={setTagFilter}/></td>
+                          <td style={S.td}><span style={S.badge(...(STA_C[c.status]||['#eef0f5','#8a90a2']))}>{c.status}</span></td>
+                          <td style={S.td}>
+                            <div style={{display:'flex',alignItems:'center',gap:6}}>
+                              <button style={{...S.btn('green',false,true),padding:'5px 12px',fontSize:12,gap:5}} onClick={()=>{setMsgTarget(c);setModal('msg')}}>
+                                <WaIcon size={12} color="#16a34a"/> WA
+                              </button>
+                              <button style={S.iconBtn(C.purpleL)} title="Modifier" onClick={()=>handleOpenEdit(c)}>✏️</button>
+                              <button style={S.iconBtn(C.red)} title="Supprimer" onClick={()=>handleOpenDelete(c)}>🗑️</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
             }
           </div>
         </>}
@@ -917,8 +1144,10 @@ export default function WhatsAppCRM({ profile }) {
         {tab==='campaigns' && <>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
             <div style={{fontSize:13,color:C.textMute}}>{campaigns.length} campagnes</div>
-            {/* ✅ FIX: utilise handleOpenCampaign pour reset propre */}
-            <button style={S.btn('primary',false,true)} onClick={handleOpenCampaign}>📢 Nouvelle campagne</button>
+            {/* ✅ FIX: utilise handleOpenCampaign pour reset propre
+                [TAGS] Fonction fléchée : sans elle, l'événement de clic serait
+                passé en argument et pris pour une liste de destinataires. */}
+            <button style={S.btn('primary',false,true)} onClick={()=>handleOpenCampaign()}>📢 Nouvelle campagne</button>
           </div>
           <div style={S.card}>
             {campaigns.length===0
@@ -1020,15 +1249,15 @@ export default function WhatsAppCRM({ profile }) {
       </div>
 
       {/* ── MODALS ── */}
-      {modal==='contact'       && <ModalAddContact newC={newC} setNewC={setNewC} closeModal={closeModal} handleAddContact={handleAddContact}/>}
-      {modal==='edit_contact'  && <ModalEditContact editC={editC} setEditC={setEditC} closeModal={closeModal} handleEditContact={handleEditContact} saving={saving}/>}
+      {modal==='contact'       && <ModalAddContact newC={newC} setNewC={setNewC} tags={tags} closeModal={closeModal} handleAddContact={handleAddContact}/>}
+      {modal==='edit_contact'  && <ModalEditContact editC={editC} setEditC={setEditC} tags={tags} closeModal={closeModal} handleEditContact={handleEditContact} saving={saving}/>}
       {modal==='delete_contact'&& <ModalConfirmDelete target={deleteTarget} closeModal={closeModal} handleDeleteContact={handleDeleteContact} deleting={deleting}/>}
-      {modal==='msg'          && msgTarget && <ModalSendMsg contacts={contacts} msgTarget={msgTarget} msgText={msgText} setMsgText={setMsgText} selectedTpl={selectedTpl} setSelectedTpl={setSelectedTpl} connected={connected} sending={sending} closeModal={closeModal} handleSendMsg={handleSendMsg}/>}
-      {modal==='campaign'     && <ModalCampaign contacts={contacts} newCam={newCam} setNewCam={setNewCam} camStep={camStep} setCamStep={setCamStep} closeModal={closeModal} handleLaunchCampaign={handleLaunchCampaign}/>}
+      {modal==='msg'          && msgTarget && <ModalSendMsg contacts={safeContacts} msgTarget={msgTarget} msgText={msgText} setMsgText={setMsgText} selectedTpl={selectedTpl} setSelectedTpl={setSelectedTpl} connected={connected} sending={sending} closeModal={closeModal} handleSendMsg={handleSendMsg}/>}
+      {modal==='campaign'     && <ModalCampaign contacts={safeContacts} tags={tags} newCam={newCam} setNewCam={setNewCam} camStep={camStep} setCamStep={setCamStep} closeModal={closeModal} handleLaunchCampaign={handleLaunchCampaign}/>}
       {modal==='notif'        && <ModalNotif newN={newN} setNewN={setNewN} closeModal={closeModal} handleAddNotif={handleAddNotif}/>}
       {modal==='pick_contact' && (
         <ModalPickContact
-          contacts={contacts}
+          contacts={safeContacts}
           onSelect={(c) => { setMsgTarget(c); setModal('msg') }}
           closeModal={closeModal}
         />

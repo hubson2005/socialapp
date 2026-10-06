@@ -1341,15 +1341,14 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
-        {topSocialLinks.length > 0 && (
-  <div style={{
-    display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
-    marginBottom:'14px', padding:'6px 11px', borderRadius:'999px',
-    background:LINK_BG_IDLE, border:`1px solid ${LINK_BORDER_COLOR}`,
-    backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+      {topSocialLinks.length > 0 && (
+  <div className="pp-content-col" style={{
+    display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center',
+    gap:'8px', marginBottom:'14px',
   }}>
     {topSocialLinks.map((link, i) => {
       const platform = resolvePlatform(link);
+      const color = platform.color || '#6366f1';
       return (
         <button
           key={i}
@@ -1357,15 +1356,27 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
           aria-label={link.label || platform.label}
           className="pp-link-btn-el"
           style={{
-            '--pp-hover-bg': LINK_BG_HOVER,
-            width:'38px', height:'38px', borderRadius:'50%', overflow:'hidden',
-            boxSizing:'border-box', lineHeight:0,
-            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-            background:LINK_ICON_BG, border:`1px solid ${LINK_BORDER_COLOR}`,
-            cursor:'pointer', padding:0, touchAction:'manipulation',
+            '--pp-hover-bg': color,
+            display:'inline-flex', alignItems:'center', gap:'8px',
+            height:'40px', padding:'0 14px 0 5px', borderRadius:'999px',
+            boxSizing:'border-box', maxWidth:'100%',
+            background:color,
+            border:'1px solid rgba(255,255,255,0.35)',
+            boxShadow:'0 4px 14px rgba(0,0,0,0.28)',
+            color:'#fff', fontSize:'12px', fontWeight:700, letterSpacing:'0.02em',
+            cursor:'pointer', touchAction:'manipulation',
           }}
         >
-          {platform.icon ? React.cloneElement(platform.icon, { width: 36, height: 36 }) : null}
+          <span style={{
+            width:'30px', height:'30px', borderRadius:'50%', overflow:'hidden',
+            flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
+            background:'#fff', lineHeight:0,
+          }}>
+            {platform.icon ? React.cloneElement(platform.icon, { width: 30, height: 30 }) : null}
+          </span>
+          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {link.label || platform.label}
+          </span>
         </button>
       );
     })}

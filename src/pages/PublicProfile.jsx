@@ -1287,8 +1287,15 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
         {profile.banner_url ? (
           <>
             <div className="pp-content-col" style={{ position:'relative' }}>
-              <div style={{ borderRadius:'24px', overflow:'hidden', aspectRatio:'16/7', boxShadow:'0 8px 28px rgba(0,0,0,0.35)' }}>
-                {/* [PERF2c] Bannière en haut de page : jamais lazy ; prioritaire si c'est le hero */}
+              {/* [BANNER-RING] Anneau translucide : memes valeurs que l'anneau de l'avatar */}
+              <div style={{
+                padding:'3px',
+                borderRadius:'28px',
+                background:'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))',
+                boxShadow:'0 8px 28px rgba(0,0,0,0.35)',
+              }}>
+                <div style={{ borderRadius:'25px', overflow:'hidden', aspectRatio:'16/7' }}>
+                  {/* [PERF2c] Bannière en haut de page : jamais lazy ; prioritaire si c'est le hero */}
                 <LazyImg
                   eager
                   priority={!!heroRaw && heroRaw === profile.banner_url}
@@ -1296,6 +1303,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
                   alt="Bannière du profil"
                   style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                 />
+                </div>
               </div>
               <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(65%)' }}>
                 {avatarBlock}
@@ -1333,8 +1341,8 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
         {topSocialLinks.length > 0 && (
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'center', gap:'10px',
-            marginBottom:'18px', padding:'8px 14px', borderRadius:'999px',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:'6px',
+            marginBottom:'14px', padding:'5px 9px', borderRadius:'999px',
             background:LINK_BG_IDLE, border:`1px solid ${LINK_BORDER_COLOR}`,
             backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
           }}>
@@ -1348,13 +1356,13 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
                   className="pp-link-btn-el"
                   style={{
                     '--pp-hover-bg': LINK_BG_HOVER,
-                    width:'44px', height:'44px', borderRadius:'50%', overflow:'hidden',
+                    width:'32px', height:'32px', borderRadius:'50%', overflow:'hidden',
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
                     background:LINK_ICON_BG, border:`1px solid ${LINK_BORDER_COLOR}`,
                     cursor:'pointer', padding:0, touchAction:'manipulation',
                   }}
                 >
-                  {platform.icon ? React.cloneElement(platform.icon, { width: 44, height: 44 }) : null}
+                  {platform.icon ? React.cloneElement(platform.icon, { width: 32, height: 32 }) : null}
                 </button>
               );
             })}

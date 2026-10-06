@@ -307,26 +307,6 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }
   );
 }
 
-function EventLockedPanel({ onUpgrade }) {
-  const color = '#22c55e';
-  return (
-    <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'360px', gap:'20px', textAlign:'center', padding:'40px 32px', background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'20px' }}>
-      <div style={{ position:'relative' }}>
-        <div style={{ width:'80px', height:'80px', borderRadius:'24px', background:color+'14', border:'1px solid '+color+'40', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto', fontSize:'32px' }}>🎉</div>
-        <div style={{ position:'absolute', top:'-6px', right:'-6px', width:'28px', height:'28px', borderRadius:'50%', background:'#ffffff', border:'2px solid '+color+'55', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>🔒</div>
-      </div>
-      <div>
-        <p style={{ color:'#161a2e', fontSize:'20px', fontWeight:800, margin:'0 0 8px' }}>Module Événement</p>
-        <p style={{ color:'#6b7280', fontSize:'14px', margin:'0 0 6px', lineHeight:1.5 }}>Ce module est vendu à l'unité, en dehors de votre offre.</p>
-        <p style={{ color:'#9095a5', fontSize:'12px', margin:'6px 0 0' }}>{PLAN_LIMITS['événement'].price}</p>
-      </div>
-      <button type="button" onClick={onUpgrade} style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'linear-gradient(135deg,'+color+','+color+'cc)', borderRadius:'14px', padding:'12px 28px', color:'white', fontSize:'14px', fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
-        <Crown size={15} /> Activer le module — {PLAN_LIMITS['événement'].price}
-      </button>
-    </motion.div>
-  );
-}
-
 function EventMediaCarousel({ medias = [], onRemove, adminMode = false }) {
   const [current, setCurrent] = useState(0);
   const intervalRef = useRef(null);
@@ -531,11 +511,8 @@ export default function UserDashboard() {
   // 4 produits marketplace, 1 document, etc. `effectivePlan` force le
   // palier "business" pour l'admin, indépendamment de la valeur stockée
   // en base — plus besoin de retoucher le profil à chaque fois.
-  // Accès Événement = module payé (plan 'événement' ou flag posé par le webhook),
- // jamais dérivé de is_event, que l'utilisateur modifie lui-même dans EventPanel.
   const effectivePlan = isAdmin ? 'business' : rawPlan;
   const limits         = PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.basic;
-  const hasEventAccess = isAdmin || limits.hasEvent || localProfile?.event_module_paid === true;
 
   // Point d'entrée unique pour toute demande d'upgrade dans le dashboard.
   // - Appelé SANS argument (limite de quota : liens, formulaires, docs…)
@@ -716,7 +693,18 @@ export default function UserDashboard() {
       ? localProfile.username.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
       : null;
 
-    // [FIX Q-ACTIVATION] (commentaire inchangé)
+    // [FIX Q-ACTIVATION] Le username n'est persisté en base que si le compte
+    // est activé (verrou anti-squattage de username avant paiement,
+    // intentionnel — cf. handleCreateProfile : is_activated démarre à false,
+    // activation manuelle depuis l'admin dashboard une fois le paiement
+    // confirmé). Avant ce fix, toute tentative de changer/définir le
+    // username avant activation était silencieusement ignorée à la
+    // sauvegarde : le QR affiché (basé sur le state local, voir
+    // QRCodeDisplay) encodait un lien qui n'existait pas en base, d'où
+    // "Profil introuvable" au scan sans que l'utilisateur comprenne
+    // pourquoi. On compare à la valeur RÉELLEMENT en base (la query
+    // `profiles`, pas le state local mutable) pour n'avertir que si un
+    // changement de username va effectivement être ignoré.
     const serverProfile = profiles.find(p => p.id === localProfile.id);
     const usernameWillBeIgnored = !isActivated && sanitized && sanitized !== (serverProfile?.username || null);
     if (usernameWillBeIgnored) {
@@ -729,16 +717,12 @@ export default function UserDashboard() {
       display_name: localProfile.display_name, bio: localProfile.bio, links: localProfile.links,
       theme_color: localProfile.theme_color, expiry_date: localProfile.expiry_date,
       ...(isActivated && sanitized ? { username: sanitized } : {}),
-      is_verified: localProfile.is_verified||false,
-      ...(hasEventAccess ? {
-        is_event: localProfile.is_event||false,
-        event_name: localProfile.event_name||null, event_date: localProfile.event_date||null,
-        event_location: localProfile.event_location||null, event_color1: localProfile.event_color1||null,
-        event_color2: localProfile.event_color2||null, event_booking_url: localProfile.event_booking_url||null,
-        event_description: localProfile.event_description||null, event_images: eventImagesArray,
-        event_image_url: eventImagesArray[0]||null,
-      } : {}),
-      bg_image_url: localProfile.bg_image_url||null,
+      is_verified: localProfile.is_verified||false, is_event: localProfile.is_event||false,
+      event_name: localProfile.event_name||null, event_date: localProfile.event_date||null,
+      event_location: localProfile.event_location||null, event_color1: localProfile.event_color1||null,
+      event_color2: localProfile.event_color2||null, event_booking_url: localProfile.event_booking_url||null,
+      event_description: localProfile.event_description||null, event_images: eventImagesArray,
+      event_image_url: eventImagesArray[0]||null, bg_image_url: localProfile.bg_image_url||null,
       // [AJOUT] Bannière de couverture — persistée comme bg_image_url ci-dessus
       banner_url: localProfile.banner_url||null,
     }});
@@ -893,22 +877,23 @@ export default function UserDashboard() {
     const currentNav       = USER_NAV.find(n => n.id === activeSection);
     const currentPlanOrder = PLAN_ORDER[effectivePlan] ?? 0;
 
-    const isEventLocked = activeSection === 'event' && !hasEventAccess;
-
     const isCurrentSectionLocked = () => {
-      if (isAdmin) return false; // l'admin n'est jamais bloqué par le plan
-      if (isEventLocked) return true;
+      if (isAdmin) return false; // FIX — l'admin ne doit jamais être bloqué par le plan
       const nav = USER_NAV.find(n => n.id === activeSection);
       if (!nav || !nav.locked) return false;
       return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99);
     };
 
     // Compte jamais payé (pas de ligne dans `subscriptions`) : accès au
-    // dashboard entièrement bloqué tant que le paiement n'est pas fait.
-    // Les comptes dont l'abonnement est simplement EXPIRÉ gardent le
-    // comportement actuel : bandeau de rappel, dashboard accessible.
-    // subscriptionLoading évite un flash de l'écran de paiement pendant
-    // le chargement de la query `subscription`.
+    // dashboard entièrement bloqué tant que le paiement n'est pas fait — on
+    // ne se fie plus à `rawPlan` seul (qui accordait déjà les quotas de
+    // l'offre choisie à l'inscription, avant tout paiement). Les comptes
+    // dont l'abonnement est simplement EXPIRÉ (une ligne `subscription`
+    // existe déjà) gardent le comportement actuel : bandeau de rappel,
+    // dashboard toujours accessible.
+    // subscriptionLoading évite un flash de l'écran de paiement pour un
+    // utilisateur déjà activé, le temps que la requête `subscription`
+    // réponde (undefined pendant le chargement ≠ "pas d'abonnement").
     if (!isAdmin && !isActivated && !subscriptionLoading && !subscription) {
       mainContent = (
         <>
@@ -929,9 +914,6 @@ export default function UserDashboard() {
       );
     } else {
       const renderSection = () => {
-        if (isEventLocked) {
-    return <EventLockedPanel onUpgrade={() => startGeniusPayCheckout('événement', 'new', 'annual')} />;
-  }
         if (isCurrentSectionLocked()) {
           const nav = USER_NAV.find(n => n.id === activeSection);
           // Feature verrouillée par palier de plan → modale d'upgrade ciblée

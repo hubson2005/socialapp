@@ -70,6 +70,7 @@ const TEMPLATES_BY_STATUS = {
 const GENERIC_TEMPLATES = [
   { id: 'g1', label: 'Rappel courtois', body: "Je me permets de revenir vers vous. Avez-vous eu le temps d'y réfléchir ?" },
   { id: 'g2', label: 'Sans réponse',    body: "Je n'ai pas eu de retour à mon précédent message. Si le sujet n'est plus d'actualité, dites-le-moi simplement afin que je ne vous dérange pas davantage." },
+  { id: 'g3', label: 'Message libre',   body: '' },
 ];
 const LATE_TEMPLATE = { id: 'g0', label: 'Après un délai', body: "Veuillez excuser le délai de ma réponse. Je reviens vers vous pour faire le point sur votre demande. Êtes-vous disponible pour en parler ?" };
 
@@ -81,8 +82,11 @@ const templatesFor = (status, late) => [
 ];
 
 // Salutation + corps + signature (omises proprement si prénom / expéditeur inconnus)
-const buildMessage = (body, { first, sender }) =>
-  `Bonjour${first ? ' ' + first : ''},\n\n${body}${sender ? `\n\nCordialement,\n${sender}` : ''}`;
+const buildMessage = (body, { first, sender }) => {
+  const hello = `Bonjour${first ? ' ' + first : ''},\n\n`;
+  if (!body) return hello;   // message libre : salutation seule
+  return `${hello}${body}${sender ? `\n\nCordialement,\n${sender}` : ''}`;
+};
 
 const GROUPS = [
   { key: 'overdue',  label: 'En retard',   color: '#dc2626', bg: 'rgba(220,38,38,0.08)'  },
@@ -99,9 +103,9 @@ const smallBtn = (color = '#6b7280', bg = '#f6f7fb', border = '#e6e8f0') => ({
 });
 
 // ── [M1] Modale de message de relance ────────────────────────────────────────
-function FollowUpMessageModal({ task, lead, sender, onClose, onSend }) {
+// [M2] Exportée : réutilisée par LeadsCRMPanel pour les boutons WhatsApp des leads.
+export function WhatsAppComposerModal({ lead, late = false, title = 'Message de relance', sender, onClose, onSend }) {
   const first = (lead?.name || '').trim().split(/\s+/)[0];
-  const late = daysLate(task.due_at) >= 2;
   const templates = useMemo(() => templatesFor(lead?.status, late), [lead?.status, late]);
   const [tplId, setTplId] = useState(templates[0].id);
   const [text, setText]   = useState(() => buildMessage(templates[0].body, { first, sender }));
@@ -118,7 +122,7 @@ function FollowUpMessageModal({ task, lead, sender, onClose, onSend }) {
       <div className="fu-modal" style={{ width: '100%', maxWidth: 480, background: '#ffffff', border: '1px solid #e6e8f0', borderRadius: 18, boxShadow: '0 30px 80px rgba(15,23,42,0.25)', padding: 22, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ margin: 0, color: '#161a2e', fontSize: 15, fontWeight: 800 }}>Message de relance</h3>
+            <h3 style={{ margin: 0, color: '#161a2e', fontSize: 15, fontWeight: 800 }}>{title}</h3>
             <div style={{ color: '#8a90a2', fontSize: 12, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {lead?.name}{lead?.company ? ` · ${lead.company}` : ''}{lead?.phone ? ` · ${lead.phone}` : ''}
             </div>
@@ -401,9 +405,9 @@ export default function FollowUpsPanel({ profileId, leads = [], onOpenLead, refr
       )}
 
       {composer && (
-        <FollowUpMessageModal
-          task={composer.task}
+        <WhatsAppComposerModal
           lead={composer.lead}
+          late={daysLate(composer.task.due_at) >= 2}
           sender={sender}
           onClose={() => setComposer(null)}
           onSend={sendWhatsApp}

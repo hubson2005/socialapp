@@ -11,7 +11,7 @@ import {
 import { toast } from 'sonner';
 import TasksCRMPanel  from './TasksCRMPanel';   // fiche contact : tâches
 import ContactTimeline from './ContactTimeline'; // fiche contact : timeline unifiée
-import FollowUpsPanel  from './FollowUpsPanel';  // [R1] panneau « À relancer »
+import FollowUpsPanel, { WhatsAppComposerModal } from './FollowUpsPanel'; // [R1] « À relancer » · [M2] modale de message
 import { supabase } from '../../supabase';
 // [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
 import { triggerNewLead }                    from '../../lib/triggers/newLead';
@@ -62,6 +62,10 @@ import { normalizePhone, isValidPhone, checkPhone } from '../../lib/phone';     
 //       ajoutées / terminées via TasksCRMPanel).
 //  [R2] Fiche lead : « Programmer une relance » en un clic (demain, 3 jours,
 //       1 semaine, 2 semaines, ou date précise) → insère dans crm_tasks.
+//
+//  [M2] Boutons WhatsApp (fiche lead + cartes) : ouvrent la modale de message
+//       professionnel adapté au statut du lead (modifiable, signature auto) au
+//       lieu d'un wa.me vide ; envoi tracé dans l'historique du lead.
 //
 // ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
 //  [FIX1] Commentaire JSX mal fermé dans la modale "Nouveau lead".
@@ -312,7 +316,7 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
 
 // [FIX5] Hauteur/largeur minimales 40px. [C2] validation via isValidPhone,
 // lien wa.me avec le numéro normalisé (225 + 10 chiffres).
-function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
+function WhatsAppBtn({ phone, leadId, onContact, onCompose, compact = false }) {
   const hasPhone = !!phone?.trim();
   return (
     <button
@@ -321,6 +325,7 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
         e.stopPropagation();
         if (!hasPhone) return;
         if (!isValidPhone(phone)) { toast.error('Numéro invalide'); return; }
+        if (onCompose) { onCompose(); return; }   // [M2] message professionnel adapté
         window.open(`https://wa.me/${normalizePhone(phone)}`, '_blank', 'noopener,noreferrer');
         onContact && onContact(leadId);
       }}
@@ -378,7 +383,7 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
 
 // ─── LeadModal — tiroir latéral, thème clair ─────────────────────────────────
 // [TG2] `allTags` : tags existants, proposés en suggestions cliquables.
-function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete, onContact, onTaskCreated }) {
+function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete, onContact, onTaskCreated, onCompose, activityTick = 0 }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
   // [C8c] score initial `?? 0` (avant : `?? 50`, qui faussait la 1re modif)
@@ -389,7 +394,7 @@ function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete,
   const [loadingAct, setLoadingAct]   = useState(true);
   const [taskKey, setTaskKey]         = useState(0); // [R2] remonte TasksCRMPanel après création
 
-  useEffect(() => { loadActivities(); }, [lead.id]);
+  useEffect(() => { loadActivities(); }, [lead.id, activityTick]);   // [M2] activityTick : recharge après un envoi WhatsApp
 
   const loadActivities = async () => {
     setLoadingAct(true);
@@ -566,7 +571,7 @@ function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete,
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <WhatsAppBtn phone={current.phone} leadId={lead.id} onContact={async (id) => {
+            <WhatsAppBtn phone={current.phone} leadId={lead.id} onCompose={onCompose ? () => onCompose({ ...lead, phone: current.phone }) : undefined} onContact={async (id) => {
               await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
               onContact && onContact();
               loadActivities();
@@ -843,7 +848,7 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
 }
 
 // [G3] Carte compacte pour la vue liste en grille. [T1] Carte blanche.
-function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
+function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover, onCompose }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   return (
     <motion.div
@@ -880,7 +885,7 @@ function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
       <ScoreBar score={lead.score || 0} />
 
       <div onClick={e => e.stopPropagation()}>
-        <WhatsAppBtn phone={lead.phone} leadId={lead.id}
+        <WhatsAppBtn phone={lead.phone} leadId={lead.id} onCompose={onCompose ? () => onCompose(lead) : undefined}
           onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]); }} />
       </div>
     </motion.div>
@@ -905,6 +910,9 @@ export default function LeadsCRMPanel({ profileId }) {
   const [bulkTagInput, setBulkTagInput] = useState('');   // [TG4]
   const [page, setPage]                 = useState(1); // [G1]
   const [followRefresh, setFollowRefresh] = useState(0); // [R1] recharge « À relancer »
+  const [composeLead, setComposeLead]   = useState(null); // [M2] lead dont on écrit le message WhatsApp
+  const [senderName, setSenderName]     = useState('');   // [M2] signature des messages
+  const [activityTick, setActivityTick] = useState(0);    // [M2] recharge l'historique de la fiche ouverte
   // [FIX6] Détecté une seule fois (appareils tactiles : pas de hover collé).
   const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
 
@@ -938,8 +946,27 @@ export default function LeadsCRMPanel({ profileId }) {
     return () => { supabase.removeChannel(channel); };
   }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // [M2] Nom du profil : signature des messages WhatsApp (silencieux si indisponible)
+  useEffect(() => {
+    if (!profileId) return;
+    let cancelled = false;
+    supabase.from('link_profiles').select('display_name').eq('id', profileId).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setSenderName((data?.display_name || '').trim()); });
+    return () => { cancelled = true; };
+  }, [profileId]);
+
   // [G5] Reset sélection + page au changement de vue/filtre/tag/recherche.
   useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setBulkTagInput(''); setPage(1); }, [view, filter, tagFilter, search]);
+
+  // [M2] Ouvre WhatsApp avec le message choisi, puis trace dans l'historique du lead
+  const sendCompose = async (text) => {
+    const target = composeLead;
+    if (!target) return;
+    window.open(`https://wa.me/${normalizePhone(target.phone)}?text=${encodeURIComponent(text.trim())}`, '_blank', 'noopener,noreferrer');
+    setComposeLead(null);
+    await supabase.from('lead_activities').insert([{ lead_id: target.id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
+    setActivityTick(k => k + 1);
+  };
 
   // [TG3] Ajout d'un tag dans la modale « Nouveau lead » (immuable)
   const addNewLeadTag = () => {
@@ -1348,6 +1375,7 @@ export default function LeadsCRMPanel({ profileId }) {
                     onToggleSelect={() => toggleSelect(lead.id)}
                     onOpen={() => setSelectedLead(lead)}
                     canHover={canHover}
+                    onCompose={setComposeLead}
                   />
                 ))}
               </div>
@@ -1416,10 +1444,22 @@ export default function LeadsCRMPanel({ profileId }) {
         {selectedLead && (
           <LeadModal lead={selectedLead} profileId={profileId} allTags={allTags} onClose={() => { setSelectedLead(null); setFollowRefresh(k => k + 1); }}
             onTaskCreated={() => setFollowRefresh(k => k + 1)}
+            onCompose={setComposeLead} activityTick={activityTick}
             onUpdate={updated => { updateLeadLocal(updated); setSelectedLead(updated); }}
             onDelete={deleteLead} />
         )}
       </AnimatePresence>
+
+      {/* [M2] Message WhatsApp professionnel adapté (au-dessus du tiroir : z-index 1100) */}
+      {composeLead && (
+        <WhatsAppComposerModal
+          lead={composeLead}
+          title="Message WhatsApp"
+          sender={senderName}
+          onClose={() => setComposeLead(null)}
+          onSend={sendCompose}
+        />
+      )}
     </div>
   );
 }

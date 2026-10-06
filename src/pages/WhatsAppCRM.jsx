@@ -8,6 +8,7 @@ import {
 // CHAQUE fois et CampaignAIGenerator restait toujours `null`, désactivant
 // la fonctionnalité sans aucune erreur visible. Import ES standard :
 import { CampaignAIGenerator } from '@/components/dashboard/AIPanels'
+import { normalizePhone } from '../lib/phone'
 
 // ── TEMPLATES ────────────────────────────────────────────────────
 const TEMPLATES = [
@@ -30,6 +31,13 @@ const getAllTags = (contacts = []) => {
   contacts.forEach(c => getContactTags(c).forEach(t => { if (!out.includes(t)) out.push(t) }))
   return out
 }
+
+// [DUP] Message lisible pour les erreurs d'enregistrement d'un contact.
+// 23505 = violation d'unicité Postgres (index unique user_id + numéro).
+const contactErrorMessage = (e) =>
+  e?.code === '23505'
+    ? 'Ce numéro existe déjà dans vos contacts'
+    : (e?.message || 'Une erreur est survenue')
 
 // ── DESIGN TOKENS ────────────────────────────────────────────────
 // [T1] [FIX THÈME] `purpleL` était une teinte "claire" pensée uniquement pour
@@ -833,14 +841,24 @@ export default function WhatsAppCRM({ profile }) {
     setDeleteTarget(null)
   }
 
+  // [DUP] Contrôle immédiat, tous formats confondus (0700000000 = +225 07 00 00 00 00).
+  // La base reste le garde-fou final (index unique, erreur 23505).
+  const findDuplicate = (phone, ignoreId = null) => {
+    const n = normalizePhone(phone)
+    if (!n) return null
+    return (contacts || []).find(c => c.id !== ignoreId && normalizePhone(c.phone) === n) || null
+  }
+
   const handleAddContact = async () => {
     if (!newC.name||!newC.phone) return
+    const dup = findDuplicate(newC.phone)
+    if (dup) { flash(`Ce numéro existe déjà : ${dup.name}`,'error'); return }
     try {
       await addContact({ ...newC, tags: cleanTags(newC.tags) })
       flash(`Contact "${newC.name}" ajouté ✓`)
       setModal(null)
       setNewC({name:'',phone:'',email:'',tags:['client']})
-    } catch(e) { flash(e.message,'error') }
+    } catch(e) { flash(contactErrorMessage(e),'error') }
   }
 
   const handleOpenEdit = (c) => {
@@ -850,12 +868,14 @@ export default function WhatsAppCRM({ profile }) {
 
   const handleEditContact = async () => {
     if (!editC?.name||!editC?.phone) return
+    const dup = findDuplicate(editC.phone, editC.id)
+    if (dup) { flash(`Ce numéro existe déjà : ${dup.name}`,'error'); return }
     setSaving(true)
     try {
       await updateContact(editC.id, { name:editC.name, phone:editC.phone, email:editC.email, tags:cleanTags(editC.tags) })
       flash(`Contact "${editC.name}" modifié ✓`)
       closeModal()
-    } catch(e) { flash(e.message,'error') }
+    } catch(e) { flash(contactErrorMessage(e),'error') }
     finally { setSaving(false) }
   }
 

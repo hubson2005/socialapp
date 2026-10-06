@@ -1172,6 +1172,8 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
   const LINK_BORDER_COLOR  = isLinkBgDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.18)';
   const LINK_BG_IDLE       = isLinkBgDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.55)';
   const LINK_BG_HOVER      = isLinkBgDark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.78)';
+  const LINK_CARD_BG_IDLE  = isLinkBgDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.66)';
+  const LINK_CARD_BG_HOVER = isLinkBgDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.86)';
   const LINK_ICON_BG       = isLinkBgDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.80)';
   const LINK_TEXT_SHADOW   = isLinkBgDark ? '0 1px 3px rgba(0,0,0,0.35)' : 'none';
 
@@ -1341,8 +1343,8 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
         {topSocialLinks.length > 0 && (
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'center', gap:'6px',
-            marginBottom:'14px', padding:'5px 9px', borderRadius:'999px',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+            marginBottom:'14px', padding:'6px 11px', borderRadius:'999px',
             background:LINK_BG_IDLE, border:`1px solid ${LINK_BORDER_COLOR}`,
             backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
           }}>
@@ -1356,7 +1358,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
                   className="pp-link-btn-el"
                   style={{
                     '--pp-hover-bg': LINK_BG_HOVER,
-                    width:'32px', height:'32px', borderRadius:'50%', overflow:'hidden',
+                    width:'38px', height:'32px', borderRadius:'50%', overflow:'hidden',
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
                     background:LINK_ICON_BG, border:`1px solid ${LINK_BORDER_COLOR}`,
                     cursor:'pointer', padding:0, touchAction:'manipulation',
@@ -1513,10 +1515,10 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
                     display:'flex', alignItems:'center', gap:'12px', width:'100%',
                     padding:'8px 8px',
                     borderRadius:'999px',
-                    background:LINK_BG_IDLE,
+                    background:LINK_CARD_BG_IDLE,
                     border:`1px solid ${LINK_BORDER_COLOR}`,
                     backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
-                    '--pp-hover-bg': LINK_BG_HOVER,
+                    '--pp-hover-bg': LINK_CARD_BG_HOVER,
                     cursor:'pointer', textAlign:'left',
                     boxShadow:CARD_SHADOW,
                     transition:'background 0.15s,transform 0.1s',

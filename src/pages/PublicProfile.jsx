@@ -1341,10 +1341,12 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
-      {topSocialLinks.length > 0 && (
+     {topSocialLinks.length > 0 && (
   <div className="pp-content-col" style={{
-    display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center',
-    gap:'8px', marginBottom:'14px',
+    display:'flex', flexWrap:'nowrap', alignItems:'center', justifyContent:'center',
+    gap:'6px', marginBottom:'14px', boxSizing:'border-box',
+    // 1 ou 2 boutons : on limite la largeur pour ne pas les étirer sur toute la ligne
+    maxWidth: topSocialLinks.length === 1 ? '150px' : topSocialLinks.length === 2 ? '260px' : undefined,
   }}>
     {topSocialLinks.map((link, i) => {
       const platform = resolvePlatform(link);
@@ -1357,24 +1359,25 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
           className="pp-link-btn-el"
           style={{
             '--pp-hover-bg': color,
-            display:'inline-flex', alignItems:'center', gap:'8px',
-            height:'40px', padding:'0 14px 0 5px', borderRadius:'999px',
-            boxSizing:'border-box', maxWidth:'100%',
+            flex:'1 1 0', minWidth:0,
+            display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px',
+            height:'38px', padding:'0 8px 0 4px', borderRadius:'999px',
+            boxSizing:'border-box',
             background:color,
             border:'1px solid rgba(255,255,255,0.35)',
             boxShadow:'0 4px 14px rgba(0,0,0,0.28)',
-            color:'#fff', fontSize:'12px', fontWeight:700, letterSpacing:'0.02em',
+            color:'#fff', fontSize:'clamp(10px, 2.9vw, 12px)', fontWeight:700, letterSpacing:'0.01em',
             cursor:'pointer', touchAction:'manipulation',
           }}
         >
           <span style={{
-            width:'30px', height:'30px', borderRadius:'50%', overflow:'hidden',
+            width:'28px', height:'28px', borderRadius:'50%', overflow:'hidden',
             flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
             background:'#fff', lineHeight:0,
           }}>
-            {platform.icon ? React.cloneElement(platform.icon, { width: 30, height: 30 }) : null}
+            {platform.icon ? React.cloneElement(platform.icon, { width: 28, height: 28 }) : null}
           </span>
-          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
             {link.label || platform.label}
           </span>
         </button>

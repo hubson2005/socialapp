@@ -512,7 +512,11 @@ function ActionConfigFields({ action, config, setConfigField }) {
               {/* Statuts enrichis pour create_lead */}
               {field.key === 'status'
                 ? LEAD_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)
-                : (field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)
+                : (field.options || []).map(opt => {
+                    const v = typeof opt === 'object' ? opt.value : opt;
+                    const l = typeof opt === 'object' ? opt.label : opt;
+                    return <option key={v} value={v}>{l}</option>;
+                  })
               }
             </select>
 

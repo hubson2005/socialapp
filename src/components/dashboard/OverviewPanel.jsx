@@ -69,7 +69,19 @@ export default function OverviewPanel({
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
       <div>
-        <h2 style={{ color:'#0f1222', fontSize:'20px', fontWeight:800, margin:0 }}>Dashboard</h2>
+        {/* [FIX MOBILE] Le badge « Non enregistré » est masqué dans la topbar
+            sur mobile (UserDashboard.jsx) car il y était écrasé par les
+            boutons. Il s'affiche ici, juste devant le titre de la page,
+            uniquement sur mobile (isMob) pour éviter le doublon avec la
+            topbar sur tablette/desktop. */}
+        <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
+          <h2 style={{ color:'#0f1222', fontSize:'20px', fontWeight:800, margin:0 }}>Dashboard</h2>
+          {hasChanges && isMob && (
+            <span style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'11px', color:'#b45309', fontWeight:600 }}>
+              ● Non enregistré
+            </span>
+          )}
+        </div>
         <p style={{ color:'rgba(15,18,34,0.45)', fontSize:'13px', margin:'4px 0 0' }}>
           Bienvenue sur votre espace SocialApp
         </p>

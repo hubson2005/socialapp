@@ -73,6 +73,7 @@ import {
   Lock,
   Mail,
   LogOut,
+  CheckSquare,
 } from 'lucide-react';
 import { PLAN_ORDER } from './UserSidebar';
 
@@ -160,6 +161,7 @@ const NAV_IDS = {
   // [FIX C20] 'crm' → 'leads' : aligné sur le `case 'leads'` du switch de
   // rendu du dashboard (<LeadsCRMPanel />).
   CRM:          'leads',
+  TASKS:        'tasks',
   PLATFORMS:    'platforms',
   REALTIME:     'realtime',
   AUTOMATIONS:  'automations',
@@ -186,6 +188,7 @@ const NAV_LOCK = {
   [NAV_IDS.REALTIME]:     'pro',
   [NAV_IDS.BOOKING]:      'pro',
   [NAV_IDS.CRM]:          'business',
+  [NAV_IDS.TASKS]:        'business',
   [NAV_IDS.AUTOMATIONS]:  'business',
   [NAV_IDS.INTEGRATIONS]: 'business',
 };
@@ -212,6 +215,7 @@ const SIDEBAR_GROUPS = [
     label: 'Gestion commerciale',
     items: [
       { id: NAV_IDS.CRM,          label: 'Leads / CRM',     icon: Users,    description: 'Gérez vos prospects et clients' },
+      { id: NAV_IDS.TASKS,        label: 'Tâches',          icon: CheckSquare, description: 'Relances et rappels à faire' },
       { id: NAV_IDS.AUTOMATIONS,  label: 'Automatisations', icon: Zap,      description: 'Workflows et scénarios' },
       { id: NAV_IDS.INTEGRATIONS, label: 'Intégrations',    icon: Sparkles, description: 'Connectez vos outils préférés' },
     ],

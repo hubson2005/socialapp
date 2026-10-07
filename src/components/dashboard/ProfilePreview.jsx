@@ -7,6 +7,22 @@ const toUrl = (m) => (typeof m === 'string' ? m : m?.url);
 export default function ProfilePreview({ profile, onClose, isMobile = false }) {
   const iframeRef = useRef(null);
   const [ready, setReady] = useState(false);
+  // [PREVIEW-SCALE] La page est rendue a 390 px (largeur d'un vrai telephone)
+  // puis reduite pour tenir dans le cadre : meme mise en page que sur mobile.
+  const frameRef = useRef(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setBox({ w: width, h: height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const VIEW_W = 390;
+  const scale = isMobile || !box.w ? 1 : box.w / VIEW_W;
 
   // Le dashboard stocke parfois event_images sous forme d'objets {url} : on normalise
   const payload = useMemo(() => {
@@ -78,8 +94,16 @@ export default function ProfilePreview({ profile, onClose, isMobile = false }) {
           borderRadius: isMobile ? 0 : 36, border: isMobile ? 'none' : '8px solid #161a2e',
           overflow:'hidden', background:'#0f0a1e', boxShadow: isMobile ? 'none' : '0 20px 50px rgba(15,23,42,.25)',
         }}>
-          <iframe ref={iframeRef} src="/preview-profile" title="Aperçu du profil public"
-            style={{ width:'100%', height:'100%', border:'none', display:'block' }} />
+          <div ref={frameRef} style={{ width:'100%', height:'100%', overflow:'hidden' }}>
+            <iframe ref={iframeRef} src="/preview-profile" title="Aperçu du profil public"
+              style={{
+                width: scale === 1 ? '100%' : VIEW_W,
+                height: scale === 1 ? '100%' : box.h / scale,
+                border: 'none', display: 'block',
+                transform: scale === 1 ? undefined : `scale(${scale})`,
+                transformOrigin: 'top left',
+              }} />
+          </div>
         </div>
       </div>
     </motion.aside>

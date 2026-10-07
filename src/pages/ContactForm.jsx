@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
+import { checkPhone } from '../lib/phone';
 import { MessageCircle, User, Phone, Send, Check, Loader2 } from 'lucide-react';
 
 export default function ContactForm({ profileId, profileName }) {
@@ -14,6 +15,8 @@ export default function ContactForm({ profileId, profileName }) {
     setError('');
     if (!form.name.trim()) { setError('Veuillez entrer votre nom.'); return; }
     if (!form.phone.trim()) { setError('Veuillez entrer votre numéro WhatsApp.'); return; }
+    const pc = checkPhone(form.phone);
+    if (!pc.ok) { setError(pc.reason); return; }
     if (!form.message.trim()) { setError('Veuillez écrire un message.'); return; }
 
     setLoading(true);

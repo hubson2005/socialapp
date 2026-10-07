@@ -9,6 +9,9 @@ import {
   GripVertical, Flame, Snowflake, CheckCircle2, Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import TasksCRMPanel  from './TasksCRMPanel';   // fiche contact : tâches
+import ContactTimeline from './ContactTimeline'; // fiche contact : timeline unifiée
+import FollowUpsPanel, { WhatsAppComposerModal } from './FollowUpsPanel'; // [R1] « À relancer » · [M2] modale de message
 import { supabase } from '../../supabase';
 // [A4][A7][A8][A9][A10] Moteur d'automatisation — déclencheurs CRM
 import { triggerNewLead }                    from '../../lib/triggers/newLead';
@@ -17,10 +20,10 @@ import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus
 import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
 import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
 import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
-import { normalizePhone, isValidPhone }      from '../../lib/phone';                   // [C2]
+import { normalizePhone, isValidPhone, checkPhone } from '../../lib/phone';                   // [C2]
 
 
-// ─── CORRECTIONS DU PLAN DU 2 OCTOBRE 2026 (cette révision) ───────────────────
+// ─── CORRECTIONS DU PLAN DU 2 OCTOBRE 2026 ────────────────────────────────────
 //  [C2] normalizePhone/isValidPhone importés depuis lib/phone.js (format
 //       ivoirien : +225 + 10 chiffres, le 0 est conservé). Bouton WhatsApp
 //       corrigé. addLead gère le doublon renvoyé par la base (code 23505).
@@ -34,6 +37,35 @@ import { normalizePhone, isValidPhone }      from '../../lib/phone';            
 //  [C7] Export CSV : protection contre l'injection de formules (csvCell).
 //  [C8] 8a notes saisissables en édition ; 8b handleStatusChange contrôle
 //       l'erreur ; 8c score initial `?? 0`.
+//
+// ─── TAGS / SEGMENTS (cette révision) ─────────────────────────────────────────
+//  [TG1] normalizeTag : normalisation unique (minuscules, tirets, sans « # »,
+//        30 caractères max) pour fiche, création et actions groupées.
+//  [TG2] Fiche lead : suggestions de tags existants en un clic (addTag
+//        accepte une valeur) + autocomplétion (datalist).
+//  [TG3] « Nouveau lead » : champ Tags à la création (déclenche lead_tagged
+//        pour chaque tag, comme l'ajout depuis la fiche).
+//  [TG4] Actions groupées : « + Tag » / « − Tag » sur la sélection.
+//  [TG5] Filtre par tag : compteurs, tri par fréquence, bouton Effacer,
+//        export CSV du segment affiché ; le filtre se réinitialise si le tag
+//        n'existe plus.
+//  [TG6] Correctif : addTag appelé via onClick recevait l'événement comme
+//        valeur ; remplacé par une fonction fléchée.
+//
+// ─── RAPPELS DE RELANCE (cette révision) ──────────────────────────────────────
+//  [R1] Panneau « À relancer » (FollowUpsPanel) au-dessus des filtres : tâches
+//       ouvertes de crm_tasks en retard / du jour / à venir (7 j), avec
+//       WhatsApp, Reporter (+1/+3/+7 j) et Terminé. Les rappels eux-mêmes
+//       (notification à l'échéance) restent envoyés par le cron
+//       `crm-task-reminders` côté base.
+//       « À relancer » se recharge aussi à la fermeture de la fiche lead (tâches
+//       ajoutées / terminées via TasksCRMPanel).
+//  [R2] Fiche lead : « Programmer une relance » en un clic (demain, 3 jours,
+//       1 semaine, 2 semaines, ou date précise) → insère dans crm_tasks.
+//
+//  [M2] Boutons WhatsApp (fiche lead + cartes) : ouvrent la modale de message
+//       professionnel adapté au statut du lead (modifiable, signature auto) au
+//       lieu d'un wa.me vide ; envoi tracé dans l'historique du lead.
 //
 // ─── CORRECTIONS RESPONSIVE / BUGS ────────────────────────────────────────────
 //  [FIX1] Commentaire JSX mal fermé dans la modale "Nouveau lead".
@@ -91,12 +123,14 @@ const ACTIVITY_ICONS = {
   whatsapp:  '💬',
   status:    '🔄',
   task:      '📋',
+  task_created: '📋',
   task_done: '✅',
 };
 
+// [TG3] tags: [] ajouté (tableau, jamais muté — mises à jour immuables)
 const EMPTY_LEAD = {
   name: '', phone: '', email: '', company: '',
-  status: 'prospect', source: 'manuel', notes: '', score: 0,
+  status: 'prospect', source: 'manuel', notes: '', score: 0, tags: [],
 };
 
 // [G1] Pagination de la vue liste : 16 leads par page (4 colonnes x 4 lignes)
@@ -127,6 +161,10 @@ const csvCell = (v) => {
   if (!looksLikePhone && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return `"${s.replace(/"/g, '""')}"`;
 };
+
+// [TG1] Normalisation unique des tags : « #VIP Urgent » → « vip-urgent »
+const normalizeTag = (s) =>
+  String(s || '').trim().toLowerCase().replace(/^#+/, '').replace(/\s+/g, '-').slice(0, 30);
 
 const scoreLabel = (s) =>
   s <= 30  ? { label: 'Froid',    color: '#0891b2', icon: '❄️'  } :
@@ -278,7 +316,7 @@ function TagChips({ tags = [], onRemove, size = 'normal' }) {
 
 // [FIX5] Hauteur/largeur minimales 40px. [C2] validation via isValidPhone,
 // lien wa.me avec le numéro normalisé (225 + 10 chiffres).
-function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
+function WhatsAppBtn({ phone, leadId, onContact, onCompose, compact = false }) {
   const hasPhone = !!phone?.trim();
   return (
     <button
@@ -287,6 +325,7 @@ function WhatsAppBtn({ phone, leadId, onContact, compact = false }) {
         e.stopPropagation();
         if (!hasPhone) return;
         if (!isValidPhone(phone)) { toast.error('Numéro invalide'); return; }
+        if (onCompose) { onCompose(); return; }   // [M2] message professionnel adapté
         window.open(`https://wa.me/${normalizePhone(phone)}`, '_blank', 'noopener,noreferrer');
         onContact && onContact(leadId);
       }}
@@ -343,7 +382,8 @@ function Field({ icon, label, value, editing, onChange, type, options, valueRaw 
 }
 
 // ─── LeadModal — tiroir latéral, thème clair ─────────────────────────────────
-function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) {
+// [TG2] `allTags` : tags existants, proposés en suggestions cliquables.
+function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete, onContact, onTaskCreated, onCompose, activityTick = 0 }) {
   const { isTablet } = useBreakpoint(); // [tablet]
   const [editing, setEditing] = useState(false);
   // [C8c] score initial `?? 0` (avant : `?? 50`, qui faussait la 1re modif)
@@ -352,8 +392,9 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
   const [newTag, setNewTag] = useState('');
   const [activities, setActivities]   = useState([]);
   const [loadingAct, setLoadingAct]   = useState(true);
+  const [taskKey, setTaskKey]         = useState(0); // [R2] remonte TasksCRMPanel après création
 
-  useEffect(() => { loadActivities(); }, [lead.id]);
+  useEffect(() => { loadActivities(); }, [lead.id, activityTick]);   // [M2] activityTick : recharge après un envoi WhatsApp
 
   const loadActivities = async () => {
     setLoadingAct(true);
@@ -377,6 +418,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
   // [C3] saveEdit : déclenche aussi lead_status_changed ; [C2] doublon 23505
   const saveEdit = async () => {
+    if (form.phone?.trim() && !checkPhone(form.phone).ok) { toast.error(checkPhone(form.phone).reason); return; }
     const statusChanged = form.status !== lead.status;
     const scoreChanged  = form.score  !== (lead.score ?? 0);
     const { error } = await supabase.from('leads').update({
@@ -438,8 +480,9 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     });
   };
 
-  const addTag = async () => {
-    const tag = newTag.trim().toLowerCase().replace(/\s+/g, '-');
+  // [TG1][TG2] accepte une valeur (suggestion cliquée) ou, par défaut, le champ de saisie
+  const addTag = async (value = newTag) => {
+    const tag = normalizeTag(value);
     if (!tag) return;
     const currentTags = lead.tags || [];
     if (currentTags.includes(tag)) { setNewTag(''); return; }
@@ -464,8 +507,30 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
     onUpdate({ ...lead, tags: updatedTags });
   };
 
+  // [R2] Programme une relance : tâche ouverte dans crm_tasks, échéance 09:00.
+  // Les colonnes priority/status/source gardent leurs valeurs par défaut.
+  const scheduleFollowUp = async (when) => {
+    const due = when instanceof Date ? new Date(when) : new Date();
+    if (!(when instanceof Date)) due.setDate(due.getDate() + when);
+    due.setHours(9, 0, 0, 0);
+    const pid = profileId || lead.profile_id;
+    if (!pid) { toast.error('Profil introuvable'); return; }
+    const { error } = await supabase.from('crm_tasks').insert([{
+      profile_id: pid, lead_id: lead.id, title: `Relancer ${lead.name}`, due_at: due.toISOString(),
+    }]);
+    if (error) { toast.error(error.message); return; }
+    // Même trace que useCrmTasks.addTask : visible dans la timeline du lead
+    supabase.from('lead_activities').insert([{ lead_id: lead.id, type: 'task_created', description: `Relancer ${lead.name}` }])
+      .then(({ error: e }) => { if (e) console.warn('[relance] activité non tracée :', e.message); });
+    toast.success(`Relance programmée le ${due.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`);
+    setTaskKey(k => k + 1);
+    onTaskCreated && onTaskCreated();
+  };
+
   const current = editing ? form : lead;
   const { color: sc } = scoreLabel(current.score || 0);
+  // [TG2] Tags existants pas encore sur ce lead (10 max)
+  const tagSuggestions = allTags.filter(t => !(lead.tags || []).includes(t)).slice(0, 10);
 
   return (
     <motion.div
@@ -506,7 +571,7 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <WhatsAppBtn phone={current.phone} leadId={lead.id} onContact={async (id) => {
+            <WhatsAppBtn phone={current.phone} leadId={lead.id} onCompose={onCompose ? () => onCompose({ ...lead, phone: current.phone }) : undefined} onContact={async (id) => {
               await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
               onContact && onContact();
               loadActivities();
@@ -523,6 +588,9 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
 
           <Section title="Informations">
             <Field icon={<Phone size={13} />} label="Téléphone" value={current.phone} editing={editing} onChange={v => setForm(f => ({ ...f, phone: v }))} />
+            {!editing && current.phone && !isValidPhone(current.phone) && (
+              <p style={{ margin: '-4px 0 10px', fontSize: 12, color: '#b45309', lineHeight: 1.4 }}>⚠ {checkPhone(current.phone).reason}. Modifiez la fiche pour la corriger.</p>
+            )}
             <Field icon={<Mail size={13} />} label="Email" value={current.email} editing={editing} onChange={v => setForm(f => ({ ...f, email: v }))} />
             <Field icon={<Building2 size={13} />} label="Entreprise" value={current.company} editing={editing} onChange={v => setForm(f => ({ ...f, company: v }))} />
             <Field icon={<Globe size={13} />} label="Source" value={SOURCES.find(s => s.id === current.source)?.label || current.source} valueRaw={current.source} editing={editing} type="select" options={SOURCES} onChange={v => setForm(f => ({ ...f, source: v }))} />
@@ -545,9 +613,21 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
           <Section title="Tags">
             <TagChips tags={lead.tags || []} onRemove={removeTag} />
             <div style={{ display: 'flex', gap: 8, marginTop: (lead.tags?.length ? 10 : 0) }}>
-              <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field-light" style={{ ...inpModal, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
-              <button onClick={addTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
+              {/* [TG2] list="crm-tags-list" : autocomplétion avec les tags existants */}
+              <input list="crm-tags-list" value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Ajouter un tag (ex: vip, urgent)..." className="crm-field-light" style={{ ...inpModal, flex: 1 }} onKeyDown={e => e.key === 'Enter' && addTag()} />
+              {/* [TG6] fonction fléchée : sans elle, l'événement de clic serait pris pour le tag */}
+              <button onClick={() => addTag()} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
             </div>
+            {tagSuggestions.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                <span style={{ color: '#9095a5', fontSize: 11 }}>Existants :</span>
+                {tagSuggestions.map(t => (
+                  <button key={t} onClick={() => addTag(t)} style={{ padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px dashed ${tagColor(t)}66`, background: 'transparent', color: tagColor(t), fontSize: 10.5, fontWeight: 600 }}>
+                    + #{t}
+                  </button>
+                ))}
+              </div>
+            )}
           </Section>
 
           <Section title="Score commercial">
@@ -573,37 +653,34 @@ function LeadModal({ lead, profileId, onClose, onUpdate, onDelete, onContact }) 
             )}
           </Section>
 
-          <Section title="Historique">
-            {loadingAct
-              ? <div style={{ textAlign: 'center', padding: 20 }}><Loader2 size={16} color="#a2a7b5" className="animate-spin" /></div>
-              : activities.length === 0
-              ? <p style={{ color: '#a2a7b5', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Aucune activité</p>
-              : activities.map(a => (
-                <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid #eef0f5' }}>
-                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{ACTIVITY_ICONS[a.type] || '📌'}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <p style={{ margin: 0, color: '#161a2e', fontSize: 13, flex: 1 }}>{a.description}</p>
-                      {/* [A10][C5] Bouton "Fait" uniquement sur les tâches non terminées */}
-                      {a.type === 'task' && !a.done_at && (
-                        <button
-                          onClick={() => markTaskDone(a)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 7, border: '1px solid rgba(22,163,74,0.35)', background: 'rgba(22,163,74,0.1)', color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-                        >
-                          ✓ Fait
-                        </button>
-                      )}
-                      {a.type === 'task' && a.done_at && (
-                        <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>✓ Terminée</span>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 11, color: '#9095a5' }}>
-                      {new Date(a.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
-                    </span>
-                  </div>
-                </div>
-              ))
-            }
+          <Section title="Tâches">
+            {/* [R2] Relance en un clic */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              <span style={{ color: '#9095a5', fontSize: 11 }}>Programmer une relance :</span>
+              {[['Demain', 1], ['3 jours', 3], ['1 semaine', 7], ['2 semaines', 14]].map(([label, n]) => (
+                <button key={n} onClick={() => scheduleFollowUp(n)} style={{ padding: '4px 10px', borderRadius: 99, cursor: 'pointer', border: '1px solid #c7d2fe', background: 'rgba(99,102,241,0.08)', color: '#4f46e5', fontSize: 11, fontWeight: 700 }}>
+                  {label}
+                </button>
+              ))}
+              <input
+                type="date"
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={e => { if (e.target.value) { scheduleFollowUp(new Date(`${e.target.value}T09:00:00`)); e.target.value = ''; } }}
+                title="Choisir une date"
+                className="crm-field-light"
+                style={{ ...inpModal, width: 'auto', padding: '4px 8px', fontSize: 11 }}
+              />
+            </div>
+            <TasksCRMPanel key={taskKey} profileId={profileId || lead.profile_id} leadId={lead.id} compact />
+          </Section>
+
+          <Section title="Historique complet">
+            {/* refreshKey : se recharge quand une note / un statut est ajouté (loadActivities) */}
+            <ContactTimeline
+              leadId={lead.id}
+              createdAt={lead.created_at}
+              refreshKey={`${activities.length}:${activities[0]?.id || ''}`}
+            />
           </Section>
         </div>
       </motion.div>
@@ -676,7 +753,7 @@ function PipelineCard({ lead, isDragging, onOpen, onDragStart, onDragMove, onDra
       </div>
       {(lead.phone || lead.company) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {lead.phone && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}</span>}
+          {lead.phone && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={9} /> {lead.phone}{!isValidPhone(lead.phone) && <span title="Numéro à vérifier" style={{ color: '#f59e0b' }}>⚠</span>}</span>}
           {lead.company && <span style={{ color: '#8a90a2', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4 }}><Building2 size={9} /> {lead.company}</span>}
         </div>
       )}
@@ -771,7 +848,7 @@ function PipelineView({ leads, onCardClick, onStatusChange }) {
 }
 
 // [G3] Carte compacte pour la vue liste en grille. [T1] Carte blanche.
-function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
+function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover, onCompose }) {
   const { color: sc } = scoreLabel(lead.score || 0);
   return (
     <motion.div
@@ -798,7 +875,7 @@ function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
 
       {(lead.phone || lead.company) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}</span>}
+          {lead.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Phone size={10} /> {lead.phone}{!isValidPhone(lead.phone) && <span title="Numéro à vérifier" style={{ color: '#f59e0b' }}>⚠</span>}</span>}
           {lead.company && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8a90a2', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><Building2 size={10} /> {lead.company}</span>}
         </div>
       )}
@@ -808,7 +885,7 @@ function LeadGridCard({ lead, isSelected, onToggleSelect, onOpen, canHover }) {
       <ScoreBar score={lead.score || 0} />
 
       <div onClick={e => e.stopPropagation()}>
-        <WhatsAppBtn phone={lead.phone} leadId={lead.id}
+        <WhatsAppBtn phone={lead.phone} leadId={lead.id} onCompose={onCompose ? () => onCompose(lead) : undefined}
           onContact={async (id) => { await supabase.from('lead_activities').insert([{ lead_id: id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]); }} />
       </div>
     </motion.div>
@@ -826,10 +903,16 @@ export default function LeadsCRMPanel({ profileId }) {
   const [showAdd, setShowAdd]           = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [newLead, setNewLead]           = useState({ ...EMPTY_LEAD });
+  const [newLeadTag, setNewLeadTag]     = useState('');   // [TG3]
   const [adding, setAdding]             = useState(false);
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [bulkStatus, setBulkStatus]     = useState('');
+  const [bulkTagInput, setBulkTagInput] = useState('');   // [TG4]
   const [page, setPage]                 = useState(1); // [G1]
+  const [followRefresh, setFollowRefresh] = useState(0); // [R1] recharge « À relancer »
+  const [composeLead, setComposeLead]   = useState(null); // [M2] lead dont on écrit le message WhatsApp
+  const [senderName, setSenderName]     = useState('');   // [M2] signature des messages
+  const [activityTick, setActivityTick] = useState(0);    // [M2] recharge l'historique de la fiche ouverte
   // [FIX6] Détecté une seule fois (appareils tactiles : pas de hover collé).
   const [canHover] = useState(() => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches);
 
@@ -863,19 +946,52 @@ export default function LeadsCRMPanel({ profileId }) {
     return () => { supabase.removeChannel(channel); };
   }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // [M2] Nom du profil : signature des messages WhatsApp (silencieux si indisponible)
+  useEffect(() => {
+    if (!profileId) return;
+    let cancelled = false;
+    supabase.from('link_profiles').select('display_name').eq('id', profileId).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setSenderName((data?.display_name || '').trim()); });
+    return () => { cancelled = true; };
+  }, [profileId]);
+
   // [G5] Reset sélection + page au changement de vue/filtre/tag/recherche.
-  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setPage(1); }, [view, filter, tagFilter, search]);
+  useEffect(() => { setSelectedIds(new Set()); setBulkStatus(''); setBulkTagInput(''); setPage(1); }, [view, filter, tagFilter, search]);
+
+  // [M2] Ouvre WhatsApp avec le message choisi, puis trace dans l'historique du lead
+  const sendCompose = async (text) => {
+    const target = composeLead;
+    if (!target) return;
+    window.open(`https://wa.me/${normalizePhone(target.phone)}?text=${encodeURIComponent(text.trim())}`, '_blank', 'noopener,noreferrer');
+    setComposeLead(null);
+    await supabase.from('lead_activities').insert([{ lead_id: target.id, type: 'whatsapp', description: 'Contact WhatsApp effectué' }]);
+    setActivityTick(k => k + 1);
+  };
+
+  // [TG3] Ajout d'un tag dans la modale « Nouveau lead » (immuable)
+  const addNewLeadTag = () => {
+    const tag = normalizeTag(newLeadTag);
+    if (!tag) return;
+    setNewLead(p => (p.tags || []).includes(tag) ? p : { ...p, tags: [...(p.tags || []), tag] });
+    setNewLeadTag('');
+  };
 
   // ── [A4] Ajout d'un lead avec déclencheur automatisation ─────────
   const addLead = async () => {
     if (!newLead.name.trim()) { toast.error('Nom requis'); return; }
+    if (newLead.phone?.trim() && !checkPhone(newLead.phone).ok) { toast.error(checkPhone(newLead.phone).reason); return; }
     setAdding(true);
     // Contrôle client (retour immédiat) — la base fait foi (index unique).
     const exists = leads.find(l => normalizePhone(l.phone) === normalizePhone(newLead.phone) && normalizePhone(newLead.phone).length > 0);
     if (exists) { toast.error('Ce numéro existe déjà'); setAdding(false); return; }
     // [C2] doublon renvoyé par la base (23505)
+    // [TG3] un tag saisi mais pas encore validé (Entrée/+) est pris en compte
+    const pendingTag = normalizeTag(newLeadTag);
+    const tags = pendingTag && !(newLead.tags || []).includes(pendingTag)
+      ? [...(newLead.tags || []), pendingTag]
+      : (newLead.tags || []);
     const { data, error } = await supabase.from('leads')
-      .insert([{ ...newLead, profile_id: profileId, score: 0 }]).select().single();
+      .insert([{ ...newLead, tags, profile_id: profileId, score: 0 }]).select().single();
     if (error) {
       toast.error(error.code === '23505' ? 'Ce numéro existe déjà' : error.message);
       setAdding(false); return;
@@ -891,8 +1007,14 @@ export default function LeadsCRMPanel({ profileId }) {
       source: data.source,
     });
 
+    // [A8][TG3] lead_tagged pour chaque tag posé à la création
+    (data.tags || []).forEach(tag => triggerLeadTagged(profileId, {
+      leadId: data.id, leadName: data.name, tag,
+    }));
+
     setLeads(p => p.some(l => l.id === data.id) ? p : [data, ...p]);
     setNewLead({ ...EMPTY_LEAD });
+    setNewLeadTag('');
     setShowAdd(false);
     setAdding(false);
     toast.success('Lead ajouté ✅');
@@ -958,6 +1080,37 @@ export default function LeadsCRMPanel({ profileId }) {
     toast.success(`${ids.length} lead${ids.length > 1 ? 's' : ''} mis à jour`);
   };
 
+  // [TG4] Action groupée : ajouter ou retirer un tag sur la sélection.
+  // Ne traite que les leads concernés, mise à jour optimiste, rechargement
+  // silencieux en cas d'erreur, lead_tagged déclenché à l'ajout (comme [A8]).
+  const bulkTag = async (mode) => {
+    const tag = normalizeTag(bulkTagInput);
+    if (!tag) { toast.error('Saisissez un tag'); return; }
+    const targets = leads.filter(l =>
+      selectedIds.has(l.id) && (l.tags || []).includes(tag) === (mode === 'remove'));
+    if (!targets.length) {
+      toast.info(mode === 'add' ? 'Tous les leads ont déjà ce tag' : 'Aucun lead sélectionné n\'a ce tag');
+      return;
+    }
+    const nextTags = new Map(targets.map(l => [
+      l.id,
+      mode === 'add' ? [...(l.tags || []), tag] : (l.tags || []).filter(t => t !== tag),
+    ]));
+
+    setLeads(prev => prev.map(l => nextTags.has(l.id) ? { ...l, tags: nextTags.get(l.id) } : l));
+    const results = await Promise.all(targets.map(l =>
+      supabase.from('leads').update({ tags: nextTags.get(l.id) }).eq('id', l.id)));
+    const failed = results.find(r => r.error);
+    if (failed) { toast.error(failed.error.message); loadLeads({ silent: true }); return; }
+
+    if (mode === 'add') targets.forEach(l => triggerLeadTagged(profileId, {
+      leadId: l.id, leadName: l.name, tag,
+    }));
+
+    setBulkTagInput('');
+    toast.success(`#${tag} ${mode === 'add' ? 'ajouté à' : 'retiré de'} ${targets.length} lead${targets.length > 1 ? 's' : ''}`);
+  };
+
   const bulkDelete = async () => {
     const ids = [...selectedIds];
     if (!window.confirm(`Supprimer définitivement ${ids.length} lead${ids.length > 1 ? 's' : ''} ?`)) return;
@@ -981,28 +1134,52 @@ export default function LeadsCRMPanel({ profileId }) {
     return [headers, ...data].map(r => r.map(csvCell).join(',')).join('\n');
   };
 
+  // [TG5] Téléchargement mutualisé (export complet, sélection, segment)
+  const downloadCSV = (rows, name) => {
+    const blob = new Blob(['\uFEFF' + buildCSV(rows)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${name}-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportCSV = () => {
     if (!leads.length) { toast.error('Aucun lead à exporter'); return; }
-    const blob = new Blob(['\uFEFF' + buildCSV(leads)], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `leads-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+    downloadCSV(leads, 'leads');
   };
 
   const exportSelectedCSV = () => {
     const selected = leads.filter(l => selectedIds.has(l.id)); if (!selected.length) return;
-    const blob = new Blob(['\uFEFF' + buildCSV(selected)], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `leads-selection-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+    downloadCSV(selected, 'leads-selection');
   };
 
-  const allTags = useMemo(() => { const set = new Set(); leads.forEach(l => (l.tags || []).forEach(t => set.add(t))); return Array.from(set).sort(); }, [leads]);
+  // [TG5] Export du segment affiché (tag actif + filtres en cours)
+  const exportSegmentCSV = () => {
+    if (!filteredLeads.length) { toast.error('Aucun lead à exporter'); return; }
+    downloadCSV(filteredLeads, `leads-${tagFilter || 'segment'}`);
+  };
+
+  // [TG5] Compteurs par tag, tags triés par fréquence puis alphabétique
+  const tagCounts = useMemo(() => {
+    const m = new Map();
+    leads.forEach(l => (l.tags || []).forEach(t => m.set(t, (m.get(t) || 0) + 1)));
+    return m;
+  }, [leads]);
+  const allTags = useMemo(
+    () => [...tagCounts.keys()].sort((a, b) => (tagCounts.get(b) - tagCounts.get(a)) || a.localeCompare(b)),
+    [tagCounts]
+  );
 
   const filteredLeads = leads.filter(l => {
-    const matchesFilter = filter === 'all' || l.status === filter;
+    const matchesFilter = filter === 'all'
+      || (filter === 'phone_check' ? (!!l.phone && !isValidPhone(l.phone)) : l.status === filter);
     const matchesTag = !tagFilter || (l.tags || []).includes(tagFilter);
     const q = search.trim().toLowerCase();
     const matchesSearch = !q || l.name?.toLowerCase().includes(q) || l.phone?.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q) || l.company?.toLowerCase().includes(q) || (l.tags || []).some(t => t.toLowerCase().includes(q));
     return matchesFilter && matchesTag && matchesSearch;
   });
 
+  const invalidPhoneCount = leads.filter(l => l.phone && !isValidPhone(l.phone)).length;
   const statusCounts = STATUSES.reduce((acc, s) => { acc[s.id] = leads.filter(l => l.status === s.id).length; return acc; }, {});
   const allSelected  = filteredLeads.length > 0 && filteredLeads.every(l => selectedIds.has(l.id));
   const someSelected = filteredLeads.some(l => selectedIds.has(l.id));
@@ -1015,7 +1192,15 @@ export default function LeadsCRMPanel({ profileId }) {
   // [G5] Garde-fou si la page courante n'existe plus.
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // [TG5] Si le tag filtré n'existe plus (retiré de tous les leads), on réinitialise le filtre.
+  useEffect(() => {
+    if (tagFilter && !tagCounts.has(tagFilter)) setTagFilter(null);
+  }, [tagFilter, tagCounts]);
+
   if (!profileId) return <div style={{ padding: 40, textAlign: 'center', color: '#a2a7b5', fontSize: 13 }}>Sélectionnez un profil pour gérer vos leads.</div>;
+
+  // Style commun aux petits boutons de la barre d'actions groupées
+  const bulkBtn = { display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -1026,6 +1211,11 @@ export default function LeadsCRMPanel({ profileId }) {
         .crm-field-light:focus{border-color:#8b5cf6!important;background:#ffffff!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12);}
         .crm-field-light::placeholder{color:#a2a7b5;}
       `}</style>
+
+      {/* [TG2] Autocomplétion des tags existants (fiche, création, actions groupées) */}
+      <datalist id="crm-tags-list">
+        {allTags.map(t => <option key={t} value={t} />)}
+      </datalist>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
@@ -1050,6 +1240,14 @@ export default function LeadsCRMPanel({ profileId }) {
         </div>
       </div>
 
+      {/* [R1] À relancer : en retard / aujourd'hui / à venir */}
+      <FollowUpsPanel
+        profileId={profileId}
+        leads={leads}
+        onOpenLead={setSelectedLead}
+        refreshKey={followRefresh}
+      />
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ position: 'relative' }}>
           <Search size={14} color="#9095a5" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
@@ -1068,6 +1266,11 @@ export default function LeadsCRMPanel({ profileId }) {
                 {s.label} ({statusCounts[s.id] || 0})
               </button>
             ))}
+            {invalidPhoneCount > 0 && (
+              <button onClick={() => setFilter('phone_check')} title="Leads dont le numéro est incomplet ou invalide" style={{ padding: '6px 12px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${filter === 'phone_check' ? '#f59e0b' : '#dde0ea'}`, background: filter === 'phone_check' ? 'rgba(245,158,11,0.12)' : 'transparent', color: filter === 'phone_check' ? '#b45309' : '#6b7280', fontSize: 12, fontWeight: 600 }}>
+                ⚠ N° à vérifier ({invalidPhoneCount})
+              </button>
+            )}
           </div>
         )}
 
@@ -1076,9 +1279,20 @@ export default function LeadsCRMPanel({ profileId }) {
             <span style={{ color: '#9095a5', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}><TagIcon size={11} /> Tags :</span>
             {allTags.map(tag => (
               <button key={tag} onClick={() => setTagFilter(prev => prev === tag ? null : tag)} style={{ padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${tagFilter === tag ? tagColor(tag) : '#dde0ea'}`, background: tagFilter === tag ? `${tagColor(tag)}22` : 'transparent', color: tagFilter === tag ? tagColor(tag) : '#8a90a2', fontSize: 10.5, fontWeight: 600 }}>
-                #{tag}
+                #{tag} <span style={{ opacity: 0.7 }}>({tagCounts.get(tag)})</span>
               </button>
             ))}
+            {/* [TG5] Effacer le filtre + exporter le segment affiché */}
+            {tagFilter && (
+              <>
+                <button onClick={() => setTagFilter(null)} style={{ ...bulkBtn, padding: '3px 9px', borderRadius: 99, fontSize: 10.5 }}>
+                  <X size={10} /> Effacer
+                </button>
+                <button onClick={exportSegmentCSV} style={{ ...bulkBtn, padding: '3px 9px', borderRadius: 99, fontSize: 10.5 }}>
+                  <Download size={10} /> Exporter #{tagFilter} ({filteredLeads.length})
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1090,14 +1304,29 @@ export default function LeadsCRMPanel({ profileId }) {
               <span style={{ background: 'rgba(99,102,241,0.16)', color: '#4338ca', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 99 }}>
                 {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
               </span>
-              <button onClick={() => setSelectedIds(new Set())} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => setSelectedIds(new Set())} style={bulkBtn}>
                 <X size={11} /> Désélectionner
               </button>
               <select value={bulkStatus} onChange={e => { setBulkStatus(e.target.value); bulkChangeStatus(e.target.value); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#454b5a', fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
                 <option value="">Changer le statut…</option>
                 {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
-              <button onClick={exportSelectedCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#f6f7fb', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+
+              {/* [TG4] Tags en action groupée */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input list="crm-tags-list" value={bulkTagInput} onChange={e => setBulkTagInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && bulkTag('add')}
+                  placeholder="Tag…" maxLength={30}
+                  style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e6e8f0', background: '#ffffff', color: '#454b5a', fontSize: 11, fontWeight: 600, outline: 'none', width: 110 }} />
+                <button onClick={() => bulkTag('add')} style={bulkBtn} title="Ajouter ce tag à la sélection">
+                  <Plus size={11} /> Tag
+                </button>
+                <button onClick={() => bulkTag('remove')} style={bulkBtn} title="Retirer ce tag de la sélection">
+                  − Tag
+                </button>
+              </div>
+
+              <button onClick={exportSelectedCSV} style={bulkBtn}>
                 <Download size={11} /> CSV
               </button>
               <button onClick={bulkDelete} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.08)', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
@@ -1146,6 +1375,7 @@ export default function LeadsCRMPanel({ profileId }) {
                     onToggleSelect={() => toggleSelect(lead.id)}
                     onOpen={() => setSelectedLead(lead)}
                     canHover={canHover}
+                    onCompose={setComposeLead}
                   />
                 ))}
               </div>
@@ -1184,6 +1414,19 @@ export default function LeadsCRMPanel({ profileId }) {
                   {SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
+
+              {/* [TG3] Tags à la création */}
+              <div>
+                <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Tags</label>
+                <TagChips tags={newLead.tags || []} onRemove={t => setNewLead(p => ({ ...p, tags: (p.tags || []).filter(x => x !== t) }))} />
+                <div style={{ display: 'flex', gap: 8, marginTop: (newLead.tags?.length ? 8 : 0) }}>
+                  <input list="crm-tags-list" value={newLeadTag} onChange={e => setNewLeadTag(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewLeadTag(); } }}
+                    className="crm-field-light" style={{ ...inpModal, flex: 1 }} placeholder="Ex: vip, urgent" maxLength={30} />
+                  <button type="button" onClick={addNewLeadTag} style={{ ...actionBtn('#6366f1'), padding: '0 14px', borderRadius: 10, width: 'auto' }}><Plus size={14} /></button>
+                </div>
+              </div>
+
               <div>
                 <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes</label>
                 <textarea value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} rows={3} className="crm-field-light" style={{ ...inpModal, resize: 'none' }} placeholder="Notes additionnelles..." />
@@ -1199,11 +1442,24 @@ export default function LeadsCRMPanel({ profileId }) {
 
       <AnimatePresence>
         {selectedLead && (
-          <LeadModal lead={selectedLead} profileId={profileId} onClose={() => setSelectedLead(null)}
+          <LeadModal lead={selectedLead} profileId={profileId} allTags={allTags} onClose={() => { setSelectedLead(null); setFollowRefresh(k => k + 1); }}
+            onTaskCreated={() => setFollowRefresh(k => k + 1)}
+            onCompose={setComposeLead} activityTick={activityTick}
             onUpdate={updated => { updateLeadLocal(updated); setSelectedLead(updated); }}
             onDelete={deleteLead} />
         )}
       </AnimatePresence>
+
+      {/* [M2] Message WhatsApp professionnel adapté (au-dessus du tiroir : z-index 1100) */}
+      {composeLead && (
+        <WhatsAppComposerModal
+          lead={composeLead}
+          title="Message WhatsApp"
+          sender={senderName}
+          onClose={() => setComposeLead(null)}
+          onSend={sendCompose}
+        />
+      )}
     </div>
   );
 }

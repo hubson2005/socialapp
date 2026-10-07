@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase'; // même chemin que PublicProfile.jsx
+import { checkPhone } from '../lib/phone';
 import { triggerNewBooking, triggerNewEventRegistration } from '../lib/triggers/booking';
 
 // Palette "premium" : fond opaque (plus de simple transparence sur le fond
@@ -170,6 +171,8 @@ export function ServiceBookingFlow({ profileId, services, initialService }) {
       setErrorMsg('Ton nom et ton téléphone sont requis.');
       return;
     }
+    const pc = checkPhone(form.client_phone);
+    if (!pc.ok) { setErrorMsg(pc.reason); return; }
     setSubmitting(true);
     setErrorMsg('');
     const { error } = await supabase.rpc('create_public_booking', {
@@ -319,6 +322,8 @@ export function EventBookingFlow({ profileId, events, initialEvent }) {
       setErrorMsg('Ton nom et ton téléphone sont requis.');
       return;
     }
+    const pc = checkPhone(form.client_phone);
+    if (!pc.ok) { setErrorMsg(pc.reason); return; }
     setSubmitting(true);
     setErrorMsg('');
     const { error } = await supabase.rpc('book_public_event', {

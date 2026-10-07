@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
+import TasksCRMPanel from "@/components/dashboard/TasksCRMPanel";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/dashboard/UserSidebar";
 import OverviewPanel from "@/components/dashboard/OverviewPanel";
@@ -954,6 +955,7 @@ export default function UserDashboard() {
           case 'analytics':  return limits.hasStats ? <AnalyticsPanel profileId={localProfile.id} advanced={limits.hasAdvancedAnalytics} /> : null;
           case 'realtime':        return limits.hasRealtime ? <RealtimePanel  profileId={localProfile.id} /> : null;
           case 'crm':             return limits.hasCRM      ? <LeadsCRMPanel  profileId={localProfile.id} /> : null;
+          case 'tasks':           return limits.hasCRM      ? <TasksCRMPanel  profileId={localProfile.id} /> : null;
           case 'profile-visits': return <ProfileVisitsPanel profileId={localProfile.id} />;
           case 'whatsapp-crm':    return limits.hasCRM      ? <WhatsappCRMPanel profileId={localProfile.id} /> : null;
           case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
@@ -1016,7 +1018,7 @@ export default function UserDashboard() {
             </div>
           )}
 
-          <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1 }}>
+          <div style={{ flex:1, height:'100dvh', minHeight:'100dvh', overflowX:'hidden', overflowY:'auto', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', minWidth:0, position:'relative', zIndex:1, marginRight: showPreview && isDesktop ? 400 : 0, transition:'margin-right .25s ease' }}>
 
             {/* Topbar — blanc, alignée sur la zone de contenu claire.
                 [T2] paddingTop remplacé par un fond peint jusque dans la
@@ -1036,7 +1038,7 @@ export default function UserDashboard() {
                   {useBottomNav && <img src="/Logo_SocialApp.png" alt="" style={{ width:'26px', height:'26px', borderRadius:'7px', objectFit:'cover', flexShrink:0 }} />}
                   <h2 style={{ color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0, whiteSpace:'nowrap' }}>{currentNav?.label || 'Tableau de bord'}</h2>
                   <AnimatePresence>
-                    {hasChanges && (
+                    {hasChanges && !isMobile && (
                       <motion.span initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.85 }} transition={{ duration:0.15 }}
                         style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'10px', color:'#b45309', fontWeight:600, flexShrink:0 }}>
                         ● Non enregistré
@@ -1059,10 +1061,13 @@ export default function UserDashboard() {
                   <button
                     onClick={handleSave}
                     disabled={!hasChanges || updateMutation.isPending}
-                    style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'#eef0f5', border:'1px solid '+(hasChanges?'transparent':'#dde0ea'), borderRadius:'9px', color:hasChanges?'white':'#a2a7b5', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
+                    style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', position:'relative', background:hasChanges?'linear-gradient(135deg,#6366f1,#8b5cf6)':'#eef0f5', border:'1px solid '+(hasChanges?'transparent':'#dde0ea'), borderRadius:'9px', color:hasChanges?'white':'#a2a7b5', fontSize:'11px', fontWeight:600, cursor:hasChanges?'pointer':'default', opacity:updateMutation.isPending?0.7:1 }}
                   >
                     {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                     {!isMobile && 'Enregistrer'}
+                    {isMobile && hasChanges && (
+                      <span style={{ position:'absolute', top:'-3px', right:'-3px', width:'10px', height:'10px', borderRadius:'50%', background:'#f59e0b', border:'2px solid #fff' }} />
+                    )}
                   </button>
                 </div>
               </div>
@@ -1096,7 +1101,8 @@ export default function UserDashboard() {
           </div>{/* ← ferme le div flex colonne */}
 
           {useBottomNav && (
-            <MobileNav
+            <MobileNav
+
               activeSection={activeSection === 'crm' ? 'leads' : activeSection} onNavigate={(id) => setActiveSection(id === 'leads' ? 'crm' : id)}
               profile={localProfile} plan={effectivePlan} limits={limits}
               isAdmin={isAdmin}

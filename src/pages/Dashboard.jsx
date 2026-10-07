@@ -8,7 +8,7 @@ import {
   ShieldCheck, Clock, Users, RefreshCw, Activity, BarChart3, TrendingUp,
   Zap, UserPlus, Globe, Link2, Settings, LayoutDashboard, FileText,
   ShoppingBag, MousePointerClick, ArrowUpRight, ArrowDownRight, Radio,
-  Layers, MessageCircle, Crown,
+  Layers, MessageCircle, Crown, CheckSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +27,7 @@ import DocumentsPanel from "@/components/dashboard/DocumentsPanel";
 import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
+import TasksCRMPanel from "@/components/dashboard/TasksCRMPanel";
 import MobileNav from "@/components/dashboard/MobileNav";
 import EventManager from "@/components/dashboard/EventManager";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
@@ -154,6 +155,7 @@ const SIDEBAR_NAV = [
   { id: 'realtime',        label: 'Temps réel',       icon: Radio,           group: 'main', badge: 'LIVE' },
   { id: 'analytics',       label: 'Analytics',        icon: BarChart3,       group: 'main' },
   { id: 'leads',           label: 'Leads / CRM',      icon: UserPlus,        group: 'crm' },
+  { id: 'tasks',           label: 'Tâches',           icon: CheckSquare,     group: 'crm' },
   { id: 'whatsapp-crm',    label: 'WhatsApp CRM',     icon: MessageCircle,   group: 'crm' },
   { id: 'automations',     label: 'Automatisations',  icon: Zap,             group: 'crm' },
   { id: 'integrations',    label: 'Intégrations',     icon: Sparkles,        group: 'crm' },
@@ -1290,6 +1292,7 @@ export default function Dashboard() {
       case 'realtime':        return <RealtimePanel profileId={localProfile.id}/>;
       case 'analytics':       return <AnalyticsPanel profileId={localProfile.id}/>;
       case 'leads':           return <LeadsCRMPanel profileId={localProfile.id}/>;
+      case 'tasks':           return <TasksCRMPanel profileId={localProfile.id}/>;
       case 'whatsapp-crm':    return <WhatsappCRMPanel profileId={localProfile.id}/>;
       case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
       case 'automations':     return <AutomationsPanel profileId={localProfile.id}/>;

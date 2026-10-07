@@ -93,22 +93,37 @@ export default function InstallPrompt() {
           from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Desktop (> 1100px, pas de barre du bas) : coin bas-droit */
+        .sa-install-prompt {
+          position: fixed;
+          right: 20px;
+          left: auto;
+          bottom: calc(20px + env(safe-area-inset-bottom));
+          width: calc(100vw - 40px);
+          max-width: 380px;
+        }
+
+        /* Mobile + tablette (MobileNav visible) : au-dessus de la barre */
+        @media (max-width: 1099px) {
+          .sa-install-prompt {
+            left: 12px;
+            right: 12px;
+            width: auto;
+            max-width: none;
+            bottom: calc(112px + env(safe-area-inset-bottom));
+          }
+        }
       `}</style>
-      <div style={{
-        position: 'fixed',
-        bottom: 'calc(20px + env(safe-area-inset-bottom))',
-        right: '20px',
-        left: 'auto',
-        maxWidth: '380px',
-        width: 'calc(100vw - 40px)',
+      <div className="sa-install-prompt" style={{
         zIndex: 9999,
         background: 'linear-gradient(180deg,#0d1330,#0a0f24)',
         border: '1px solid rgba(99,102,241,0.25)',
         borderRadius: '16px',
-        padding: '14px 16px',
+        padding: '12px 14px',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: '10px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
         animation: 'installPromptSlideIn 0.25s ease',
       }}>

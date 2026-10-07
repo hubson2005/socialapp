@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ListChecks, ArrowRight, Check } from 'lucide-react';
 import { FIELD_TYPES } from './FormBuilder';
+import { checkPhone } from '../../lib/phone';
 
 const typeMeta = (type) => FIELD_TYPES.find(f => f.type === type) || FIELD_TYPES[0];
 
@@ -244,13 +245,18 @@ export default function FormPreview({ form, mode = 'preview', onSubmit }) {
   const [submitting, setSubmitting] = useState(false);
   const fields = form?.fields || [];
 
-  const setFieldValue = (id, val) => setValues(v => ({ ...v, [id]: val }));
+  const [submitError, setSubmitError] = useState('');
+  const setFieldValue = (id, val) => { setSubmitError(''); setValues(v => ({ ...v, [id]: val })); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (mode !== 'public') return; // pas de vraie soumission en aperçu
     const missing = fields.find(f => f.required && !values[f.id]);
     if (missing) return;
+    // Téléphone saisi mais invalide : on bloque avec un message clair (sinon le lead part sans numéro joignable)
+    const badPhone = fields.find(f => f.type === 'phone' && values[f.id] && !checkPhone(values[f.id]).ok);
+    if (badPhone) { setSubmitError(checkPhone(values[badPhone.id]).reason); return; }
+    setSubmitError('');
     setSubmitting(true);
     if (onSubmit) await onSubmit(values);
     setSubmitting(false);
@@ -323,6 +329,10 @@ export default function FormPreview({ form, mode = 'preview', onSubmit }) {
                 onChange={val => setFieldValue(field.id, val)}
               />
             ))}
+
+            {mode === 'public' && submitError && (
+              <p role="alert" style={{ margin: '0 0 10px', color: '#f87171', fontSize: 13, lineHeight: 1.4 }}>{submitError}</p>
+            )}
 
             {mode === 'public' && (
               <button

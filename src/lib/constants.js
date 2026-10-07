@@ -71,6 +71,7 @@ export const ACTIONS = {
   ADD_SCORE:      'add_score',
   ADD_TAG:        'add_tag',
   NOTIFY_OWNER:   'notify_owner',
+  WAIT:           'wait',
 };
 
 /** Libellés affichés dans l'UI */
@@ -81,6 +82,7 @@ export const ACTION_LABELS = {
   [ACTIONS.ADD_SCORE]:     '⭐ Modifier le score',
   [ACTIONS.ADD_TAG]:       '🏷️ Ajouter un tag',
   [ACTIONS.NOTIFY_OWNER]:  '🔔 Notifier le propriétaire',
+  [ACTIONS.WAIT]:          '⏳ Attendre puis continuer',
 };
 
 /** Options pour le <select> action */
@@ -96,6 +98,16 @@ export const ACTION_OPTIONS = Object.entries(ACTION_LABELS).map(([value, label])
  * Structure : { [actionKey]: [ { key, label, type, placeholder? } ] }
  */
 export const ACTION_CONFIG_FIELDS = {
+  [ACTIONS.WAIT]: [
+    { key: 'delayHours', label: 'Attendre (en heures)', type: 'number', placeholder: '24' },
+    { key: 'cancelIf',   label: 'Annuler la suite si…', type: 'select',
+      options: [
+        { value: 'none',           label: 'Ne jamais annuler' },
+        { value: 'lead_replied',   label: 'Le contact a répondu (WhatsApp)' },
+        { value: 'status_changed', label: 'Le statut du contact change' },
+        { value: 'any_activity',   label: 'Une activité est enregistrée' },
+      ] },
+  ],
   [ACTIONS.CREATE_LEAD]: [
     { key: 'status',      label: 'Statut initial',    type: 'select',
       options: ['prospect','qualifié','client','perdu'] },
@@ -103,7 +115,8 @@ export const ACTION_CONFIG_FIELDS = {
     { key: 'defaultName', label: 'Nom par défaut',    type: 'text',   placeholder: 'Visiteur' },
   ],
   [ACTIONS.CREATE_TASK]: [
-    { key: 'taskTitle', label: 'Titre de la tâche', type: 'text', placeholder: 'Rappeler ce contact' },
+    { key: 'taskTitle',  label: 'Titre de la tâche',          type: 'text',   placeholder: 'Rappeler ce contact' },
+    { key: 'dueInHours', label: 'Échéance dans (heures)',     type: 'number', placeholder: '24' },
   ],
   [ACTIONS.SEND_WHATSAPP]: [
     { key: 'message', label: 'Message WhatsApp', type: 'textarea', placeholder: 'Bonjour ! Merci pour votre intérêt. 👋' },

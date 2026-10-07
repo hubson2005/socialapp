@@ -171,6 +171,22 @@ async function _executeAction({
         score:      config.score   ?? 50,
         tags:       config.tag     ? [config.tag] : [],
       }).select().single();
+      // Même numéro déjà présent dans ce profil (index unique leads_profile_phone_uniq, erreur 23505) :
+      // on réutilise ce lead au lieu d'interrompre l'automatisation (tâche, relance, notification).
+      if (error?.code === '23505' && context.phone) {
+        const { data: norm } = await supabase.rpc('normalize_phone_ci', { raw: String(context.phone) });
+        if (norm) {
+          const { data: existing } = await supabase.from('leads').select('*')
+            .eq('profile_id', profileId).eq('phone_norm', norm).limit(1).maybeSingle();
+          if (existing) {
+            const { error: actErr } = await supabase.from('lead_activities').insert({
+              lead_id: existing.id, type: 'note', description: 'Nouvelle prise de contact : lead existant réutilisé',
+            });
+            if (actErr) console.warn('[create_lead] activité non tracée :', actErr.message);
+            return existing;
+          }
+        }
+      }
       if (error) throw new Error(`create_lead: ${error.message}`);
       return data;
     }
@@ -237,16 +253,20 @@ async function _executeAction({
     case 'notify_owner': {
       const { data: profile } = await supabase.from('link_profiles').select('user_id').eq('id', profileId).single();
       if (!profile?.user_id) return null;
-      const { data, error } = await supabase.from('notifications').insert({
-        user_id:    profile.user_id,
-        profile_id: profileId,
-        type:       'automation',
-        title:      config.notifTitle || config.title || `Automatisation : ${automation.name}`,
-        message:    config.message || `Déclencheur activé : ${automation.name}`,
-        read:       false,
-      }).select().single();
-      if (error) { console.warn('[notify_owner]', error.message); return null; }
-      return data;
+      // Colonnes réelles de `notifications` : id, user_id, title, message, type, is_read, link, created_at.
+      // `type` n'accepte que info | success | warning | error ; il n'existe NI `profile_id` NI `read`
+      // (l'ancienne forme était refusée par la base sans aucune erreur visible dans les logs).
+      // On ne renvoie pas la ligne : un id de notification ne doit pas devenir le `lastEntityId`
+      // que les actions suivantes prendraient pour un lead.
+      const { error } = await supabase.from('notifications').insert({
+        user_id: profile.user_id,
+        type:    'info',
+        title:   config.notifTitle || config.title || `Automatisation : ${automation.name}`,
+        message: config.message || `Déclencheur activé : ${automation.name}`,
+        is_read: false,
+      });
+      if (error) console.warn('[notify_owner]', error.message);
+      return null;
     }
 
     case 'send_whatsapp': {

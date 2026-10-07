@@ -19,7 +19,6 @@ import { useBreakpoint }                     from '../../hooks/useBreakpoint';
 import { triggerLeadStatusChanged }          from '../../lib/triggers/leadStatus';     // [A7]
 import { triggerLeadTagged }                 from '../../lib/triggers/leadTagged';     // [A8]
 import { triggerLeadScoreReachedIfThreshold } from '../../lib/triggers/leadScore';     // [A9]
-import { triggerTaskCompleted }              from '../../lib/triggers/taskCompleted';  // [A10]
 import { normalizePhone, isValidPhone, checkPhone } from '../../lib/phone';                   // [C2]
 
 
@@ -391,30 +390,16 @@ function LeadModal({ lead, profileId, allTags = [], onClose, onUpdate, onDelete,
   const [note, setNote] = useState('');
   const [newTag, setNewTag] = useState('');
   const [activities, setActivities]   = useState([]);
-  const [loadingAct, setLoadingAct]   = useState(true);
   const [taskKey, setTaskKey]         = useState(0); // [R2] remonte TasksCRMPanel après création
 
   useEffect(() => { loadActivities(); }, [lead.id, activityTick]);   // [M2] activityTick : recharge après un envoi WhatsApp
 
   const loadActivities = async () => {
-    setLoadingAct(true);
     const { data } = await supabase.from('lead_activities').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
     setActivities(data || []);
-    setLoadingAct(false);
   };
 
-  // [A10][C5] Marquer une tâche comme terminée : done_at sur la tâche elle-même
-  const markTaskDone = async (activity) => {
-    if (activity.done_at) return;
-    const doneAt = new Date().toISOString();
-    setActivities(prev => prev.map(a => a.id === activity.id ? { ...a, done_at: doneAt } : a));
-    const { error } = await supabase.from('lead_activities')
-      .update({ done_at: doneAt }).eq('id', activity.id);
-    if (error) { toast.error(error.message); loadActivities(); return; }
-    if (profileId) triggerTaskCompleted(profileId, {           // [A10]
-      leadId: lead.id, leadName: lead.name, taskDescription: activity.description,
-    });
-  };
+  // Les tâches se gèrent dans <TasksCRMPanel> (table crm_tasks) : l'ancien markTaskDone est retiré.
 
   // [C3] saveEdit : déclenche aussi lead_status_changed ; [C2] doublon 23505
   const saveEdit = async () => {

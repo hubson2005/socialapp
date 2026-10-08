@@ -11,6 +11,51 @@ import mtnMomoLogo from '../../assets/mtn-momo.svg';
 import moovMoneyLogo from '../../assets/moov-money.svg';
 import waveLogo from '../../assets/wave.svg';
 
+// ─── [LOGO RÉEL v2] LogoTile ───────────────────────────────────────────────
+// Pastille carrée arrondie (même gabarit que les badges SVG) qui affiche un
+// vrai logo importé depuis src/assets/.
+//
+// POURQUOI UN ÉLÉMENT `icon` ET PAS SEULEMENT `logoUrl` : toute l'application
+// (profil public, cartes du dashboard, assistant de création, statistiques)
+// affiche `PLATFORMS[x].icon`, parfois via React.cloneElement(icon, {width,
+// height}). En faisant de `icon` lui-même la pastille-logo, tous ces écrans
+// affichent le même logo sans modification. Les props width/height sont donc
+// respectées (20 px par défaut, comme les badges SVG).
+//
+// Repli : si l'image ne charge pas, on affiche `fallback` (le badge SVG).
+//   white : passe un logo monochrome noir en blanc (filtre CSS) — utile
+//           lorsque le fichier est une silhouette noire (cas de Wave).
+//   pad   : marge intérieure, en fraction du côté (0.1 = 10 %).
+function LogoTile({
+  src, alt, bg, white = false, pad = 0.17, radius = '22%',
+  fallback = null, width = 20, height = 20, style,
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed && fallback) return React.cloneElement(fallback, { width, height });
+  const side = Math.min(Number(width) || 20, Number(height) || 20);
+  return (
+    <span
+      style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width, height, borderRadius: radius, background: bg,
+        padding: Math.round(side * pad), boxSizing: 'border-box',
+        flexShrink: 0, overflow: 'hidden', ...style,
+      }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        onError={() => setFailed(true)}
+        style={{
+          width: '100%', height: '100%', objectFit: 'contain', display: 'block',
+          filter: white ? 'brightness(0) invert(1)' : undefined,
+        }}
+      />
+    </span>
+  );
+}
+
 export const PLATFORMS = {
   // ── Réseaux sociaux ──────────────────────────────────────────────────────
   instagram: {
@@ -261,32 +306,59 @@ playstore: {
   // PayPal/Cash App, il n'existe pas de format d'URL universel par
   // utilisateur : le placeholder pointe vers un lien de paiement générique
   // (page CinetPay/FedaPay/lien marchand) que chacun personnalise.
-  // [LOGO RÉEL] logoUrl pointe vers un fichier hébergé (ex: bucket Supabase
-  // Storage public). Tant que logoUrl est vide/invalide, le badge SVG stylisé
-  // (icon) sert de repli automatique — voir le composant PlatformIcon plus bas.
+  // [LOGO RÉEL v2] `icon` est une pastille <LogoTile> : le vrai logo (importé
+  // depuis src/assets/) s'affiche partout où l'app utilise PLATFORMS[x].icon,
+  // et le badge SVG d'origine sert de repli (`fallback`) si l'image ne charge
+  // pas. `logoUrl` reste exposé pour les rares usages directs.
   orangemoney: {
     label: 'Orange Money', color: '#FF6600', category: 'Paiement',
     placeholder: 'https://orangemoney.ci/paiement/tonlien',
     logoUrl: orangeMoneyLogo,
-    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FF6600"/><circle cx="12" cy="12" r="7" fill="none" stroke="white" strokeWidth="1.5"/><text x="12" y="15.5" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="8" fill="white">OM</text></svg>),
+    icon: (
+      <LogoTile
+        src={orangeMoneyLogo} alt="Orange Money" bg="#FF6600"
+        fallback={<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FF6600"/><circle cx="12" cy="12" r="7" fill="none" stroke="white" strokeWidth="1.5"/><text x="12" y="15.5" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="8" fill="white">OM</text></svg>}
+      />
+    ),
   },
   mtnmomo: {
     label: 'MTN Mobile Money', color: '#FFCC08', category: 'Paiement',
     placeholder: 'https://momo.mtn.ci/paiement/tonlien',
     logoUrl: mtnMomoLogo,
-    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FFCC08"/><text x="12" y="15" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="7.5" fill="#000000">MoMo</text></svg>),
+    icon: (
+      <LogoTile
+        src={mtnMomoLogo} alt="MTN Mobile Money" bg="#FFCC08"
+        fallback={<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#FFCC08"/><text x="12" y="15" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="7.5" fill="#000000">MoMo</text></svg>}
+      />
+    ),
   },
   moovmoney: {
     label: 'Moov Money', color: '#004B87', category: 'Paiement',
     placeholder: 'https://moovmoney.ci/paiement/tonlien',
     logoUrl: moovMoneyLogo,
-    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#004B87"/><text x="12" y="15" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="7" fill="white">Moov</text></svg>),
+    icon: (
+      <LogoTile
+        src={moovMoneyLogo} alt="Moov Money" bg="#004B87"
+        fallback={<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#004B87"/><text x="12" y="15" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="7" fill="white">Moov</text></svg>}
+      />
+    ),
   },
+  // [WAVE] Le fichier src/assets/wave.svg est une silhouette NOIRE (le pingouin
+  // qui salue). `white` la passe en blanc sur la pastille turquoise (`bg`).
+  // Pour changer le rendu, c'est ici et nulle part ailleurs :
+  //   - couleur de fond : `bg` (et `color` ci-dessus pour les pastilles du profil)
+  //   - pingouin noir au lieu de blanc : retirer `white`
+  //   - pingouin plus grand / plus petit : `pad` (0.1 = 10 % de marge)
   wave: {
     label: 'Wave', color: '#1DC8CD', category: 'Paiement',
     placeholder: 'https://pay.wave.com/m/tonlien',
     logoUrl: waveLogo,
-    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#001A72"/><path d="M4 12c1.5-3 2.5-3 4 0s2.5 3 4 0 2.5-3 4 0 2.5 3 4 0" stroke="#1DC8CD" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>),
+    icon: (
+      <LogoTile
+        src={waveLogo} alt="Wave" bg="#1DC8CD" white pad={0.1}
+        fallback={<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#001A72"/><path d="M4 12c1.5-3 2.5-3 4 0s2.5 3 4 0 2.5-3 4 0 2.5 3 4 0" stroke="#1DC8CD" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}
+      />
+    ),
   },
 
   // ── Autre ────────────────────────────────────────────────────────────────
@@ -317,31 +389,12 @@ const REPEATABLE_LIMITS = {
   fixedphone: 2,
 };
 
-// [LOGO RÉEL] Affiche platform.logoUrl (vraie image de marque hébergée) si
-// elle est définie et charge correctement ; sinon, repli automatique sur le
-// badge SVG stylisé (platform.icon). Ainsi, ajouter un vrai logo se résume à
-// renseigner `logoUrl` dans PLATFORMS — aucune autre modif nécessaire.
+// [LOGO RÉEL v2] Dans cette fenêtre, les plateformes à logo réel (celles qui
+// ont `logoUrl`) s'affichent en pastille pleine 36 px, comme avant ; les
+// autres gardent leur badge SVG de 20 px. Le logo et son repli sont gérés par
+// <LogoTile> (voir plus haut) : plus de logique d'erreur ici.
 function PlatformIcon({ platform }) {
-  const [failed, setFailed] = useState(false);
-  if (platform.logoUrl && !failed) {
-    return (
-      <div
-        style={{
-          width: '100%', height: '100%', borderRadius: '8px',
-          background: platform.color, display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-          padding: '6px', boxSizing: 'border-box',
-        }}
-      >
-        <img
-          src={platform.logoUrl}
-          alt={platform.label}
-          onError={() => setFailed(true)}
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        />
-      </div>
-    );
-  }
+  if (platform.logoUrl) return React.cloneElement(platform.icon, { width: 36, height: 36 });
   return platform.icon;
 }
 

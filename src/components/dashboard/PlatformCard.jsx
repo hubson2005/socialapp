@@ -1,13 +1,27 @@
 import React, { useState } from 'react';
 import { Trash2, GripVertical, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
-import { PLATFORMS } from './AddPlatformDialog';
+import { PLATFORMS, extractCryptoAddress, validateCryptoAddress } from './AddPlatformDialog';
+
+// [SÉCURITÉ] Schémas refusés à la saisie : un lien « javascript:… » ou « data:… »
+// s'exécuterait chez les visiteurs du profil public. (Le profil public les
+// ignore aussi à l'affichage — voir handleLinkClick dans PublicProfile.jsx.)
+const UNSAFE_SCHEME = /^\s*(javascript|data|vbscript|file):/i;
 
 // [FIX THÈME] Carte calquée sur l'ancien fond sombre (rgba(255,255,255,0.25)
 // + texte blanc) — quasi invisible sur le fond clair du dashboard. Repassée
 // en carte blanche opaque, cohérente avec PlatformsPanel (dans
 // UserDashboard.jsx) qui l'englobe.
+//
+// [CRYPTO] Pour les plateformes `cryptoAddress` (bitcoin, ethereum, usdt, usdc,
+// tron, xrp), le champ contient l'ADRESSE du portefeuille (pas une URL) :
+//  - intitulé « Adresse du portefeuille » ;
+//  - contrôle de FORMAT non bloquant (avertissement sous le champ) ;
+//  - à la sortie du champ, l'adresse est nettoyée (espaces, « bitcoin:… », « ?amount=… ») ;
+//  - le titre affiché sur le profil est toujours modifiable (utile pour indiquer
+//    le réseau : « Mon adresse USDT (TRC20) »).
 export default function PlatformCard({ link, index, onUpdate, onRemove }) {
   const [expanded, setExpanded] = useState(false);
+  const [urlError, setUrlError] = useState('');
 
   const meta = PLATFORMS[link.platform] || {
     label: link.platform || 'Autre',
@@ -21,6 +35,43 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
       </svg>
     ),
   };
+
+  const isCrypto = !!meta.cryptoAddress;
+  const hasUrl = !!(link.url || '').trim();
+  const check = isCrypto && hasUrl ? validateCryptoAddress(link.platform, link.url) : null;
+  const addressWarning = check && !check.ok ? check.reason : '';
+  const hasError = !!urlError || !!addressWarning;
+  const idleBorder = hasError ? '#fca5a5' : '#e6e8f0';
+
+  const handleUrlChange = (e) => {
+    const value = e.target.value;
+    if (UNSAFE_SCHEME.test(value)) {
+      setUrlError("Ce type de lien n'est pas autorisé. Utilisez http(s)://, tel:, mailto: ou une adresse de portefeuille.");
+      return; // on ne met pas à jour : la valeur dangereuse n'est jamais enregistrée
+    }
+    setUrlError('');
+    onUpdate({ ...link, url: value });
+  };
+
+  // [CRYPTO] Nettoyage à la sortie du champ
+  const handleUrlBlur = (e) => {
+    e.target.style.borderColor = idleBorder;
+    if (!isCrypto) return;
+    const cleaned = extractCryptoAddress(link.url);
+    if (cleaned !== (link.url || '')) onUpdate({ ...link, url: cleaned });
+  };
+
+  const inputStyle = (borderColor) => ({
+    width: '100%', boxSizing: 'border-box',
+    background: '#f6f7fb',
+    border: `1px solid ${borderColor}`,
+    borderRadius: '10px',
+    padding: '7px 12px',
+    color: '#161a2e',
+    fontSize: '12px',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+  });
 
   return (
     <div
@@ -73,20 +124,22 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
           }
         </button>
 
-        {/* Toggle expand */}
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
-            color: '#9095a5',
-            display: 'flex', alignItems: 'center',
-          }}
-        >
-          {expanded
-            ? <ChevronUp style={{ width: '14px', height: '14px' }} />
-            : <ChevronDown style={{ width: '14px', height: '14px' }} />
-          }
-        </button>
+        {/* Toggle expand — inutile pour les adresses crypto (titre toujours visible) */}
+        {!isCrypto && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+              color: '#9095a5',
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            {expanded
+              ? <ChevronUp style={{ width: '14px', height: '14px' }} />
+              : <ChevronDown style={{ width: '14px', height: '14px' }} />
+            }
+          </button>
+        )}
 
         {/* Supprimer */}
         <button
@@ -105,53 +158,56 @@ export default function PlatformCard({ link, index, onUpdate, onRemove }) {
         </button>
       </div>
 
-      {/* URL — toujours visible */}
+      {/* URL / adresse — toujours visible */}
       <div style={{ padding: '0 12px 10px' }}>
+        {isCrypto && (
+          <label style={{ display: 'block', color: '#6b7280', fontSize: '11px', fontWeight: 600, margin: '0 0 4px' }}>
+            Adresse du portefeuille
+          </label>
+        )}
         <input
           type="text"
           value={link.url || ''}
-          onChange={(e) => onUpdate({ ...link, url: e.target.value })}
+          onChange={handleUrlChange}
           placeholder={meta.placeholder}
-          style={{
-            width: '100%', boxSizing: 'border-box',
-            background: '#f6f7fb',
-            border: '1px solid #e6e8f0',
-            borderRadius: '10px',
-            padding: '7px 12px',
-            color: '#161a2e',
-            fontSize: '12px',
-            outline: 'none',
-            transition: 'border-color 0.15s',
-          }}
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          style={inputStyle(idleBorder)}
           onFocus={(e) => e.target.style.borderColor = '#8b5cf6'}
-          onBlur={(e) => e.target.style.borderColor = '#e6e8f0'}
+          onBlur={handleUrlBlur}
         />
+        {urlError && (
+          <p style={{ color: '#dc2626', fontSize: '11px', margin: '5px 0 0', lineHeight: 1.4 }}>{urlError}</p>
+        )}
+        {addressWarning && (
+          <p style={{ color: '#b45309', fontSize: '11px', margin: '5px 0 0', lineHeight: 1.4 }}>
+            ⚠ {addressWarning}. Vérifiez avant de publier : une adresse erronée peut faire perdre des fonds.
+          </p>
+        )}
       </div>
 
-      {/* Libellé personnalisé — visible si expanded */}
-      {expanded && (
+      {/* Libellé personnalisé — visible si expanded (toujours pour les adresses crypto) */}
+      {(expanded || isCrypto) && (
         <div style={{ padding: '0 12px 12px' }}>
+          {isCrypto && (
+            <label style={{ display: 'block', color: '#6b7280', fontSize: '11px', fontWeight: 600, margin: '0 0 4px' }}>
+              Titre affiché sur votre profil
+            </label>
+          )}
           <input
             type="text"
             value={link.label || ''}
             onChange={(e) => onUpdate({ ...link, label: e.target.value })}
-            placeholder="Libellé personnalisé (optionnel)"
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              background: '#f6f7fb',
-              border: '1px solid #e6e8f0',
-              borderRadius: '10px',
-              padding: '7px 12px',
-              color: '#161a2e',
-              fontSize: '12px',
-              outline: 'none',
-              transition: 'border-color 0.15s',
-            }}
+            placeholder={isCrypto ? `Mon adresse ${meta.coin}` : 'Libellé personnalisé (optionnel)'}
+            style={inputStyle('#e6e8f0')}
             onFocus={(e) => e.target.style.borderColor = '#8b5cf6'}
             onBlur={(e) => e.target.style.borderColor = '#e6e8f0'}
           />
           <p style={{ color: '#9095a5', fontSize: '10px', margin: '5px 0 0', lineHeight: 1.4 }}>
-            Ce texte remplace le nom de la plateforme sur votre profil public.
+            {isCrypto
+              ? 'Pour USDT et USDC, indiquez le réseau (ex. « Mon adresse USDT (TRC20) ») : un envoi sur le mauvais réseau est souvent perdu.'
+              : 'Ce texte remplace le nom de la plateforme sur votre profil public.'}
           </p>
         </div>
       )}

@@ -47,6 +47,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
+import CryptoAddressRow from '../components/CryptoAddressRow';
 // [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
 import { triggerQrScan }          from '../lib/triggers/qr';
@@ -1520,10 +1521,24 @@ export default function PublicProfile({ previewProfile = null }) {
           </div>
         )}
 
-        {/* Liens */}
+                {/* Liens */}
         <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
           {mainLinks.map((link, i) => {
             const platform = resolvePlatform(link);
+
+            if (platform.cryptoAddress) {
+              return (
+                <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
+                  <CryptoAddressRow
+                    link={link}
+                    platform={platform}
+                    theme={{ text: LINK_TEXT_COLOR, border: LINK_BORDER_COLOR, bg: LINK_CARD_BG_IDLE, iconBg: LINK_ICON_BG, shadow: CARD_SHADOW }}
+                    onCopied={() => { if (profile && !isPreview) trackClick(profile.id, link.platform); }}
+                  />
+                </div>
+              );
+            }
+
             return (
               <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
                 <RippleButton

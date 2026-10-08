@@ -56,6 +56,13 @@ function LogoTile({
   );
 }
 
+// [CRYPTO] Formats d'adresses (contrôle de FORMAT uniquement, sans somme de contrôle).
+const RE_BTC_BECH32 = /^bc1[ac-hj-np-z02-9]{11,71}$/i;
+const RE_BTC_LEGACY = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+const RE_EVM        = /^0x[a-fA-F0-9]{40}$/;                 // Ethereum, USDT/USDC (ERC20, BEP20…)
+const RE_TRON       = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;         // TRON, USDT/USDC (TRC20)
+const RE_XRP        = /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/;      // XRP (adresse classique)
+
 export const PLATFORMS = {
   // ── Réseaux sociaux ──────────────────────────────────────────────────────
   instagram: {
@@ -361,6 +368,67 @@ playstore: {
     ),
   },
 
+  // ── Crypto ───────────────────────────────────────────────────────────────
+  // [CRYPTO] Deux familles :
+  //  1) cryptopay : un LIEN de paiement https (Binance Pay, Coinbase Commerce,
+  //     NOWPayments…). S'ouvre comme un lien classique.
+  //  2) Adresses de portefeuille (bitcoin, ethereum, usdt, usdc, tron, xrp) :
+  //     `cryptoAddress: true`. Le champ « url » du lien contient l'ADRESSE, pas
+  //     une URL. Le profil public l'affiche dans une ligne dédiée
+  //     (CryptoAddressRow) avec un bouton qui copie l'adresse uniquement.
+  //     `coin` sert au titre par défaut (« Mon adresse BITCOIN ») ;
+  //     `addressPatterns` : contrôle de FORMAT seulement (pas de somme de
+  //     contrôle) — voir validateCryptoAddress() plus bas.
+  // Icônes dessinées (pas les logos officiels) ; pour un vrai logo, utiliser
+  // <LogoTile> comme pour Wave.
+  cryptopay: {
+    label: 'Lien de paiement crypto', color: '#7C3AED', category: 'Crypto',
+    placeholder: 'https://pay.binance.com/… (lien de paiement)',
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#7C3AED"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="white" strokeWidth="1.6"/><path d="M12 7.2l3.2 4.8-3.2 4.8-3.2-4.8z" fill="white"/></svg>),
+  },
+  bitcoin: {
+    label: 'Bitcoin', color: '#F7931A', category: 'Crypto',
+    cryptoAddress: true, coin: 'BITCOIN',
+    addressPatterns: [RE_BTC_BECH32, RE_BTC_LEGACY],
+    placeholder: 'bc1q… ou 1… (adresse Bitcoin)',
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#F7931A"/><text x="12" y="16.6" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="13" fill="white">B</text><rect x="10" y="5.2" width="1.3" height="2.2" fill="white"/><rect x="12.7" y="5.2" width="1.3" height="2.2" fill="white"/><rect x="10" y="16.6" width="1.3" height="2.2" fill="white"/><rect x="12.7" y="16.6" width="1.3" height="2.2" fill="white"/></svg>),
+  },
+  ethereum: {
+    label: 'Ethereum', color: '#627EEA', category: 'Crypto',
+    cryptoAddress: true, coin: 'ETHEREUM',
+    addressPatterns: [RE_EVM],
+    placeholder: '0x… (adresse Ethereum)',
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#627EEA"/><path d="M12 4.2l4.6 7.6L12 14.5 7.4 11.8z" fill="white" opacity="0.95"/><path d="M12 15.6l4.6-2.7L12 19.8 7.4 12.9z" fill="white" opacity="0.8"/></svg>),
+  },
+  usdt: {
+    label: 'USDT (Tether)', color: '#26A17B', category: 'Crypto',
+    cryptoAddress: true, coin: 'USDT',
+    addressPatterns: [RE_EVM, RE_TRON],
+    placeholder: 'T… (TRC20) ou 0x… (ERC20/BEP20) — précisez le réseau dans le titre',
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#26A17B"/><rect x="6.2" y="6.3" width="11.6" height="2.3" rx="0.4" fill="white"/><rect x="10.8" y="8.4" width="2.4" height="9.4" fill="white"/><ellipse cx="12" cy="11.8" rx="5.4" ry="1.3" fill="none" stroke="white" strokeWidth="1.1"/></svg>),
+  },
+  usdc: {
+    label: 'USDC', color: '#2775CA', category: 'Crypto',
+    cryptoAddress: true, coin: 'USDC',
+    addressPatterns: [RE_EVM, RE_TRON],
+    placeholder: '0x… (adresse USDC) — précisez le réseau dans le titre',
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#2775CA"/><path d="M8.4 5.9a7 7 0 0 0 0 12.2" fill="none" stroke="white" strokeWidth="1.3" strokeLinecap="round"/><path d="M15.6 5.9a7 7 0 0 1 0 12.2" fill="none" stroke="white" strokeWidth="1.3" strokeLinecap="round"/><text x="12" y="16.3" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="11.5" fill="white">$</text></svg>),
+  },
+  tron: {
+    label: 'TRON (TRX)', color: '#EF0027', category: 'Crypto',
+    cryptoAddress: true, coin: 'TRON',
+    addressPatterns: [RE_TRON],
+    placeholder: 'T… (adresse TRON)',
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#EF0027"/><path d="M7 7.6l10 2-5.1 8.4z" fill="none" stroke="white" strokeWidth="1.4" strokeLinejoin="round"/><path d="M7 7.6l6.4 5M17 9.6l-3.6 3" fill="none" stroke="white" strokeWidth="1.2" strokeLinecap="round"/></svg>),
+  },
+  xrp: {
+    label: 'Ripple (XRP)', color: '#23292F', category: 'Crypto',
+    cryptoAddress: true, coin: 'XRP',
+    addressPatterns: [RE_XRP],
+    placeholder: 'r… (adresse XRP) — ajoutez le tag de destination dans le titre si besoin',
+    icon: (<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="12" fill="#23292F"/><path d="M6.6 7.2c2.3 3 3.6 3.9 5.4 3.9s3.1-.9 5.4-3.9" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round"/><path d="M6.6 16.8c2.3-3 3.6-3.9 5.4-3.9s3.1.9 5.4 3.9" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round"/></svg>),
+  },
+
   // ── Autre ────────────────────────────────────────────────────────────────
   website: {
     label: 'Site web', color: '#6366F1', category: 'Autre',
@@ -374,10 +442,31 @@ playstore: {
   },
 };
 
+// [CRYPTO] Extrait l'adresse brute d'une saisie : retire un préfixe de schéma
+// (« bitcoin:… »), les paramètres (« ?amount=… ») et les espaces.
+export function extractCryptoAddress(raw) {
+  return String(raw || '').trim()
+    .replace(/^(bitcoin|ethereum|litecoin|tron|ripple|xrp|usdt|usdc):/i, '')
+    .split('?')[0]
+    .replace(/\s+/g, '');
+}
+
+// [CRYPTO] Contrôle de format d'une adresse pour une plateforme `cryptoAddress`.
+// Renvoie { ok, address, reason? }. Ne vérifie PAS que l'adresse existe ni
+// qu'elle vous appartient : à utiliser à la saisie pour attraper les fautes de frappe.
+export function validateCryptoAddress(platformKey, raw) {
+  const p = PLATFORMS[platformKey];
+  if (!p?.cryptoAddress) return { ok: true, address: String(raw || '').trim() };
+  const address = extractCryptoAddress(raw);
+  if (!address) return { ok: false, address, reason: 'Adresse manquante' };
+  const ok = (p.addressPatterns || []).some((re) => re.test(address));
+  return ok ? { ok, address } : { ok: false, address, reason: `Adresse ${p.coin} invalide : vérifiez le format et le réseau` };
+}
+
 const CATEGORY_ORDER = [
   'Réseaux sociaux', 'Messagerie', 'Musique',
   'Navigation', 'Développement', 'Créatif',
-  'Business', 'Contact', 'Paiement', 'Autre',
+  'Business', 'Contact', 'Paiement', 'Crypto', 'Autre',
 ];
 
 // Plateformes autorisées en plusieurs exemplaires (numéros différents),
@@ -387,6 +476,9 @@ const REPEATABLE_LIMITS = {
   whatsapp: 2,
   phone: 3,
   fixedphone: 2,
+  cryptopay: 3,   // [CRYPTO] ex. un lien par réseau / par stablecoin
+  usdt: 3,        // [CRYPTO] une adresse par réseau (TRC20, ERC20, BEP20…)
+  usdc: 3,
 };
 
 // [LOGO RÉEL v2] Dans cette fenêtre, les plateformes à logo réel (celles qui

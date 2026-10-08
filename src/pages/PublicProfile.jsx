@@ -3,33 +3,24 @@
  *
  * [ ... tout l'historique de révisions précédent est inchangé, voir la
  *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
- *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, DL1-DL8 ... ]
+ *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, PERF2a-f, DL1-DL8 ... ]
  *
- * PERF2 (cette révision) — Affichage instantané via le pré-rendu serveur :
- *  [PERF2a] api/profile.js injecte dans le HTML window.__PROFILE__ (profil) et
- *        window.__PROFILE_EXTRAS__ (produits + documents visibles). Le composant
- *        démarre avec ces données : plus de skeleton, plus de cascade
- *        profil → produits/documents, plus de décalage de mise en page quand
- *        la boutique / les documents arrivent au-dessus des liens.
- *        Les données restent revalidées en arrière-plan (le CDN peut servir
- *        une version vieille de 60 s à 10 min) ; le state n'est remplacé que
- *        si le contenu a réellement changé.
- *  [PERF2b] Image principale (LCP) : heroRawUrl() DOIT rester identique à celle
- *        de api/profile.js. Toute image dont l'URL d'origine == hero est
- *        demandée à HERO_WIDTH (même valeur côté serveur) pour que le
- *        <link rel="preload"> du HTML soit réutilisé par le navigateur.
- *        Le hero ignore donc le mode léger (une seule image, largeur 720) :
- *        sinon le preload serait téléchargé en plus de la variante 480.
- *  [PERF2c] Hero en loading eager + fetchPriority high. La bannière est
- *        toujours eager (elle est en haut de page).
- *  [PERF2d] images (slider événement) calculé par useMemo au lieu de
- *        useState + useEffect : l'image est présente dès le 1er rendu au
- *        lieu d'apparaître un rendu plus tard (gain LCP + CLS).
- *  [PERF2e] trackView / trackProfileVisit différés (requestIdleCallback,
- *        timeout 2 s) : l'appel ipapi.co ne concurrence plus l'image LCP.
- *  [PERF2f] Recherche du profil : « _ » et « % » échappés dans ilike()
- *        (jokers SQL), sinon « jean_luc » pouvait matcher « jeanxluc » et
- *        maybeSingle() renvoyait une erreur → "Profil introuvable".
+ * MODAL (cette révision) — Modale détail produit refaite pour tous les mobiles :
+ *  [MODAL1] Prix : whitespace nowrap + taille fluide clamp() ; l'unité « F »
+ *        est plus petite et collée au nombre (plus de « 350 000 / F » sur deux
+ *        lignes). L'ancien prix et la pastille « Économise » passent DESSOUS
+ *        (flex-wrap) au lieu de se casser quand la place manque.
+ *  [MODAL2] Image : object-fit contain (jamais rognée) + fond flouté de la même
+ *        image pour supprimer les bandes noires. Le flou est désactivé en mode
+ *        léger (zéro coût GPU). Même URL que l'image nette → pas de requête
+ *        supplémentaire.
+ *  [MODAL3] Zoom : toucher l'image (ou le bouton « Agrandir ») ouvre
+ *        l'ImageLightbox en qualité d'origine. La touche Échap ferme d'abord le
+ *        zoom, puis la modale.
+ *  [MODAL4] Mise en page : barre du haut compacte (poignée + fermer sur une
+ *        ligne), zone centrale scrollable, bouton WhatsApp FIXE en pied
+ *        (toujours visible), safe-area-inset-bottom, overscroll contain,
+ *        role="dialog" + aria-modal.
  *
  * MODE DATA-LIGHT :
  *  [DL1] Détection automatique via le hook useDataSaverMode() (header
@@ -39,44 +30,15 @@
  *        visite (voir le hook), ou si le visiteur touche le switch [DL7].
  *  [DL2] Police custom Manrope : chargement du Google Font entièrement
  *        sauté en mode léger (effet à if (isLight) return; en tête).
- *        fontFamily du conteneur principal bascule sur SYSTEM_FONT_STACK
- *        (police système, poids zéro réseau) — hérité par tous les
- *        enfants qui ne fixent pas leur propre fontFamily.
- *  [DL3] Images : nouvel helper imgUrl(url, {width, quality, format})
- *        ajoute les paramètres de transformation à la volée de Supabase
- *        Storage. Toutes les images "passives" (avatar, bannière, cartes
- *        boutique, carrousel événement) demandent une largeur réduite en
- *        mode léger. Les images ouvertes explicitement par le visiteur
- *        (lightbox plein écran, modale produit) restent en qualité
- *        normale : c'est un geste volontaire, pas un chargement passif.
- *        ⚠️ Nécessite que la transformation d'image Supabase Storage soit
- *        activée sur le projet (plan Pro et supérieur) ; sur un plan sans
- *        transformation, ces paramètres sont simplement ignorés par le
- *        CDN et l'image d'origine est servie (pas de casse, juste pas
- *        d'économie).
- *  [DL4] Fond "mesh" animé ([P4]) : les deux taches radiales floutées et
- *        leur animation pp-meshDrift sont désactivées en mode léger
- *        (animation:none, filter/blur retiré) — remplacées par un simple
- *        dégradé plat. Coupe le coût de repaint GPU en continu, pas
- *        seulement le poids réseau.
- *  [DL5] Indicateur de poids ([DL5]) : en mode léger uniquement, un petit
- *        texte "~XX Ko chargés" apparaît sous le badge de marque, calculé
- *        via performance.getEntriesByType('resource') après le premier
- *        rendu stable. Argument de confiance visible pour le visiteur
- *        ("cette page respecte votre forfait data").
- *  [DL6] isLight propagé en prop à PublicProductCard et ProductDetailModal
- *        (déjà des composants séparés) pour qu'ils réduisent eux aussi la
- *        largeur demandée à Supabase Storage sur les visuels produits.
- *  [DL7] Petit switch "Mode léger" discret, à côté du badge de marque en
- *        bas de page : permet au visiteur de forcer manuellement l'état
- *        (utile sur desktop où Save-Data n'existe pas, ou pour repasser
- *        en mode complet malgré la détection auto). Préférence mémorisée
- *        en localStorage via le hook, prioritaire sur la détection auto
- *        tant qu'elle n'est pas effacée.
+ *  [DL3] Images : helper imgUrl(url, {width, quality}) — transformation à la
+ *        volée de Supabase Storage (plan Pro requis, voir IMG_TRANSFORM).
+ *  [DL4] Fond "mesh" animé désactivé en mode léger.
+ *  [DL5] Indicateur de poids "~XX Ko chargés" en mode léger.
+ *  [DL6] isLight propagé à PublicProductCard et ProductDetailModal.
+ *  [DL7] Switch "Mode léger" discret en bas de page.
  *
- * Aucun changement de comportement en mode complet (isLight === false) :
- * toutes ces additions sont conditionnelles et n'affectent pas le rendu
- * existant quand la détection ne déclenche pas le mode léger.
+ * Aucun changement de comportement en mode complet (isLight === false) hors
+ * la modale produit [MODAL1-4].
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -99,26 +61,15 @@ import { useDataSaverMode } from '../hooks/useDataSaverMode';
 // [C11] Numéro support centralisé — modifier ici uniquement
 const SUPPORT_WHATSAPP = '2250576031212';
 
-// [W2] Surface des cartes — passée en blanc quasi opaque (au lieu de la
-// surface sombre CARD_BG précédente) pour que boutons de liens, cartes
-// boutique, cartes documents, bloc countdown et bloc description
-// événement soient blancs, tout en gardant l'effet "glass" via le blur.
+// [W2] Surface des cartes — blanc quasi opaque
 const CARD_BG        = 'rgba(255,255,255,0.94)';
 const CARD_BG_HOVER  = 'rgba(255,255,255,1)';
 const CARD_BORDER    = '1px solid rgba(0,0,0,0.10)';
-// [PERF1] backdropFilter retiré : appliqué en boucle sur chaque carte (liens,
-// boutique, documents), il forçait un recalcul GPU par carte visible à
-// CHAQUE frame de scroll (contrairement à un flou statique). Sur mobile,
-// avec 6-15+ cartes visibles simultanément, ça saturait le compositeur et
-// rendait le scroll saccadé. Impact visuel quasi nul à retirer : CARD_BG
-// est déjà opaque à 94% (rgba(255,255,255,0.94)), le flou derrière une
-// carte quasi opaque n'apportait presque rien à l'œil.
+// [PERF1] backdropFilter retiré des cartes (scroll fluide sur mobile)
 const CARD_BLUR      = {};
 const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
 
-// [W3] Couleurs de texte dédiées au contenu affiché sur les cartes
-// blanches (CARD_BG), pour garder un bon contraste (au lieu du blanc
-// utilisé auparavant sur fond sombre).
+// [W3] Couleurs de texte pour les cartes blanches
 const CARD_TEXT        = '#15102a';
 const CARD_TEXT_MUTED  = 'rgba(21,16,42,0.55)';
 const CARD_TEXT_FAINT  = 'rgba(21,16,42,0.42)';
@@ -133,10 +84,6 @@ const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
 const FONT_LINK_ID          = 'pp-font-manrope';
 
 // ─── [DL3] Images allégées via transformation Supabase Storage ────────
-// Ajoute width/quality/format à une URL Supabase Storage pour demander
-// une variante réduite au CDN. Sans effet si l'URL est vide, ou si le
-// projet Supabase n'a pas la transformation d'image activée (le CDN
-// ignore alors simplement ces paramètres et sert l'original).
 // ⚠️ [PERF2b] Copie identique dans api/profile.js — à garder synchronisées.
 // Transformation d'image Supabase INDISPONIBLE sur ce projet (render/image → 403,
 // plan Pro requis). Tant que ce drapeau est false, imgUrl() renvoie l'URL
@@ -152,8 +99,7 @@ function imgUrl(url, { width, quality = 70 } = {}) {
   return `${base}${sep}width=${width}&quality=${quality}`;
 }
 
-// Largeurs demandées selon le mode — mode léger nettement plus bas, mode
-// complet proche de la taille d'affichage réelle (retina inclus).
+// Largeurs demandées selon le mode
 const IMG_WIDTHS = {
   light: { avatar: 90,  banner: 480, product: 220, event: 480 },
   full:  { avatar: 212, banner: 960, product: 440, event: 960 },
@@ -163,8 +109,7 @@ const IMG_WIDTHS = {
 // ⚠️ Doit rester identique à HERO_WIDTH dans api/profile.js.
 const HERO_WIDTH = 720;
 
-// [PERF2b] Image principale — MÊME RÈGLE que heroRawUrl() dans api/profile.js :
-// profil événement avec images → 1re image de l'événement ; sinon la bannière.
+// [PERF2b] Image principale — MÊME RÈGLE que heroRawUrl() dans api/profile.js
 function heroRawUrl(p) {
   if (!p) return null;
   const https = (u) => (typeof u === 'string' && /^https:\/\//i.test(u) ? u : null);
@@ -177,8 +122,7 @@ function heroRawUrl(p) {
   return https(p.banner_url);
 }
 
-// [PERF2a] Données injectées par api/profile.js (null si absentes ou si elles
-// concernent un autre profil, ex. navigation interne entre deux profils).
+// [PERF2a] Données injectées par api/profile.js
 function readSsrData(username) {
   try {
     const p = window.__PROFILE__;
@@ -192,7 +136,7 @@ function readSsrData(username) {
   }
 }
 
-// N'écrase le state que si le contenu a réellement changé (évite des rendus inutiles)
+// N'écrase le state que si le contenu a réellement changé
 const sameJson = (a, b) => {
   try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
 };
@@ -204,15 +148,6 @@ const deferIdle = (fn, timeout = 2000) => {
 };
 
 // ─── [F1] Verrouillage du scroll body — mutualisé ──────────────
-// Remplace les deux implémentations dupliquées (ImageLightbox et
-// ProductDetailModal faisaient chacune leur propre
-// document.body.style.overflow='hidden'). Un compteur global permet
-// aux deux modales de coexister sans se marcher dessus (si l'une se
-// ferme pendant que l'autre est encore ouverte, le scroll ne se
-// débloque que lorsque le compteur retombe à zéro). Le pattern
-// position:fixed + restauration du scrollY est nécessaire car iOS
-// Safari ignore parfois overflow:hidden seul sur le body, notamment
-// quand un clavier virtuel est impliqué ailleurs sur la page.
 let __ppScrollLockCount = 0;
 let __ppScrollY = 0;
 
@@ -246,22 +181,10 @@ function useBodyScrollLock() {
 }
 
 // ─── Tracking ─────────────────────────────────────────────────
-// [TRK] Bloc corrigé — remplace tout ce qui se trouve entre
-// « // ─── Tracking ─── » et « // ─── Utilitaires ─── » dans PublicProfile.jsx.
-//
-// [TRK1] fetchCountry() renvoie null (et non '') quand la géoloc échoue :
-//        un seul « Inconnu » côté stats au lieu de deux lignes distinctes.
-// [TRK2] isAutomated() : ignore les clients automatisés (PageSpeed Insights /
-//        Lighthouse, GTmetrix, Googlebot, navigateurs headless...). Ils exécutent
-//        le JS, tournent depuis des datacenters (souvent US) et testent mobile +
-//        desktop simultanément → vues « US » en double.
-// [TRK3] alreadyTracked() : une seule vue par profil et par session d'onglet
-//        (un rechargement ne recompte plus).
-// [TRK4] isTrackingDisabled() : exclusion manuelle du propriétaire. Ouvrir une
-//        fois https://www.socialapp.work/TON_USERNAME?notrack=1 dans un
-//        navigateur → ses visites/clics ne sont plus comptés (?notrack=0 pour
-//        réactiver). Ne fonctionne qu'en navigation normale : une fenêtre
-//        privée est comptée, ce qui permet de tester le tracking.
+// [TRK1] fetchCountry() renvoie null (et non '') quand la géoloc échoue.
+// [TRK2] isAutomated() : ignore PageSpeed/Lighthouse, GTmetrix, Googlebot, headless...
+// [TRK3] alreadyTracked() : une seule vue par profil et par session d'onglet.
+// [TRK4] isTrackingDisabled() : exclusion manuelle du propriétaire (?notrack=1 / ?notrack=0).
 
 function detectDevice() {
   const ua = navigator.userAgent.toLowerCase();
@@ -285,8 +208,7 @@ function cleanReferrer() {
   } catch { return 'direct'; }
 }
 
-// [TRK2] Liste volontairement précise : « \bbot\b » et non « bot » seul, pour ne
-// pas bloquer de vrais téléphones dont le modèle contient « bot » (ex. Cubot).
+// [TRK2] « \bbot\b » et non « bot » seul, pour ne pas bloquer de vrais téléphones (ex. Cubot).
 const AUTOMATED_UA = /googlebot|bingbot|\bbot\b|crawler|spider|slurp|lighthouse|pagespeed|gtmetrix|headlesschrome|phantomjs/i;
 
 function isAutomated() {
@@ -334,10 +256,9 @@ async function fetchCountry() {
   }
 }
 
-// [C3] console.log de debug supprimés — erreurs Supabase uniquement en dev
+// [C3] erreurs Supabase uniquement en dev
 async function trackView(profileId) {
   try {
-    // [C2] await direct, pas de Promise.all inutile
     const geo = await fetchCountry();
     const payload = {
       profile_id:   profileId,
@@ -371,11 +292,8 @@ async function trackClick(profileId, platform) {
   }
 }
 
-// [DL8] Tracking CRM dédié — capture l'IP réelle du visiteur via l'Edge
-// Function track-profile-visit (impossible à lire côté client, il faut
-// passer par le serveur qui reçoit la requête HTTP brute). Best-effort :
-// un échec ne doit jamais bloquer ou ralentir l'affichage du profil
-// public, d'où le .catch() silencieux plutôt qu'un throw.
+// [DL8] Tracking CRM dédié — capture l'IP réelle via l'Edge Function
+// track-profile-visit. Best-effort : un échec ne bloque jamais l'affichage.
 function trackProfileVisit(profileId) {
   supabase.functions.invoke('track-profile-visit', {
     body: {
@@ -400,10 +318,7 @@ const parseColors = (tc) => {
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
 
-// [S2] Détermine si le contenu posé par-dessus le fond du profil doit
-// être "clair" (texte blanc) ou "sombre" (texte foncé), pour que les
-// boutons de liens désormais transparents restent lisibles quel que
-// soit le fond choisi par l'utilisateur.
+// [S2] Détermine si le contenu posé par-dessus le fond doit être "clair" ou "sombre"
 function getProfileContrast(profile) {
   if (profile?.bg_image_url) return 'light';
 
@@ -436,9 +351,10 @@ const getCountdown = (eventDate) => {
 
 const formatPrice = (p) => p ? Number(p).toLocaleString('fr-FR') + ' F' : '';
 
-// [SB1] Résout les métadonnées d'affichage (icône, couleur, libellé) d'un
-// lien à partir de PLATFORMS, avec le même repli générique que la section
-// "Liens" pour toute plateforme inconnue.
+// [MODAL1] Nombre formaté avec espaces insécables : « 350 000 » ne se coupe jamais
+const formatNumber = (p) => Number(p || 0).toLocaleString('fr-FR').replace(/[\s\u202f]/g, '\u00A0');
+
+// [SB1] Résout les métadonnées d'affichage (icône, couleur, libellé) d'un lien
 function resolvePlatform(link) {
   const key = (link.platform || '').toLowerCase();
   return PLATFORMS[key] || {
@@ -497,8 +413,6 @@ function ProfileSkeleton() {
 
 // [PERF2c] eager : charge sans attendre (images en haut de page) ;
 // priority : eager + fetchPriority high (image LCP uniquement).
-// Le test img.complete évite de rester à opacity 0 si l'image était déjà
-// disponible (préchargée / en cache) avant l'attache du onLoad.
 function LazyImg({ src, alt, style, eager = false, priority = false }) {
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef(null);
@@ -589,7 +503,7 @@ function ImageLightbox({ src, onClose }) {
       <button
         onClick={onClose}
         aria-label="Fermer"
-        style={{ position:'absolute', top:'16px', right:'16px', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'white', zIndex:2, touchAction:'manipulation' }}
+        style={{ position:'absolute', top:'max(16px, env(safe-area-inset-top, 0px))', right:'16px', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'white', zIndex:2, touchAction:'manipulation' }}
       >
         <X size={18} />
       </button>
@@ -628,62 +542,158 @@ function RippleButton({ onClick, style, children, platformColor }) {
   );
 }
 
-// [DL6] isLight en prop — réduit la largeur demandée à Supabase Storage
-// pour l'image produit affichée dans la modale de détail.
-function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLight }) {
-  const discount = product.original_price && product.price
-    ? Math.round((1 - product.price / product.original_price) * 100)
-    : 0;
+// [MODAL1-4][DL6] Modale détail produit — responsive tous mobiles.
+// Props : isLight (mode data-light), onZoom(url) ouvre l'ImageLightbox du
+// parent, isZoomed (true tant que le lightbox est ouvert : Échap ferme alors
+// uniquement le zoom).
+function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLight, onZoom, isZoomed }) {
+  const hasOld   = !!product.original_price && Number(product.original_price) > Number(product.price);
+  const discount = hasOld ? Math.round((1 - product.price / product.original_price) * 100) : 0;
+  const inStock  = product.is_available !== false;
   const waNumber = (whatsappNumber || '').replace(/\D/g, '');
-  const waMsg = encodeURIComponent(`Bonjour ! Je suis intéressé(e) par votre article : *${product.title}* à ${formatPrice(product.price)}. Est-il encore disponible ?`);
+  const waMsg    = encodeURIComponent(`Bonjour ! Je suis intéressé(e) par votre article : *${product.title}* à ${formatPrice(product.price)}. Est-il encore disponible ?`);
   const imgWidth = isLight ? IMG_WIDTHS.light.product * 2 : IMG_WIDTHS.full.product * 2; // vue détail = plus grande que la vignette
+  const showCta  = inStock && !!waNumber;
+  const canZoom  = !!product.image_url && typeof onZoom === 'function';
 
   useBodyScrollLock();
 
+  // [MODAL3] Échap : ferme la modale, sauf si le zoom est ouvert (il se ferme d'abord)
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape' && !isZoomed) onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose, isZoomed]);
+
   return (
-    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:'#0f0a1e', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92dvh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
-        <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}>
-          <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.15)' }} />
-        </div>
-        <div style={{ display:'flex', justifyContent:'flex-end', padding:'8px 16px 0' }}>
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={product.title}
+      style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background:'#0f0a1e', border:'1px solid rgba(255,255,255,0.12)', borderBottom:'none', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92dvh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
+      >
+        {/* Barre du haut : poignée centrée + fermer à droite, sur une seule ligne */}
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center', height:'52px', flexShrink:0 }}>
+          <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.18)' }} />
           <button
             onClick={onClose}
             aria-label="Fermer"
-            style={{ width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.6)', fontSize:'18px', touchAction:'manipulation' }}
-          >×</button>
+            style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.75)', touchAction:'manipulation' }}
+          >
+            <X size={18} />
+          </button>
         </div>
-        <div style={{ overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain', padding:'0 0 calc(32px + env(safe-area-inset-bottom, 0px))' }}>
-          <div style={{ margin:'10px 16px 0', borderRadius:'18px', overflow:'hidden', aspectRatio:'4/3', background:'rgba(255,255,255,0.05)', position:'relative' }}>
-            {product.image_url
-              ? <LazyImg src={imgUrl(product.image_url, { width: imgWidth })} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-              : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ShoppingBag size={48} color="rgba(255,255,255,0.15)" /></div>
-            }
-            {discount > 0 && <div style={{ position:'absolute', top:'12px', left:'12px', background:'#22c55e', borderRadius:'8px', padding:'4px 10px', fontSize:'13px', fontWeight:700, color:'white' }}>-{discount}%</div>}
-            {!product.is_available && (
-              <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+
+        {/* Contenu scrollable */}
+        <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain', padding:'0 16px 20px' }}>
+
+          {/* Image — affichée en entier, fond flouté de la même image, zoom au toucher */}
+          <div
+            onClick={canZoom ? () => onZoom(product.image_url) : undefined}
+            style={{ borderRadius:'18px', overflow:'hidden', aspectRatio:'4/3', background:'#0b0716', position:'relative', isolation:'isolate', cursor: canZoom ? 'zoom-in' : 'default', touchAction:'manipulation' }}
+          >
+            {product.image_url ? (
+              <>
+                {/* Fond flouté (désactivé en mode léger : zéro coût GPU) */}
+                {!isLight && (
+                  <img
+                    src={imgUrl(product.image_url, { width: imgWidth })}
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    style={{ position:'absolute', inset:'-20px', width:'calc(100% + 40px)', height:'calc(100% + 40px)', objectFit:'cover', filter:'blur(24px) saturate(1.2)', opacity:0.55, transform:'scale(1.1)', zIndex:0, pointerEvents:'none' }}
+                  />
+                )}
+                {/* Image nette, jamais rognée */}
+                <LazyImg
+                  eager
+                  src={imgUrl(product.image_url, { width: imgWidth })}
+                  alt={product.title}
+                  style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', objectPosition:'center', display:'block', zIndex:1 }}
+                />
+              </>
+            ) : (
+              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <ShoppingBag size={48} color="rgba(255,255,255,0.15)" />
+              </div>
+            )}
+
+            {discount > 0 && (
+              <div style={{ position:'absolute', top:'10px', left:'10px', zIndex:2, background:'#22c55e', borderRadius:'8px', padding:'4px 10px', fontSize:'13px', fontWeight:800, color:'white', boxShadow:'0 4px 12px rgba(0,0,0,0.35)' }}>-{discount}%</div>
+            )}
+
+            {canZoom && inStock && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onZoom(product.image_url); }}
+                aria-label="Agrandir l'image"
+                style={{ position:'absolute', bottom:'10px', right:'10px', zIndex:2, display:'flex', alignItems:'center', gap:'5px', background:'rgba(0,0,0,0.6)', color:'white', border:'1px solid rgba(255,255,255,0.18)', borderRadius:'999px', padding:'7px 12px', minHeight:'36px', fontSize:'11px', fontWeight:700, cursor:'pointer', touchAction:'manipulation' }}
+              >
+                <ZoomIn size={13} /> Agrandir
+              </button>
+            )}
+
+            {!inStock && (
+              <div style={{ position:'absolute', inset:0, zIndex:3, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
                 <span style={{ background:'rgba(0,0,0,0.8)', color:'white', fontSize:'13px', fontWeight:700, padding:'8px 20px', borderRadius:'100px' }}>INDISPONIBLE</span>
               </div>
             )}
           </div>
-          <div style={{ padding:'18px 20px 0' }}>
-            <h2 style={{ color:'white', fontSize:'20px', fontWeight:800, margin:'0 0 12px', lineHeight:1.3 }}>{product.title}</h2>
-            <div style={{ display:'flex', alignItems:'baseline', gap:'10px', marginBottom:'16px' }}>
-              <span style={{ fontSize:'28px', fontWeight:900, color:product.original_price ? '#ff6b35' : 'white', letterSpacing:'-1px' }}>{formatPrice(product.price)}</span>
-              {product.original_price && <span style={{ fontSize:'16px', color:'rgba(255,255,255,0.35)', textDecoration:'line-through' }}>{formatPrice(product.original_price)}</span>}
-              {discount > 0 && <span style={{ fontSize:'13px', background:'rgba(34,197,94,0.15)', color:'#22c55e', padding:'3px 10px', borderRadius:'100px', fontWeight:700 }}>Économise {formatPrice(product.original_price - product.price)}</span>}
+
+          {/* Titre */}
+          <h2 style={{ color:'white', fontSize:'clamp(17px, 5vw, 21px)', fontWeight:800, margin:'16px 0 10px', lineHeight:1.25, wordBreak:'break-word' }}>
+            {product.title}
+          </h2>
+
+          {/* [MODAL1] Prix : jamais coupé, les éléments passent dessous si besoin */}
+          <div style={{ display:'flex', flexWrap:'wrap', alignItems:'baseline', columnGap:'12px', rowGap:'6px', marginBottom:'12px' }}>
+            <span style={{ whiteSpace:'nowrap', fontSize:'clamp(26px, 8.5vw, 32px)', fontWeight:900, lineHeight:1, letterSpacing:'-0.5px', color: hasOld ? '#ff6b35' : 'white', fontVariantNumeric:'tabular-nums' }}>
+              {formatNumber(product.price)}
+              <span style={{ fontSize:'0.55em', fontWeight:800, marginLeft:'4px', letterSpacing:0 }}>F</span>
+            </span>
+            {hasOld && (
+              <span style={{ whiteSpace:'nowrap', fontSize:'15px', color:'rgba(255,255,255,0.4)', textDecoration:'line-through', fontVariantNumeric:'tabular-nums' }}>
+                {formatNumber(product.original_price)}&nbsp;F
+              </span>
+            )}
+          </div>
+
+          {/* Pastilles : stock + économie */}
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'8px', marginBottom:'16px' }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background: inStock ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:'1px solid ' + (inStock ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), borderRadius:'100px', padding:'6px 12px' }}>
+              <div style={{ width:'7px', height:'7px', borderRadius:'50%', background: inStock ? '#22c55e' : '#ef4444', flexShrink:0 }} />
+              <span style={{ fontSize:'12px', fontWeight:600, whiteSpace:'nowrap', color: inStock ? '#22c55e' : '#f87171' }}>
+                {inStock ? 'En stock · Disponible' : 'Rupture de stock'}
+              </span>
             </div>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:product.is_available !== false ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:'1px solid ' + (product.is_available !== false ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), borderRadius:'100px', padding:'5px 12px', marginBottom:'18px' }}>
-              <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:product.is_available !== false ? '#22c55e' : '#ef4444', flexShrink:0 }} />
-              <span style={{ fontSize:'12px', fontWeight:600, color:product.is_available !== false ? '#22c55e' : '#f87171' }}>{product.is_available !== false ? 'En stock · Disponible' : 'Rupture de stock'}</span>
-            </div>
-            {product.description && (
-              <div style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'14px', padding:'14px 16px', marginBottom:'20px' }}>
-                <p style={{ color:'rgba(255,255,255,0.55)', fontSize:'11px', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 8px' }}>Description</p>
-                <p style={{ color:'rgba(255,255,255,0.8)', fontSize:'14px', lineHeight:1.7, margin:0, whiteSpace:'pre-wrap' }}>{product.description}</p>
+            {discount > 0 && (
+              <div style={{ display:'inline-flex', alignItems:'center', background:'rgba(34,197,94,0.12)', border:'1px solid rgba(34,197,94,0.25)', borderRadius:'100px', padding:'6px 12px' }}>
+                <span style={{ fontSize:'12px', fontWeight:700, whiteSpace:'nowrap', color:'#22c55e' }}>
+                  Économise {formatNumber(product.original_price - product.price)}&nbsp;F
+                </span>
               </div>
             )}
-            {product.is_available !== false && waNumber && (
+          </div>
+
+          {/* Description */}
+          {product.description && (
+            <div style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'14px', padding:'14px 16px' }}>
+              <p style={{ color:'rgba(255,255,255,0.55)', fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 8px' }}>Description</p>
+              <p style={{ color:'rgba(255,255,255,0.85)', fontSize:'14px', lineHeight:1.65, margin:0, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{product.description}</p>
+            </div>
+          )}
+
+          <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'11px', textAlign:'center', margin:'16px 0 0' }}>🔒 Paiement et livraison directement avec le vendeur</p>
+        </div>
+
+        {/* [MODAL4] Pied fixe : le bouton reste toujours visible */}
+        {(showCta || !inStock) && (
+          <div style={{ flexShrink:0, padding:'12px 16px calc(12px + env(safe-area-inset-bottom, 0px))', background:'linear-gradient(to top, #0f0a1e 78%, rgba(15,10,30,0))', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+            {showCta ? (
               <a
                 href={`https://wa.me/${waNumber}?text=${waMsg}`}
                 target="_blank"
@@ -695,19 +705,17 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
                     price:        product.price,
                   });
                 }}
-                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', padding:'15px', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', marginBottom:'12px', touchAction:'manipulation' }}
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', minHeight:'52px', padding:'0 16px', boxSizing:'border-box', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', touchAction:'manipulation' }}
               >
                 <WhatsAppIcon size={20} color="white" /> Commander sur WhatsApp
               </a>
-            )}
-            {product.is_available === false && (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', width:'100%', padding:'15px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', color:'rgba(255,255,255,0.35)', fontSize:'14px', fontWeight:600, marginBottom:'12px' }}>
+            ) : (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', minHeight:'52px', boxSizing:'border-box', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', color:'rgba(255,255,255,0.4)', fontSize:'14px', fontWeight:600 }}>
                 Article temporairement indisponible
               </div>
             )}
-            <p style={{ color:'rgba(255,255,255,0.2)', fontSize:'11px', textAlign:'center', margin:0 }}>🔒 Paiement et livraison directement avec le vendeur</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -742,7 +750,7 @@ function PublicProductCard({ product, onOpen, isLight }) {
         <div style={{ position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.6)', borderRadius:'100px', padding:'3px 8px', fontSize:'10px', color:'rgba(255,255,255,0.9)', fontWeight:600 }}>Voir +</div>
       </div>
       <div style={{ padding:'10px 12px 12px' }}>
-        <span style={{ fontSize:'16px', fontWeight:800, color:product.original_price ? '#ff6b35' : CARD_TEXT, display:'block', lineHeight:1.1 }}>{formatPrice(product.price)}</span>
+        <span style={{ fontSize:'16px', fontWeight:800, color:product.original_price ? '#ff6b35' : CARD_TEXT, display:'block', lineHeight:1.1, whiteSpace:'nowrap' }}>{formatPrice(product.price)}</span>
         {product.original_price && <span style={{ fontSize:'11px', color:CARD_TEXT_FAINT, textDecoration:'line-through' }}>{formatPrice(product.original_price)}</span>}
         <p style={{ color:CARD_TEXT, opacity:0.85, fontSize:'12px', fontWeight:600, margin:'4px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{product.title}</p>
       </div>
@@ -751,10 +759,6 @@ function PublicProductCard({ product, onOpen, isLight }) {
 }
 
 // [DL5] Petit indicateur "~XX Ko chargés" — mode léger uniquement.
-// Calcule le poids transféré via la Resource Timing API, ~1.5s après le
-// montage (laisse le temps aux principales requêtes de se terminer).
-// Purement indicatif (n'inclut pas ce qui charge après ce délai) —
-// affiché comme un argument de confiance, pas comme une mesure exacte.
 function PageWeightBadge() {
   const [kb, setKb] = useState(null);
 
@@ -779,10 +783,6 @@ function PageWeightBadge() {
 }
 
 // [DL7] Switch discret pour forcer manuellement le mode léger/complet.
-// Force toujours explicitement l'état opposé à l'état actuel (et non un
-// simple "effacer la préférence manuelle", qui pourrait retomber sur le
-// même état si la détection auto le redonnait) — comportement prévisible
-// pour le visiteur quel que soit l'historique de détection.
 function LightModeToggle({ isLight, setManual }) {
   return (
     <button
@@ -822,7 +822,8 @@ export default function PublicProfile({ previewProfile = null }) {
 
   // [DL1] Détection du mode data-light
   const { isLight, setManual, clearManual } = useDataSaverMode();
-  // [PREVIEW] Resynchronise le brouillon envoye par le dashboard (iframe /preview-profile)
+
+  // [PREVIEW] Resynchronise le brouillon envoyé par le dashboard (iframe /preview-profile)
   useEffect(() => {
     if (previewProfile) setProfile(previewProfile);
   }, [previewProfile]);
@@ -897,8 +898,7 @@ export default function PublicProfile({ previewProfile = null }) {
           .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
         }
 
-        /* [DL4] Mode léger : coupe l'animation "mesh" (pp-meshDrift) du
-           fond décoratif, en plus de la règle reduced-motion existante. */
+        /* [DL4] Mode léger : coupe l'animation "mesh" du fond décoratif */
         .pp-light-mode .pp-mesh-blob { animation:none !important; filter:none !important; }
 
         @media (prefers-reduced-motion: reduce) {
@@ -940,9 +940,10 @@ export default function PublicProfile({ previewProfile = null }) {
       });
     };
 
-  // [PERF2e][TRK] Tracking différé + filtré (bots, ?notrack, une fois par session)
-const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
-    // [PREVIEW] En apercu : seulement boutique + documents, aucun tracking ni fetch du profil
+    // [PERF2e][TRK] Tracking différé + filtré (bots, ?notrack, une fois par session)
+    const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
+
+    // [PREVIEW] En aperçu : seulement boutique + documents, aucun tracking ni fetch du profil
     if (isPreview) {
       if (previewProfile?.id) loadExtras(previewProfile.id);
       return;
@@ -1004,8 +1005,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
   }, [profile?.id]);
 
   // ── Images slider ────────────────────────────────────────────
-  // [PERF2d] Calculé directement (useMemo) au lieu de useState + useEffect :
-  // l'image événement est présente dès le premier rendu.
+  // [PERF2d] Calculé directement (useMemo) : l'image événement est présente dès le premier rendu.
   const images = useMemo(() => {
     if (profile?.event_images)         return Array.isArray(profile.event_images) ? profile.event_images : [profile.event_images];
     if (profile?.event_image_url)      return [profile.event_image_url];
@@ -1058,9 +1058,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
   }, [profile?.is_event, profile?.event_date]);
 
   // ── [C5][F9][O7][P4][BG1][BG2][DL4] Background style ──────────
-  // [DL4] En mode léger : pas de taches radiales floutées animées
-  // (pp-meshDrift + filter:blur), juste un dégradé plat — coupe le coût
-  // de repaint GPU en continu en plus du poids réseau.
+  // [DL4] En mode léger : dégradé plat, pas de taches radiales floutées animées.
   useEffect(() => {
     if (!profile) return;
 
@@ -1153,7 +1151,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
       });
     }
 
-        const url    = (link.url || '').trim();
+    const url    = (link.url || '').trim();
     const key    = (link.platform || '').toLowerCase();
     const scheme = ((url.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1] || '').toLowerCase();
     const WALLET_SCHEMES = ['bitcoin', 'ethereum', 'litecoin'];
@@ -1164,9 +1162,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
     else if (scheme === 'https' || scheme === 'http') window.open(url, '_blank', 'noopener,noreferrer');
     else if (!scheme && url)                          window.open('https://' + url, '_blank', 'noopener,noreferrer');
     // tout autre schéma (javascript:, data:, vbscript:…) est ignoré
-    }, [profile, isPreview]);
-
-  if (loading)  return <ProfileSkeleton />;
+  }, [profile, isPreview]);
 
   if (loading)  return <ProfileSkeleton />;
   if (notFound) return (
@@ -1282,9 +1278,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
         <ShareBar profile={profile} />
       </div>
 
-      {/* [DL2] fontFamily bascule sur SYSTEM_FONT_STACK en mode léger —
-          hérité par tous les descendants qui ne fixent pas leur propre
-          fontFamily (aucun ne le fait dans cette page). */}
+      {/* [DL2] fontFamily bascule sur SYSTEM_FONT_STACK en mode léger */}
       <div style={{
         position:'relative', zIndex:1, minHeight:'100dvh',
         display:'flex', flexDirection:'column', alignItems:'center',
@@ -1298,7 +1292,7 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
         {profile.banner_url ? (
           <>
             <div className="pp-content-col" style={{ position:'relative' }}>
-              {/* [BANNER-RING] Anneau translucide : memes valeurs que l'anneau de l'avatar */}
+              {/* [BANNER-RING] Anneau translucide : mêmes valeurs que l'anneau de l'avatar */}
               <div style={{
                 padding:'3px',
                 borderRadius:'28px',
@@ -1307,13 +1301,13 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
               }}>
                 <div style={{ borderRadius:'25px', overflow:'hidden', aspectRatio:'16/7' }}>
                   {/* [PERF2c] Bannière en haut de page : jamais lazy ; prioritaire si c'est le hero */}
-                <LazyImg
-                  eager
-                  priority={!!heroRaw && heroRaw === profile.banner_url}
-                  src={srcFor(profile.banner_url, bannerW)}
-                  alt="Bannière du profil"
-                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                />
+                  <LazyImg
+                    eager
+                    priority={!!heroRaw && heroRaw === profile.banner_url}
+                    src={srcFor(profile.banner_url, bannerW)}
+                    alt="Bannière du profil"
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                  />
                 </div>
               </div>
               <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(65%)' }}>
@@ -1350,50 +1344,50 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
 
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
-     {topSocialLinks.length > 0 && (
-  <div className="pp-content-col" style={{
-    display:'flex', flexWrap:'nowrap', alignItems:'center', justifyContent:'center',
-    gap:'6px', marginBottom:'14px', boxSizing:'border-box',
-    // 1 ou 2 boutons : on limite la largeur pour ne pas les étirer sur toute la ligne
-    maxWidth: topSocialLinks.length === 1 ? '150px' : topSocialLinks.length === 2 ? '260px' : undefined,
-  }}>
-    {topSocialLinks.map((link, i) => {
-      const platform = resolvePlatform(link);
-      const color = platform.color || '#6366f1';
-      return (
-        <button
-          key={i}
-          onClick={() => handleLinkClick(link)}
-          aria-label={link.label || platform.label}
-          className="pp-link-btn-el"
-          style={{
-            '--pp-hover-bg': color,
-            flex:'1 1 0', minWidth:0,
-            display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px',
-            height:'38px', padding:'0 8px 0 4px', borderRadius:'999px',
-            boxSizing:'border-box',
-            background:color,
-            border:'1px solid rgba(255,255,255,0.35)',
-            boxShadow:'0 4px 14px rgba(0,0,0,0.28)',
-            color:'#fff', fontSize:'clamp(10px, 2.9vw, 12px)', fontWeight:700, letterSpacing:'0.01em',
-            cursor:'pointer', touchAction:'manipulation',
-          }}
-        >
-          <span style={{
-            width:'28px', height:'28px', borderRadius:'50%', overflow:'hidden',
-            flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
-            background:'#fff', lineHeight:0,
+        {topSocialLinks.length > 0 && (
+          <div className="pp-content-col" style={{
+            display:'flex', flexWrap:'nowrap', alignItems:'center', justifyContent:'center',
+            gap:'6px', marginBottom:'14px', boxSizing:'border-box',
+            // 1 ou 2 boutons : on limite la largeur pour ne pas les étirer sur toute la ligne
+            maxWidth: topSocialLinks.length === 1 ? '150px' : topSocialLinks.length === 2 ? '260px' : undefined,
           }}>
-            {platform.icon ? React.cloneElement(platform.icon, { width: 28, height: 28 }) : null}
-          </span>
-          <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {link.label || platform.label}
-          </span>
-        </button>
-      );
-    })}
-  </div>
-)}
+            {topSocialLinks.map((link, i) => {
+              const platform = resolvePlatform(link);
+              const color = platform.color || '#6366f1';
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleLinkClick(link)}
+                  aria-label={link.label || platform.label}
+                  className="pp-link-btn-el"
+                  style={{
+                    '--pp-hover-bg': color,
+                    flex:'1 1 0', minWidth:0,
+                    display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px',
+                    height:'38px', padding:'0 8px 0 4px', borderRadius:'999px',
+                    boxSizing:'border-box',
+                    background:color,
+                    border:'1px solid rgba(255,255,255,0.35)',
+                    boxShadow:'0 4px 14px rgba(0,0,0,0.28)',
+                    color:'#fff', fontSize:'clamp(10px, 2.9vw, 12px)', fontWeight:700, letterSpacing:'0.01em',
+                    cursor:'pointer', touchAction:'manipulation',
+                  }}
+                >
+                  <span style={{
+                    width:'28px', height:'28px', borderRadius:'50%', overflow:'hidden',
+                    flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
+                    background:'#fff', lineHeight:0,
+                  }}>
+                    {platform.icon ? React.cloneElement(platform.icon, { width: 28, height: 28 }) : null}
+                  </span>
+                  <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {link.label || platform.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Événement */}
         {hasEventContent && (
@@ -1606,6 +1600,8 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
           whatsappNumber={profile.phone || ''}
           profileId={isPreview ? null : profile.id}
           isLight={isLight}
+          onZoom={setLightboxSrc}
+          isZoomed={!!lightboxSrc}
           onClose={() => setSelectedProduct(null)}
         />,
         document.body

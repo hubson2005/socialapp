@@ -1153,11 +1153,20 @@ const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
       });
     }
 
-    const url = link.url || '';
-    if      (link.platform === 'phone') window.location.href = 'tel:'    + url.replace(/^tel:/i,    '').trim();
-    else if (link.platform === 'email') window.location.href = 'mailto:' + url.replace(/^mailto:/i, '').trim();
-    else window.open(url, '_blank', 'noopener,noreferrer');
-  }, [profile, isPreview]);
+        const url    = (link.url || '').trim();
+    const key    = (link.platform || '').toLowerCase();
+    const scheme = ((url.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1] || '').toLowerCase();
+    const WALLET_SCHEMES = ['bitcoin', 'ethereum', 'litecoin'];
+
+    if      (key === 'phone' || key === 'fixedphone') window.location.href = 'tel:'    + url.replace(/^tel:/i,    '').trim();
+    else if (key === 'email')                         window.location.href = 'mailto:' + url.replace(/^mailto:/i, '').trim();
+    else if (WALLET_SCHEMES.includes(scheme))         window.location.href = url;
+    else if (scheme === 'https' || scheme === 'http') window.open(url, '_blank', 'noopener,noreferrer');
+    else if (!scheme && url)                          window.open('https://' + url, '_blank', 'noopener,noreferrer');
+    // tout autre schéma (javascript:, data:, vbscript:…) est ignoré
+    }, [profile, isPreview]);
+
+  if (loading)  return <ProfileSkeleton />;
 
   if (loading)  return <ProfileSkeleton />;
   if (notFound) return (

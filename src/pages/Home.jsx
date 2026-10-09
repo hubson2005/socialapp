@@ -161,6 +161,92 @@ function PlanModal({ onClose, onSelect, billing, setBilling }) {
 }
 
 /* ─────────────────────────────────────────────
+   HERO : tablette (dashboard) puis téléphone (profil public), en boucle
+───────────────────────────────────────────── */
+function HeroDevices() {
+  const side = ['chart', 'trend', 'live', 'users', 'bag', 'ticket', 'form'];
+  const bars = [38, 52, 44, 68, 58, 82, 100];
+  const rows = [
+    { l: 'WhatsApp', c: '#25D366', i: 'chat' },
+    { l: 'Instagram', c: '#E1306C', i: 'image' },
+    { l: 'Boutique', c: '#ff6b35', i: 'bag' },
+    { l: 'Facebook', c: '#1877F2', t: 'f' },
+  ];
+  const Ic = ({ n }) => <svg className="sa-i"><use href={'#i-' + n} /></svg>;
+  return (
+    <div className="sa-dvw" aria-label="Aperçu du tableau de bord et du profil public SocialApp">
+      <div className="sa-dv">
+        <div className="sa-dv-tab">
+          <div className="sa-dv-bez">
+            <div className="sa-dv-scr">
+              <div className="sa-dv-side">
+                {side.map((n, i) => <span key={n} className={i === 0 ? 'a' : ''}><Ic n={n} /></span>)}
+              </div>
+              <div className="sa-dv-main">
+                <div className="sa-dv-h">
+                  <div><b>Dashboard</b><small>Bienvenue · Dorine Fashion</small></div>
+                  <span className="sa-dv-live"><i />3 visiteurs en direct</span>
+                </div>
+                <div className="sa-dv-kpi">
+                  {[['450', 'Vues', '#6366f1'], ['89', 'Clics', '#f59e0b'], ['22%', 'CTR', '#16a34a'], ['12', 'Leads', '#ec4899']].map(([v, l, c]) => (
+                    <div key={l}><b style={{ color: c }}>{v}</b><small>{l}</small></div>
+                  ))}
+                </div>
+                <div className="sa-dv-two">
+                  <div className="sa-dv-box">
+                    <small>Visites · 7 jours</small>
+                    <div className="sa-dv-bars">{bars.map((h, i) => <i key={i} style={{ height: h + '%', animationDelay: i * 70 + 'ms' }} />)}</div>
+                  </div>
+                  <div className="sa-dv-box">
+                    <small>Top pays</small>
+                    {[['CI', 85], ['FR', 40], ['SN', 25]].map(([c, w]) => (
+                      <div className="sa-dv-ctry" key={c}><em>{c}</em><u><i style={{ width: w + '%' }} /></u></div>
+                    ))}
+                  </div>
+                </div>
+                <div className="sa-dv-chips"><span style={{ background: 'rgba(99,102,241,.14)', color: '#4f46e5' }}>4 Prospects</span><span style={{ background: 'rgba(239,68,68,.12)', color: '#dc2626' }}>2 Chauds</span><span style={{ background: 'rgba(34,197,94,.14)', color: '#15803d' }}>6 Clients</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sa-dv-phone">
+          <div className="sa-dv-pbez">
+            <div className="sa-dv-notch" />
+            <div className="sa-dv-pscr">
+              <div className="sa-dv-cover" />
+              <div className="sa-dv-av sa-g">D</div>
+              <div className="sa-dv-pname">Dorine Fashion <span style={{ color: '#22c55e' }}><Ic n="badge" /></span></div>
+              <div className="sa-dv-pbio">Mode &amp; accessoires · Abidjan</div>
+              <div className="sa-dv-links">
+                {rows.map((r, i) => (
+                  <div className="sa-dv-link" key={r.l} style={{ animationDelay: i * 90 + 'ms' }}>
+                    <span style={{ background: r.c }}>{r.i ? <Ic n={r.i} /> : r.t}</span>{r.l}<em>›</em>
+                  </div>
+                ))}
+              </div>
+              <div className="sa-dv-shop">
+                <div style={{ animationDelay: '420ms' }}><i style={{ background: 'linear-gradient(135deg,#f6b58f,#e8845a)' }} /><b>14 000 F</b></div>
+                <div style={{ animationDelay: '500ms' }}><i style={{ background: 'linear-gradient(135deg,#c9b8f5,#8f7be0)' }} /><b>10 000 F</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sa-dv-fb sa-dv-b1"><b>Nouveau lead !</b><small>Kofi M. · via QR Code</small></div>
+        <div className="sa-dv-fb sa-dv-b2"><small>Vues aujourd'hui</small><b style={{ fontSize: '22px', color: '#ff6b35' }}>+247</b><small style={{ color: '#16a34a' }}>↑ 34% vs hier</small></div>
+        <div className="sa-dv-fb sa-dv-b3"><b>Commande WhatsApp</b><small>Robe Ankara · 8 500 FCFA</small></div>
+
+        <div className="sa-dv-pills">
+          <span className="sa-dv-p1"><Ic n="chart" /> Tableau de bord</span>
+          <span className="sa-dv-p2"><Ic n="user" /> Profil public</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    STYLES
 ───────────────────────────────────────────── */
 const CSS = `
@@ -180,7 +266,6 @@ const CSS = `
 .sa-btn.sa-gr{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
 .sa-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;font-size:12px;font-weight:700;margin-bottom:18px}
 .sa-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
-.sa-p h1.sa-ttl span{display:inline}
 .sa-ttl .sa-ln{display:block;overflow:hidden;padding-bottom:.14em;margin-bottom:-.14em}
 .sa-ttl .sa-ln>span{display:block;transform:translateY(110%);opacity:0;animation:sa-up 1s cubic-bezier(.2,.8,.2,1) forwards,sa-flow 9s ease-in-out 1.4s infinite alternate;background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .sa-ttl .sa-l1{background-image:linear-gradient(100deg,#f0501a 0%,#f2a900 45%,#f0501a 100%);animation-delay:.15s,1.4s}
@@ -193,6 +278,7 @@ const CSS = `
 .sa-hero{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;padding:80px 0 90px}
 .sa-p h1{margin:0;font-size:62px;line-height:1.02;letter-spacing:-3px;font-weight:900}
 .sa-p h1 span{display:block}
+.sa-p h1.sa-ttl .sa-l2 span{display:inline}
 .sa-pitch{font-size:14px;color:#5d5a6e;line-height:1.8;margin:22px 0 14px;max-width:540px;padding:14px 18px;background:rgba(255,255,255,.7);border:1px solid rgba(29,26,43,.08);border-radius:14px}
 .sa-tag{font-size:20px;font-weight:700;margin:12px 0 18px;line-height:1.3}
 .sa-ck{display:flex;gap:10px;align-items:center;font-size:13px;color:#3d3a4f;margin-bottom:8px}
@@ -443,6 +529,73 @@ const CSS = `
 @media(max-width:900px){.sa-mg{grid-template-columns:1fr}.sa-md{padding:56px 18px 24px}}
 @media(max-width:640px){.sa-mpwoman{height:250px;margin-right:-26px}.sa-mpwrap .sa-phone{width:190px}}
 @media(prefers-reduced-motion:reduce){.sa-float{animation:none}}
+.sa-dvw{--k:1;width:calc(560px*var(--k));height:calc(486px*var(--k));margin:0 auto;position:relative}
+.sa-dv{position:absolute;left:0;top:0;width:560px;height:486px;transform:scale(var(--k));transform-origin:0 0}
+.sa-dv::before{content:'';position:absolute;left:50%;top:44%;width:440px;height:440px;margin:-220px 0 0 -220px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.22),transparent 70%);filter:blur(40px)}
+.sa-dv-tab,.sa-dv-phone{position:absolute;opacity:0;will-change:transform,opacity}
+.sa-dv-tab{left:20px;top:56px;width:520px;height:352px;animation:sa-dvTab 14s ease-in-out infinite}
+.sa-dv-phone{left:164px;top:6px;width:232px;height:468px;animation:sa-dvPhone 14s ease-in-out infinite}
+.sa-dv-bez{height:100%;padding:12px;border-radius:30px;background:#1c1a24;box-shadow:0 40px 80px -30px rgba(60,30,10,.55),inset 0 0 0 2px #36333f}
+.sa-dv-scr{height:100%;display:grid;grid-template-columns:44px 1fr;background:#fff;border-radius:19px;overflow:hidden}
+.sa-dv-side{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;background:#fbf9f4;border-right:1px solid #eee9de}
+.sa-dv-side span{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#6b6874}
+.sa-dv-side span.a{background:rgba(99,102,241,.14);color:#4f46e5}
+.sa-dv-main{display:flex;flex-direction:column;gap:9px;padding:12px 14px;min-width:0;color:#1d1a2b}
+.sa-dv-h{display:flex;justify-content:space-between;align-items:center}
+.sa-dv-h b{display:block;font-size:13px}.sa-dv-h small{font-size:9px;color:#7b788a}
+.sa-dv-live{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:100px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);font-size:9px;font-weight:700;color:#16a34a}
+.sa-dv-live i{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:sa-dvBlink 1.6s infinite}
+.sa-dv-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.sa-dv-kpi div{background:#f5f1e8;border-radius:11px;padding:8px;text-align:center}
+.sa-dv-kpi b{display:block;font-size:19px;font-weight:900;line-height:1.1}.sa-dv-kpi small{font-size:8px;color:#7b788a}
+.sa-dv-two{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;flex:1;min-height:0}
+.sa-dv-box{background:#f5f1e8;border-radius:11px;padding:9px;display:flex;flex-direction:column;gap:6px;min-height:0}
+.sa-dv-box>small{font-size:9px;font-weight:700;color:#5d5a6e}
+.sa-dv-bars{flex:1;display:flex;align-items:flex-end;gap:6px}
+.sa-dv-bars i{flex:1;border-radius:4px 4px 0 0;background:#e3d6bf;transform-origin:bottom;animation:sa-dvBar 14s ease-out infinite}
+.sa-dv-bars i:last-child{background:#1d1a2b}
+.sa-dv-ctry{display:flex;align-items:center;gap:6px}.sa-dv-ctry em{font-style:normal;font-size:9px;color:#7b788a;width:16px}
+.sa-dv-ctry u{flex:1;height:5px;border-radius:3px;background:#e3dccb;overflow:hidden}.sa-dv-ctry u i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#6366f1,#a78bfa)}
+.sa-dv-chips{display:flex;gap:5px}.sa-dv-chips span{padding:4px 8px;border-radius:7px;font-size:9px;font-weight:700}
+.sa-dv-pbez{position:relative;height:100%;padding:9px;border-radius:38px;background:#1c1a24;box-shadow:0 40px 80px -30px rgba(60,30,10,.6),inset 0 0 0 2px #36333f}
+.sa-dv-notch{position:absolute;top:15px;left:50%;width:62px;height:16px;margin-left:-31px;border-radius:10px;background:#1c1a24;z-index:2}
+.sa-dv-pscr{position:relative;height:100%;border-radius:30px;overflow:hidden;background:#fbf9f4;padding:0 14px;color:#1d1a2b}
+.sa-dv-cover{position:absolute;left:0;right:0;top:0;height:92px;background:linear-gradient(135deg,#ffd9c2,#f7c948 60%,#e9e1fb)}
+.sa-dv-av{position:relative;width:54px;height:54px;margin:62px auto 0;border-radius:16px;border:3px solid #fbf9f4;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#2a1305}
+.sa-dv-pname{text-align:center;margin-top:8px;font-size:13px;font-weight:800}
+.sa-dv-pname .sa-i{width:13px;height:13px;vertical-align:-2px}
+.sa-dv-pbio{text-align:center;font-size:9px;color:#7b788a;margin:2px 0 12px}
+.sa-dv-links{display:flex;flex-direction:column;gap:7px}
+.sa-dv-link{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#fff;border:1px solid #eee9de;font-size:11px;font-weight:700;box-shadow:0 4px 10px -6px rgba(60,40,20,.25);opacity:0;animation:sa-dvRow 14s ease-out infinite}
+.sa-dv-link span{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800}
+.sa-dv-link span .sa-i{width:13px;height:13px}.sa-dv-link em{margin-left:auto;font-style:normal;color:#b7b2a6;font-size:14px}
+.sa-dv-shop{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.sa-dv-shop div{border-radius:12px;background:#fff;border:1px solid #eee9de;overflow:hidden;opacity:0;animation:sa-dvRow 14s ease-out infinite}
+.sa-dv-shop i{display:block;height:52px}.sa-dv-shop b{display:block;padding:5px 8px;font-size:10px}
+.sa-dv-fb{position:absolute;z-index:3;padding:10px 14px;border-radius:14px;background:#fff;border:1px solid rgba(29,26,43,.1);box-shadow:0 16px 36px rgba(60,40,20,.2);opacity:0}
+.sa-dv-fb b{display:block;font-size:11px}.sa-dv-fb small{display:block;font-size:10px;color:#7b788a}
+.sa-dv-b1{left:372px;top:20px;animation:sa-dvB1 14s ease-in-out infinite}
+.sa-dv-b2{left:468px;top:214px;text-align:center;animation:sa-dvB1 14s ease-in-out infinite .15s}
+.sa-dv-b3{left:12px;top:372px;animation:sa-dvB3 14s ease-in-out infinite}
+.sa-dv-pills{position:absolute;left:0;right:0;top:442px;display:flex;justify-content:center;gap:10px}
+.sa-dv-pills span{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:100px;font-size:12px;font-weight:700;border:1px solid rgba(29,26,43,.12)}
+.sa-dv-p1{animation:sa-dvP1 14s steps(1,end) infinite}.sa-dv-p2{animation:sa-dvP2 14s steps(1,end) infinite}
+@keyframes sa-dvTab{0%{opacity:0;transform:translateX(70px) scale(.94)}7%,43%{opacity:1;transform:none}50%,100%{opacity:0;transform:translateX(-70px) scale(.94)}}
+@keyframes sa-dvPhone{0%,50%{opacity:0;transform:translateX(70px) scale(.94)}57%,93%{opacity:1;transform:none}100%{opacity:0;transform:translateX(-70px) scale(.94)}}
+@keyframes sa-dvBar{0%,6%{transform:scaleY(0)}18%,100%{transform:scaleY(1)}}
+@keyframes sa-dvRow{0%,56%{opacity:0;transform:translateY(10px)}63%,93%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes sa-dvB1{0%,12%{opacity:0;transform:translateY(12px) scale(.95)}18%,42%{opacity:1;transform:none}48%,100%{opacity:0;transform:translateY(-6px)}}
+@keyframes sa-dvB3{0%,62%{opacity:0;transform:translateY(12px) scale(.95)}68%,92%{opacity:1;transform:none}98%,100%{opacity:0}}
+@keyframes sa-dvBlink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes sa-dvP1{0%{background:#1d1a2b;color:#fff;border-color:#1d1a2b}50%{background:rgba(255,255,255,.75);color:#5d5a6e;border-color:rgba(29,26,43,.12)}}
+@keyframes sa-dvP2{0%{background:rgba(255,255,255,.75);color:#5d5a6e;border-color:rgba(29,26,43,.12)}50%{background:#1d1a2b;color:#fff;border-color:#1d1a2b}}
+.sa-dvw:hover .sa-dv *,.sa-dvw:hover .sa-dv{animation-play-state:paused}
+@media(max-width:1100px){.sa-dvw{--k:.86}}
+@media(max-width:960px){.sa-dvw{--k:1}}
+@media(max-width:640px){.sa-dvw{--k:.64}}
+@media(max-width:430px){.sa-dvw{--k:.54}}
+@media(prefers-reduced-motion:reduce){.sa-dv-tab{opacity:1;animation:none}.sa-dv-phone,.sa-dv-fb,.sa-dv-pills{display:none}.sa-dv-bars i{animation:none}}
+
 `;
 
 /* ─────────────────────────────────────────────
@@ -711,121 +864,7 @@ export default function Home() {
 <span style={{color:"#f0a500"}}>★★★★★</span> 4.9/5</span>
 </div>
 </div>
-<div className="sa-st">
-<div className="sa-fb" style={{top:"-18px",right:"-14px"}}>
-<b style={{display:"inline"}}>Nouveau lead !</b>
-<br />
-<span>Kofi M. · via QR Code</span>
-</div>
-<div className="sa-fb" style={{top:"46%",right:"-26px",textAlign:"center"}}>
-<span>Vues aujourd'hui</span>
-<b style={{fontSize:"22px",color:"#ff6b35"}}>+247</b>
-<span style={{color:"#16a34a"}}>↑ 34% vs hier</span>
-</div>
-<div className="sa-fb" style={{bottom:"-14px",left:"-18px"}}>
-<b style={{display:"inline"}}>Commande WhatsApp</b>
-<br />
-<span>Robe Ankara · 8 500 FCFA</span>
-</div>
-<div className="sa-card" style={{overflow:"hidden"}}>
-<div className="sa-top">
-<i style={{background:"#ef4444"}}>
-</i>
-<i style={{background:"#f59e0b"}}>
-</i>
-<i style={{background:"#22c55e"}}>
-</i>
-<em>socialapp.work/dashboard</em>
-</div>
-<div className="sa-db">
-<div className="sa-sb">
-<span className="sa-a">
-<svg className="sa-i">
-<use href="#i-chart">
-</use>
-</svg>
-</span>
-<span>
-<svg className="sa-i">
-<use href="#i-trend">
-</use>
-</svg>
-</span>
-<span>
-<svg className="sa-i">
-<use href="#i-live">
-</use>
-</svg>
-</span>
-<span>
-<svg className="sa-i">
-<use href="#i-users">
-</use>
-</svg>
-</span>
-<span>
-<svg className="sa-i">
-<use href="#i-bag">
-</use>
-</svg>
-</span>
-<span>
-<svg className="sa-i">
-<use href="#i-ticket">
-</use>
-</svg>
-</span>
-<span>
-<svg className="sa-i">
-<use href="#i-form">
-</use>
-</svg>
-</span>
-</div>
-<div className="sa-dc">
-<div>
-<b style={{fontSize:"13px"}}>Dashboard</b>
-<br />
-<span style={{fontSize:"9px",color:"#7b788a"}}>Bienvenue · Dorine Fashion</span>
-</div>
-<div className="sa-mc">
-<div>
-<b style={{color:"#6366f1"}}>450</b>Vues</div>
-<div>
-<b style={{color:"#f59e0b"}}>89</b>Clics</div>
-<div>
-<b style={{color:"#16a34a"}}>22%</b>CTR</div>
-<div>
-<b style={{color:"#ec4899"}}>12</b>Leads</div>
-</div>
-<div style={{background:"#f5f1e8",borderRadius:"12px",padding:"10px"}}>
-<b style={{fontSize:"10px",color:"#5d5a6e"}}>Top pays</b>
-<div className="sa-bar">CI<u>
-<i style={{width:"85%"}}>
-</i>
-</u>
-</div>
-<div className="sa-bar">FR<u>
-<i style={{width:"40%"}}>
-</i>
-</u>
-</div>
-<div className="sa-bar">SN<u>
-<i style={{width:"25%"}}>
-</i>
-</u>
-</div>
-</div>
-<div style={{display:"flex",gap:"8px",alignItems:"center",padding:"6px 8px",background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.25)",borderRadius:"8px",fontSize:"10px",fontWeight:"700",color:"#16a34a"}}>● 3 visiteurs en direct</div>
-<div style={{display:"flex",gap:"5px"}}>
-<span className="sa-chip" style={{background:"rgba(99,102,241,.14)",color:"#4f46e5"}}>4 Prospects</span>
-<span className="sa-chip" style={{background:"rgba(239,68,68,.12)",color:"#dc2626"}}>2 Chauds </span>
-<span className="sa-chip" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>6 Clients </span>
-</div>
-</div>
-</div>
-</div>
-</div>
+<HeroDevices />
 </header>
 </div>
 <div className="sa-stats">
@@ -1421,7 +1460,7 @@ export default function Home() {
 <div>
 <div className="sa-brand" style={{marginBottom:"16px",color:"#1d1a2b"}}>
 <div className="sa-mk sa-g" style={{width:"32px",height:"32px",overflow:"hidden"}}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>SocialApp</div>
-<p>La plateforme SaaS africaine qui propulse votre activité : carte de visite digitale innovante, CRM intégré, QR Code intelligent et marketplace professionnelle. Une solution tout-en-un conçue pour connecter, gérer et développer votre activité partout en Afrique.</p>
+<p>Plateforme SaaS ivoirienne : profil digital, CRM, QR Code et marketplace pour développer votre activité. Accessible partout en Afrique.</p>
 <div className="sa-pay">
 <span>Orange Money</span>
 <span>Wave</span>

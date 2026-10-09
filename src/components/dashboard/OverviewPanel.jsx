@@ -8,6 +8,10 @@ import ProfileHeader from "@/components/dashboard/ProfileHeader";
 import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import StatsCard from "@/components/dashboard/StatsCard";
 
+// [BANNIÈRES MULTIPLES] Nombre maximum de bannières par profil.
+// ⚠️ Doit rester identique à MAX_BANNERS dans UserDashboard.jsx.
+const MAX_BANNERS = 5;
+
 function useWindowWidth() {
   const [width, setWidth] = React.useState(
     typeof window !== 'undefined' ? window.innerWidth : 1200
@@ -29,12 +33,13 @@ export default function OverviewPanel({
   // `onBgUpload` reçoit directement le File (comme uploadBgFile côté
   // UserDashboard), pas l'event brut.
   bgImageUrl, uploadingBg, onBgUpload, onBgRemove,
-  // [AJOUT] Bannière de couverture (profile.banner_url) — même pattern que
-  // l'image de fond ci-dessus : `onBannerUpload` reçoit directement le File.
-  // Affichée en haut de la page publique, au-dessus de l'avatar (voir
-  // PublicProfile.jsx). Distincte de l'image de fond (qui couvre tout
-  // l'écran derrière la page).
- bannerUrls = [], uploadingBanner, onBannerUpload, onBannerRemove,
+  // [BANNIÈRES MULTIPLES] Remplace l'ancien `bannerUrl` (une seule bannière).
+  //  - bannerUrls     : tableau d'URLs (max MAX_BANNERS)
+  //  - onBannerUpload : reçoit un TABLEAU de File (input `multiple`)
+  //  - onBannerRemove : reçoit l'INDEX de la bannière à retirer
+  // Affichées en carrousel en haut de la page publique (voir PublicProfile.jsx).
+  // Distinctes de l'image de fond (qui couvre tout l'écran derrière la page).
+  bannerUrls = [], uploadingBanner, onBannerUpload, onBannerRemove,
 }) {
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];
@@ -65,6 +70,12 @@ export default function OverviewPanel({
   // seules Profil + QR Code restent, sur 2 colonnes au lieu de 3.
   const showStatsCard = limits.hasStats;
   const topColumnCount = showStatsCard ? 3 : 2;
+
+  // [BANNIÈRES MULTIPLES] État dérivé pour le bloc d'upload
+  const bannerCount   = bannerUrls.length;
+  const hasBanners    = bannerCount > 0;
+  const bannersFull   = bannerCount >= MAX_BANNERS;
+  const bannerBlocked = uploadingBanner || bannersFull;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
@@ -160,54 +171,73 @@ export default function OverviewPanel({
               </span>
             </div>
 
-            {/* [AJOUT] Bannière de couverture (profile.banner_url) — placée
-                AVANT le bloc "Image de fond" : c'est le premier élément
-                visuel de la page publique (au-dessus de l'avatar), il
-                précède donc logiquement le fond d'écran plein-page dans
-                l'ordre des contrôles. Même pattern d'upload que ci-dessous. */}
+            {/* [BANNIÈRES MULTIPLES] Bannières de couverture (profile.banner_urls,
+                max MAX_BANNERS) — placées AVANT le bloc "Image de fond" : c'est
+                le premier élément visuel de la page publique (au-dessus de
+                l'avatar), il précède donc logiquement le fond d'écran
+                plein-page dans l'ordre des contrôles. Sur la page publique,
+                elles défilent en carrousel avec un bouton Télécharger. */}
             {onBannerUpload && (
-              <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
                 <label style={{
-                  flex:1, display:'flex', alignItems:'center', gap:'6px',
-                  background:bannerUrl?'rgba(99,102,241,0.08)':'rgba(15,18,34,0.03)',
-                  border:'1px solid '+(bannerUrl?'rgba(99,102,241,0.35)':'rgba(15,18,34,0.1)'),
-                  borderRadius:'8px', padding:'7px 10px', cursor:uploadingBanner?'not-allowed':'pointer',
-                  position:'relative',
+                  display:'flex', alignItems:'center', gap:'6px',
+                  background:hasBanners?'rgba(99,102,241,0.08)':'rgba(15,18,34,0.03)',
+                  border:'1px solid '+(hasBanners?'rgba(99,102,241,0.35)':'rgba(15,18,34,0.1)'),
+                  borderRadius:'8px', padding:'7px 10px', position:'relative',
+                  cursor:bannerBlocked?'not-allowed':'pointer',
+                  opacity:bannersFull?0.6:1,
                 }}>
                   {uploadingBanner
                     ? <Loader2 size={12} color="#6366f1" className="animate-spin" />
-                    : <GalleryHorizontal size={12} color={bannerUrl ? '#6366f1' : 'rgba(15,18,34,0.4)'} />
+                    : <GalleryHorizontal size={12} color={hasBanners ? '#6366f1' : 'rgba(15,18,34,0.4)'} />
                   }
-                  <span style={{ color:bannerUrl?'#4f46e5':'rgba(15,18,34,0.5)', fontSize:'10px', fontWeight:600 }}>
-                    {bannerUrl ? 'Changer la bannière' : 'Bannière de couverture'}
+                  <span style={{ color:hasBanners?'#4f46e5':'rgba(15,18,34,0.5)', fontSize:'10px', fontWeight:600 }}>
+                    {bannersFull
+                      ? `Maximum atteint (${bannerCount}/${MAX_BANNERS})`
+                      : hasBanners
+                        ? `Ajouter des bannières (${bannerCount}/${MAX_BANNERS})`
+                        : 'Bannières de couverture'}
                   </span>
                   <input
-                    type="file" accept="image/*"
-                    style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
-                    onChange={e => { const file = e.target.files?.[0]; if (file) onBannerUpload(file); e.target.value=''; }}
-                    disabled={uploadingBanner}
+                    type="file" accept="image/*" multiple
+                    style={{ position:'absolute', inset:0, opacity:0, cursor:bannerBlocked?'not-allowed':'pointer', width:'100%', height:'100%' }}
+                    disabled={bannerBlocked}
+                    onChange={e => {
+                      // Array.from AVANT de vider l'input : reset de value vide aussi la FileList
+                      const files = Array.from(e.target.files || []);
+                      e.target.value = '';
+                      if (files.length) onBannerUpload(files);
+                    }}
                   />
                 </label>
-                {bannerUrl && onBannerRemove && (
-                  <button
-                    onClick={onBannerRemove}
-                    aria-label="Retirer la bannière"
-                    style={{
-                      width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                      background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)',
-                      borderRadius:'8px', cursor:'pointer',
-                    }}
-                  >
-                    <X size={11} color="#f87171" />
-                  </button>
+
+                {hasBanners && (
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                    {bannerUrls.map((u, i) => (
+                      <div key={u + i} style={{ position:'relative', width:'72px', height:'32px', borderRadius:'6px', overflow:'hidden', border:'1px solid rgba(15,18,34,0.12)' }}>
+                        <img src={u} alt={`Bannière ${i + 1}`} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                        {onBannerRemove && (
+                          <button
+                            type="button"
+                            onClick={() => onBannerRemove(i)}
+                            disabled={uploadingBanner}
+                            aria-label={`Retirer la bannière ${i + 1}`}
+                            style={{ position:'absolute', top:'2px', right:'2px', width:'16px', height:'16px', borderRadius:'50%', border:'none', background:'rgba(0,0,0,0.65)', display:'flex', alignItems:'center', justifyContent:'center', cursor:uploadingBanner?'not-allowed':'pointer', padding:0 }}
+                          >
+                            <X size={9} color="white" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
 
             {/* [DÉPLACÉ DEPUIS LA SIDEBAR] Image de fond du profil public —
                 rapprochée de la carte qu'elle modifie plutôt que reléguée
-                au bas du menu, loin de tout aperçu. Placée après la
-                bannière de couverture ci-dessus. */}
+                au bas du menu, loin de tout aperçu. Placée après les
+                bannières de couverture ci-dessus. */}
             {onBgUpload && (
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
                 <label style={{

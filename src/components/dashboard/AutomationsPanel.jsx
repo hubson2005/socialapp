@@ -19,23 +19,20 @@
 // SUPPRESSION RAPIDE + ARCHIVAGE :
 //  [A1]-[A4] cf. révisions précédentes (inchangées)
 //
-// THÈME CLAIR (cette révision) :
-//  [L1] Palette de variables CSS (:root) entièrement retournée pour
-//       coller au fond clair `#f4f5fa` du reste du UserDashboard :
-//       cartes blanches, bordures gris clair, texte foncé. Les couleurs
-//       d'accent (orange, vert, bleu, violet, rouge, jaune) sont
-//       conservées à l'identique — c'est la charte de la marque.
-//  [L2] Tous les fonds `rgba(255,255,255,x)` utilisés en dur dans le
-//       CSS (cartes stats, tabs, search, auto-card, tmpl-card, flow-step,
-//       log-row, chips inline JS) basculés en `rgba(15,17,25,x)` — un
-//       noir très dilué qui donne un liseré/fond gris clair au lieu
-//       d'un fond transparent-sur-sombre invisible sur fond clair.
-//  [L3] Modal : fond blanc, bordure claire ; l'overlay reste sombre
-//       (comportement standard, indépendant du thème du contenu).
-//  [L4] Toggle OFF, poignée du modal, hover states : ajustés pour
-//       rester visibles sur fond clair.
+// THÈME CLAIR :
+//  [L1]-[L4] cf. révisions précédentes (inchangées)
+//
+// GRILLE + PAGINATION (cette révision) :
+//  [G1] Liste des automations en grille de 2 cartes par ligne dès 700px
+//       (1 colonne en dessous). En grille, la barre d'actions passe en
+//       bas de la carte (ligne séparée) pour que les cartes restent lisibles.
+//  [G2] Pagination : 10 cartes par page (PAGE_SIZE). La 11e carte crée
+//       automatiquement la page 2. Contrôles Précédent / numéros / Suivant
+//       + compteur « 1–10 sur 11 ».
+//  [G3] La page repasse à 1 quand le filtre ou la recherche change ;
+//       elle est bornée si des suppressions réduisent le nombre de pages.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { supabase } from "../../supabase";
@@ -56,6 +53,11 @@ const STYLE = `
   color:#151329;
   font-family:'DM Sans',sans-serif;
   font-size:13.5px;
+}
+/* Mobile / tablette : espace sous le contenu pour la barre de navigation
+   flottante + zone de geste iOS/Android (sinon la pagination est masquée) */
+@media (max-width: 1023px) {
+  .ap-root{ padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* [L1] :root — palette claire, cohérente avec le fond #f4f5fa du dashboard */
@@ -186,7 +188,7 @@ const STYLE = `
   background:var(--card); border:1px solid var(--border);
   box-shadow:0 1px 2px rgba(16,18,40,0.04), 0 1px 8px rgba(16,18,40,0.03);
   border-radius:14px; padding:14px; display:flex;
-  align-items:flex-start; gap:12px;
+  align-items:flex-start; gap:12px; min-width:0;
   transition:border-color .15s,background .15s; cursor:pointer;
 }
 .auto-card.active-card{ border-color:rgba(245,132,31,.35); }
@@ -199,8 +201,9 @@ const STYLE = `
 .auto-name{
   font-size:13.5px; font-weight:600; color:var(--t1);
   display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  overflow-wrap:anywhere;
 }
-.auto-desc{ font-size:12px; color:var(--t2); margin-top:4px; line-height:1.5; }
+.auto-desc{ font-size:12px; color:var(--t2); margin-top:4px; line-height:1.5; overflow-wrap:anywhere; }
 .auto-meta{ display:flex; align-items:center; gap:6px; margin-top:8px; flex-wrap:wrap; }
 .auto-badge{ font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; }
 .ab-trigger{ background:var(--blueD); color:#2563eb; }
@@ -297,6 +300,26 @@ const STYLE = `
   padding-left:17px; margin-top:-2px;
 }
 
+/* [G2] Pagination */
+.ap-pager{
+  display:flex; align-items:center; justify-content:center;
+  flex-wrap:wrap; gap:6px; margin-top:18px;
+}
+.ap-page-info{
+  flex-basis:100%; text-align:center; font-size:12px; color:var(--t2); margin-bottom:2px;
+}
+.ap-page-btn{
+  min-width:44px; min-height:44px; padding:0 12px;
+  border-radius:10px; border:1px solid var(--border);
+  background:var(--card); color:var(--t2);
+  font-size:13px; font-weight:600; font-family:'DM Sans',sans-serif;
+  cursor:pointer; transition:all .12s;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.ap-page-btn.on{ background:var(--orange); border-color:var(--orange); color:#fff; }
+.ap-page-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.ap-page-dots{ color:var(--t3); padding:0 2px; user-select:none; }
+
 /* [P1][P2] Overlay du modal — rendu via portail React dans document.body.
    L'overlay reste sombre (comportement standard indépendant du thème
    du contenu, cf. [L3]). z-index relevé à 1000 pour rester au-dessus
@@ -371,8 +394,7 @@ const STYLE = `
 
 /* [R3] Tous les états :hover regroupés et gardés par (hover:hover) et
    (pointer:fine) — évite l'état "hover collé" après un tap sur
-   mobile/tablette tactile (même classe de bug déjà corrigée sur
-   IntegrationsPanel) */
+   mobile/tablette tactile */
 @media (hover: hover) and (pointer: fine) {
   .ap-btn-primary:hover{ filter:brightness(1.08); }
   .ap-btn-sec:hover{ background:var(--hover2); color:var(--t1); }
@@ -380,11 +402,35 @@ const STYLE = `
   .ap-tab:hover{ color:var(--t1); }
   .auto-card:hover{ border-color:#d7dae4; box-shadow:0 2px 10px rgba(16,18,40,0.07); }
   .tmpl-card:hover{ border-color:rgba(245,132,31,.4); box-shadow:0 2px 10px rgba(16,18,40,0.07); }
+  .ap-page-btn:not(:disabled):not(.on):hover{ background:var(--hover2); color:var(--t1); }
 }
 
-/* [R2] Media queries fusionnées : une seule règle 768–1023px cohérente
-   (remplace les deux blocs dupliqués/contradictoires de l'ancienne
-   version, dont un était imbriqué à tort dans :root) */
+/* [G1] Grille de 2 cartes par ligne dès 700px.
+   La barre d'actions passe sous le contenu de la carte (pleine largeur)
+   pour que chaque carte reste lisible dans une demi-largeur. */
+@media (min-width: 700px) {
+  .auto-list{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+    align-items:stretch;
+  }
+  .auto-card{
+    flex-wrap:wrap;
+    align-content:space-between;
+  }
+  .auto-right{
+    flex:0 0 100%;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding-top:10px;
+    border-top:1px solid var(--border);
+  }
+}
+
+/* [R2] Une seule règle 768–1023px cohérente */
 @media (min-width: 768px) and (max-width: 1023px) {
   .ap-stats{ grid-template-columns: repeat(2, 1fr); gap:10px; }
   .ap-stat-num{ font-size:24px; }
@@ -401,11 +447,7 @@ const STYLE = `
   .ap-toggle.off::after { left:4px; }
 }
 
-/* Modal : centré et largeur contrainte dès 600px (tablette/desktop).
-   Règle distincte de la précédente (768-1023px) : celle-ci gère
-   uniquement le positionnement de l'overlay/modal à partir de 600px,
-   sans plafond haut, donc s'applique aussi au desktop large — ce n'est
-   pas un doublon de la règle tablette ci-dessus. */
+/* Modal : centré et largeur contrainte dès 600px (tablette/desktop). */
 @media (min-width: 600px) {
   .ap-modal-overlay{ align-items:center; padding:20px; }
   .ap-modal{ border-radius:18px; max-height:90dvh; }
@@ -420,6 +462,9 @@ const STYLE = `
 `;
 
 /* ─── Constantes locales ──────────────────────────────────── */
+
+// [G2] Nombre de cartes par page : la 11e carte ouvre la page 2
+const PAGE_SIZE = 10;
 
 // [M3] Actions réellement exécutées par le moteur — clés moteur uniquement
 const IMPLEMENTED_ACTIONS = new Set([
@@ -474,6 +519,19 @@ function formatLastRun(isoDate) {
   const diffD = Math.floor(diffH / 24);
   if (diffD < 7)    return `il y a ${diffD}j`;
   return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+}
+
+// [G2] Liste de pages à afficher : 1 … (p-1) p (p+1) … N
+function getPageList(current, total) {
+  if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+  const set = new Set([1, total, current, current - 1, current + 1]);
+  const pages = [...set].filter(p => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out = [];
+  pages.forEach((p, i) => {
+    if (i > 0 && p - pages[i - 1] > 1) out.push(`dots-${p}`);
+    out.push(p);
+  });
+  return out;
 }
 
 /* ─── [M5] ActionConfigFields : dynamique depuis constants ─ */
@@ -561,6 +619,8 @@ export default function AutomationsPanel({ profileId }) {
   const [search, setSearch]           = useState('');
   const [modal, setModal]             = useState(null);
   const [form, setForm]               = useState(EMPTY_FORM);
+  const [page, setPage]               = useState(1);          // [G2]
+  const listTopRef                    = useRef(null);          // [G2]
 
   const { isMobile, isTablet } = useBreakpoint();
   const isCreate = modal === 'create';
@@ -569,6 +629,9 @@ export default function AutomationsPanel({ profileId }) {
 
   useEffect(() => { if (profileId) loadAutomations(); }, [profileId]);
   useEffect(() => { if (tab === 'logs' && profileId) loadLogs(); }, [tab, profileId]);
+
+  // [G3] Retour à la page 1 quand le filtre ou la recherche change
+  useEffect(() => { setPage(1); }, [filter, search]);
 
   // [P3] Verrouillage du scroll du body pendant que le modal est ouvert.
   useEffect(() => {
@@ -739,6 +802,23 @@ export default function AutomationsPanel({ profileId }) {
     return matchFilter && matchSearch;
   }), [automations, filter, search]);
 
+  /* ── [G2][G3] Pagination ── */
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart   = (currentPage - 1) * PAGE_SIZE;
+  const paged       = useMemo(
+    () => filtered.slice(pageStart, pageStart + PAGE_SIZE),
+    [filtered, pageStart]
+  );
+
+  const goToPage = (p) => {
+    setPage(p);
+    // Remonte en haut de la liste pour voir la nouvelle page
+    requestAnimationFrame(() => {
+      listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   /* ── Stats ── */
   const nonArchived = automations.filter(a => !a.archived);
   const totalRuns   = nonArchived.reduce((sum, a) => sum + (a.runs || 0), 0);
@@ -878,7 +958,7 @@ export default function AutomationsPanel({ profileId }) {
         {/* ── AUTOMATIONS ── */}
         {tab === 'automations' && (
           <>
-            <div className="ap-toolbar">
+            <div className="ap-toolbar" ref={listTopRef} style={{ scrollMarginTop: 80 }}>
               {['Tous','Actives','Inactives','Archivées'].map(f => (
                 <button key={f} className={`ap-filter-btn${filter === f ? ' on' : ''}`} onClick={() => setFilter(f)}>
                   {f === 'Archivées' ? `📦 Archivées${nbArchived ? ` (${nbArchived})` : ''}` : f}
@@ -893,75 +973,116 @@ export default function AutomationsPanel({ profileId }) {
             {loading ? (
               <div className="ap-loading">Chargement...</div>
             ) : (
-              <div className="auto-list">
-                {filtered.map(auto => {
-                  const triggerLabel = TRIGGER_LABELS[auto.trigger] || auto.trigger || 'Aucun';
-                  const actionLabel  = ACTION_LABELS[auto.action]   || auto.action   || 'Aucune';
-                  const cardFlow = [
-                    ['🎯', triggerLabel],
-                    ...(auto.action ? [['⚡', actionLabel]] : []),
-                    ['✅', 'Exécuté'],
-                  ];
+              <>
+                <div className="auto-list">
+                  {paged.map(auto => {
+                    const triggerLabel = TRIGGER_LABELS[auto.trigger] || auto.trigger || 'Aucun';
+                    const actionLabel  = ACTION_LABELS[auto.action]   || auto.action   || 'Aucune';
+                    const cardFlow = [
+                      ['🎯', triggerLabel],
+                      ...(auto.action ? [['⚡', actionLabel]] : []),
+                      ['✅', 'Exécuté'],
+                    ];
 
-                  return (
-                    <div key={auto.id} className={`auto-card${auto.active ? ' active-card' : ''}`} onClick={() => openEdit(auto)}>
-                      <div className="auto-ico" style={{ background: auto.color }}>{auto.icon}</div>
-                      <div className="auto-body">
-                        <div className="auto-name">
-                          {auto.name}
-                          <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.12)':'rgba(100,100,120,.14)', color:auto.active?'#16a34a':'#6b6f85', padding:'2px 7px', borderRadius:20 }}>
-                            {auto.active ? 'Actif' : 'Inactif'}
-                          </span>
-                          {auto.archived && (
-                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(100,100,120,.14)', color:'#6b6f85', padding:'2px 7px', borderRadius:20 }}>
-                              📦 Archivé
+                    return (
+                      <div key={auto.id} className={`auto-card${auto.active ? ' active-card' : ''}`} onClick={() => openEdit(auto)}>
+                        <div className="auto-ico" style={{ background: auto.color }}>{auto.icon}</div>
+                        <div className="auto-body">
+                          <div className="auto-name">
+                            {auto.name}
+                            <span style={{ fontSize:10, fontWeight:700, background:auto.active?'rgba(34,208,122,.12)':'rgba(100,100,120,.14)', color:auto.active?'#16a34a':'#6b6f85', padding:'2px 7px', borderRadius:20 }}>
+                              {auto.active ? 'Actif' : 'Inactif'}
                             </span>
-                          )}
-                          {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
-                            <span style={{ fontSize:10, fontWeight:700, background:'rgba(234,179,8,.14)', color:'#a16207', padding:'2px 7px', borderRadius:20 }}>
-                              ⏳ Bientôt
-                            </span>
-                          )}
+                            {auto.archived && (
+                              <span style={{ fontSize:10, fontWeight:700, background:'rgba(100,100,120,.14)', color:'#6b6f85', padding:'2px 7px', borderRadius:20 }}>
+                                📦 Archivé
+                              </span>
+                            )}
+                            {auto.action && !IMPLEMENTED_ACTIONS.has(auto.action) && (
+                              <span style={{ fontSize:10, fontWeight:700, background:'rgba(234,179,8,.14)', color:'#a16207', padding:'2px 7px', borderRadius:20 }}>
+                                ⏳ Bientôt
+                              </span>
+                            )}
+                          </div>
+                          <div className="auto-desc">{auto.desc}</div>
+                          <div className="flow">
+                            {cardFlow.map(([ico, lbl], i) => (
+                              <span key={i} style={{ display:'flex', alignItems:'center' }}>
+                                <span className="flow-step"><span style={{ fontSize:13 }}>{ico}</span>{lbl}</span>
+                                {i < cardFlow.length - 1 && <span className="flow-arrow">→</span>}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="auto-meta">
+                            <span className="auto-badge ab-trigger">{triggerLabel}</span>
+                            <span className="auto-badge ab-action">{actionLabel}</span>
+                            {auto.freq && <span className="auto-badge ab-freq">🔄 {auto.freq}</span>}
+                            <span className="auto-stat">🔄 {auto.runs || 0} exéc.</span>
+                            <span className="auto-stat">⏱ {formatLastRun(auto.last_run)}</span>
+                          </div>
                         </div>
-                        <div className="auto-desc">{auto.desc}</div>
-                        <div className="flow">
-                          {cardFlow.map(([ico, lbl], i) => (
-                            <span key={i} style={{ display:'flex', alignItems:'center' }}>
-                              <span className="flow-step"><span style={{ fontSize:13 }}>{ico}</span>{lbl}</span>
-                              {i < cardFlow.length - 1 && <span className="flow-arrow">→</span>}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="auto-meta">
-                          <span className="auto-badge ab-trigger">{triggerLabel}</span>
-                          <span className="auto-badge ab-action">{actionLabel}</span>
-                          {auto.freq && <span className="auto-badge ab-freq">🔄 {auto.freq}</span>}
-                          <span className="auto-stat">🔄 {auto.runs || 0} exéc.</span>
-                          <span className="auto-stat">⏱ {formatLastRun(auto.last_run)}</span>
+                        <div className="auto-right" onClick={e => e.stopPropagation()}>
+                          <div className="ap-tog-wrap">
+                            <span className="ap-tog-lbl">{auto.active ? 'ON' : 'OFF'}</span>
+                            <button className={`ap-toggle ${auto.active ? 'on' : 'off'}`} onClick={() => toggleAuto(auto.id)} />
+                          </div>
+                          <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
+                            <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
+                            <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); toggleArchive(auto.id); }}>
+                              {auto.archived ? '📤 Désarchiver' : '📦 Archiver'}
+                            </button>
+                            <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px', color:'#f45b5b' }} onClick={e => { e.stopPropagation(); handleDelete(auto.id); }}>🗑</button>
+                          </div>
                         </div>
                       </div>
-                      <div className="auto-right" onClick={e => e.stopPropagation()}>
-                        <div className="ap-tog-wrap">
-                          <span className="ap-tog-lbl">{auto.active ? 'ON' : 'OFF'}</span>
-                          <button className={`ap-toggle ${auto.active ? 'on' : 'off'}`} onClick={() => toggleAuto(auto.id)} />
-                        </div>
-                        <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
-                          <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); openEdit(auto); }}>✏ Modifier</button>
-                          <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px' }} onClick={e => { e.stopPropagation(); toggleArchive(auto.id); }}>
-                            {auto.archived ? '📤 Désarchiver' : '📦 Archiver'}
-                          </button>
-                          <button className="ap-btn-sec" style={{ fontSize:11, height:28, padding:'0 9px', color:'#f45b5b' }} onClick={e => { e.stopPropagation(); handleDelete(auto.id); }}>🗑</button>
-                        </div>
-                      </div>
+                    );
+                  })}
+                  {!filtered.length && (
+                    <div style={{ gridColumn:'1 / -1', textAlign:'center', padding:'50px 0', color:'#9a9db0', fontSize:13 }}>
+                      {filter === 'Archivées' ? 'Aucune automation archivée' : 'Aucune automation trouvée'}
                     </div>
-                  );
-                })}
-                {!filtered.length && (
-                  <div style={{ textAlign:'center', padding:'50px 0', color:'#9a9db0', fontSize:13 }}>
-                    {filter === 'Archivées' ? 'Aucune automation archivée' : 'Aucune automation trouvée'}
-                  </div>
+                  )}
+                </div>
+
+                {/* [G2] Pagination — visible dès la 11e carte */}
+                {filtered.length > PAGE_SIZE && (
+                  <nav className="ap-pager" aria-label="Pagination des automations">
+                    <div className="ap-page-info">
+                      {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filtered.length)} sur {filtered.length}
+                    </div>
+                    <button
+                      type="button" className="ap-page-btn"
+                      disabled={currentPage === 1}
+                      onClick={() => goToPage(currentPage - 1)}
+                      aria-label="Page précédente"
+                    >
+                      ‹ Préc.
+                    </button>
+                    {getPageList(currentPage, totalPages).map(p =>
+                      typeof p === 'string' ? (
+                        <span key={p} className="ap-page-dots">…</span>
+                      ) : (
+                        <button
+                          key={p} type="button"
+                          className={`ap-page-btn${p === currentPage ? ' on' : ''}`}
+                          aria-current={p === currentPage ? 'page' : undefined}
+                          onClick={() => goToPage(p)}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+                    <button
+                      type="button" className="ap-page-btn"
+                      disabled={currentPage === totalPages}
+                      onClick={() => goToPage(currentPage + 1)}
+                      aria-label="Page suivante"
+                    >
+                      Suiv. ›
+                    </button>
+                  </nav>
                 )}
-              </div>
+              </>
             )}
           </>
         )}

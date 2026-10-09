@@ -34,7 +34,7 @@ export default function OverviewPanel({
   // Affichée en haut de la page publique, au-dessus de l'avatar (voir
   // PublicProfile.jsx). Distincte de l'image de fond (qui couvre tout
   // l'écran derrière la page).
-  bannerUrl, uploadingBanner, onBannerUpload, onBannerRemove,
+ bannerUrls = [], uploadingBanner, onBannerUpload, onBannerRemove,
 }) {
   const isMob = useWindowWidth() < 768;
   const links = profile?.links || [];

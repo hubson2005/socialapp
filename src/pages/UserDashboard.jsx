@@ -118,6 +118,7 @@ const parseColors  = (themeColor) => {
   if (themeColor && themeColor.includes('|')) { const [bg1, bg2] = themeColor.split('|'); return { bg1, bg2 }; }
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
+const MAX_BANNERS = 5;
 const MAX_SIZE_KB = 2000;
 
 const db = {
@@ -772,7 +773,8 @@ export default function UserDashboard() {
       event_description: localProfile.event_description||null, event_images: eventImagesArray,
       event_image_url: eventImagesArray[0]||null, bg_image_url: localProfile.bg_image_url||null,
       // [AJOUT] Bannière de couverture — persistée comme bg_image_url ci-dessus
-      banner_url: localProfile.banner_url||null,
+      banner_urls: currentBanners,
+      banner_url: currentBanners[0] || null,
     }});
   };
 
@@ -847,34 +849,53 @@ export default function UserDashboard() {
   // [FIX BG-PERSIST] / [FIX RLS-SILENCIEUX]), juste un préfixe de nom de
   // fichier différent ('banner-' au lieu de 'bg-') et un champ cible
   // différent (banner_url au lieu de bg_image_url).
-  const uploadBannerFile = async (file) => {
-    if (!file) return;
-    if (file.size / 1024 > MAX_SIZE_KB) { toast.error('Image trop lourde ! Max 2 Mo'); return; }
-    if (!localProfile?.id) return;
-    setUploadingBanner(true);
-    try {
-      const name = 'banner-' + localProfile.id + '-' + Date.now() + '.' + file.name.split('.').pop();
+  // Liste courante (rétro-compatible avec l'ancien banner_url seul)
+const currentBanners = localProfile?.banner_urls?.length
+  ? localProfile.banner_urls
+  : (localProfile?.banner_url ? [localProfile.banner_url] : []);
+
+const persistBanners = async (urls) => {
+  const { data: dbRows, error: dbError } = await supabase
+    .from('link_profiles')
+    .update({ banner_urls: urls, banner_url: urls[0] || null })
+    .eq('id', localProfile.id)
+    .select('id, banner_urls');
+  if (dbError) throw dbError;
+  if (!dbRows || dbRows.length === 0) {
+    throw new Error("La mise à jour n'a touché aucune ligne en base (vérifie les policies RLS)");
+  }
+  updateLocal({ banner_urls: urls, banner_url: urls[0] || null });
+  queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
+};
+
+const uploadBannerFiles = async (files) => {
+  const list = Array.from(files || []);
+  if (!list.length || !localProfile?.id) return;
+  const room = MAX_BANNERS - currentBanners.length;
+  if (room <= 0) { toast.error(`Maximum ${MAX_BANNERS} bannières`); return; }
+  if (list.length > room) toast.warning(`Seules ${room} bannière(s) supplémentaire(s) seront ajoutées`);
+
+  setUploadingBanner(true);
+  try {
+    const newUrls = [];
+    for (const file of list.slice(0, room)) {
+      if (file.size / 1024 > MAX_SIZE_KB) { toast.error(`${file.name} : image trop lourde (max 2 Mo)`); continue; }
+      const name = 'banner-' + localProfile.id + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '.' + file.name.split('.').pop();
       const { error: uploadError } = await supabase.storage.from('avatars').upload(name, file, { upsert: true });
       if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('avatars').getPublicUrl(name);
+      newUrls.push(supabase.storage.from('avatars').getPublicUrl(name).data.publicUrl);
+    }
+    if (!newUrls.length) return;
+    await persistBanners([...currentBanners, ...newUrls]);
+    toast.success(newUrls.length > 1 ? `${newUrls.length} bannières ajoutées !` : 'Bannière ajoutée !');
+  } catch (err) { toast.error('Erreur : ' + err.message); }
+  finally { setUploadingBanner(false); }
+};
 
-      // [FIX RLS-SILENCIEUX] même correctif que uploadBgFile — voir ci-dessus
-      const { data: dbRows, error: dbError } = await supabase
-        .from('link_profiles')
-        .update({ banner_url: data.publicUrl })
-        .eq('id', localProfile.id)
-        .select('id, banner_url');
-      if (dbError) throw dbError;
-      if (!dbRows || dbRows.length === 0) {
-        throw new Error("La mise à jour n'a touché aucune ligne en base (vérifie les policies RLS sur link_profiles / que ce profil t'appartient bien)");
-      }
-
-      updateLocal({ banner_url: data.publicUrl });
-      queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
-      toast.success('Bannière appliquée !');
-    } catch (err) { toast.error('Erreur : ' + err.message); }
-    finally { setUploadingBanner(false); }
-  };
+const removeBanner = async (index) => {
+  try { await persistBanners(currentBanners.filter((_, i) => i !== index)); toast.success('Bannière supprimée'); }
+  catch (err) { toast.error('Erreur : ' + err.message); }
+};
 
   // FIX logout — déplacé en bas du panel Paramètres (renderSection case 'settings')
   const handleSignOut = async () => {
@@ -990,7 +1011,7 @@ export default function UserDashboard() {
           //
           // [AJOUT] bannerUrl / uploadingBanner / onBannerUpload / onBannerRemove :
           // même pattern que ci-dessus pour la bannière de couverture.
-          case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrl={localProfile?.banner_url} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFile} onBannerRemove={()=>updateLocal({ banner_url:null })} />;
+          case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrls={currentBanners} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFiles} onBannerRemove={removeBanner} />;
           case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
           case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
           // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,

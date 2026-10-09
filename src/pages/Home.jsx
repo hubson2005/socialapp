@@ -12,7 +12,6 @@ import leadsCrmMockup from '../assets/LEADS_CRM.png';
 import leadsCrmMockupWebp from '../assets/LEADS_CRM.webp';
 import profilMockup from '../assets/INTERFACE_SOCIALAPP.png';
 import tabletWebp from '../assets/DASHBOARD_TABLETTE.webp';
-import tabletPng from '../assets/DASHBOARD_TABLETTE.png';
 import EventQuickCreateModal from '../components/EventQuickCreateModal';
 
 /* ─────────────────────────────────────────────
@@ -187,18 +186,15 @@ function HeroDevices() {
       <div className="sa-dv">
         <div className="sa-dv-tab">
           <div className="sa-tstage">
-            <picture>
-              <source srcSet={tabletWebp} type="image/webp" />
-              <img
-                src={tabletPng}
-                alt="Tablette affichant le tableau de bord Analytics"
-                width="1976"
-                height="1312"
-                decoding="async"
-                loading="eager"
-                fetchPriority="high"
-              />
-            </picture>
+  <img
+    src={tabletWebp}
+    alt="Tablette affichant le tableau de bord Analytics"
+    width="1976"
+    height="1312"
+    decoding="async"
+    loading="eager"
+    fetchPriority="high"
+  />
             <div className="sa-tchart" role="img" aria-label="Activité des 7 derniers jours : vues et clics par jour">
               <div className="sa-tt">Activité — 7 derniers jours</div>
               <div className="sa-tleg"><span><i className="sa-lv" />Vues</span><span><i className="sa-lc" />Clics</span></div>

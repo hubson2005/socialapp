@@ -1,357 +1,1718 @@
-import React from 'react';
-import {
-  Save, Loader2, Lock, CheckCircle, AlertCircle, Crown,
-  CalendarClock, CalendarDays, AtSign, BadgeCheck, BarChart2,
-  Link2, ShoppingBag, Users, Image, GalleryHorizontal, X,
-} from "lucide-react";
-import ProfileHeader from "@/components/dashboard/ProfileHeader";
-import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
-import StatsCard from "@/components/dashboard/StatsCard";
+/**
+ * PublicProfile.jsx — Page profil publique SocialApp
+ *
+ * [ ... tout l'historique de révisions précédent est inchangé, voir la
+ *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
+ *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, PERF2a-f, DL1-DL8 ... ]
+ *
+ * BANNIÈRES MULTIPLES (cette révision) :
+ *  [BANNER-SLIDER] Les bannières (profile.banner_urls, repli sur banner_url)
+ *        défilent en fondu enchaîné toutes les 4 s, avec pause au survol/toucher,
+ *        swipe, points de navigation et bouton « Télécharger » en haut à droite.
+ *        En mode léger, seules la slide courante et ses voisines sont montées.
+ *
+ * MODAL — Modale détail produit refaite pour tous les mobiles :
+ *  [MODAL1] Prix : whitespace nowrap + taille fluide clamp() ; l'unité « F »
+ *        est plus petite et collée au nombre (plus de « 350 000 / F » sur deux
+ *        lignes). L'ancien prix et la pastille « Économise » passent DESSOUS
+ *        (flex-wrap) au lieu de se casser quand la place manque.
+ *  [MODAL2] Image : object-fit contain (jamais rognée) + fond flouté de la même
+ *        image pour supprimer les bandes noires. Le flou est désactivé en mode
+ *        léger (zéro coût GPU). Même URL que l'image nette → pas de requête
+ *        supplémentaire.
+ *  [MODAL3] Zoom : toucher l'image (ou le bouton « Agrandir ») ouvre
+ *        l'ImageLightbox en qualité d'origine. La touche Échap ferme d'abord le
+ *        zoom, puis la modale.
+ *  [MODAL4] Mise en page : barre du haut compacte (poignée + fermer sur une
+ *        ligne), zone centrale scrollable, bouton WhatsApp FIXE en pied
+ *        (toujours visible), safe-area-inset-bottom, overscroll contain,
+ *        role="dialog" + aria-modal.
+ *
+ * MODE DATA-LIGHT :
+ *  [DL1] Détection automatique via le hook useDataSaverMode() (header
+ *        Save-Data / navigator.connection.effectiveType 2g-3g / bascule
+ *        manuelle mémorisée). isLight est calculé une fois par montage et
+ *        redevient réactif si le type de connexion change en cours de
+ *        visite (voir le hook), ou si le visiteur touche le switch [DL7].
+ *  [DL2] Police custom Manrope : chargement du Google Font entièrement
+ *        sauté en mode léger (effet à if (isLight) return; en tête).
+ *  [DL3] Images : helper imgUrl(url, {width, quality}) — transformation à la
+ *        volée de Supabase Storage (plan Pro requis, voir IMG_TRANSFORM).
+ *  [DL4] Fond "mesh" animé désactivé en mode léger.
+ *  [DL5] Indicateur de poids "~XX Ko chargés" en mode léger.
+ *  [DL6] isLight propagé à PublicProductCard et ProductDetailModal.
+ *  [DL7] Switch "Mode léger" discret en bas de page.
+ *
+ * Aucun changement de comportement en mode complet (isLight === false) hors
+ * la modale produit [MODAL1-4] et le carrousel de bannières [BANNER-SLIDER].
+ */
 
-// [BANNIÈRES MULTIPLES] Nombre maximum de bannières par profil.
-// ⚠️ Doit rester identique à MAX_BANNERS dans UserDashboard.jsx.
-const MAX_BANNERS = 5;
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useParams } from 'react-router-dom';
+import { supabase } from '../supabase';
+import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff } from 'lucide-react';
+import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
+import CryptoAddressRow from '../components/CryptoAddressRow';
+// [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
+import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
+import { triggerQrScan }          from '../lib/triggers/qr';
+import { triggerMarketplaceBuy }  from '../lib/triggers/marketplace';
+import { triggerMarketplaceClick } from '../lib/triggers/marketplaceClick'; // [A6]
+import SEO from "../components/SEO";
+import PublicBookingWidget from '@/pages//PublicBookingWidget';
+// [DL1] Détection du mode data-light
+import { useDataSaverMode } from '../hooks/useDataSaverMode';
 
-function useWindowWidth() {
-  const [width, setWidth] = React.useState(
-    typeof window !== 'undefined' ? window.innerWidth : 1200
-  );
-  React.useEffect(() => {
-    const h = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
-  }, []);
-  return width;
+// ─── Constantes ───────────────────────────────────────────────
+// [C11] Numéro support centralisé — modifier ici uniquement
+const SUPPORT_WHATSAPP = '2250576031212';
+
+// [W2] Surface des cartes — blanc quasi opaque
+const CARD_BG        = 'rgba(255,255,255,0.94)';
+const CARD_BG_HOVER  = 'rgba(255,255,255,1)';
+const CARD_BORDER    = '1px solid rgba(0,0,0,0.10)';
+// [PERF1] backdropFilter retiré des cartes (scroll fluide sur mobile)
+const CARD_BLUR      = {};
+const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
+
+// [W3] Couleurs de texte pour les cartes blanches
+const CARD_TEXT        = '#15102a';
+const CARD_TEXT_MUTED  = 'rgba(21,16,42,0.55)';
+const CARD_TEXT_FAINT  = 'rgba(21,16,42,0.42)';
+
+// [P1] Police de marque unique pour toute la page
+const FONT_STACK = "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+// [DL2] Police système pure — utilisée en mode léger, zéro requête réseau
+const SYSTEM_FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+
+const KEYFRAME_SKELETON_ID  = 'pp-keyframes-skeleton';
+const KEYFRAME_MAIN_ID      = 'pp-keyframes-main';
+const FONT_LINK_ID          = 'pp-font-manrope';
+
+// ─── [DL3] Images allégées via transformation Supabase Storage ────────
+// ⚠️ [PERF2b] Copie identique dans api/profile.js — à garder synchronisées.
+// Transformation d'image Supabase INDISPONIBLE sur ce projet (render/image → 403,
+// plan Pro requis). Tant que ce drapeau est false, imgUrl() renvoie l'URL
+// d'origine inchangée : même URL pour le preload, le mode léger et le mode complet.
+// Après passage au plan Pro : mettre true (la requête passe alors par
+// /render/image/public/ ; le WebP est négocié automatiquement par Supabase).
+const IMG_TRANSFORM = false;
+function imgUrl(url, { width, quality = 70 } = {}) {
+  if (!IMG_TRANSFORM || !url || !width) return url;
+  if (!url.includes('/storage/v1/object/public/')) return url;
+  const base = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}width=${width}&quality=${quality}`;
 }
 
-export default function OverviewPanel({
-  profile, limits, isActivated, onNavigate,
-  onUpdate, onSave, hasChanges, saving, plan,
-  onRequestActivation, onUpgrade,
-  // [DÉPLACÉ] Contrôle d'image de fond, auparavant dans le footer de
-  // UserSidebar — vit maintenant dans la carte Profil, juste en dessous.
-  // `onBgUpload` reçoit directement le File (comme uploadBgFile côté
-  // UserDashboard), pas l'event brut.
-  bgImageUrl, uploadingBg, onBgUpload, onBgRemove,
-  // [BANNIÈRES MULTIPLES] Remplace l'ancien `bannerUrl` (une seule bannière).
-  //  - bannerUrls     : tableau d'URLs (max MAX_BANNERS)
-  //  - onBannerUpload : reçoit un TABLEAU de File (input `multiple`)
-  //  - onBannerRemove : reçoit l'INDEX de la bannière à retirer
-  // Affichées en carrousel en haut de la page publique (voir PublicProfile.jsx).
-  // Distinctes de l'image de fond (qui couvre tout l'écran derrière la page).
-  bannerUrls = [], uploadingBanner, onBannerUpload, onBannerRemove,
-}) {
-  const isMob = useWindowWidth() < 768;
-  const links = profile?.links || [];
+// Largeurs demandées selon le mode
+const IMG_WIDTHS = {
+  light: { avatar: 90,  banner: 480, product: 220, event: 480 },
+  full:  { avatar: 212, banner: 960, product: 440, event: 960 },
+};
 
-  // [SIMPLIFICATION PAR PLAN] Auparavant, une fonctionnalité non incluse
-  // dans le plan (Événement, Analytics, CRM…) restait affichée grisée avec
-  // un cadenas + bouton d'upgrade. On filtre désormais ces cartes pour ne
-  // garder QUE ce qui est réellement inclus dans le plan courant : le
-  // dashboard Basic devient ainsi visuellement plus léger (moins de
-  // cartes) que Pro, lui-même plus léger que Business, plutôt que les
-  // trois affichant la même grille avec plus ou moins de cadenas.
-  // Pour retrouver l'ancien comportement (cartes verrouillées visibles),
-  // il suffit de ne pas filtrer sur `locked` ci-dessous.
-  const quickActions = [
-    { label:'Plateformes',  icon:Link2,         color:'#3b4bf0', section:'platforms',   desc:links.length+' lien(s)',                                                       locked:false },
-    { label:'Événement',    icon:CalendarClock, color:'#7b3ff2', section:'event',        desc:profile?.is_event?'Activé':'Désactivé',                                        locked:!limits.hasEvent },
-    { label:'Analytics',    icon:BarChart2,     color:'#a52ee0', section:'analytics',    desc:'Actifs',                                                                       locked:!limits.hasStats },
-    { label:'Marketplace',  icon:ShoppingBag,   color:'#d81f9e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max', locked:false },
-    { label:'CRM',          icon:Users,         color:'#ef2f6b', section:'crm',          desc:'Actif',                                                                        locked:!limits.hasCRM },
-    // [CHANGEMENT] Documents remplacé par le Calendrier de RDV sur la page
-    // d'accueil — Documents reste accessible normalement depuis la
-    // sidebar/MobileNav, il n'est simplement plus mis en avant ici.
-    { label:'Calendrier',   icon:CalendarDays,  color:'#0d1330', section:'booking',     desc:'Prise de rendez-vous',                                                        locked:false },
-  ].filter(a => !a.locked);
+// [PERF2b] Largeur unique de l'image principale (LCP), quel que soit le mode.
+// ⚠️ Doit rester identique à HERO_WIDTH dans api/profile.js.
+const HERO_WIDTH = 720;
 
-  // Idem pour la rangée du haut : la carte Statistiques n'apparaît plus du
-  // tout en version "verrouillée" pour les plans qui n'y ont pas accès —
-  // seules Profil + QR Code restent, sur 2 colonnes au lieu de 3.
-  const showStatsCard = limits.hasStats;
-  const topColumnCount = showStatsCard ? 3 : 2;
+// [PERF2b] Image principale — MÊME RÈGLE que heroRawUrl() dans api/profile.js
+function heroRawUrl(p) {
+  if (!p) return null;
+  const https = (u) => (typeof u === 'string' && /^https:\/\//i.test(u) ? u : null);
+  if (p.is_event) {
+    const list = p.event_images
+      ? (Array.isArray(p.event_images) ? p.event_images : [p.event_images])
+      : (p.event_image_url ? [p.event_image_url] : []);
+    if (list.length) return https(list[0]);
+  }
+  return https(p.banner_url);
+}
 
-  // [BANNIÈRES MULTIPLES] État dérivé pour le bloc d'upload
-  const bannerCount   = bannerUrls.length;
-  const hasBanners    = bannerCount > 0;
-  const bannersFull   = bannerCount >= MAX_BANNERS;
-  const bannerBlocked = uploadingBanner || bannersFull;
+// [PERF2a] Données injectées par api/profile.js
+function readSsrData(username) {
+  try {
+    const p = window.__PROFILE__;
+    if (!p || !p.username) return null;
+    if (String(p.username).toLowerCase() !== String(username || '').toLowerCase()) return null;
+    const x = window.__PROFILE_EXTRAS__;
+    const extras = x && String(x.profile_id) === String(p.id) ? x : null;
+    return { profile: p, extras };
+  } catch {
+    return null;
+  }
+}
+
+// N'écrase le state que si le contenu a réellement changé
+const sameJson = (a, b) => {
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+};
+
+// [PERF2e] Exécute fn quand le navigateur est au repos (repli : setTimeout)
+const deferIdle = (fn, timeout = 2000) => {
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn, { timeout });
+  else setTimeout(fn, 800);
+};
+
+// ─── [F1] Verrouillage du scroll body — mutualisé ──────────────
+let __ppScrollLockCount = 0;
+let __ppScrollY = 0;
+
+function lockBodyScroll() {
+  if (__ppScrollLockCount === 0) {
+    __ppScrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${__ppScrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+  }
+  __ppScrollLockCount++;
+}
+
+function unlockBodyScroll() {
+  __ppScrollLockCount = Math.max(0, __ppScrollLockCount - 1);
+  if (__ppScrollLockCount === 0) {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+    window.scrollTo(0, __ppScrollY);
+  }
+}
+
+function useBodyScrollLock() {
+  useEffect(() => {
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, []);
+}
+
+// ─── Tracking ─────────────────────────────────────────────────
+// [TRK1] fetchCountry() renvoie null (et non '') quand la géoloc échoue.
+// [TRK2] isAutomated() : ignore PageSpeed/Lighthouse, GTmetrix, Googlebot, headless...
+// [TRK3] alreadyTracked() : une seule vue par profil et par session d'onglet.
+// [TRK4] isTrackingDisabled() : exclusion manuelle du propriétaire (?notrack=1 / ?notrack=0).
+
+function detectDevice() {
+  const ua = navigator.userAgent.toLowerCase();
+  if (/tablet|ipad|playbook|silk/.test(ua))                                          return 'tablet';
+  if (/mobile|android|iphone|ipod|blackberry|iemobile|opera mini/.test(ua))         return 'mobile';
+  return 'desktop';
+}
+
+function cleanReferrer() {
+  try {
+    const ref = document.referrer;
+    if (!ref) return 'direct';
+    const host = new URL(ref).hostname.replace(/^www\./, '');
+    if (host.includes('google'))                                                      return 'google';
+    if (host.includes('facebook') || host.includes('fb.com'))                        return 'facebook';
+    if (host.includes('instagram'))                                                   return 'instagram';
+    if (host.includes('tiktok'))                                                      return 'tiktok';
+    if (host.includes('twitter') || host.includes('t.co') || host.includes('x.com')) return 'twitter';
+    if (host.includes('whatsapp'))                                                    return 'whatsapp';
+    return host || 'direct';
+  } catch { return 'direct'; }
+}
+
+// [TRK2] « \bbot\b » et non « bot » seul, pour ne pas bloquer de vrais téléphones (ex. Cubot).
+const AUTOMATED_UA = /googlebot|bingbot|\bbot\b|crawler|spider|slurp|lighthouse|pagespeed|gtmetrix|headlesschrome|phantomjs/i;
+
+function isAutomated() {
+  try {
+    return navigator.webdriver === true || AUTOMATED_UA.test(navigator.userAgent || '');
+  } catch { return false; }
+}
+
+// [TRK4]
+function isTrackingDisabled() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('notrack') === '1') localStorage.setItem('pp_notrack', '1');
+    if (p.get('notrack') === '0') localStorage.removeItem('pp_notrack');
+    return localStorage.getItem('pp_notrack') === '1';
+  } catch { return false; }
+}
+
+function shouldTrack() {
+  return !isTrackingDisabled() && !isAutomated();
+}
+
+// [TRK3] Renvoie true si ce profil a déjà été compté dans cette session d'onglet.
+function alreadyTracked(profileId) {
+  try {
+    const key = `pp_view_${profileId}`;
+    if (sessionStorage.getItem(key)) return true;
+    sessionStorage.setItem(key, '1');
+  } catch { /* storage indisponible : on laisse passer */ }
+  return false;
+}
+
+// [TRK1] null (et non '') en cas d'échec.
+async function fetchCountry() {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3000);
+    const res = await fetch('https://ipapi.co/json/', { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    return { country: d.country_code || null, country_name: d.country_name || null };
+  } catch {
+    return { country: null, country_name: null };
+  }
+}
+
+// [C3] erreurs Supabase uniquement en dev
+async function trackView(profileId) {
+  try {
+    const geo = await fetchCountry();
+    const payload = {
+      profile_id:   profileId,
+      event_type:   'view',
+      device:       detectDevice(),
+      referrer:     cleanReferrer(),
+      country:      geo.country,
+      country_name: geo.country_name,
+    };
+    const { error } = await supabase.from('profile_stats').insert([payload]);
+    if (error && process.env.NODE_ENV !== 'production') console.error('[trackView]', error);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') console.error('[trackView crash]', err);
+  }
+}
+
+async function trackClick(profileId, platform) {
+  if (!shouldTrack()) return; // [TRK2][TRK4]
+  try {
+    const payload = {
+      profile_id: profileId,
+      event_type: 'click',
+      platform,
+      device:     detectDevice(),
+      referrer:   cleanReferrer(),
+    };
+    const { error } = await supabase.from('profile_stats').insert([payload]);
+    if (error && process.env.NODE_ENV !== 'production') console.error('[trackClick]', error);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') console.error('[trackClick crash]', err);
+  }
+}
+
+// [DL8] Tracking CRM dédié — capture l'IP réelle via l'Edge Function
+// track-profile-visit. Best-effort : un échec ne bloque jamais l'affichage.
+function trackProfileVisit(profileId) {
+  supabase.functions.invoke('track-profile-visit', {
+    body: {
+      profile_id: profileId,
+      referrer: document.referrer,
+    },
+  }).catch((err) => {
+    if (process.env.NODE_ENV !== 'production') console.error('[trackProfileVisit]', err);
+  });
+}
+
+// [TRK] Point d'entrée unique pour une visite : filtre + une fois par session.
+function trackVisitOnce(profileId) {
+  if (!shouldTrack() || alreadyTracked(profileId)) return;
+  trackView(profileId);
+  trackProfileVisit(profileId);
+}
+
+// ─── Utilitaires ──────────────────────────────────────────────
+const parseColors = (tc) => {
+  if (tc && tc.includes('|')) { const [a, b] = tc.split('|'); return { bg1: a, bg2: b }; }
+  return { bg1: '#0f0a1e', bg2: '#2d1b69' };
+};
+
+// [S2] Détermine si le contenu posé par-dessus le fond doit être "clair" ou "sombre"
+function getProfileContrast(profile) {
+  if (profile?.bg_image_url) return 'light';
+
+  const relativeLuminance = (hex) => {
+    const clean = String(hex || '').replace('#', '');
+    if (clean.length !== 6) return 0.1; // secours : fond de marque sombre par défaut
+    const r = parseInt(clean.slice(0, 2), 16) / 255;
+    const g = parseInt(clean.slice(2, 4), 16) / 255;
+    const b = parseInt(clean.slice(4, 6), 16) / 255;
+    const lin = (v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  };
+
+  const { bg1, bg2 } = parseColors(profile?.theme_color);
+  const avgLum = (relativeLuminance(bg1) + relativeLuminance(bg2)) / 2;
+  return avgLum > 0.5 ? 'dark' : 'light';
+}
+
+const getCountdown = (eventDate) => {
+  if (!eventDate) return null;
+  const diff = new Date(eventDate) - new Date();
+  if (diff <= 0) return null;
+  return {
+    days:  Math.floor(diff / 86400000),
+    hours: Math.floor((diff % 86400000) / 3600000),
+    mins:  Math.floor((diff % 3600000)  / 60000),
+    secs:  Math.floor((diff % 60000)    / 1000),
+  };
+};
+
+const formatPrice = (p) => p ? Number(p).toLocaleString('fr-FR') + ' F' : '';
+
+// [MODAL1] Nombre formaté avec espaces insécables : « 350 000 » ne se coupe jamais
+const formatNumber = (p) => Number(p || 0).toLocaleString('fr-FR').replace(/[\s\u202f]/g, '\u00A0');
+
+// [SB1] Résout les métadonnées d'affichage (icône, couleur, libellé) d'un lien
+function resolvePlatform(link) {
+  const key = (link.platform || '').toLowerCase();
+  return PLATFORMS[key] || {
+    label: (link.platform || 'LIEN').toUpperCase(),
+    color: '#6366f1',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28">
+        <rect width="24" height="24" rx="6" fill="#6366f1"/>
+        <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" fill="none"/>
+        <ellipse cx="12" cy="12" rx="3.5" ry="8" stroke="white" strokeWidth="1.5" fill="none"/>
+        <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="1.5"/>
+      </svg>
+    ),
+  };
+}
+
+// ─── Sous-composants ──────────────────────────────────────────
+
+// [C6] Keyframes skeleton injectées une seule fois
+function ProfileSkeleton() {
+  useEffect(() => {
+    if (!document.getElementById(KEYFRAME_SKELETON_ID)) {
+      const s = document.createElement('style');
+      s.id = KEYFRAME_SKELETON_ID;
+      s.textContent = `
+        @keyframes pp-shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+        .pp-sk {
+          background: linear-gradient(90deg,rgba(255,255,255,0.06) 25%,rgba(255,255,255,0.12) 50%,rgba(255,255,255,0.06) 75%);
+          background-size: 600px 100%;
+          animation: pp-shimmer 1.4s infinite linear;
+          border-radius: 12px;
+        }
+        /* [F13] Réduction des animations si demandé au niveau système */
+        @media (prefers-reduced-motion: reduce) {
+          .pp-sk { animation: none; }
+        }
+      `;
+      document.head.appendChild(s);
+    }
+  }, []);
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
-      <div>
-        {/* [FIX MOBILE] Le badge « Non enregistré » est masqué dans la topbar
-            sur mobile (UserDashboard.jsx) car il y était écrasé par les
-            boutons. Il s'affiche ici, juste devant le titre de la page,
-            uniquement sur mobile (isMob) pour éviter le doublon avec la
-            topbar sur tablette/desktop. */}
-        <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
-          <h2 style={{ color:'#0f1222', fontSize:'20px', fontWeight:800, margin:0 }}>Dashboard</h2>
-          {hasChanges && isMob && (
-            <span style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:'6px', padding:'2px 8px', fontSize:'11px', color:'#b45309', fontWeight:600 }}>
-              ● Non enregistré
-            </span>
-          )}
-        </div>
-        <p style={{ color:'rgba(15,18,34,0.45)', fontSize:'13px', margin:'4px 0 0' }}>
-          Bienvenue sur votre espace SocialApp
-        </p>
+    <div style={{ minHeight:'100dvh', background:'#0f0a1e', display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 16px', fontFamily:SYSTEM_FONT_STACK }}>
+      <div className="pp-sk" style={{ width:118, height:118, borderRadius:28, marginBottom:16 }} />
+      <div className="pp-sk" style={{ width:180, height:22, marginBottom:10 }} />
+      <div className="pp-sk" style={{ width:240, height:14, marginBottom:6 }} />
+      <div className="pp-sk" style={{ width:180, height:14, marginBottom:24 }} />
+      <div style={{ width:'100%', maxWidth:384, display:'flex', flexDirection:'column', gap:10 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} className="pp-sk" style={{ width:'100%', height:72, borderRadius:16, opacity: 1 - i * 0.2 }} />
+        ))}
       </div>
+    </div>
+  );
+}
 
-      {/* Activation banner */}
-      {!isActivated && (
-        <div style={{ background:'rgba(59,75,240,0.06)', border:'1px solid rgba(59,75,240,0.2)', borderRadius:'14px', padding:'12px 16px', display:'flex', alignItems:'flex-start', gap:'10px' }}>
-          <AlertCircle size={16} color="#3b4bf0" style={{ flexShrink:0, marginTop:'1px' }}/>
-          <div>
-            <p style={{ color:'#2c3aa8', fontSize:'13px', fontWeight:600, margin:'0 0 2px' }}>Compte en attente d'activation</p>
-            <p style={{ color:'rgba(44,58,168,0.65)', fontSize:'11px', margin:0 }}>
-              Certaines fonctionnalités sont verrouillées. Envoyez votre paiement via Wave CI au numéro : +225 05 76 03 12 12 pour l'activer
-            </p>
+// [PERF2c] eager : charge sans attendre (images en haut de page) ;
+// priority : eager + fetchPriority high (image LCP uniquement).
+function LazyImg({ src, alt, style, eager = false, priority = false }) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) setLoaded(true);
+  }, [src]);
+
+  return (
+    <img
+      ref={imgRef}
+      src={src} alt={alt}
+      loading={eager || priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : undefined}
+      decoding="async"
+      onLoad={() => setLoaded(true)}
+      style={{ ...style, opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+    />
+  );
+}
+
+const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill={color}>
+    <path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2zm5.2 13.8c-.2.6-1.3 1.2-1.8 1.2-.5.1-1.1.1-1.6-.1-1-.3-2-1-2.8-1.8A9.2 9.2 0 0 1 9 12.4c-.2-.5-.2-1-.1-1.5.1-.5.6-1.1 1-1.3.3-.1.5-.1.7 0 .2 0 .3 0 .4.3l.6 1.6c0 .1.1.3 0 .4-.1.2-.2.3-.3.4-.1.1-.3.3-.2.5.4.7 1 1.3 1.7 1.7.2.1.4 0 .5-.1l.5-.6c.2-.2.4-.2.6-.1l1.4.7c.2.1.4.2.4.4.1.3 0 .8-.2 1z"/>
+  </svg>
+);
+
+// [P2] Barre d'actions flottante — partage natif avec repli "copier le lien".
+function ShareBar({ profile }) {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef(null);
+
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+
+  const handleShare = async () => {
+    const url = `https://www.socialapp.work/${profile.username}`;
+    const shareData = { title: profile.display_name, text: profile.bio || '', url };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+      throw new Error('no-native-share');
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => setCopied(false), 1800);
+      } catch {
+        window.prompt('Copiez ce lien :', url);
+      }
+    }
+  };
+
+  return (
+    <button
+      onClick={handleShare}
+      aria-label="Partager ce profil"
+      className="pp-share-btn"
+      style={{
+        display:'flex', alignItems:'center', justifyContent:'center',
+        width:'48px', height:'48px', borderRadius:'50%',
+        background: copied ? 'rgba(34,197,94,0.9)' : 'rgba(99,102,241,0.92)',
+        border: `1px solid ${copied ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.18)'}`,
+        color: '#fff',
+        cursor:'pointer', touchAction:'manipulation', ...CARD_BLUR,
+        boxShadow:'0 6px 20px rgba(0,0,0,0.35)',
+        transition:'background 0.2s,border-color 0.2s,color 0.2s,transform 0.15s',
+      }}
+    >
+      {copied ? <Check size={18} /> : <Share2 size={18} />}
+    </button>
+  );
+}
+
+function ImageLightbox({ src, onClose }) {
+  useBodyScrollLock();
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:9500, background:'rgba(0,0,0,0.92)', backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', animation:'pp-fadeInOverlay 0.2s ease' }}>
+      <button
+        onClick={onClose}
+        aria-label="Fermer"
+        style={{ position:'absolute', top:'max(16px, env(safe-area-inset-top, 0px))', right:'16px', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'white', zIndex:2, touchAction:'manipulation' }}
+      >
+        <X size={18} />
+      </button>
+      <img src={src} alt="aperçu" onClick={e => e.stopPropagation()} style={{ maxWidth:'100%', maxHeight:'90dvh', borderRadius:'16px', objectFit:'contain', boxShadow:'0 24px 80px rgba(0,0,0,0.8)', animation:'pp-zoomIn 0.25s cubic-bezier(0.34,1.56,0.64,1)' }} />
+    </div>
+  );
+}
+
+// [BANNER-SLIDER] Carrousel de bannières : fondu enchaîné toutes les 4 s,
+// pause au survol/toucher, swipe, points, bouton Télécharger en haut à droite.
+// En mode léger, seules la slide courante et ses voisines sont montées.
+function BannerSlider({ urls, getSrc, isLight, priority, onDownload }) {
+  const n = urls.length;
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const touchX = useRef(null);
+
+  useEffect(() => { if (index >= n) setIndex(0); }, [n, index]);
+
+  // `index` en dépendance : le minuteur repart à 4 s après un changement manuel
+  useEffect(() => {
+    if (n < 2 || paused) return;
+    const t = setInterval(() => setIndex(i => (i + 1) % n), 4000);
+    return () => clearInterval(t);
+  }, [n, paused, index]);
+
+  const onTouchEnd = (e) => {
+    const sx = touchX.current;
+    touchX.current = null;
+    setPaused(false);
+    if (sx == null || n < 2) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 40) setIndex(i => (dx < 0 ? (i + 1) % n : (i - 1 + n) % n));
+  };
+
+  return (
+    <div
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onTouchStart={(e) => { touchX.current = e.touches[0].clientX; setPaused(true); }}
+      onTouchEnd={onTouchEnd}
+      style={{ position:'absolute', inset:0, touchAction:'pan-y' }}
+    >
+      {urls.map((u, i) => {
+        const near = i === index || i === (index + 1) % n || i === (index - 1 + n) % n;
+        if (isLight && !near) return null;
+        return (
+          <div key={u + i} aria-hidden={i !== index}
+            style={{ position:'absolute', inset:0, opacity: i === index ? 1 : 0, transition:'opacity 0.6s ease', pointerEvents:'none' }}>
+            <LazyImg
+              eager={i === 0}
+              priority={priority && i === 0}
+              src={getSrc(u)}
+              alt={`Bannière ${i + 1}`}
+              style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+            />
           </div>
-          <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer"
-            style={{ marginLeft:'auto', background:'#25D366', borderRadius:'8px', padding:'8px 14px', color:'white', fontSize:'11px', fontWeight:700, textDecoration:'none', flexShrink:0, display:'flex', alignItems:'center', gap:'5px', whiteSpace:'nowrap' }}>
-            WhatsApp — Envoyer la preuve
-          </a>
+        );
+      })}
+
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onDownload(urls[index]); }}
+        aria-label="Télécharger la bannière"
+        style={{ position:'absolute', top:'10px', right:'10px', zIndex:3, display:'flex', alignItems:'center', gap:'5px', background:'rgba(255,255,255,0.92)', color:'#000', padding:'8px 12px', minHeight:'36px', borderRadius:'999px', fontWeight:700, fontSize:'11px', border:'none', cursor:'pointer', touchAction:'manipulation', boxShadow:'0 2px 10px rgba(0,0,0,0.3)' }}
+      >
+        <Download size={12} /> Télécharger
+      </button>
+
+      {n > 1 && (
+        <div style={{ position:'absolute', bottom:'6px', left:'50%', transform:'translateX(-50%)', display:'flex', zIndex:3 }}>
+          {urls.map((_, i) => (
+            <button key={i} type="button" onClick={() => setIndex(i)} aria-label={`Bannière ${i + 1}`}
+              style={{ background:'none', border:'none', padding:'6px 3px', cursor:'pointer', touchAction:'manipulation' }}>
+              <span style={{ display:'block', width: i === index ? '18px' : '6px', height:'6px', borderRadius:'999px', background:'white', opacity: i === index ? 1 : 0.5, boxShadow:'0 1px 3px rgba(0,0,0,0.4)', transition:'all 0.3s' }} />
+            </button>
+          ))}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Top grid — 3 colonnes (Profil / QR / Stats) si le plan inclut les
-          statistiques, sinon 2 colonnes (Profil / QR) pour un dashboard
-          Basic plus compact plutôt qu'une 3e carte grisée. */}
-      <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr':`repeat(${topColumnCount},1fr)`, gap:'16px', alignItems:'start' }}>
+function RippleButton({ onClick, style, children, platformColor }) {
+  const [ripples, setRipples] = useState([]);
+  const timeouts = useRef([]);
 
-        {/* Profile card — [THÈME CLAIR] alignée sur le style de la carte
-            profil admin : fond blanc, bordure/texte foncés, plus de bloc
-            sombre isolé au sein d'un dashboard clair. */}
-        <div style={{ background:'#ffffff', border:'1px solid rgba(15,18,34,0.08)', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 20px rgba(15,18,34,0.08)' }}>
-          <ProfileHeader profile={profile} onUpdate={onUpdate}/>
+  useEffect(() => {
+    return () => { timeouts.current.forEach(clearTimeout); timeouts.current = []; };
+  }, []);
 
-          {/* Bloc méta compact — username + badge sur une ligne, expiry + statut sur l'autre */}
-          <div style={{ borderTop:'1px solid rgba(15,18,34,0.08)', padding:'12px 14px', display:'flex', flexDirection:'column', gap:'10px' }}>
+  const handlePointerDown = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const id = Date.now();
+    setRipples(p => [...p, { x: e.clientX - rect.left, y: e.clientY - rect.top, id }]);
+    const t = setTimeout(() => setRipples(p => p.filter(r => r.id !== id)), 600);
+    timeouts.current.push(t);
+  };
+  return (
+    <button
+      onClick={onClick}
+      onPointerDown={handlePointerDown}
+      className="pp-link-btn-el"
+      style={{ ...style, position:'relative', overflow:'hidden', touchAction:'manipulation', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}
+    >
+      {ripples.map(r => (
+        <span key={r.id} style={{ position:'absolute', left:r.x, top:r.y, width:'8px', height:'8px', borderRadius:'50%', background:'rgba(0,0,0,0.18)', transform:'translate(-50%,-50%) scale(0)', animation:'pp-ripple 0.6s ease-out forwards', pointerEvents:'none' }} />
+      ))}
+      {children}
+    </button>
+  );
+}
 
-            {/* Ligne 1 : username + badge vérifié */}
-            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <AtSign size={13} color="rgba(15,18,34,0.35)" style={{ flexShrink:0 }}/>
-              {isActivated ? (
-                <input type="text" value={profile?.username||''} onChange={e=>onUpdate({username:e.target.value})} placeholder="username"
-                  style={{ background:'transparent', border:'none', color:'#3b4bf0', fontSize:'12px', fontWeight:600, outline:'none', flex:1, minWidth:0 }}/>
-              ) : (
-                <div
-                  role="button" tabIndex={0}
-                  onClick={onRequestActivation}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onRequestActivation?.(); }}
-                  title="Cliquez pour activer votre compte et débloquer le username personnalisé"
-                  style={{ flex:1, display:'flex', alignItems:'center', gap:'6px', cursor:'pointer', minWidth:0 }}
-                >
-                  <Lock size={11} color="rgba(15,18,34,0.35)" style={{ flexShrink:0 }}/>
-                  <span style={{ fontSize:'12px', color:'rgba(15,18,34,0.35)', fontStyle:'italic', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile?.username||'verrouillé'}</span>
-                </div>
-              )}
+// [MODAL1-4][DL6] Modale détail produit — responsive tous mobiles.
+// Props : isLight (mode data-light), onZoom(url) ouvre l'ImageLightbox du
+// parent, isZoomed (true tant que le lightbox est ouvert : Échap ferme alors
+// uniquement le zoom).
+function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLight, onZoom, isZoomed }) {
+  const hasOld   = !!product.original_price && Number(product.original_price) > Number(product.price);
+  const discount = hasOld ? Math.round((1 - product.price / product.original_price) * 100) : 0;
+  const inStock  = product.is_available !== false;
+  const waNumber = (whatsappNumber || '').replace(/\D/g, '');
+  const waMsg    = encodeURIComponent(`Bonjour ! Je suis intéressé(e) par votre article : *${product.title}* à ${formatPrice(product.price)}. Est-il encore disponible ?`);
+  const imgWidth = isLight ? IMG_WIDTHS.light.product * 2 : IMG_WIDTHS.full.product * 2; // vue détail = plus grande que la vignette
+  const showCta  = inStock && !!waNumber;
+  const canZoom  = !!product.image_url && typeof onZoom === 'function';
 
-              <button onClick={()=>limits.badge&&onUpdate({is_verified:!profile?.is_verified})}
-                title={limits.badge ? 'Badge vérifié' : 'Badge vérifié — PRO requis'}
-                aria-label="Basculer le badge vérifié"
-                style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:limits.badge?'pointer':'not-allowed', padding:0, flexShrink:0, opacity:limits.badge?1:0.4 }}>
-                <BadgeCheck size={13} color={profile?.is_verified ? '#22c55e' : 'rgba(15,18,34,0.35)'}/>
-                <div style={{ width:'30px', height:'17px', borderRadius:'100px', background:profile?.is_verified?'#22c55e':'rgba(15,18,34,0.12)', position:'relative', transition:'background 0.3s' }}>
-                  <div style={{ width:'11px', height:'11px', borderRadius:'50%', background:'white', position:'absolute', top:'3px', left:profile?.is_verified?'16px':'3px', transition:'left 0.3s', boxShadow:'0 1px 3px rgba(15,18,34,0.25)' }}/>
-                </div>
-              </button>
-            </div>
+  useBodyScrollLock();
 
-            {/* Ligne 2 : expiry + statut d'activation */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px', flexWrap:'wrap' }}>
-              <span style={{ display:'flex', alignItems:'center', gap:'5px', color:'rgba(15,18,34,0.45)', fontSize:'11px' }}>
-                <CalendarClock size={12}/>
-                Exp. {profile?.expiry_date ? new Date(profile.expiry_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
-              </span>
-              <span style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'11px', color:isActivated?'#16a34a':'#3b82f6' }}>
-                {isActivated ? <CheckCircle size={12}/> : <Lock size={12}/>}
-                {isActivated ? 'Compte activé' : "En attente d'activation"}
-              </span>
-            </div>
+  // [MODAL3] Échap : ferme la modale, sauf si le zoom est ouvert (il se ferme d'abord)
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape' && !isZoomed) onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose, isZoomed]);
 
-            {/* [BANNIÈRES MULTIPLES] Bannières de couverture (profile.banner_urls,
-                max MAX_BANNERS) — placées AVANT le bloc "Image de fond" : c'est
-                le premier élément visuel de la page publique (au-dessus de
-                l'avatar), il précède donc logiquement le fond d'écran
-                plein-page dans l'ordre des contrôles. Sur la page publique,
-                elles défilent en carrousel avec un bouton Télécharger. */}
-            {onBannerUpload && (
-              <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-                <label style={{
-                  display:'flex', alignItems:'center', gap:'6px',
-                  background:hasBanners?'rgba(99,102,241,0.08)':'rgba(15,18,34,0.03)',
-                  border:'1px solid '+(hasBanners?'rgba(99,102,241,0.35)':'rgba(15,18,34,0.1)'),
-                  borderRadius:'8px', padding:'7px 10px', position:'relative',
-                  cursor:bannerBlocked?'not-allowed':'pointer',
-                  opacity:bannersFull?0.6:1,
-                }}>
-                  {uploadingBanner
-                    ? <Loader2 size={12} color="#6366f1" className="animate-spin" />
-                    : <GalleryHorizontal size={12} color={hasBanners ? '#6366f1' : 'rgba(15,18,34,0.4)'} />
-                  }
-                  <span style={{ color:hasBanners?'#4f46e5':'rgba(15,18,34,0.5)', fontSize:'10px', fontWeight:600 }}>
-                    {bannersFull
-                      ? `Maximum atteint (${bannerCount}/${MAX_BANNERS})`
-                      : hasBanners
-                        ? `Ajouter des bannières (${bannerCount}/${MAX_BANNERS})`
-                        : 'Bannières de couverture'}
-                  </span>
-                  <input
-                    type="file" accept="image/*" multiple
-                    style={{ position:'absolute', inset:0, opacity:0, cursor:bannerBlocked?'not-allowed':'pointer', width:'100%', height:'100%' }}
-                    disabled={bannerBlocked}
-                    onChange={e => {
-                      // Array.from AVANT de vider l'input : reset de value vide aussi la FileList
-                      const files = Array.from(e.target.files || []);
-                      e.target.value = '';
-                      if (files.length) onBannerUpload(files);
-                    }}
+  return (
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={product.title}
+      style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background:'#0f0a1e', border:'1px solid rgba(255,255,255,0.12)', borderBottom:'none', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92dvh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
+      >
+        {/* Barre du haut : poignée centrée + fermer à droite, sur une seule ligne */}
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center', height:'52px', flexShrink:0 }}>
+          <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.18)' }} />
+          <button
+            onClick={onClose}
+            aria-label="Fermer"
+            style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.75)', touchAction:'manipulation' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Contenu scrollable */}
+        <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain', padding:'0 16px 20px' }}>
+
+          {/* Image — affichée en entier, fond flouté de la même image, zoom au toucher */}
+          <div
+            onClick={canZoom ? () => onZoom(product.image_url) : undefined}
+            style={{ borderRadius:'18px', overflow:'hidden', aspectRatio:'4/3', background:'#0b0716', position:'relative', isolation:'isolate', cursor: canZoom ? 'zoom-in' : 'default', touchAction:'manipulation' }}
+          >
+            {product.image_url ? (
+              <>
+                {/* Fond flouté (désactivé en mode léger : zéro coût GPU) */}
+                {!isLight && (
+                  <img
+                    src={imgUrl(product.image_url, { width: imgWidth })}
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    style={{ position:'absolute', inset:'-20px', width:'calc(100% + 40px)', height:'calc(100% + 40px)', objectFit:'cover', filter:'blur(24px) saturate(1.2)', opacity:0.55, transform:'scale(1.1)', zIndex:0, pointerEvents:'none' }}
                   />
-                </label>
+                )}
+                {/* Image nette, jamais rognée */}
+                <LazyImg
+                  eager
+                  src={imgUrl(product.image_url, { width: imgWidth })}
+                  alt={product.title}
+                  style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', objectPosition:'center', display:'block', zIndex:1 }}
+                />
+              </>
+            ) : (
+              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <ShoppingBag size={48} color="rgba(255,255,255,0.15)" />
+              </div>
+            )}
 
-                {hasBanners && (
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                    {bannerUrls.map((u, i) => (
-                      <div key={u + i} style={{ position:'relative', width:'72px', height:'32px', borderRadius:'6px', overflow:'hidden', border:'1px solid rgba(15,18,34,0.12)' }}>
-                        <img src={u} alt={`Bannière ${i + 1}`} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-                        {onBannerRemove && (
-                          <button
-                            type="button"
-                            onClick={() => onBannerRemove(i)}
-                            disabled={uploadingBanner}
-                            aria-label={`Retirer la bannière ${i + 1}`}
-                            style={{ position:'absolute', top:'2px', right:'2px', width:'16px', height:'16px', borderRadius:'50%', border:'none', background:'rgba(0,0,0,0.65)', display:'flex', alignItems:'center', justifyContent:'center', cursor:uploadingBanner?'not-allowed':'pointer', padding:0 }}
-                          >
-                            <X size={9} color="white" />
-                          </button>
-                        )}
-                      </div>
+            {discount > 0 && (
+              <div style={{ position:'absolute', top:'10px', left:'10px', zIndex:2, background:'#22c55e', borderRadius:'8px', padding:'4px 10px', fontSize:'13px', fontWeight:800, color:'white', boxShadow:'0 4px 12px rgba(0,0,0,0.35)' }}>-{discount}%</div>
+            )}
+
+            {canZoom && inStock && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onZoom(product.image_url); }}
+                aria-label="Agrandir l'image"
+                style={{ position:'absolute', bottom:'10px', right:'10px', zIndex:2, display:'flex', alignItems:'center', gap:'5px', background:'rgba(0,0,0,0.6)', color:'white', border:'1px solid rgba(255,255,255,0.18)', borderRadius:'999px', padding:'7px 12px', minHeight:'36px', fontSize:'11px', fontWeight:700, cursor:'pointer', touchAction:'manipulation' }}
+              >
+                <ZoomIn size={13} /> Agrandir
+              </button>
+            )}
+
+            {!inStock && (
+              <div style={{ position:'absolute', inset:0, zIndex:3, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+                <span style={{ background:'rgba(0,0,0,0.8)', color:'white', fontSize:'13px', fontWeight:700, padding:'8px 20px', borderRadius:'100px' }}>INDISPONIBLE</span>
+              </div>
+            )}
+          </div>
+
+          {/* Titre */}
+          <h2 style={{ color:'white', fontSize:'clamp(17px, 5vw, 21px)', fontWeight:800, margin:'16px 0 10px', lineHeight:1.25, wordBreak:'break-word' }}>
+            {product.title}
+          </h2>
+
+          {/* [MODAL1] Prix : jamais coupé, les éléments passent dessous si besoin */}
+          <div style={{ display:'flex', flexWrap:'wrap', alignItems:'baseline', columnGap:'12px', rowGap:'6px', marginBottom:'12px' }}>
+            <span style={{ whiteSpace:'nowrap', fontSize:'clamp(26px, 8.5vw, 32px)', fontWeight:900, lineHeight:1, letterSpacing:'-0.5px', color: hasOld ? '#ff6b35' : 'white', fontVariantNumeric:'tabular-nums' }}>
+              {formatNumber(product.price)}
+              <span style={{ fontSize:'0.55em', fontWeight:800, marginLeft:'4px', letterSpacing:0 }}>F</span>
+            </span>
+            {hasOld && (
+              <span style={{ whiteSpace:'nowrap', fontSize:'15px', color:'rgba(255,255,255,0.4)', textDecoration:'line-through', fontVariantNumeric:'tabular-nums' }}>
+                {formatNumber(product.original_price)}&nbsp;F
+              </span>
+            )}
+          </div>
+
+          {/* Pastilles : stock + économie */}
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'8px', marginBottom:'16px' }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background: inStock ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:'1px solid ' + (inStock ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), borderRadius:'100px', padding:'6px 12px' }}>
+              <div style={{ width:'7px', height:'7px', borderRadius:'50%', background: inStock ? '#22c55e' : '#ef4444', flexShrink:0 }} />
+              <span style={{ fontSize:'12px', fontWeight:600, whiteSpace:'nowrap', color: inStock ? '#22c55e' : '#f87171' }}>
+                {inStock ? 'En stock · Disponible' : 'Rupture de stock'}
+              </span>
+            </div>
+            {discount > 0 && (
+              <div style={{ display:'inline-flex', alignItems:'center', background:'rgba(34,197,94,0.12)', border:'1px solid rgba(34,197,94,0.25)', borderRadius:'100px', padding:'6px 12px' }}>
+                <span style={{ fontSize:'12px', fontWeight:700, whiteSpace:'nowrap', color:'#22c55e' }}>
+                  Économise {formatNumber(product.original_price - product.price)}&nbsp;F
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          {product.description && (
+            <div style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'14px', padding:'14px 16px' }}>
+              <p style={{ color:'rgba(255,255,255,0.55)', fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 8px' }}>Description</p>
+              <p style={{ color:'rgba(255,255,255,0.85)', fontSize:'14px', lineHeight:1.65, margin:0, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{product.description}</p>
+            </div>
+          )}
+
+          <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'11px', textAlign:'center', margin:'16px 0 0' }}>🔒 Paiement et livraison directement avec le vendeur</p>
+        </div>
+
+        {/* [MODAL4] Pied fixe : le bouton reste toujours visible */}
+        {(showCta || !inStock) && (
+          <div style={{ flexShrink:0, padding:'12px 16px calc(12px + env(safe-area-inset-bottom, 0px))', background:'linear-gradient(to top, #0f0a1e 78%, rgba(15,10,30,0))', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+            {showCta ? (
+              <a
+                href={`https://wa.me/${waNumber}?text=${waMsg}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  if (profileId) triggerMarketplaceBuy(profileId, {
+                    productId:    product.id,
+                    productTitle: product.title,
+                    price:        product.price,
+                  });
+                }}
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', minHeight:'52px', padding:'0 16px', boxSizing:'border-box', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', touchAction:'manipulation' }}
+              >
+                <WhatsAppIcon size={20} color="white" /> Commander sur WhatsApp
+              </a>
+            ) : (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', minHeight:'52px', boxSizing:'border-box', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', color:'rgba(255,255,255,0.4)', fontSize:'14px', fontWeight:600 }}>
+                Article temporairement indisponible
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// [W2][W3][DL6] Carte boutique blanche — isLight en prop pour réduire la
+// largeur d'image demandée à Supabase Storage.
+function PublicProductCard({ product, onOpen, isLight }) {
+  const discount = product.original_price && product.price
+    ? Math.round((1 - product.price / product.original_price) * 100)
+    : 0;
+  const imgWidth = isLight ? IMG_WIDTHS.light.product : IMG_WIDTHS.full.product;
+  return (
+    <div
+      onClick={() => onOpen(product)}
+      className="pp-shop-card"
+      style={{ background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s,background 0.15s', touchAction:'manipulation' }}
+      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onTouchEnd={e => e.currentTarget.style.transform   = 'scale(1)'}
+    >
+      <div style={{ position:'relative', aspectRatio:'4/3', background:'rgba(0,0,0,0.05)', overflow:'hidden' }}>
+        {product.image_url
+          ? <LazyImg src={imgUrl(product.image_url, { width: imgWidth })} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ShoppingBag size={28} color="rgba(0,0,0,0.2)" /></div>
+        }
+        {discount > 0 && <div style={{ position:'absolute', top:'8px', left:'8px', background:'#22c55e', borderRadius:'6px', padding:'2px 7px', fontSize:'11px', fontWeight:700, color:'white' }}>-{discount}%</div>}
+        {!product.is_available && (
+          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <span style={{ background:'rgba(0,0,0,0.7)', color:'rgba(255,255,255,0.9)', fontSize:'10px', fontWeight:700, padding:'4px 10px', borderRadius:'20px' }}>INDISPONIBLE</span>
+          </div>
+        )}
+        <div style={{ position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.6)', borderRadius:'100px', padding:'3px 8px', fontSize:'10px', color:'rgba(255,255,255,0.9)', fontWeight:600 }}>Voir +</div>
+      </div>
+      <div style={{ padding:'10px 12px 12px' }}>
+        <span style={{ fontSize:'16px', fontWeight:800, color:product.original_price ? '#ff6b35' : CARD_TEXT, display:'block', lineHeight:1.1, whiteSpace:'nowrap' }}>{formatPrice(product.price)}</span>
+        {product.original_price && <span style={{ fontSize:'11px', color:CARD_TEXT_FAINT, textDecoration:'line-through' }}>{formatPrice(product.original_price)}</span>}
+        <p style={{ color:CARD_TEXT, opacity:0.85, fontSize:'12px', fontWeight:600, margin:'4px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{product.title}</p>
+      </div>
+    </div>
+  );
+}
+
+// [DL5] Petit indicateur "~XX Ko chargés" — mode léger uniquement.
+function PageWeightBadge() {
+  const [kb, setKb] = useState(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        const entries = performance.getEntriesByType('resource');
+        const total = entries.reduce((sum, e) => sum + (e.transferSize || 0), 0);
+        if (total > 0) setKb(Math.round(total / 1024));
+      } catch {}
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (kb === null) return null;
+
+  return (
+    <div style={{ marginTop:'8px', display:'inline-flex', alignItems:'center', gap:'5px', color:'rgba(255,255,255,0.35)', fontSize:'11px' }}>
+      <Wifi size={11} /> Mode léger · ~{kb} Ko chargés
+    </div>
+  );
+}
+
+// [DL7] Switch discret pour forcer manuellement le mode léger/complet.
+function LightModeToggle({ isLight, setManual }) {
+  return (
+    <button
+      onClick={() => setManual(!isLight)}
+      aria-label={isLight ? 'Repasser en mode complet' : 'Activer le mode léger'}
+      style={{
+        marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px',
+        background:'transparent', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'100px',
+        padding:'6px 14px', color:'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600,
+        cursor:'pointer', touchAction:'manipulation',
+      }}
+    >
+      {isLight ? <WifiOff size={11} /> : <Wifi size={11} />}
+      {isLight ? 'Mode léger activé' : 'Activer le mode léger'}
+    </button>
+  );
+}
+
+// ─── Composant principal ──────────────────────────────────────
+export default function PublicProfile({ previewProfile = null }) {
+  const { username } = useParams();
+
+  // [PERF2a] Données pré-rendues par api/profile.js (lues une seule fois au montage)
+  const isPreview = !!previewProfile;
+  const [ssrInit] = useState(() => (isPreview ? null : readSsrData(username)));
+
+  const [profile, setProfile]               = useState(ssrInit?.profile || previewProfile || null);
+  const [loading, setLoading]               = useState(!ssrInit && !previewProfile);
+  const [notFound, setNotFound]             = useState(false);
+  const [countdown, setCountdown]           = useState(null);
+  const [currentIndex, setCurrentIndex]     = useState(0);
+  const [isAutoPlay, setIsAutoPlay]         = useState(true);
+  const [products, setProducts]             = useState(ssrInit?.extras?.products || []);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [documents, setDocuments]           = useState(ssrInit?.extras?.documents || []);
+  const [lightboxSrc, setLightboxSrc]       = useState(null);
+
+  // [DL1] Détection du mode data-light
+  const { isLight, setManual, clearManual } = useDataSaverMode();
+
+  // [PREVIEW] Resynchronise le brouillon envoyé par le dashboard (iframe /preview-profile)
+  useEffect(() => {
+    if (previewProfile) setProfile(previewProfile);
+  }, [previewProfile]);
+
+  // [C8] Guard isMounted pour éviter setState après démontage
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  // [P1][DL2] Import de la police de marque — sauté en mode léger
+  useEffect(() => {
+    if (isLight) return; // [DL2] pas de police custom en mode léger
+    if (!document.getElementById(FONT_LINK_ID)) {
+      const link = document.createElement('link');
+      link.id = FONT_LINK_ID;
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap';
+      document.head.appendChild(link);
+    }
+  }, [isLight]);
+
+  // [C7] Keyframes principales injectées une seule fois
+  useEffect(() => {
+    if (!document.getElementById(KEYFRAME_MAIN_ID)) {
+      const s = document.createElement('style');
+      s.id = KEYFRAME_MAIN_ID;
+      s.textContent = `
+        html,body { min-height:100%;margin:0;padding:0; }
+        a,button { -webkit-tap-highlight-color:transparent; }
+        @keyframes pp-pulse       { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes pp-ripple      { 0%{transform:translate(-50%,-50%) scale(0);opacity:1} 100%{transform:translate(-50%,-50%) scale(28);opacity:0} }
+        @keyframes pp-fadeSlideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pp-fadeInOverlay { from{opacity:0} to{opacity:1} }
+        @keyframes pp-slideUp     { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes pp-zoomIn      { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
+        @keyframes pp-spin        { to{transform:rotate(360deg)} }
+        @keyframes pp-meshDrift   {
+          0%,100% { transform:translate(0,0) scale(1); }
+          33%     { transform:translate(3%,-4%) scale(1.06); }
+          66%     { transform:translate(-3%,3%) scale(1.03); }
+        }
+        .pp-link-btn              { animation:pp-fadeSlideUp 0.4s ease both; }
+
+        .pp-avatar-ring--verified {
+          background: conic-gradient(from 0deg,#6366f1,#22c55e,#f7c948,#ff6b35,#6366f1);
+        }
+
+        .pp-link-btn-el:active { transform: translateY(1px); }
+        .pp-link-btn-el:focus-visible,
+        .pp-shop-card:focus-visible {
+          outline: 2px solid #6366f1;
+          outline-offset: 2px;
+        }
+        .pp-share-btn:focus-visible {
+          outline: 2px solid rgba(255,255,255,0.85);
+          outline-offset: 2px;
+        }
+
+        .pp-content-col { width:100%; max-width:384px; }
+        .pp-shop-grid   { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        @media (min-width:768px) {
+          .pp-content-col { max-width:480px; }
+          .pp-shop-grid   { grid-template-columns:repeat(3,1fr); gap:12px; }
+        }
+
+        @media (hover: hover) {
+          .pp-link-btn-el:hover  { background:var(--pp-hover-bg, ${CARD_BG_HOVER}) !important; transform:translateY(-1px); }
+          .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
+          .pp-share-btn:hover    { background:rgba(255,255,255,0.14) !important; }
+          .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
+        }
+
+        /* [DL4] Mode léger : coupe l'animation "mesh" du fond décoratif */
+        .pp-light-mode .pp-mesh-blob { animation:none !important; filter:none !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .pp-link-btn { animation:none; }
+          .pp-mesh-blob { animation:none !important; }
+          *, *::before, *::after { animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+        }
+      `;
+      document.head.appendChild(s);
+    }
+  }, []);
+
+  // ── Chargement initial ───────────────────────────────────────
+  // [PERF2a] Avec les données pré-rendues : produits/documents et tracking
+  // démarrent immédiatement (plus de cascade), et le profil est revalidé
+  // en arrière-plan. Sans données pré-rendues : comportement d'origine.
+  useEffect(() => {
+    const ssr = readSsrData(username);
+
+    const loadExtras = (profileId) => {
+      Promise.all([
+        supabase
+          .from('marketplace_products')
+          .select('id,title,price,original_price,description,image_url,is_available')
+          .eq('profile_id', profileId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('profile_documents')
+          .select('id,name,file_url,file_size,is_visible')
+          .eq('profile_id', profileId)
+          .eq('is_visible', true)
+          .order('created_at', { ascending: false }),
+      ]).then(([prod, docs]) => {
+        if (!isMounted.current) return; // [C8]
+        const nextProducts = prod?.data || [];
+        const nextDocs     = docs?.data || [];
+        setProducts(prev  => (sameJson(prev, nextProducts) ? prev : nextProducts));
+        setDocuments(prev => (sameJson(prev, nextDocs)     ? prev : nextDocs));
+      });
+    };
+
+    // [PERF2e][TRK] Tracking différé + filtré (bots, ?notrack, une fois par session)
+    const startTracking = (id) => deferIdle(() => trackVisitOnce(id));
+
+    // [PREVIEW] En aperçu : seulement boutique + documents, aucun tracking ni fetch du profil
+    if (isPreview) {
+      if (previewProfile?.id) loadExtras(previewProfile.id);
+      return;
+    }
+
+    if (ssr) {
+      loadExtras(ssr.profile.id);
+      startTracking(ssr.profile.id);
+    }
+
+    const init = async () => {
+      // [PERF2f] « _ » et « % » sont des jokers SQL dans ilike : on les échappe
+      const pattern = String(username || '').replace(/[\\%_]/g, '\\$&');
+      const { data, error } = await supabase
+        .from('link_profiles')
+        .select('*')
+        .ilike('username', pattern)
+        .maybeSingle();
+
+      if (!isMounted.current) return; // [C8]
+
+      if (error || !data) {
+        // Avec des données pré-rendues, on garde l'affichage existant
+        if (!ssr) {
+          setNotFound(true);
+          setLoading(false);
+        }
+        return;
+      }
+
+      setProfile(prev => (sameJson(prev, data) ? prev : data));
+      setLoading(false);
+
+      if (!ssr) {
+        startTracking(data.id);
+        loadExtras(data.id);
+      }
+    };
+    init();
+  }, [username, isPreview, previewProfile?.id]);
+
+  // ── [C1][A2] QR scan isolé + déclencheur automatisation ─────
+  useEffect(() => {
+    if (isPreview || !profile?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('source') !== 'qr') return;
+    const medium = params.get('medium');
+
+    supabase.from('profile_stats')
+      .insert([{ profile_id: profile.id, event_type: 'qr_scan', referrer: medium || 'non_specifie' }])
+      .then(({ error }) => {
+        if (error && process.env.NODE_ENV !== 'production') console.error('[QR scan]', error);
+      });
+
+    triggerQrScan(profile.id, {
+      referrer: medium || 'non_specifie',
+      device:   detectDevice(),
+    });
+  }, [profile?.id]);
+
+  // ── Images slider ────────────────────────────────────────────
+  // [PERF2d] Calculé directement (useMemo) : l'image événement est présente dès le premier rendu.
+  const images = useMemo(() => {
+    if (profile?.event_images)         return Array.isArray(profile.event_images) ? profile.event_images : [profile.event_images];
+    if (profile?.event_image_url)      return [profile.event_image_url];
+    return [];
+  }, [profile?.event_images, profile?.event_image_url]);
+
+  // [BANNER-SLIDER] Liste des bannières (repli sur l'ancien banner_url unique).
+  // useMemo = hook : doit rester AVANT les return anticipés plus bas.
+  const bannerList = useMemo(() => {
+    const list = Array.isArray(profile?.banner_urls) && profile.banner_urls.length
+      ? profile.banner_urls
+      : (profile?.banner_url ? [profile.banner_url] : []);
+    return list.filter(u => typeof u === 'string' && u);
+  }, [profile?.banner_urls, profile?.banner_url]);
+
+  useEffect(() => {
+    if (!images.length || !isAutoPlay) return;
+    const t = setInterval(() => setCurrentIndex(p => (p + 1) % images.length), 4000);
+    return () => clearInterval(t);
+  }, [images.length, isAutoPlay]);
+
+  const swipeCleanupRef = useRef(null);
+
+  const handleTouchStart = useCallback((e) => {
+    const sx = e.touches[0].clientX, sy = e.touches[0].clientY;
+    const onMove = (me) => {
+      const dx = sx - me.touches[0].clientX, dy = sy - me.touches[0].clientY;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        setCurrentIndex(prev => {
+          if (dx > 0) return Math.min(prev + 1, images.length - 1);
+          return Math.max(prev - 1, 0);
+        });
+        setIsAutoPlay(false);
+        me.preventDefault();
+        cleanup();
+      }
+    };
+    const onEnd = () => cleanup();
+    function cleanup() {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      if (swipeCleanupRef.current === cleanup) swipeCleanupRef.current = null;
+    }
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd, { once: true });
+    swipeCleanupRef.current = cleanup;
+  }, [images.length]);
+
+  useEffect(() => {
+    return () => { if (swipeCleanupRef.current) swipeCleanupRef.current(); };
+  }, []);
+
+  // ── Countdown ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!profile?.is_event || !profile?.event_date) return;
+    setCountdown(getCountdown(profile.event_date));
+    const t = setInterval(() => setCountdown(getCountdown(profile.event_date)), 1000);
+    return () => clearInterval(t);
+  }, [profile?.is_event, profile?.event_date]);
+
+  // ── [C5][F9][O7][P4][BG1][BG2][DL4] Background style ──────────
+  // [DL4] En mode léger : dégradé plat, pas de taches radiales floutées animées.
+  useEffect(() => {
+    if (!profile) return;
+
+    const fallbackBg = profile.bg_image_url ? '#0f0a1e' : parseColors(profile.theme_color).bg1;
+    document.documentElement.style.background = fallbackBg;
+    document.body.style.background = 'transparent';
+
+    let bgCss = '';
+    if (profile.bg_image_url) {
+      const safeUrl = encodeURI(imgUrl(profile.bg_image_url, { width: isLight ? IMG_WIDTHS.light.banner : IMG_WIDTHS.full.banner }));
+      bgCss = `
+        #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background-image:url(${JSON.stringify(safeUrl)});background-size:cover;background-position:center;background-repeat:no-repeat; }
+        #__bg_overlay__ { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-9;background:linear-gradient(160deg,rgba(0,0,0,0.58),rgba(0,0,0,0.42));pointer-events:none; }
+      `;
+    } else {
+      const { bg1, bg2 } = parseColors(profile.theme_color);
+      if (isLight) {
+        // [DL4] Dégradé plat, pas de blob/blur/animation
+        bgCss = `
+          #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2}); }
+          #__bg_overlay__ { display:none; }
+        `;
+      } else {
+        bgCss = `
+          #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2});overflow:hidden; }
+          #__bg_layer__::before, #__bg_layer__::after {
+            content:'';
+            position:absolute;
+            width:70%; height:70%;
+            border-radius:50%;
+            filter:blur(70px);
+            opacity:0.5;
+          }
+          #__bg_layer__::before {
+            top:-15%; left:-10%;
+            background:${bg2};
+            animation:pp-meshDrift 22s ease-in-out infinite;
+          }
+          #__bg_layer__::after {
+            bottom:-20%; right:-10%;
+            background:${bg1};
+            animation:pp-meshDrift 26s ease-in-out infinite reverse;
+          }
+          #__bg_overlay__ { display:none; }
+        `;
+      }
+    }
+
+    let styleEl = document.getElementById('__bg_style__');
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = '__bg_style__';
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = bgCss;
+
+    return () => {
+      const s = document.getElementById('__bg_style__');
+      if (s) s.remove();
+      document.documentElement.style.background = fallbackBg;
+      document.body.style.background = 'transparent';
+    };
+  }, [profile?.bg_image_url, profile?.theme_color, isLight]); // [DL4] isLight ajouté aux dépendances
+
+  // ── Download helper ──────────────────────────────────────────
+  const handleDownload = (url) => {
+    try {
+      const fn = url.split('/').pop().split('?')[0] || 'image.jpg';
+      const a = document.createElement('a');
+      a.href = url.includes('?') ? url + '&download=' + fn : url + '?download=' + fn;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      window.open(url, '_blank');
+    }
+  };
+
+  // ── [A1] Clic sur lien — avec déclencheur automatisation WhatsApp ──
+  const handleLinkClick = useCallback((link) => {
+    if (!profile || isPreview) return;
+    trackClick(profile.id, link.platform);
+
+    if ((link.platform || '').toLowerCase() === 'whatsapp') {
+      triggerWhatsappClick(profile.id, {
+        referrer: cleanReferrer(),
+        device:   detectDevice(),
+      });
+    }
+
+    const url    = (link.url || '').trim();
+    const key    = (link.platform || '').toLowerCase();
+    const scheme = ((url.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1] || '').toLowerCase();
+    const WALLET_SCHEMES = ['bitcoin', 'ethereum', 'litecoin'];
+
+    if      (key === 'phone' || key === 'fixedphone') window.location.href = 'tel:'    + url.replace(/^tel:/i,    '').trim();
+    else if (key === 'email')                         window.location.href = 'mailto:' + url.replace(/^mailto:/i, '').trim();
+    else if (WALLET_SCHEMES.includes(scheme))         window.location.href = url;
+    else if (scheme === 'https' || scheme === 'http') window.open(url, '_blank', 'noopener,noreferrer');
+    else if (!scheme && url)                          window.open('https://' + url, '_blank', 'noopener,noreferrer');
+    // tout autre schéma (javascript:, data:, vbscript:…) est ignoré
+  }, [profile, isPreview]);
+
+  if (loading)  return <ProfileSkeleton />;
+  if (notFound) return (
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white', fontFamily:SYSTEM_FONT_STACK }}>
+      <p>Profil introuvable.</p>
+    </div>
+  );
+
+  const linkContrast      = getProfileContrast(profile);
+  const isLinkBgDark       = linkContrast === 'light';
+  const LINK_TEXT_COLOR    = isLinkBgDark ? 'rgba(255,255,255,0.96)' : '#15102a';
+  const LINK_BORDER_COLOR  = isLinkBgDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.18)';
+  const LINK_BG_IDLE       = isLinkBgDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.55)';
+  const LINK_BG_HOVER      = isLinkBgDark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.78)';
+  const LINK_CARD_BG_IDLE  = isLinkBgDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.66)';
+  const LINK_CARD_BG_HOVER = isLinkBgDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.86)';
+  const LINK_ICON_BG       = isLinkBgDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.80)';
+  const LINK_TEXT_SHADOW   = isLinkBgDark ? '0 1px 3px rgba(0,0,0,0.35)' : 'none';
+
+  const enabledLinks    = (profile.links || []).filter(l => l.enabled !== false);
+
+  const topWhatsapp = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'whatsapp');
+  const topPhone     = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'phone');
+  const topFacebook  = enabledLinks.find(l => (l.platform || '').toLowerCase() === 'facebook');
+  const topSocialLinks = [topWhatsapp, topPhone, topFacebook].filter(Boolean);
+
+  const mainLinksFiltered = enabledLinks.filter(l => {
+    const linkKey = (l.platform || '').toLowerCase();
+    if (linkKey === 'facebook') return false;
+    if (linkKey === 'whatsapp' && l === topWhatsapp) return false;
+    if (linkKey === 'phone' && l === topPhone) return false;
+    return true;
+  });
+
+  const MAIN_LINKS_PRIORITY = ['phone', 'whatsapp'];
+  const mainLinks = [...mainLinksFiltered].sort((a, b) => {
+    const aKey = (a.platform || '').toLowerCase();
+    const bKey = (b.platform || '').toLowerCase();
+    const aRank = MAIN_LINKS_PRIORITY.includes(aKey) ? MAIN_LINKS_PRIORITY.indexOf(aKey) : MAIN_LINKS_PRIORITY.length;
+    const bRank = MAIN_LINKS_PRIORITY.includes(bKey) ? MAIN_LINKS_PRIORITY.indexOf(bKey) : MAIN_LINKS_PRIORITY.length;
+    return aRank - bRank;
+  });
+
+  const ec1             = profile.event_color1 || '#ff6b35';
+  const ec2             = profile.event_color2 || '#f7c948';
+  const available       = products.filter(p => p.is_available !== false);
+  const sortedProducts  = [...available, ...products.filter(p => p.is_available === false)];
+  const hasEventContent = profile.is_event && (
+    images.length > 0 ||
+    profile.event_name || profile.event_date ||
+    profile.event_location || profile.event_description ||
+    profile.event_booking_url
+  );
+
+  // [DL3] Largeur d'avatar/bannière selon le mode
+  const avatarW = isLight ? IMG_WIDTHS.light.avatar : IMG_WIDTHS.full.avatar;
+  const bannerW = isLight ? IMG_WIDTHS.light.banner : IMG_WIDTHS.full.banner;
+  const eventW  = isLight ? IMG_WIDTHS.light.event  : IMG_WIDTHS.full.event;
+
+  // [PERF2b] Image principale : même URL que le <link rel="preload"> du HTML
+  const heroRaw = heroRawUrl(profile);
+  const srcFor  = (url, w) => imgUrl(url, { width: url && url === heroRaw ? HERO_WIDTH : w });
+
+  const avatarBlock = (
+    <div style={{ position:'relative' }}>
+      <div
+        className={profile.is_verified ? 'pp-avatar-ring--verified' : undefined}
+        style={{
+          padding:'3px', borderRadius:'28px',
+          background: profile.is_verified ? undefined : 'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))',
+          boxShadow:'0 8px 32px rgba(0,0,0,0.3)',
+        }}
+      >
+        <div style={{ padding:'3px', borderRadius:'25px', background:'#0f0a1e' }}>
+          {profile.avatar_url
+            ? <img src={imgUrl(profile.avatar_url, { width: avatarW })} alt={profile.display_name} style={{ width:'106px', height:'106px', borderRadius:'22px', objectFit:'cover', display:'block' }} />
+            : <div style={{ width:'106px', height:'106px', borderRadius:'22px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
+          }
+        </div>
+      </div>
+      {profile.is_verified && (
+        <div style={{ position:'absolute', bottom:'-8px', right:'-8px', width:'28px', height:'28px', borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', border:'3px solid rgba(255,255,255,0.9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'700', color:'white', boxShadow:'0 4px 12px rgba(34,197,94,0.5)' }}>✓</div>
+      )}
+    </div>
+  );
+
+  return (
+  <>
+    {!isPreview && (
+    <SEO
+      title={`${profile.display_name} | SocialApp`}
+      description={profile.bio}
+      url={`https://www.socialapp.work/${profile.username}`}
+      image={profile.avatar_url}
+      type="profile"
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "Person",
+        name: profile.display_name,
+        url: `https://www.socialapp.work/${profile.username}`,
+        image: profile.avatar_url,
+      }}
+    />
+    )}
+      <div id="__bg_layer__" className={isLight ? 'pp-light-mode' : undefined} />
+      <div id="__bg_overlay__" />
+
+      <div style={{
+        position:'fixed', zIndex:50,
+        bottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
+        right:  'max(16px, env(safe-area-inset-right, 0px))',
+      }}>
+        <ShareBar profile={profile} />
+      </div>
+
+      {/* [DL2] fontFamily bascule sur SYSTEM_FONT_STACK en mode léger */}
+      <div style={{
+        position:'relative', zIndex:1, minHeight:'100dvh',
+        display:'flex', flexDirection:'column', alignItems:'center',
+        paddingTop:    'max(24px, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(40px, env(safe-area-inset-bottom, 0px))',
+        paddingLeft:   'max(16px, env(safe-area-inset-left, 0px))',
+        paddingRight:  'max(16px, env(safe-area-inset-right, 0px))',
+        fontFamily: isLight ? SYSTEM_FONT_STACK : FONT_STACK,
+      }}>
+
+        {bannerList.length > 0 ? (
+          <>
+            <div className="pp-content-col" style={{ position:'relative' }}>
+              {/* [BANNER-RING] Anneau translucide : mêmes valeurs que l'anneau de l'avatar */}
+              <div style={{
+                padding:'3px',
+                borderRadius:'28px',
+                background:'linear-gradient(135deg,rgba(255,255,255,0.4),rgba(255,255,255,0.05))',
+                boxShadow:'0 8px 28px rgba(0,0,0,0.35)',
+              }}>
+                <div style={{ borderRadius:'25px', overflow:'hidden', aspectRatio:'16/7', position:'relative' }}>
+                  {/* [BANNER-SLIDER][PERF2c] 1re bannière : jamais lazy ; prioritaire si c'est le hero */}
+                  <BannerSlider
+                    urls={bannerList}
+                    getSrc={(u) => srcFor(u, bannerW)}
+                    isLight={isLight}
+                    priority={!!heroRaw && heroRaw === bannerList[0]}
+                    onDownload={handleDownload}
+                  />
+                </div>
+              </div>
+              <div style={{ position:'absolute', left:'20px', bottom:0, transform:'translateY(65%)' }}>
+                {avatarBlock}
+              </div>
+            </div>
+
+            <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'0px', minHeight:'80px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {profile.display_name}
+                {profile.is_verified && <span style={{ marginLeft:'6px', fontSize:'14px', color:'#22c55e' }}>✓</span>}
+              </h1>
+              {profile.bio && (
+                <p style={{ color:'rgba(255,255,255,0.75)', fontSize:'13px', fontWeight:500, textAlign:'left', lineHeight:1.4, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
+                  {profile.bio}
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ marginBottom:'16px' }}>
+              {avatarBlock}
+            </div>
+
+            <h1 style={{ fontSize:'24px', fontWeight:'800', color:'white', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
+              {profile.display_name}
+              {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
+            </h1>
+
+            {profile.bio && <p style={{ color:'rgba(255,255,255,0.72)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
+          </>
+        )}
+
+        {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
+
+        {topSocialLinks.length > 0 && (
+          <div className="pp-content-col" style={{
+            display:'flex', flexWrap:'nowrap', alignItems:'center', justifyContent:'center',
+            gap:'8px', marginBottom:'14px', boxSizing:'border-box',
+          }}>
+            {topSocialLinks.map((link, i) => {
+              const platform = resolvePlatform(link);
+              const color = platform.color || '#6366f1';
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleLinkClick(link)}
+                  aria-label={link.label || platform.label}
+                  className="pp-link-btn-el"
+                  style={{
+                    '--pp-hover-bg': color,
+                    flex:'0 1 auto', minWidth:0,
+                    display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px',
+                    height:'38px', padding:'0 8px 0 4px', borderRadius:'999px',
+                    boxSizing:'border-box',
+                    background:color,
+                    border:'1px solid rgba(255,255,255,0.35)',
+                    boxShadow:'0 4px 14px rgba(0,0,0,0.28)',
+                    color:'#fff', fontSize:'clamp(10px, 2.9vw, 12px)', fontWeight:700, letterSpacing:'0.01em',
+                    cursor:'pointer', touchAction:'manipulation',
+                  }}
+                >
+                  <span style={{
+                    width:'28px', height:'28px', borderRadius:'50%', overflow:'hidden',
+                    flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
+                    background:'#fff', lineHeight:0,
+                  }}>
+                    {platform.icon ? React.cloneElement(platform.icon, { width: 28, height: 28 }) : null}
+                  </span>
+                  <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {link.label || platform.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Événement */}
+        {hasEventContent && (
+          <div className="pp-content-col" style={{ marginBottom:'20px' }}>
+            {images.length > 0 && (
+              <div style={{ position:'relative', borderRadius:'20px', overflow:'hidden', marginBottom:'12px', boxShadow:'0 8px 32px rgba(0,0,0,0.3)', touchAction:'pan-y' }} onTouchStart={handleTouchStart}>
+                {/* [PERF2b][PERF2c] Image LCP : même URL que le preload, fetchPriority high sur la 1re */}
+                <img
+                  src={srcFor(images[currentIndex], eventW)}
+                  alt={profile.event_name || "Image de l'événement"}
+                  fetchPriority={currentIndex === 0 ? 'high' : undefined}
+                  decoding="async"
+                  style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }}
+                  onClick={() => setLightboxSrc(images[currentIndex])}
+                />
+                <div style={{ position:'absolute', bottom:'14px', right:'12px', display:'flex', gap:'6px', zIndex:10 }}>
+                  <button onClick={e => { e.stopPropagation(); setLightboxSrc(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.9)', color:'white', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', touchAction:'manipulation', minHeight:'36px' }}>
+                    <ZoomIn size={12} /> Afficher
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); handleDownload(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(255,255,255,0.92)', color:'#000', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', touchAction:'manipulation', minHeight:'36px' }}>
+                    <Download size={12} /> Télécharger
+                  </button>
+                </div>
+                {images.length > 1 && (
+                  <div style={{ position:'absolute', bottom:'46px', width:'100%', display:'flex', justifyContent:'center', gap:'6px' }}>
+                    {images.map((_, i) => (
+                      <div
+                        key={i}
+                        onClick={() => { setCurrentIndex(i); setIsAutoPlay(false); }}
+                        style={{ width: i === currentIndex ? '18px' : '6px', height:'6px', borderRadius:'999px', background:'white', opacity: i === currentIndex ? 1 : 0.4, transition:'all 0.3s', cursor:'pointer' }}
+                      />
                     ))}
                   </div>
                 )}
               </div>
             )}
-
-            {/* [DÉPLACÉ DEPUIS LA SIDEBAR] Image de fond du profil public —
-                rapprochée de la carte qu'elle modifie plutôt que reléguée
-                au bas du menu, loin de tout aperçu. Placée après les
-                bannières de couverture ci-dessus. */}
-            {onBgUpload && (
-              <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <label style={{
-                  flex:1, display:'flex', alignItems:'center', gap:'6px',
-                  background:bgImageUrl?'rgba(219,39,119,0.08)':'rgba(15,18,34,0.03)',
-                  border:'1px solid '+(bgImageUrl?'rgba(219,39,119,0.35)':'rgba(15,18,34,0.1)'),
-                  borderRadius:'8px', padding:'7px 10px', cursor:uploadingBg?'not-allowed':'pointer',
-                  position:'relative',
-                }}>
-                  {uploadingBg
-                    ? <Loader2 size={12} color="#db2777" className="animate-spin" />
-                    : <Image size={12} color={bgImageUrl ? '#db2777' : 'rgba(15,18,34,0.4)'} />
-                  }
-                  <span style={{ color:bgImageUrl?'#be185d':'rgba(15,18,34,0.5)', fontSize:'10px', fontWeight:600 }}>
-                    {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
-                  </span>
-                  <input
-                    type="file" accept="image/*"
-                    style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
-                    onChange={e => { const file = e.target.files?.[0]; if (file) onBgUpload(file); e.target.value=''; }}
-                    disabled={uploadingBg}
-                  />
-                </label>
-                {bgImageUrl && onBgRemove && (
-                  <button
-                    onClick={onBgRemove}
-                    aria-label="Retirer l'image de fond"
-                    style={{
-                      width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                      background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)',
-                      borderRadius:'8px', cursor:'pointer',
-                    }}
-                  >
-                    <X size={11} color="#f87171" />
-                  </button>
-                )}
+            {(profile.event_name || profile.event_location) && (
+              <div style={{ background:`linear-gradient(135deg,${ec1},${ec2})`, borderRadius:'20px', padding:'20px', textAlign:'center', marginBottom:'12px' }}>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(0,0,0,0.2)', borderRadius:'100px', padding:'4px 12px', fontSize:'11px', fontWeight:'700', color:'white', marginBottom:'8px' }}>
+                  <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'white', display:'inline-block', animation:'pp-pulse 1.5s infinite' }} /> ÉVÉNEMENT
+                </div>
+                {profile.event_name     && <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'4px' }}>{profile.event_name}</div>}
+                {profile.event_location && <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
               </div>
             )}
-          </div>
-
-          {/* Save row */}
-          {hasChanges && (
-            <div style={{ borderTop:'1px solid rgba(15,18,34,0.08)', padding:'10px 14px' }}>
-              <button onClick={onSave} disabled={saving}
-                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', width:'100%', padding:'8px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', borderRadius:'10px', color:'white', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>
-                {saving ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} Sauvegarder
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* QR Code */}
-        <div>
-          <QRCodeDisplay
-            profileId={profile?.id}
-            username={profile?.username}
-            userLogo={profile?.avatar_url}
-            isActivated={isActivated}
-            onNavigate={onNavigate}
-          />
-        </div>
-
-        {/* Stats — n'apparaît que si le plan l'inclut (voir showStatsCard
-            plus haut) ; plus de version "grisée + upgrade" ici, elle est
-            simplement absente pour Basic. */}
-        {showStatsCard && (
-          <div>
-            <StatsCard profileId={profile?.id}/>
+            {countdown && (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'12px' }}>
+                {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
+                  <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
+                    <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{String(v).padStart(2, '0')}</div>
+                    <div style={{ fontWeight:'700', fontSize:'9px', color:CARD_TEXT_MUTED, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {profile.event_description && (
+              <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
+                <p style={{ fontSize:'13px', color:CARD_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
+              </div>
+            )}
+            {profile.event_booking_url && (
+              <a href={profile.event_booking_url} target="_blank" rel="noopener noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:`linear-gradient(135deg,${ec1},${ec2})`, borderRadius:'14px', padding:'14px 20px', color:'white', fontSize:'15px', fontWeight:'700', textDecoration:'none', width:'100%', boxShadow:'0 4px 20px rgba(0,0,0,0.2)', touchAction:'manipulation' }}>
+                🎟️ Réserver ma place
+              </a>
+            )}
           </div>
         )}
-      </div>
 
-      {/* Quick actions — uniquement les sections incluses dans le plan
-          (voir le filtre `locked` plus haut). Basic : Plateformes,
-          Marketplace, Documents. Pro : + Événement, Analytics.
-          Business : + CRM. Chaque plan a donc sa propre grille, sans
-          cartes grisées à combler. */}
-      <div style={{ display:'grid', gridTemplateColumns:isMob?'1fr 1fr':'repeat(3,1fr)', gap:'10px' }}>
-        {quickActions.map(a => (
-          <button key={a.section} onClick={()=>onNavigate(a.section)}
-            style={{ display:'flex', flexDirection:'column', gap:'10px', padding:'14px', background:a.color, border:'1px solid '+a.color, borderRadius:'16px', cursor:'pointer', textAlign:'left', transition:'all 0.15s', boxShadow:'0 2px 10px '+a.color+'40' }}
-            onMouseEnter={e=>{ e.currentTarget.style.filter='brightness(1.08)';e.currentTarget.style.transform='translateY(-2px)'; }}
-            onMouseLeave={e=>{ e.currentTarget.style.filter='brightness(1)';e.currentTarget.style.transform='translateY(0)'; }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <a.icon size={16} color="white"/>
-              </div>
-            </div>
-            <div>
-              <p style={{ color:'white', fontSize:'12px', fontWeight:700, margin:'0 0 2px' }}>{a.label}</p>
-              <p style={{ color:'rgba(255,255,255,0.85)', fontSize:'10px', margin:0 }}>{a.desc}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Bandeau d'upgrade — visible uniquement s'il existe des sections
-          masquées pour ce plan (Basic ou Pro), pour ne pas laisser
-          l'utilisateur deviner que d'autres fonctionnalités existent.
-          Absent pour Business, qui a déjà tout débloqué. */}
-      {(!limits.hasEvent || !limits.hasStats || !limits.hasCRM) && (
-        <div style={{ background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:'14px', padding:'14px 16px', display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap' }}>
-          <Crown size={16} color="#d97600" style={{ flexShrink:0 }}/>
-          <p style={{ flex:1, minWidth:'200px', margin:0, color:'#7c4a03', fontSize:'12px', lineHeight:1.5 }}>
-            {plan === 'basic'
-              ? "Passez à l'offre PRO ou BUSINESS pour débloquer Événement, Analytics, CRM et plus de liens."
-              : "Passez à l'offre BUSINESS pour débloquer le CRM et les automatisations."}
-          </p>
-          <button type="button" onClick={()=>onUpgrade?.()}
-            style={{ padding:'8px 16px', borderRadius:'10px', border:'none', background:'#d97600', color:'white', fontWeight:700, fontSize:'12px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
-            Voir les offres →
-          </button>
+        {/* Réservation */}
+        <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
+          <PublicBookingWidget profileId={profile.id} />
         </div>
+
+        {/* Boutique */}
+        {sortedProducts.length > 0 && (
+          <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px' }}>
+              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><ShoppingBag size={14} color="white" /></div>
+              <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>Boutique</h2>
+              <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{available.length} article{available.length > 1 ? 's' : ''}</span>
+            </div>
+            <div className="pp-shop-grid">
+              {sortedProducts.map(p => (
+                <PublicProductCard
+                  key={p.id}
+                  product={p}
+                  isLight={isLight}
+                  onOpen={(product) => {
+                    setSelectedProduct(product);
+                    if (profile?.id && !isPreview) triggerMarketplaceClick(profile.id, { productId: product.id, productTitle: product.title, price: product.price });
+                  }}
+                />
+              ))}
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'10px', justifyContent:'center' }}>
+              <Tag size={10} color="rgba(255,255,255,0.25)" />
+              <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px' }}>Contactez le vendeur pour commander</span>
+            </div>
+          </div>
+        )}
+
+        {/* Documents */}
+        {documents.length > 0 && (
+          <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ef4444,#b91c1c)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={14} color="white" /></div>
+              <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>Documents</h2>
+              <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              {documents.map(doc => (
+                <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
+                  onMouseEnter={e => e.currentTarget.style.background = CARD_BG_HOVER}
+                  onMouseLeave={e => e.currentTarget.style.background = CARD_BG}
+                >
+                  <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={18} color="#ef4444" /></div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ color:CARD_TEXT, fontSize:'13px', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.name}</div>
+                    {doc.file_size && (
+                      <div style={{ color:CARD_TEXT_MUTED, fontSize:'11px', marginTop:'2px' }}>
+                        PDF · {doc.file_size < 1048576 ? Math.round(doc.file_size / 1024) + ' Ko' : (doc.file_size / 1048576).toFixed(1) + ' Mo'}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ width:'32px', height:'32px', borderRadius:'8px', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><ExternalLink size={14} color="#ef4444" /></div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Liens */}
+        <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
+          {mainLinks.map((link, i) => {
+            const platform = resolvePlatform(link);
+
+            if (platform.cryptoAddress) {
+              return (
+                <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
+                  <CryptoAddressRow
+                    link={link}
+                    platform={platform}
+                    theme={{ text: LINK_TEXT_COLOR, border: LINK_BORDER_COLOR, bg: LINK_CARD_BG_IDLE, iconBg: LINK_ICON_BG, shadow: CARD_SHADOW }}
+                    onCopied={() => { if (profile && !isPreview) trackClick(profile.id, link.platform); }}
+                  />
+                </div>
+              );
+            }
+
+            return (
+              <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
+                <RippleButton
+                  onClick={() => handleLinkClick(link)}
+                  platformColor={platform.color || '#6366f1'}
+                  style={{
+                    display:'flex', alignItems:'center', gap:'12px', width:'100%',
+                    padding:'8px 8px',
+                    borderRadius:'999px',
+                    background:LINK_CARD_BG_IDLE,
+                    border:`1px solid ${LINK_BORDER_COLOR}`,
+                    backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+                    '--pp-hover-bg': LINK_CARD_BG_HOVER,
+                    cursor:'pointer', textAlign:'left',
+                    boxShadow:CARD_SHADOW,
+                    transition:'background 0.15s,transform 0.1s',
+                  }}
+                >
+                  <div style={{
+                    width:'48px', height:'48px', borderRadius:'50%', overflow:'hidden',
+                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                    background:LINK_ICON_BG, boxShadow:`0 0 0 1px ${LINK_BORDER_COLOR}`,
+                  }}>
+                    {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
+                  </div>
+
+                  <span style={{
+                    flex:1, textAlign:'center',
+                    color:LINK_TEXT_COLOR, fontWeight:'700', fontSize:'13px',
+                    letterSpacing:'0.18em', textTransform:'uppercase',
+                    textShadow:LINK_TEXT_SHADOW,
+                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                  }}>
+                    {link.label || platform.label}
+                  </span>
+
+                  <div aria-hidden="true" style={{ width:'48px', flexShrink:0 }} />
+                </RippleButton>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Support */}
+        <a
+          href={`https://wa.me/${SUPPORT_WHATSAPP}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.22)', border:'1px solid rgba(37,211,102,0.38)', borderRadius:'12px', padding:'10px 20px', color:'#25D366', fontSize:'13px', fontWeight:'500', textDecoration:'none', touchAction:'manipulation' }}
+        >
+          <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
+        </a>
+
+        <a
+          href="https://www.socialapp.work"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pp-brand-badge"
+          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'100px', padding:'7px 16px', color:'rgba(255,255,255,0.45)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
+        >
+          <Link2 size={12} /> Créé avec SocialApp
+        </a>
+
+        {/* [DL5] Indicateur de poids — mode léger uniquement */}
+        {isLight && <PageWeightBadge />}
+
+        {/* [DL7] Switch manuel mode léger/complet */}
+        <LightModeToggle isLight={isLight} setManual={setManual} />
+      </div>
+
+      {selectedProduct && createPortal(
+        <ProductDetailModal
+          product={selectedProduct}
+          whatsappNumber={profile.phone || ''}
+          profileId={isPreview ? null : profile.id}
+          isLight={isLight}
+          onZoom={setLightboxSrc}
+          isZoomed={!!lightboxSrc}
+          onClose={() => setSelectedProduct(null)}
+        />,
+        document.body
       )}
-    </div>
+      {lightboxSrc && createPortal(
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />,
+        document.body
+      )}
+    </>
   );
 }

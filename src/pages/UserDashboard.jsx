@@ -101,11 +101,16 @@ function useWindowWidth() {
 // `price` = tarif annuel (ou unique) ; `priceMonthly` n'existe que pour BUSINESS.
 // NB : la page d'accueil ne précise pas de plafond de liens pour BUSINESS —
 // la valeur 17 d'origine est conservée (à ajuster ici si besoin).
+//
+// [MODULE ÉVÉNEMENT] `hasEvent` = le plan INCLUT le module. Il est volontairement
+// à false pour BASIC / PRO / BUSINESS (module vendu à l'unité, 3 500 FCFA) et à
+// true uniquement pour l'offre « événement ». L'accès réel se calcule dans
+// UserDashboard : hasEventAccess = isAdmin || limits.hasEvent || event_module_paid.
 const PLAN_LIMITS = {
-  basic:      { maxLinks:9,  maxProfiles:1, hasStats:false, maxMarketplace:7,        maxDocs:2,  maxForms:5,        hasEvent:true, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:false, hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'standard', colorCustom:'basic',    badge:false, label:'BASIC',     color:'#6366f1', emoji:'⚡', price:'10 000 FCFA' },
-  pro:        { maxLinks:12, maxProfiles:1, hasStats:true,  maxMarketplace:10,       maxDocs:5,  maxForms:Infinity, hasEvent:true, hasRealtime:true,  hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:true,  hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'premium',  colorCustom:'advanced', badge:true,  label:'PRO',       color:'#ff8c00', emoji:'🚀', price:'15 000 FCFA' },
-  business:   { maxLinks:17, maxProfiles:1, hasStats:true,  maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:true, hasRealtime:true,  hasCRM:true,  hasAutomations:true,  hasIntegrations:true,  hasAdvancedAnalytics:true,  hasNFC:true,  hasIPTracking:true,  hasWhatsAppAI:true,  support:'vip',      qrType:'dynamic',  colorCustom:'complete', badge:true,  label:'BUSINESS',  color:'#f7c948', emoji:'💼', price:'39 900 FCFA', priceMonthly:'3 990 FCFA' },
-  événement:  { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:0,        maxDocs:0,  maxForms:0,        hasEvent:true, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:false, hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'standard', colorCustom:'basic',    badge:false, label:'ÉVÉNEMENT', color:'#22c55e', emoji:'🎉', price:'3 500 FCFA' },
+  basic:      { maxLinks:9,  maxProfiles:1, hasStats:false, maxMarketplace:7,        maxDocs:2,  maxForms:5,        hasEvent:false, hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:false, hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'standard', colorCustom:'basic',    badge:false, label:'BASIC',     color:'#6366f1', emoji:'⚡', price:'10 000 FCFA' },
+  pro:        { maxLinks:12, maxProfiles:1, hasStats:true,  maxMarketplace:10,       maxDocs:5,  maxForms:Infinity, hasEvent:false, hasRealtime:true,  hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:true,  hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'premium',  colorCustom:'advanced', badge:true,  label:'PRO',       color:'#ff8c00', emoji:'🚀', price:'15 000 FCFA' },
+  business:   { maxLinks:17, maxProfiles:1, hasStats:true,  maxMarketplace:Infinity, maxDocs:10, maxForms:Infinity, hasEvent:false, hasRealtime:true,  hasCRM:true,  hasAutomations:true,  hasIntegrations:true,  hasAdvancedAnalytics:true,  hasNFC:true,  hasIPTracking:true,  hasWhatsAppAI:true,  support:'vip',      qrType:'dynamic',  colorCustom:'complete', badge:true,  label:'BUSINESS',  color:'#f7c948', emoji:'💼', price:'39 900 FCFA', priceMonthly:'3 990 FCFA' },
+  événement:  { maxLinks:3,  maxProfiles:1, hasStats:false, maxMarketplace:0,        maxDocs:0,  maxForms:0,        hasEvent:true,  hasRealtime:false, hasCRM:false, hasAutomations:false, hasIntegrations:false, hasAdvancedAnalytics:false, hasNFC:false, hasIPTracking:false, hasWhatsAppAI:false, support:'standard', qrType:'standard', colorCustom:'basic',    badge:false, label:'ÉVÉNEMENT', color:'#22c55e', emoji:'🎉', price:'3 500 FCFA' },
 };
 
 const isVideoUrl   = (url) => /\.(mp4|webm|ogg|mov|avi|mkv|quicktime)$/i.test(url || '');
@@ -279,13 +284,16 @@ function PlanModal({ onClose, onSelect, billing = 'annual', setBilling, currentP
   );
 }
 
+// [MODULE ÉVÉNEMENT] requiredPlan peut être 'pro' | 'business' (palier de plan)
+// ou 'event' / 'evenement' (module vendu à l'unité, indépendant du plan).
 function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }) {
+  const isEvent = requiredPlan === 'event' || requiredPlan === 'evenement';
   const isPro = requiredPlan === 'pro';
-  const color = isPro ? '#d9591f' : '#b8860b';
-  const planLabel = isPro ? 'PRO' : 'BUSINESS';
+  const color = isEvent ? '#16a34a' : isPro ? '#d9591f' : '#b8860b';
+  const planLabel = isEvent ? 'MODULE ÉVÉNEMENT' : isPro ? 'PRO' : 'BUSINESS';
   // [PLANS 2026] Prix lu depuis PLAN_LIMITS (source unique) plutôt qu'en dur.
-  const planInfo = PLAN_LIMITS[isPro ? 'pro' : 'business'];
-  const price = planInfo.price + ' / an';
+  const planInfo = PLAN_LIMITS[isEvent ? 'événement' : isPro ? 'pro' : 'business'];
+  const price = isEvent ? planInfo.price : planInfo.price + ' / an';
   return (
     <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'360px', gap:'20px', textAlign:'center', padding:'40px 32px', background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'20px' }}>
       <div style={{ position:'relative' }}>
@@ -294,14 +302,18 @@ function LockedFeaturePanel({ requiredPlan, featureName, icon: Icon, onUpgrade }
       </div>
       <div>
         <p style={{ color:'#161a2e', fontSize:'20px', fontWeight:800, margin:'0 0 8px' }}>{featureName}</p>
-        <p style={{ color:'#6b7280', fontSize:'14px', margin:'0 0 6px', lineHeight:1.5 }}>Cette fonctionnalité est disponible à partir de l'offre</p>
+        <p style={{ color:'#6b7280', fontSize:'14px', margin:'0 0 6px', lineHeight:1.5 }}>
+          {isEvent
+            ? "Ce module s'achète à l'unité, quelle que soit votre offre"
+            : "Cette fonctionnalité est disponible à partir de l'offre"}
+        </p>
         <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:color+'14', border:'1px solid '+color+'40', borderRadius:'100px', padding:'5px 14px', marginBottom:'6px' }}>
           <span style={{ color, fontSize:'13px', fontWeight:700 }}>{planLabel}</span>
         </div>
         <p style={{ color:'#9095a5', fontSize:'12px', margin:'6px 0 0' }}>{price}{planInfo.priceMonthly ? ` · ou ${planInfo.priceMonthly} / mois` : ''}</p>
       </div>
       <button type="button" onClick={onUpgrade} style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'linear-gradient(135deg,'+color+','+color+'cc)', borderRadius:'14px', padding:'12px 28px', color:'white', fontSize:'14px', fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 8px 20px '+color+'33' }}>
-        <Crown size={15} /> Passer en {planLabel} — {price}
+        <Crown size={15} /> {isEvent ? `Acheter le module — ${price}` : `Passer en ${planLabel} — ${price}`}
       </button>
     </motion.div>
   );
@@ -514,6 +526,14 @@ export default function UserDashboard() {
   const effectivePlan = isAdmin ? 'business' : rawPlan;
   const limits         = PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.basic;
 
+  // [MODULE ÉVÉNEMENT] Le module (3 500 FCFA) est vendu à l'unité et ne dépend
+  // PAS du plan : BASIC, PRO et BUSINESS sont tous verrouillés tant qu'il n'est
+  // pas acheté. Accès = admin, OU plan « événement » (limits.hasEvent), OU module
+  // payé (colonne link_profiles.event_module_paid, écriture réservée à
+  // service_role/admin via le trigger protect_event_module_paid).
+  // Source unique, transmise à UserSidebar, MobileNav et au rendu des sections.
+  const hasEventAccess = isAdmin || limits.hasEvent === true || localProfile?.event_module_paid === true;
+
   // Point d'entrée unique pour toute demande d'upgrade dans le dashboard.
   // - Appelé SANS argument (limite de quota : liens, formulaires, docs…)
   //   → ouvre le comparatif complet des 3 offres (PlanModal).
@@ -524,6 +544,18 @@ export default function UserDashboard() {
   const handleOpenUpgrade = (featureName, requiredPlan) => {
     if (featureName) setFeatureUpgrade({ featureName, requiredPlan: requiredPlan || 'pro' });
     else setShowPlanModal(true);
+  };
+
+  // [MODULE ÉVÉNEMENT] Adaptateur pour UserSidebar / MobileNav : ces composants
+  // appellent onUpgrade('event') quand on clique sur l'entrée « Événement »
+  // verrouillée, et onUpgrade() (sans argument) pour tout le reste.
+  //  - 'event' → modale ciblée sur le module (slug de paiement : 'evenement')
+  //  - sinon   → comparatif des offres (comportement inchangé)
+  // Les `event` React éventuels (onClick={onUpgrade}) sont ignorés : seule la
+  // chaîne 'event' déclenche la modale du module.
+  const handleUpgradeTarget = (target) => {
+    if (target === 'event') handleOpenUpgrade('Événement', 'evenement');
+    else handleOpenUpgrade();
   };
 
   // Abonnement GeniusPay courant (table `subscriptions`, une ligne par user_id).
@@ -548,6 +580,10 @@ export default function UserDashboard() {
   // (3 990 FCFA) ; pour tout autre plan on force 'annual'. La fonction Edge
   // doit lire `billing` pour choisir le montant (39 900 vs 3 990 FCFA) et
   // la durée de l'abonnement (1 an vs 1 mois).
+  //
+  // [MODULE ÉVÉNEMENT] planSlug = 'evenement' pour l'achat du module (3 500 FCFA,
+  // paiement unique). La fonction Edge doit accepter ce slug et, une fois le
+  // paiement confirmé par le webhook, passer link_profiles.event_module_paid à true.
   const startGeniusPayCheckout = async (planSlug, mode = 'new', billingCycle = 'annual') => {
     if (!localProfile?.id || checkoutLoading) return;
     const cycle = planSlug === 'business' && billingCycle === 'monthly' ? 'monthly' : 'annual';
@@ -585,7 +621,11 @@ export default function UserDashboard() {
     setActiveProfileId(prev => prev || target.id);
   }, [profiles, activeProfileId]);
 
-  // Sync temps-réel plan / is_activated depuis l'admin
+  // Sync temps-réel plan / is_activated / event_module_paid depuis l'admin
+  // ou le webhook de paiement.
+  // [MODULE ÉVÉNEMENT] event_module_paid est synchronisé aussi : dès que le
+  // webhook GeniusPay confirme l'achat du module, la section se déverrouille
+  // sans recharger la page.
   useEffect(() => {
     if (!localProfile?.id) return;
     const profileId = localProfile.id;
@@ -594,14 +634,22 @@ export default function UserDashboard() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'link_profiles', filter: 'id=eq.' + profileId }, (payload) => {
         const newPlan = payload.new?.plan;
         const newActivated = payload.new?.is_activated;
+        const newEventPaid = payload.new?.event_module_paid;
         setLocalProfile(prev => {
           if (!prev || prev.id !== profileId) return prev;
           const planChanged = newPlan && newPlan !== prev.plan;
           const activationChanged = typeof newActivated === 'boolean' && newActivated !== prev.is_activated;
-          if (!planChanged && !activationChanged) return prev;
+          const eventPaidChanged = typeof newEventPaid === 'boolean' && newEventPaid !== prev.event_module_paid;
+          if (!planChanged && !activationChanged && !eventPaidChanged) return prev;
           if (planChanged) toast.success('🎉 Votre offre a été mise à jour : ' + newPlan.toUpperCase());
           if (activationChanged && newActivated) toast.success('✅ Votre compte a été activé !');
-          return { ...prev, ...(newPlan ? { plan: newPlan } : {}), ...(typeof newActivated === 'boolean' ? { is_activated: newActivated } : {}) };
+          if (eventPaidChanged && newEventPaid) toast.success('🎉 Module Événement activé !');
+          return {
+            ...prev,
+            ...(newPlan ? { plan: newPlan } : {}),
+            ...(typeof newActivated === 'boolean' ? { is_activated: newActivated } : {}),
+            ...(typeof newEventPaid === 'boolean' ? { event_module_paid: newEventPaid } : {}),
+          };
         });
         queryClient.invalidateQueries({ queryKey: ['userProfiles', user?.id] });
       })
@@ -881,6 +929,10 @@ export default function UserDashboard() {
       if (isAdmin) return false; // FIX — l'admin ne doit jamais être bloqué par le plan
       const nav = USER_NAV.find(n => n.id === activeSection);
       if (!nav || !nav.locked) return false;
+      // [MODULE ÉVÉNEMENT] Module vendu à l'unité : indépendant du plan.
+      // Sans ce cas, PLAN_ORDER['event'] vaut undefined → verrouillé pour tout
+      // le monde, y compris ceux qui ont payé.
+      if (nav.locked === 'event') return !hasEventAccess;
       return currentPlanOrder < (PLAN_ORDER[nav.locked] ?? 99);
     };
 
@@ -919,7 +971,10 @@ export default function UserDashboard() {
           // Feature verrouillée par palier de plan → modale d'upgrade ciblée
           // sur CETTE feature précise (nav.label / nav.locked), plutôt que le
           // comparatif générique des 3 offres.
-          return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={()=>handleOpenUpgrade(nav.label, nav.locked)} />;
+          // [MODULE ÉVÉNEMENT] Pour le module, requiredPlan = 'event' côté
+          // navigation ; la modale / le paiement utilisent le slug 'evenement'
+          // (voir handleUpgradeTarget).
+          return <LockedFeaturePanel requiredPlan={nav.locked} featureName={nav.label} icon={nav.icon} onUpgrade={()=> nav.locked === 'event' ? handleUpgradeTarget('event') : handleOpenUpgrade(nav.label, nav.locked)} />;
         }
         switch (activeSection) {
           // FIX — OverviewPanel reçoit désormais onUpgrade=handleOpenUpgrade :
@@ -992,7 +1047,9 @@ export default function UserDashboard() {
       // du navigateur. On le fixe explicitement au bleu nuit de la sidebar
       // (UserSidebar.jsx) pour qu'un éventuel liseré résiduel s'accorde avec
       // le reste du dashboard au lieu de trancher en noir.
-      const SIDEBAR_NAVY = '#161a2e';
+      // [LOGO COLORS] La sidebar est passée à #0a1028 (bleu nuit du logo) :
+      // on aligne ici le fond de secours pour éviter tout liseré d'une autre teinte.
+      const SIDEBAR_NAVY = '#0a1028';
 
       mainContent = (
         <div style={{ ...DASHBOARD_BG, height:'100dvh', minHeight:'100dvh', overflow:'hidden', display:'flex', position:'relative', overflowX:'hidden' }}>
@@ -1012,7 +1069,8 @@ export default function UserDashboard() {
                 isMobile={false}
                 isTablet={isTablet}
                 isAdmin={isAdmin}
-                onUpgrade={()=>handleOpenUpgrade()}
+                hasEventAccess={hasEventAccess}
+                onUpgrade={handleUpgradeTarget}
                 userEmail={user?.email} onSignOut={handleSignOut}
               />
             </div>
@@ -1106,9 +1164,10 @@ export default function UserDashboard() {
               activeSection={activeSection === 'crm' ? 'leads' : activeSection} onNavigate={(id) => setActiveSection(id === 'leads' ? 'crm' : id)}
               profile={localProfile} plan={effectivePlan} limits={limits}
               isAdmin={isAdmin}
+              hasEventAccess={hasEventAccess}
               onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })}
               bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg}
-              onUpgrade={()=>handleOpenUpgrade()}
+              onUpgrade={handleUpgradeTarget}
               userEmail={user?.email} onSignOut={handleSignOut}
             />
           )}
@@ -1125,7 +1184,8 @@ export default function UserDashboard() {
               import conservés pour réactivation facile si besoin. */}
           {/* <AnimatePresence>{showWaveModal && <WaveModal onClose={()=>setShowWaveModal(false)} plan={effectivePlan} />}</AnimatePresence> */}
 
-          {/* Modale d'upgrade ciblée sur UNE feature verrouillée (Analytics, Événement, CRM…) */}
+          {/* Modale d'upgrade ciblée sur UNE feature verrouillée (Analytics, Événement, CRM…)
+              [MODULE ÉVÉNEMENT] requiredPlan = 'evenement' → paiement du module (3 500 FCFA). */}
           <AnimatePresence>
             {featureUpgrade && (
               <FeatureUpgradeModal

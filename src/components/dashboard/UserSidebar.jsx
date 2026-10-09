@@ -13,13 +13,14 @@ import { useTranslation } from 'react-i18next';
 //  • BASIC    : carte, liens, marketplace, imports, formulaires, calendrier
 //  • PRO      : + analytics détaillées + temps réel
 //  • BUSINESS : + CRM, CRM WhatsApp, automatisations, intégrations, tracking IP
-//  • ÉVÉNEMENT: option à 3 500 FCFA, disponible quel que soit le plan
-//               → l'entrée "Événement" n'est donc plus verrouillée par plan
-//               (avant : locked: 'pro').
+//  • ÉVÉNEMENT: module à 3 500 FCFA, vendu à l'unité, indépendant du plan
+//               → l'entrée "Événement" reste visible avec un cadenas pour BASIC,
+//               PRO et BUSINESS tant que `hasEventAccess` est faux (admin et
+//               comptes ayant payé le module exceptés). Voir isNavLocked().
 export const USER_NAV = [
   { id: 'overview',      label: 'Dashboard',       icon: LayoutDashboard, group: 'main',      locked: null,       path: null },
   { id: 'platforms',     label: 'Plateformes',     icon: Link2,           group: 'content',   locked: null,       path: null },
-  { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: null,       path: null }, // option payante par événement, tous plans
+  { id: 'event',         label: 'Événement',       icon: CalendarDays,    group: 'content',   locked: 'event',    path: null }, // module payant à l'unité, verrouillé pour tous les plans
   { id: 'marketplace',   label: 'Marketplace',     icon: ShoppingBag,     group: 'content',   locked: null,       path: null },
   { id: 'documents',     label: 'Documents',       icon: FileText,        group: 'content',   locked: null,       path: null },
   { id: 'booking',       label: 'Calendrier',      icon: CalendarClock,   group: 'content',   locked: null,       path: null },
@@ -65,27 +66,33 @@ const UPGRADE_HINT = {
   1: { title: 'Passer à BUSINESS',        sub: 'CRM, WhatsApp IA, automatisations…' },
 };
 
-function AvatarBubble({ profile, limits, size = 32, radius = 9 }) {
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: radius,
-      background: `linear-gradient(135deg,${limits.color},${limits.color}99)`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0, overflow: 'hidden',
-    }}>
-      {profile.avatar_url
-        ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        : (profile.display_name?.[0]?.toUpperCase() || '?')
-      }
-    </div>
-  );
-}
+// ─── Palette (issue du logo SocialApp) ────────────────────────────────────────
+const C = {
+  bg:         '#0a1028',                 // bleu nuit, proche du wordmark
+  border:     'rgba(255,255,255,0.08)',
+  indigo:     '#4b4bf0',                 // bleu du logo
+  indigoSoft: 'rgba(75,75,240,0.22)',    // fond de l'élément actif
+  orange:     '#ff8a1f',                 // orange du logo
+  text:       '#aab3d0',
+  textStrong: '#ffffff',
+  icon:       '#7e88b0',
+  muted:      '#6c76a0',
+};
+
+// Hover/focus : impossibles en style inline, donc une petite feuille dédiée.
+const SIDEBAR_CSS = `
+  .ua-item:hover:not(.ua-on):not(.ua-locked) { background: rgba(255,255,255,0.05); }
+  .ua-item:hover:not(.ua-on):not(.ua-locked) .ua-label { color: #fff; }
+  .ua-item:focus-visible, .ua-util:focus-visible { outline: 2px solid ${C.orange}; outline-offset: -2px; }
+  .ua-util:hover { background: rgba(255,255,255,0.06); }
+  .ua-scroll::-webkit-scrollbar { width: 6px; }
+  .ua-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+`;
 
 // ─── UserSidebar ──────────────────────────────────────────────────────────────
 export default function UserSidebar({
   activeSection,
   onNavigate,
-  profile,
   plan,
   limits,
   collapsed,
@@ -93,11 +100,12 @@ export default function UserSidebar({
   isMobile,
   isTablet = false,
   isAdmin = false,
+  hasEventAccess = false, // admin || limits.hasEvent || event_module_paid (calculé dans UserDashboard)
   userEmail,
   onSignOut,
   onUpgrade,
 }) {
-  // FIX — plan normalisé (casse / accents) : "Business", "ÉVÉNEMENT"… ne
+  // Plan normalisé (casse / accents) : "Business", "ÉVÉNEMENT"… ne
   // retombent plus silencieusement sur un mauvais niveau.
   const planKey = normalizePlan(plan);
   const currentOrder = PLAN_ORDER[planKey] ?? 0;
@@ -106,6 +114,7 @@ export default function UserSidebar({
 
   const touchDevice = isMobile || isTablet;
   const utilityBtnSize = touchDevice ? 40 : 28;
+  const isCompact = collapsed && !isMobile;
 
   useEffect(() => {
     if (!isMobile) return;
@@ -118,15 +127,23 @@ export default function UserSidebar({
   const isNavLocked = (item) => {
     if (isAdmin) return false;
     if (!item.locked) return false;
+    // Module Événement : indépendant du plan, déverrouillé uniquement par l'accès au module.
+    if (item.locked === 'event') return !hasEventAccess;
     return currentOrder < (PLAN_ORDER[item.locked] ?? 99);
   };
 
-  // Les entrées non incluses dans le plan sont retirées du menu (Basic < Pro < Business).
-  // Pour réafficher les entrées verrouillées (cadenas + badge), retirer `&& !isNavLocked(n)`.
-  const visibleNav = USER_NAV.filter(n => !n.hidden && !isNavLocked(n));
+  // Les entrées non incluses dans le plan sont retirées du menu (Basic < Pro < Business),
+  // sauf « Événement » qui reste visible avec un cadenas pour inviter à acheter le module.
+  const visibleNav = USER_NAV.filter(n => !n.hidden && (!isNavLocked(n) || n.locked === 'event'));
 
   const handleNav = (id, locked) => {
-    if (locked) return;
+    if (locked) {
+      if (id === 'event') {
+        onUpgrade?.('event');
+        if (isMobile) onToggle();
+      }
+      return;
+    }
     onNavigate(id);
     if (isMobile) onToggle();
   };
@@ -158,13 +175,14 @@ export default function UserSidebar({
 
   return (
     <>
+      <style>{SIDEBAR_CSS}</style>
+
       {isMobile && !collapsed && (
         <div
           onClick={onToggle}
           style={{
             position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
             zIndex: 19,
           }}
         />
@@ -172,109 +190,92 @@ export default function UserSidebar({
 
       <div style={{
         ...sidebarStyle,
-        background: 'linear-gradient(180deg, #060a1a 0%, #0d1730 60%, #142140 100%)',
-        backdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(255,255,255,0.1)',
+        background: C.bg,
+        borderRight: `1px solid ${C.border}`,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        boxShadow: isMobile && !collapsed ? '8px 0 40px rgba(0,0,0,0.7)' : 'none',
+        boxShadow: isMobile && !collapsed ? '8px 0 32px rgba(0,0,0,0.5)' : 'none',
       }}>
 
-        {/* ── Logo ── */}
+        {/* ── En-tête : logo, nom, plan, bouton replier ── */}
         <div style={{
-          padding: collapsed && !isMobile ? '18px 0' : '16px',
+          padding: isCompact ? '16px 0 14px' : '16px',
           display: 'flex', alignItems: 'center', gap: '10px',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          justifyContent: collapsed && !isMobile ? 'center' : 'space-between',
+          borderBottom: `1px solid ${C.border}`,
+          justifyContent: isCompact ? 'center' : 'space-between',
           flexShrink: 0,
+          flexDirection: isCompact ? 'column' : 'row',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-            <img
-              src="/Logo_SocialApp.png" alt=""
-              style={{ width: '30px', height: '30px', borderRadius: '9px', objectFit: 'cover', flexShrink: 0 }}
-            />
-            {(!collapsed || isMobile) && (
-              <div>
-                <span style={{ color: 'white', fontSize: '14px', fontWeight: 800, display: 'block', lineHeight: 1, whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', minWidth: 0 }}>
+            <div style={{
+              width: '30px', height: '30px', borderRadius: '8px', background: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, overflow: 'hidden',
+            }}>
+              <img
+                src="/Logo_SocialApp.png" alt="SocialApp"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            {!isCompact && (
+              <div style={{ minWidth: 0 }}>
+                <span style={{ color: '#f4f6fb', fontSize: '14px', fontWeight: 600, display: 'block', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
                   SocialApp
                 </span>
-                <span style={{ color: limits.color, fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {limits.emoji} {limits.label}
-                </span>
+                {limits?.label && (
+                  <span style={{ color: C.orange, fontSize: '11px', fontWeight: 500, display: 'block', marginTop: '2px' }}>
+                    {limits.label}
+                  </span>
+                )}
               </div>
             )}
           </div>
           <button
+            className="ua-util"
             onClick={onToggle}
             aria-label={collapsed ? 'Déplier le menu' : 'Replier le menu'}
             style={{
-              width: utilityBtnSize, height: utilityBtnSize, borderRadius: '8px',
-              background: 'rgba(255,255,255,0.09)',
+              width: utilityBtnSize, height: utilityBtnSize, borderRadius: '7px',
+              background: 'transparent',
               border: '1px solid rgba(255,255,255,0.14)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              padding: 0,
             }}
           >
-            {collapsed && !isMobile
-              ? <ChevronRight size={13} color="rgba(255,255,255,0.7)" />
-              : <ChevronLeft  size={13} color="rgba(255,255,255,0.7)" />
+            {isCompact
+              ? <ChevronRight size={14} color={C.text} />
+              : <ChevronLeft  size={14} color={C.text} />
             }
           </button>
         </div>
 
-        {/* ── Profile mini (expanded) ── */}
-        {(!collapsed || isMobile) && profile && (
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-            <div
-              onClick={() => handleNav('overview', false)}
-              style={{
-                background: 'rgba(15,23,42,0.55)', borderRadius: '12px',
-                padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                border: '1px solid rgba(148,163,184,0.18)',
-              }}
-            >
-              <AvatarBubble profile={profile} limits={limits} size={32} radius={9} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: 'white', fontSize: '12px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {profile.display_name || 'Mon profil'}
-                </p>
-                {profile.username && (
-                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '10px', margin: 0 }}>@{profile.username}</p>
-                )}
-              </div>
-              <ChevronRight size={13} color="rgba(255,255,255,0.4)" />
-            </div>
-          </div>
-        )}
-
-        {/* ── Avatar collapsed ── */}
-        {collapsed && !isMobile && profile && (
-          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-            <div onClick={() => handleNav('overview', false)} style={{ cursor: 'pointer' }}>
-              <AvatarBubble profile={profile} limits={limits} size={34} radius={9} />
-            </div>
-          </div>
-        )}
-
         {/* ── Navigation ── */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          overscrollBehavior: 'contain',
-          WebkitOverflowScrolling: 'touch',
-          padding: '8px',
-          minHeight: 0,
-        }}>
+        <div
+          className="ua-scroll"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            padding: '8px',
+            minHeight: 0,
+          }}
+        >
           {USER_GROUPS.map(group => {
             const items = visibleNav.filter(n => n.group === group.id);
             if (!items.length) return null;
 
             return (
-              <div key={group.id} style={{ marginBottom: '4px' }}>
-                {collapsed && !isMobile
-                  ? <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 4px 8px' }} />
-                  : <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '8px 10px 4px', margin: 0 }}>
+              <div key={group.id} style={{ marginBottom: '2px' }}>
+                {isCompact
+                  ? <div style={{ height: '1px', background: C.border, margin: '8px 6px' }} />
+                  : <p style={{
+                      color: C.muted, fontSize: '11px', fontWeight: 500,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      padding: '14px 10px 6px', margin: 0,
+                    }}>
                       {t(`group_${group.id}`, group.label)}
                     </p>
                 }
@@ -282,59 +283,66 @@ export default function UserSidebar({
                 {items.map(item => {
                   const locked    = isNavLocked(item);
                   const isActive  = activeSection === item.id;
-                  const lockColor = item.locked === 'business' ? '#f7c948' : '#ff8c00';
-                  const lockLabel = item.locked === 'business' ? 'BUSINESS' : 'PRO';
+                  const on        = isActive && !locked;
+                  const lockColor = item.locked === 'business' ? '#f7c948' : C.orange;
+                  const lockLabel = item.locked === 'business' ? 'BUSINESS' : item.locked === 'event' ? 'MODULE' : 'PRO';
+                  const clickable = !locked || item.id === 'event';
 
                   const buttonEl = (
                     <button
                       key={item.id}
+                      className={`ua-item${on ? ' ua-on' : ''}${locked ? ' ua-locked' : ''}`}
                       onClick={() => handleNav(item.id, locked)}
-                      title={collapsed && !isMobile ? item.label + (locked ? ` (${lockLabel})` : '') : ''}
+                      aria-current={on ? 'page' : undefined}
+                      title={isCompact ? item.label + (locked ? ` (${lockLabel})` : '') : ''}
                       style={{
                         width: '100%',
+                        height: touchDevice ? '42px' : '36px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: collapsed && !isMobile ? 0 : '10px',
-                        padding: collapsed && !isMobile ? '10px 0' : '9px 10px',
-                        borderRadius: '11px',
+                        gap: isCompact ? 0 : '10px',
+                        padding: isCompact ? 0 : '0 10px',
+                        borderRadius: '7px',
                         border: 'none',
-                        background: isActive && !locked ? 'rgba(255,255,255,0.14)' : 'transparent',
-                        cursor: locked ? 'default' : 'pointer',
-                        opacity: locked ? 0.5 : 1,
-                        justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
+                        background: on ? C.indigoSoft : 'transparent',
+                        cursor: clickable ? 'pointer' : 'default',
+                        opacity: locked ? 0.55 : 1,
+                        justifyContent: isCompact ? 'center' : 'flex-start',
                         position: 'relative',
-                        marginBottom: '2px',
-                        transition: 'background 0.12s, opacity 0.12s',
+                        marginBottom: '1px',
+                        fontFamily: 'inherit',
+                        transition: 'background 0.12s',
                       }}
                     >
-                      {isActive && !locked && (
-                        <div style={{
-                          position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                          width: '3px', height: '20px',
-                          background: 'linear-gradient(180deg,#f472b6,#fdba74)',
-                          borderRadius: '0 3px 3px 0',
+                      {on && (
+                        <span style={{
+                          position: 'absolute', left: '-8px', top: '8px', bottom: '8px',
+                          width: '3px', background: C.orange, borderRadius: 0,
                         }} />
                       )}
 
-                      <div style={{
-                        width: '30px', height: '30px', borderRadius: '9px',
+                      <span style={{
+                        width: '20px', height: '20px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        background: isActive && !locked ? 'rgba(255,255,255,0.16)' : 'transparent',
                       }}>
                         {locked
-                          ? <Lock size={14} color="rgba(255,255,255,0.4)" />
-                          : <item.icon size={15} color={isActive ? 'white' : 'rgba(255,255,255,0.6)'} />
+                          ? <Lock size={16} color="rgba(255,255,255,0.4)" />
+                          : <item.icon size={17} strokeWidth={1.75} color={on ? C.orange : C.icon} />
                         }
-                      </div>
+                      </span>
 
-                      {(!collapsed || isMobile) && (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
-                          <span style={{
-                            color: isActive && !locked ? 'white' : 'rgba(255,255,255,0.7)',
-                            fontSize: '12.5px',
-                            fontWeight: isActive && !locked ? 700 : 500,
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          }}>
+                      {!isCompact && (
+                        <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+                          <span
+                            className="ua-label"
+                            style={{
+                              color: on ? C.textStrong : C.text,
+                              fontSize: '13px',
+                              fontWeight: on ? 600 : 500,
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              transition: 'color 0.12s',
+                            }}
+                          >
                             {t(item.id, item.label)}
                           </span>
                           {locked && (
@@ -344,22 +352,22 @@ export default function UserSidebar({
                               border: '1px solid ' + lockColor + '55',
                               borderRadius: '5px',
                               padding: '1px 5px',
-                              fontSize: '8px',
+                              fontSize: '9px',
                               color: lockColor,
-                              fontWeight: 700,
+                              fontWeight: 600,
                               textTransform: 'uppercase',
                               letterSpacing: '0.04em',
                             }}>
                               {lockLabel}
                             </span>
                           )}
-                        </div>
+                        </span>
                       )}
 
-                      {locked && collapsed && !isMobile && (
-                        <div style={{
-                          position: 'absolute', top: '6px', right: '6px',
-                          width: '10px', height: '10px', borderRadius: '50%',
+                      {locked && isCompact && (
+                        <span style={{
+                          position: 'absolute', top: '6px', right: '10px',
+                          width: '8px', height: '8px', borderRadius: '50%',
                           background: lockColor, border: '1px solid rgba(0,0,0,0.5)',
                         }} />
                       )}
@@ -385,22 +393,22 @@ export default function UserSidebar({
 
           {/* Rappel d'upgrade : message adapté au plan (BASIC → PRO/BUSINESS,
               PRO → BUSINESS). Jamais affiché pour BUSINESS ni pour un admin. */}
-          {!isAdmin && !isMaxPlan && (!collapsed || isMobile) && (
+          {!isAdmin && !isMaxPlan && !isCompact && (
             <button
               onClick={() => onUpgrade?.()}
               style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-                marginTop: '8px', padding: '9px 10px', borderRadius: '11px',
-                background: 'rgba(255,140,0,0.1)', border: '1px solid rgba(255,140,0,0.3)',
+                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                marginTop: '12px', padding: '9px 10px', borderRadius: '7px',
+                background: 'rgba(255,138,31,0.08)', border: '1px solid rgba(255,138,31,0.3)',
                 cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
               }}
             >
-              <Crown size={14} color="#ff8c42" style={{ flexShrink: 0 }} />
+              <Crown size={15} color={C.orange} style={{ flexShrink: 0 }} />
               <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <span style={{ color: '#ffb673', fontSize: '11px', fontWeight: 700 }}>
+                <span style={{ color: '#ffb673', fontSize: '12px', fontWeight: 600 }}>
                   {upgradeHint.title}
                 </span>
-                <span style={{ color: 'rgba(255,182,115,0.65)', fontSize: '9.5px', fontWeight: 500 }}>
+                <span style={{ color: 'rgba(255,182,115,0.7)', fontSize: '11px', fontWeight: 400 }}>
                   {upgradeHint.sub}
                 </span>
               </span>
@@ -408,50 +416,50 @@ export default function UserSidebar({
           )}
         </div>
 
-        {/* ── Footer (déplié) ── */}
-        {(!collapsed || isMobile) && (
-          <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-            {onSignOut && (
-              <div>
-                {userEmail && (
-                  <p style={{
-                    color: 'rgba(255,255,255,0.45)', fontSize: '10px', margin: '0 0 8px',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {userEmail}
-                  </p>
-                )}
-                <button
-                  onClick={onSignOut}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: touchDevice ? '10px' : '8px',
-                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-                    borderRadius: '9px', color: '#f87171', fontSize: '11px', fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  <LogOut size={13} /> Se déconnecter
-                </button>
-              </div>
+        {/* ── Pied de page (déplié) ── */}
+        {!isCompact && onSignOut && (
+          <div style={{ padding: '12px 16px 14px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+            {userEmail && (
+              <p style={{
+                color: C.muted, fontSize: '11px', margin: '0 0 6px',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {userEmail}
+              </p>
             )}
+            <button
+              className="ua-util"
+              onClick={onSignOut}
+              style={{
+                width: 'calc(100% + 20px)', margin: '0 -10px',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                height: touchDevice ? '42px' : '34px', padding: '0 10px',
+                background: 'transparent', border: 'none', borderRadius: '7px',
+                color: C.text, fontSize: '13px', fontWeight: 500,
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              }}
+            >
+              <LogOut size={17} strokeWidth={1.75} color={C.icon} /> Se déconnecter
+            </button>
           </div>
         )}
 
-        {/* ── Footer (replié) ── */}
-        {collapsed && !isMobile && onSignOut && (
-          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+        {/* ── Pied de page (replié) ── */}
+        {isCompact && onSignOut && (
+          <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
             <button
+              className="ua-util"
               onClick={onSignOut}
               aria-label="Se déconnecter"
               title={userEmail ? `Se déconnecter (${userEmail})` : 'Se déconnecter'}
               style={{
-                width: utilityBtnSize, height: utilityBtnSize, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
-                borderRadius: '8px', cursor: 'pointer',
+                width: utilityBtnSize, height: utilityBtnSize,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', border: 'none',
+                borderRadius: '7px', cursor: 'pointer', padding: 0,
               }}
             >
-              <LogOut size={14} color="#f87171" />
+              <LogOut size={17} strokeWidth={1.75} color={C.icon} />
             </button>
           </div>
         )}

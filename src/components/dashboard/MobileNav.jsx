@@ -18,36 +18,38 @@
  *  [C13] Fond du tiroir/tab bar aligné sur UserSidebar (dégradé + voile noir)
  *
  * REFONTE VISUELLE :
- *  [C14] Nouvelle charte sombre indigo/violet (maquette fournie) : fond
- *        bleu-nuit, en-tête, badge d'offre, rangée de stats optionnelle,
- *        sous-titres descriptifs, groupe PERSONNALISATION (image de fond),
- *        groupe PARAMÈTRES.
+ *  [C14] Nouvelle charte sombre : fond bleu-nuit, en-tête, badge d'offre,
+ *        rangée de stats optionnelle, sous-titres descriptifs, groupe
+ *        PERSONNALISATION (image de fond), groupe PARAMÈTRES.
  *  [C15] En-tête en ligne ; tab bar masquée tant que le tiroir est ouvert.
  *  [C16] Footer nettoyé : email + "Se déconnecter" déplacés en bas du tiroir.
  *  [C17] Props alignées sur UserDashboard.jsx : userEmail / onSignOut.
- *  [C18] Bouton "Se déconnecter" : largeur naturelle, fond rouge plein,
- *        placé sous la ligne email.
+ *  [C18] Bouton "Se déconnecter" placé sous la ligne email.
  *  [C19] Calendrier (booking) verrouillé : plans Pro et Business uniquement.
  *  [C20] FIX — NAV_IDS.CRM 'crm' → 'leads' (aligné sur le `case 'leads'`
  *        du switch de rendu du dashboard).
  *  [C21] FIX — Groupe "Administration" (Gestion des comptes) ajouté,
  *        `adminOnly`, filtré selon la prop `isAdmin`.
- *
- *  [C22] Tab bar "pilule" mobile + tablette :
- *        - Nouveau design (barre arrondie, onglet actif = anneau + icône
- *          colorée, point "Live", focus clavier visible, hover uniquement
- *          sur souris, prefers-reduced-motion).
- *        - Les media queries étant impossibles en styles inline, le CSS de
- *          la barre est injecté une seule fois (NAV_CSS), comme [C9].
- *          Mobile (≤500px) : barre 78px. Tablette (≥501px) : barre 92px.
- *        - Tiroir centré (640px max) dès 768px via la classe `mn-drawer`.
- *        - Id du <style> changé ('mobile-nav-styles') pour que le nouveau
- *          CSS soit bien injecté même après un rechargement à chaud.
- *
+ *  [C22] Tab bar "pilule" mobile + tablette (CSS injecté une seule fois,
+ *        NAV_CSS ; id du <style> : 'mobile-nav-styles').
  *  [C23] Les fonctionnalités PRO / BUSINESS verrouillées ne sont plus
- *        visibles du tout pour un plan inférieur (tab bar + tiroir) :
- *        items filtrés via isNavLocked(), groupes vides retirés.
- *        Le lien "Changer d'offre" du footer reste le point d'entrée upgrade.
+ *        visibles du tout pour un plan inférieur (tab bar + tiroir).
+ *  [C24] Tab bar complétée par des fonctionnalités accessibles.
+ *
+ *  [C25] Alignement sur la nouvelle UserSidebar.jsx :
+ *        - Couleurs du logo : indigo #4b4bf0 (fond de l'élément actif) et
+ *          orange #ff8a1f (trait, icône active, plan, tab bar active), sur
+ *          fond bleu nuit uni #0a1028 (plus de dégradé ni de flou).
+ *        - Icônes identiques à la sidebar : Temps réel = Activity,
+ *          Intégrations = GitBranch, Analytics = BarChart2 ; trait 1.75.
+ *        - Libellés de groupe 11px, "Se déconnecter" en ligne neutre.
+ *        - Id du <style> changé ('mobile-nav-styles-v2') pour que le
+ *          nouveau CSS soit bien injecté après un rechargement à chaud.
+ *
+ *  [C26] Module Événement aligné sur UserSidebar.jsx : vendu à l'unité,
+ *        indépendant du plan. L'entrée reste visible dans le tiroir avec un
+ *        cadenas (badge MODULE) tant que la prop `hasEventAccess` est fausse
+ *        (admin excepté) ; le clic appelle onUpgrade('event').
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -56,13 +58,13 @@ import {
   Users,
   ShoppingBag,
   FileText,
-  Radio,
-  BarChart3,
+  Activity,
+  BarChart2,
   Settings,
   CalendarDays,
   CalendarClock,
   Zap,
-  Sparkles,
+  GitBranch,
   Link2,
   Menu,
   X,
@@ -78,56 +80,47 @@ import {
 import { PLAN_ORDER } from './UserSidebar';
 
 // ─── Design tokens ────────────────────────────────────────────
-// [C14] Fond bleu-nuit quasi opaque (remplace le dégradé magenta→orange).
-const BRAND_BG = 'linear-gradient(180deg, rgba(10,11,26,0.98), rgba(10,11,26,0.98))';
-
+// [C25] Palette issue du logo SocialApp (identique à UserSidebar.jsx).
 const T = {
-  bg:           BRAND_BG,
-  panel:        '#12142c',
+  bg:           '#0a1028',                  // bleu nuit uni
+  panel:        '#0f1733',
   border:       'rgba(255,255,255,0.10)',
   borderSubtle: 'rgba(255,255,255,0.08)',
-  text:         'white',
-  textMuted:    'rgba(255,255,255,0.7)',
-  textDim:      'rgba(255,255,255,0.5)',
-  textGhost:    'rgba(255,255,255,0.38)',
-  accent:       '#6366f1',
-  accentEnd:    '#8b5cf6',
-  accentLight:  '#a78bfa',
-  imageAccent:  '#c4b5fd',
-  activeBg:     'rgba(99,102,241,0.16)',
-  activeBgSoft: 'rgba(99,102,241,0.22)',
-  activeBar:    'linear-gradient(180deg,#818cf8,#a78bfa)',
+  text:         '#ffffff',
+  textMuted:    '#aab3d0',
+  textDim:      '#7e88b0',
+  textGhost:    '#6c76a0',
+  accent:       '#4b4bf0',                  // indigo du logo
+  orange:       '#ff8a1f',                  // orange du logo
+  activeBg:     'rgba(75,75,240,0.22)',
+  activeBgSoft: 'rgba(75,75,240,0.30)',
+  tile:         'rgba(255,255,255,0.06)',
   red:          '#f87171',
   redBg:        'rgba(239,68,68,0.10)',
   redBorder:    'rgba(239,68,68,0.30)',
   green:        '#22c55e',
-  orange:       '#f7b955',
-  lockPro:      '#ff8c00',
+  lockPro:      '#ff8a1f',
   lockBusiness: '#f7c948',
-  radius:       '13px',
+  radius:       '10px',
   radiusPill:   '999px',
 };
 
-// FIX — [C2] avait renommé la clé 'événement' → 'evenement' *dans ce
-// fichier uniquement*. UserSidebar.jsx (source de vérité pour le plan
-// utilisateur) garde 'événement' avec accent. On importe PLAN_ORDER depuis
-// UserSidebar comme unique source de vérité.
 const MAX_PLAN_ORDER = Math.max(...Object.values(PLAN_ORDER));
 
+const ICON_STROKE = 1.75;
+
 // ─── [C22] Styles de la tab bar (injectés une seule fois) ────
-// Anneau de l'onglet actif : rouge comme sur l'aperçu.
-// Pour rester dans l'indigo du tiroir, remplace par : const NAV_ACCENT = T.accent;
-const NAV_ACCENT = '#e51b3e';
-const NAV_ACCENT_GLOW = 'rgba(229,27,62,.15)'; // à ajuster si NAV_ACCENT change
+const NAV_ACCENT = T.orange;
+const NAV_ACCENT_GLOW = 'rgba(255,138,31,.18)';
 const NAV_BAR_BG = T.panel;
 
 const NAV_CSS = `
 .mn-bar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:calc(100% - 24px);max-width:650px;height:78px;z-index:38;transition:transform .25s ease,opacity .25s ease}
 .mn-bar.is-hidden{transform:translateX(-50%) translateY(24px);opacity:0;pointer-events:none}
-.mn-bar-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:space-around;padding:5px 6px;background:${NAV_BAR_BG};border:none;border-radius:40px;box-shadow:none;box-sizing:border-box}
-.mn-item{position:relative;width:20%;height:68px;border:none;background:transparent;color:#aeb0b5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-family:inherit;transition:color .25s ease,transform .25s ease;-webkit-tap-highlight-color:transparent}
+.mn-bar-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:space-around;padding:5px 6px;background:${NAV_BAR_BG};border:1px solid rgba(255,255,255,0.08);border-radius:40px;box-shadow:0 8px 24px rgba(0,0,0,.35);box-sizing:border-box}
+.mn-item{position:relative;width:20%;height:68px;border:none;background:transparent;color:#8a94b8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-family:inherit;transition:color .25s ease,transform .25s ease;-webkit-tap-highlight-color:transparent}
 @media (hover:hover){.mn-item:hover{color:#fff}}
-.mn-item:focus-visible .mn-icon{outline:2px solid #fff;outline-offset:2px}
+.mn-item:focus-visible .mn-icon{outline:2px solid ${NAV_ACCENT};outline-offset:2px}
 .mn-icon{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .25s ease}
 .mn-icon svg{width:22px;height:22px}
 .mn-item.active{color:#fff}
@@ -183,7 +176,7 @@ const NAV_IDS = {
 // [C19] Calendrier (BOOKING) réservé aux plans Pro et Business.
 // NAV_IDS.ACCOUNTS n'y figure pas : réservé aux admins (filtré via SIDEBAR_GROUPS).
 const NAV_LOCK = {
-  [NAV_IDS.EVENT]:        'pro',
+  [NAV_IDS.EVENT]:        'event', // [C26] module payant, indépendant du plan
   [NAV_IDS.ANALYTICS]:    'pro',
   [NAV_IDS.REALTIME]:     'pro',
   [NAV_IDS.BOOKING]:      'pro',
@@ -193,17 +186,18 @@ const NAV_LOCK = {
   [NAV_IDS.INTEGRATIONS]: 'business',
 };
 
-// Icône "Profils/Plateformes" alignée sur UserSidebar (Link2).
+// [C25] Icônes alignées sur UserSidebar (Activity pour Temps réel).
 const TAB_ITEMS = [
   { id: NAV_IDS.OVERVIEW,  label: 'Dashboard', icon: LayoutDashboard },
   { id: NAV_IDS.CRM,       label: 'Leads',     icon: Users            },
   { id: NAV_IDS.PLATFORMS, label: 'Liens',     icon: Link2            },
-  { id: NAV_IDS.REALTIME,  label: 'Live',      icon: Radio, badge: '●' },
+  { id: NAV_IDS.REALTIME,  label: 'Live',      icon: Activity, badge: '●' },
   { id: NAV_IDS.MENU,      label: 'Menu',      icon: Menu             },
 ];
 
 // [C14] Chaque item porte une `description` (sous-titre dans le tiroir).
 // [C21] Groupe "Administration" marqué `adminOnly: true`.
+// [C25] Icônes identiques à la sidebar.
 const SIDEBAR_GROUPS = [
   {
     label: 'Navigation',
@@ -214,10 +208,10 @@ const SIDEBAR_GROUPS = [
   {
     label: 'Gestion commerciale',
     items: [
-      { id: NAV_IDS.CRM,          label: 'Leads / CRM',     icon: Users,    description: 'Gérez vos prospects et clients' },
+      { id: NAV_IDS.CRM,          label: 'Leads / CRM',     icon: Users,       description: 'Gérez vos prospects et clients' },
       { id: NAV_IDS.TASKS,        label: 'Tâches',          icon: CheckSquare, description: 'Relances et rappels à faire' },
-      { id: NAV_IDS.AUTOMATIONS,  label: 'Automatisations', icon: Zap,      description: 'Workflows et scénarios' },
-      { id: NAV_IDS.INTEGRATIONS, label: 'Intégrations',    icon: Sparkles, description: 'Connectez vos outils préférés' },
+      { id: NAV_IDS.AUTOMATIONS,  label: 'Automatisations', icon: Zap,         description: 'Workflows et scénarios' },
+      { id: NAV_IDS.INTEGRATIONS, label: 'Intégrations',    icon: GitBranch,   description: 'Connectez vos outils préférés' },
     ],
   },
   {
@@ -234,8 +228,8 @@ const SIDEBAR_GROUPS = [
   {
     label: 'Notifications',
     items: [
-      { id: NAV_IDS.REALTIME,  label: 'Temps réel', icon: Radio,     badge: 'LIVE', description: "Suivez l'activité en direct" },
-      { id: NAV_IDS.ANALYTICS, label: 'Analytics',  icon: BarChart3, description: 'Statistiques et performances' },
+      { id: NAV_IDS.REALTIME,  label: 'Temps réel', icon: Activity,  badge: 'LIVE', description: "Suivez l'activité en direct" },
+      { id: NAV_IDS.ANALYTICS, label: 'Analytics',  icon: BarChart2, description: 'Statistiques et performances' },
     ],
   },
   {
@@ -253,6 +247,12 @@ const SIDEBAR_GROUPS = [
   },
 ];
 
+const GROUP_LABEL_STYLE = {
+  color: T.textGhost, fontSize: '11px', fontWeight: 500,
+  letterSpacing: '0.06em', textTransform: 'uppercase',
+  padding: '12px 10px 6px', margin: 0,
+};
+
 // ─── MobileNav ───────────────────────────────────────────────
 export default function MobileNav({
   activeSection,
@@ -269,6 +269,7 @@ export default function MobileNav({
   userEmail,    // [C17] optionnel — email affiché dans le footer
   onSignOut,    // [C17] optionnel — () => void, affiche "Se déconnecter" si fourni
   isAdmin = false,
+  hasEventAccess = false, // [C26] admin || limits.hasEvent || event_module_paid (calculé dans UserDashboard)
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef  = useRef(null);
@@ -282,6 +283,8 @@ export default function MobileNav({
     if (isAdmin) return false;
     const required = NAV_LOCK[id];
     if (!required) return false;
+    // [C26] Module Événement : déverrouillé uniquement par l'accès au module.
+    if (required === 'event') return !hasEventAccess;
     return currentOrder < (PLAN_ORDER[required] ?? 99);
   };
 
@@ -330,7 +333,7 @@ export default function MobileNav({
 
   // ── [C9] + [C22] Injection unique des styles (keyframe + tab bar) ──
   useEffect(() => {
-    const styleId = 'mobile-nav-styles';
+    const styleId = 'mobile-nav-styles-v2';
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
       style.id = styleId;
@@ -350,7 +353,11 @@ export default function MobileNav({
   };
 
   const handleDrawerNav = (id) => {
-    if (isNavLocked(id)) { onUpgrade?.(); return; }
+    if (isNavLocked(id)) {
+      if (id === NAV_IDS.EVENT) { setDrawerOpen(false); onUpgrade?.('event'); return; }
+      onUpgrade?.();
+      return;
+    }
     setDrawerOpen(false);
     onNavigate(id);
   };
@@ -375,7 +382,7 @@ export default function MobileNav({
   };
 
   // ── Avatar initiale ──────────────────────────────────────────
-  // [C14] LOGIQUE DE RENDU DE LA PHOTO DE PROFIL INCHANGÉE.
+  // LOGIQUE DE RENDU DE LA PHOTO DE PROFIL INCHANGÉE.
   const avatarInitial = profile?.display_name?.charAt(0)?.toUpperCase() || '?';
 
   // [C21] Groupes visibles : on retire "Administration" si isAdmin est faux.
@@ -384,7 +391,11 @@ export default function MobileNav({
   // devenus vides. isNavLocked() renvoie toujours false pour un admin.
   const visibleGroups = SIDEBAR_GROUPS
     .filter(group => !group.adminOnly || isAdmin)
-    .map(group => ({ ...group, items: group.items.filter(item => !isNavLocked(item.id)) }))
+    .map(group => ({
+      ...group,
+      // [C26] « Événement » reste visible avec un cadenas pour inviter à acheter le module.
+      items: group.items.filter(item => !isNavLocked(item.id) || item.id === NAV_IDS.EVENT),
+    }))
     .filter(group => group.items.length > 0);
 
   // [C23] Même règle pour la tab bar (l'onglet "Menu" est toujours conservé).
@@ -412,7 +423,6 @@ export default function MobileNav({
         style={{
           position: 'fixed', inset: 0, zIndex: 39,
           background: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
           opacity: drawerOpen ? 1 : 0,
           pointerEvents: drawerOpen ? 'auto' : 'none',
           transition: 'opacity 0.25s ease',
@@ -433,10 +443,9 @@ export default function MobileNav({
           transform: drawerOpen ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.32s cubic-bezier(0.32,0.72,0,1)',
           background: T.bg,
-          backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-          borderRadius: '24px 24px 0 0',
+          borderRadius: '20px 20px 0 0',
           border: `1px solid ${T.border}`, borderBottom: 'none',
-          boxShadow: '0 -12px 60px rgba(0,0,0,0.7)',
+          boxShadow: '0 -12px 48px rgba(0,0,0,0.6)',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
         }}
@@ -458,23 +467,22 @@ export default function MobileNav({
             aria-label="Fermer le menu"
             style={{
               position: 'absolute', top: '4px', right: '20px',
-              width: '40px', height: '40px', borderRadius: '9px',
-              background: 'rgba(255,255,255,0.08)',
+              width: '40px', height: '40px', borderRadius: '8px',
+              background: 'transparent',
               border: '1px solid rgba(255,255,255,0.14)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
           >
-            <X size={15} color="rgba(255,255,255,0.7)" />
+            <X size={16} strokeWidth={ICON_STROKE} color={T.textMuted} />
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={{
               width: '56px', height: '56px', borderRadius: '50%',
-              background: `linear-gradient(135deg,${T.accent},${T.accentEnd})`,
-              boxShadow: `0 0 0 5px rgba(99,102,241,0.10)`,
+              background: T.accent,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '22px', fontWeight: 800, color: T.text,
+              fontSize: '22px', fontWeight: 600, color: T.text,
               overflow: 'hidden', flexShrink: 0,
             }}>
               {profile?.avatar_url
@@ -484,7 +492,7 @@ export default function MobileNav({
             </div>
 
             <div style={{ minWidth: 0 }}>
-              <p style={{ color: T.text, fontSize: '18px', fontWeight: 800, margin: 0, lineHeight: 1.2 }}>
+              <p style={{ color: T.text, fontSize: '18px', fontWeight: 600, margin: 0, lineHeight: 1.2 }}>
                 {profile?.display_name || 'Mon profil'}
               </p>
               {profile?.username && (
@@ -500,11 +508,11 @@ export default function MobileNav({
               display: 'inline-flex', alignItems: 'center', gap: '5px',
               marginTop: '10px', padding: '4px 10px',
               borderRadius: T.radiusPill,
-              background: (limits.color || T.orange) + '22',
-              border: `1px solid ${(limits.color || T.orange)}55`,
+              background: 'rgba(255,138,31,0.12)',
+              border: '1px solid rgba(255,138,31,0.35)',
             }}>
-              <Crown size={11} color={limits.color || T.orange} />
-              <span style={{ color: limits.color || T.orange, fontSize: '11px', fontWeight: 700 }}>
+              <Crown size={11} strokeWidth={ICON_STROKE} color={T.orange} />
+              <span style={{ color: T.orange, fontSize: '11px', fontWeight: 600 }}>
                 {limits.label}{!isMaxPlan ? '+' : ''}
               </span>
             </div>
@@ -516,7 +524,7 @@ export default function MobileNav({
           <div style={{
             margin: '14px 20px 2px',
             padding: '16px 6px',
-            borderRadius: '16px',
+            borderRadius: '12px',
             border: `1px solid ${T.borderSubtle}`,
             background: 'rgba(255,255,255,0.03)',
             display: 'grid',
@@ -525,9 +533,9 @@ export default function MobileNav({
           }}>
             {stats.map((s, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                {s.icon && <s.icon size={18} color={s.color || T.accentLight} />}
-                <span style={{ color: T.text, fontSize: '17px', fontWeight: 800, lineHeight: 1 }}>{s.value}</span>
-                <span style={{ color: T.textDim, fontSize: '10px' }}>{s.label}</span>
+                {s.icon && <s.icon size={18} strokeWidth={ICON_STROKE} color={s.color || T.orange} />}
+                <span style={{ color: T.text, fontSize: '17px', fontWeight: 600, lineHeight: 1 }}>{s.value}</span>
+                <span style={{ color: T.textDim, fontSize: '11px' }}>{s.label}</span>
               </div>
             ))}
           </div>
@@ -546,62 +554,55 @@ export default function MobileNav({
           }}
         >
           {visibleGroups.map(group => (
-            <div key={group.label} style={{ marginBottom: '4px' }}>
-              <p style={{
-                color: T.textGhost, fontSize: '9px', fontWeight: 700,
-                letterSpacing: '0.12em', textTransform: 'uppercase',
-                padding: '10px 10px 4px', margin: 0,
-              }}>
-                {group.label}
-              </p>
+            <div key={group.label} style={{ marginBottom: '2px' }}>
+              <p style={GROUP_LABEL_STYLE}>{group.label}</p>
               {group.items.map(item => {
                 const isActive = activeSection === item.id;
                 const locked   = isNavLocked(item.id);
+                const on       = isActive && !locked;
                 const lockPlan = NAV_LOCK[item.id];
                 const lockColor = lockPlan === 'business' ? T.lockBusiness : T.lockPro;
-                const lockLabel = lockPlan === 'business' ? 'BUSINESS' : 'PRO';
+                const lockLabel = lockPlan === 'business' ? 'BUSINESS' : lockPlan === 'event' ? 'MODULE' : 'PRO';
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleDrawerNav(item.id)}
-                    aria-current={isActive && !locked ? 'page' : undefined}
+                    aria-current={on ? 'page' : undefined}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-                      padding: '11px 12px', borderRadius: T.radius, border: 'none',
-                      background: isActive && !locked ? T.activeBg : 'transparent',
+                      padding: '10px 12px', borderRadius: T.radius, border: 'none',
+                      background: on ? T.activeBg : 'transparent',
                       cursor: 'pointer', marginBottom: '2px', position: 'relative',
-                      opacity: locked ? 0.55 : 1,
+                      opacity: locked ? 0.55 : 1, fontFamily: 'inherit',
                     }}
                   >
-                    {isActive && !locked && (
+                    {on && (
                       <div style={{
-                        position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                        width: '3px', height: '30px',
-                        background: T.activeBar,
-                        borderRadius: '0 3px 3px 0',
+                        position: 'absolute', left: 0, top: '10px', bottom: '10px',
+                        width: '3px', background: T.orange, borderRadius: 0,
                       }} />
                     )}
                     <div style={{
-                      width: '38px', height: '38px', borderRadius: '10px',
-                      background: isActive && !locked ? T.activeBgSoft : 'rgba(255,255,255,0.06)',
+                      width: '38px', height: '38px', borderRadius: '9px',
+                      background: on ? T.activeBgSoft : T.tile,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
                     }}>
                       {locked
-                        ? <Lock size={15} color="rgba(255,255,255,0.4)" />
-                        : <item.icon size={17} color={isActive ? 'white' : 'rgba(255,255,255,0.6)'} />
+                        ? <Lock size={16} strokeWidth={ICON_STROKE} color="rgba(255,255,255,0.4)" />
+                        : <item.icon size={18} strokeWidth={ICON_STROKE} color={on ? T.orange : T.textDim} />
                       }
                     </div>
                     <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
                       <p style={{
-                        color: isActive && !locked ? T.text : T.textMuted,
-                        fontSize: '14px', fontWeight: isActive && !locked ? 700 : 600,
+                        color: on ? T.text : T.textMuted,
+                        fontSize: '14px', fontWeight: on ? 600 : 500,
                         margin: 0, lineHeight: 1.25,
                       }}>
                         {item.label}
                       </p>
                       {item.description && (
-                        <p style={{ color: T.textDim, fontSize: '11.5px', margin: '2px 0 0', lineHeight: 1.25 }}>
+                        <p style={{ color: T.textGhost, fontSize: '12px', margin: '2px 0 0', lineHeight: 1.25 }}>
                           {item.description}
                         </p>
                       )}
@@ -609,21 +610,21 @@ export default function MobileNav({
                     {locked ? (
                       <span style={{
                         flexShrink: 0, background: lockColor + '20', border: '1px solid ' + lockColor + '55',
-                        borderRadius: '6px', padding: '2px 6px', fontSize: '8px', fontWeight: 700,
+                        borderRadius: '6px', padding: '2px 6px', fontSize: '9px', fontWeight: 600,
                         color: lockColor, textTransform: 'uppercase', letterSpacing: '0.04em',
                       }}>
                         {lockLabel}
                       </span>
                     ) : item.badge ? (
                       <span style={{
-                        background: T.green, color: T.text,
-                        fontSize: '8px', fontWeight: 700,
+                        background: T.green, color: '#04210f',
+                        fontSize: '9px', fontWeight: 700,
                         padding: '2px 6px', borderRadius: '6px', flexShrink: 0,
                       }}>
                         {item.badge}
                       </span>
                     ) : (
-                      <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+                      <ChevronRight size={14} strokeWidth={ICON_STROKE} color="rgba(255,255,255,0.3)" />
                     )}
                   </button>
                 );
@@ -633,32 +634,26 @@ export default function MobileNav({
 
           {/* Personnalisation — Image de fond, en item de liste avec bouton "Modifier" */}
           {onBgUpload && (
-            <div style={{ marginBottom: '4px' }}>
-              <p style={{
-                color: T.textGhost, fontSize: '9px', fontWeight: 700,
-                letterSpacing: '0.12em', textTransform: 'uppercase',
-                padding: '10px 10px 4px', margin: 0,
-              }}>
-                Personnalisation
-              </p>
+            <div style={{ marginBottom: '2px' }}>
+              <p style={GROUP_LABEL_STYLE}>Personnalisation</p>
               <div style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '11px 12px', borderRadius: T.radius,
+                padding: '10px 12px', borderRadius: T.radius,
               }}>
                 <div style={{
-                  width: '38px', height: '38px', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.06)',
+                  width: '38px', height: '38px', borderRadius: '9px',
+                  background: T.tile,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}>
                   {uploadingBg
-                    ? <Loader2 size={16} color={T.imageAccent} style={{ animation: 'mobile-nav-spin 1s linear infinite' }} />
-                    : <Image size={17} color={T.imageAccent} />
+                    ? <Loader2 size={17} strokeWidth={ICON_STROKE} color={T.orange} style={{ animation: 'mobile-nav-spin 1s linear infinite' }} />
+                    : <Image size={18} strokeWidth={ICON_STROKE} color={T.textDim} />
                   }
                 </div>
                 <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
-                  <p style={{ color: T.textMuted, fontSize: '14px', fontWeight: 600, margin: 0 }}>Image de fond</p>
-                  <p style={{ color: T.textDim, fontSize: '11.5px', margin: '2px 0 0' }}>
+                  <p style={{ color: T.textMuted, fontSize: '14px', fontWeight: 500, margin: 0 }}>Image de fond</p>
+                  <p style={{ color: T.textGhost, fontSize: '12px', margin: '2px 0 0' }}>
                     Personnalisez l'apparence de votre espace
                   </p>
                 </div>
@@ -672,12 +667,12 @@ export default function MobileNav({
                       width: '30px', height: '30px', flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: T.redBg, border: `1px solid ${T.redBorder}`,
-                      borderRadius: '9px',
+                      borderRadius: '8px',
                       cursor: uploadingBg ? 'not-allowed' : 'pointer',
                       opacity: uploadingBg ? 0.5 : 1,
                     }}
                   >
-                    <X size={12} color={T.red} />
+                    <X size={13} strokeWidth={ICON_STROKE} color={T.red} />
                   </button>
                 )}
 
@@ -685,11 +680,11 @@ export default function MobileNav({
                   flexShrink: 0, position: 'relative',
                   display: 'flex', alignItems: 'center',
                   padding: '7px 14px', borderRadius: T.radiusPill,
-                  background: T.activeBg, border: `1px solid rgba(99,102,241,0.35)`,
+                  background: T.activeBg, border: '1px solid rgba(75,75,240,0.45)',
                   cursor: uploadingBg ? 'not-allowed' : 'pointer',
                   opacity: uploadingBg ? 0.7 : 1,
                 }}>
-                  <span style={{ color: T.accentLight, fontSize: '11.5px', fontWeight: 700 }}>
+                  <span style={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}>
                     {bgImageUrl ? 'Modifier' : 'Ajouter'}
                   </span>
                   <input
@@ -714,25 +709,26 @@ export default function MobileNav({
             flexShrink: 0,
           }}>
             {userEmail && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                <Mail size={13} color={T.textGhost} />
-                <span style={{ color: T.textDim, fontSize: '12.5px' }}>{userEmail}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <Mail size={13} strokeWidth={ICON_STROKE} color={T.textGhost} />
+                <span style={{ color: T.textGhost, fontSize: '12px' }}>{userEmail}</span>
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
               {onSignOut && (
                 <button
                   onClick={handleLogout}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    padding: '8px 14px', borderRadius: T.radius,
-                    background: 'rgba(239,68,68,0.85)', border: '1px solid rgba(239,68,68,0.9)',
-                    cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: '10px',
+                    height: '42px', padding: '0 10px', margin: '0 -10px',
+                    borderRadius: T.radius, background: 'transparent', border: 'none',
+                    color: T.textMuted, fontSize: '14px', fontWeight: 500,
+                    cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
-                  <LogOut size={13} color="white" />
-                  <span style={{ color: 'white', fontSize: '12.5px', fontWeight: 700 }}>Se déconnecter</span>
+                  <LogOut size={18} strokeWidth={ICON_STROKE} color={T.textDim} />
+                  Se déconnecter
                 </button>
               )}
 
@@ -740,12 +736,12 @@ export default function MobileNav({
                 <button
                   onClick={onUpgrade}
                   style={{
-                    background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
-                    color: T.orange, fontSize: '11px', fontWeight: 700,
+                    background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+                    color: T.orange, fontSize: '12px', fontWeight: 600, fontFamily: 'inherit',
                   }}
                 >
-                  <Crown size={11} /> Changer d'offre
+                  <Crown size={12} strokeWidth={ICON_STROKE} /> Changer d'offre
                 </button>
               )}
             </div>
@@ -777,8 +773,8 @@ export default function MobileNav({
               >
                 <span className="mn-icon">
                   {locked
-                    ? <Lock aria-hidden="true" strokeWidth={1.8} />
-                    : <item.icon aria-hidden="true" strokeWidth={isActive ? 2.2 : 1.8} />
+                    ? <Lock aria-hidden="true" strokeWidth={ICON_STROKE} />
+                    : <item.icon aria-hidden="true" strokeWidth={ICON_STROKE} />
                   }
                   {item.badge && !isMenu && !locked && (
                     <span className="mn-dot" role="status" aria-label="En direct" />

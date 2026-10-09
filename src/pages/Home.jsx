@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { Helmet } from "react-helmet-async";
+import { Helmet } from 'react-helmet-async';
 import logo from '../assets/Logo_SocialApp.png';
 import eventMockup from '../assets/MODE_EVENEMENT.png';
 import eventMockupWebp from '../assets/MODE_EVENEMENT.webp';
@@ -14,27 +14,116 @@ import profilMockup from '../assets/INTERFACE_SOCIALAPP.png';
 import EventQuickCreateModal from '../components/EventQuickCreateModal';
 
 /* ─────────────────────────────────────────────
-   TOGGLE MENSUEL / ANNUEL
+   DONNÉES
 ───────────────────────────────────────────── */
-function BillingToggle({ value, onChange, compact = false }) {
+const NAV_LINKS = [['#f', 'Fonctionnalités'], ['#crm', 'CRM'], ['#m', 'Boutique'], ['#t', 'Tarifs'], ['#q', 'FAQ']];
+
+const PLANS = [
+  {
+    name: 'BASIC', price: '10 000', color: '#6d4fe0',
+    subtitle: 'Particulier, Petit commerce, Étudiants, Freelances',
+    bg: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.25)',
+    btn: { background: 'rgba(99,102,241,.2)', color: '#3b2fb0' },
+    features: [
+      'Une carte de visite digitale', '09 liens sociaux', 'QR Code personnalisable',
+      '02 imports autorisés (PDF, plaquette, brochure, etc.)', "Marketplace : ajout jusqu'à 07 articles",
+      '05 formulaires personnalisés', 'Calendrier de réservation',
+    ],
+  },
+  {
+    name: 'PRO', price: '15 000', color: '#e0561f', popular: true,
+    subtitle: 'Prestataires de services, Professions libérales, Créateurs de contenu, Automobile, Commerçants, Événementiel',
+    bg: 'rgba(255,107,53,.1)', border: '2px solid rgba(255,107,53,.55)',
+    features: [
+      'Une carte de visite digitale', '12 liens sociaux', 'Carte NFC (logo + QR CODE)',
+      'Analytics & statistiques détaillées', 'Stat temps réel — flux visiteurs live',
+      'Calendrier de réservation (RDV en ligne)', 'Formulaires personnalisés illimités',
+      "Marketplace : ajout jusqu'à 10 articles", '5 imports autorisés (flyers, plaquettes, brochures, etc.)',
+      'QR Code personnalisable', 'Support standard',
+    ],
+  },
+  {
+    name: 'BUSINESS', price: '39 900', monthly: '3 990', offer: '2 mois offerts', color: '#a87800',
+    subtitle: 'PME, Grandes entreprises, Agences de communication, Événementiel, institutions, banques et assurances',
+    bg: 'rgba(247,201,72,.14)', border: '1px solid rgba(214,160,0,.4)',
+    btn: { background: 'linear-gradient(135deg,#d98a0b,#f7c948)' },
+    features: [
+      'Une carte de visite digitale', 'Carte NFC (logo + QR CODE)', 'Analytics avancés complets',
+      'CRM & Pipeline de leads', 'CRM WhatsApp complet', 'Campagnes WhatsApp IA (génération automatique)',
+      'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations',
+      'Toutes les intégrations (HubSpot, Pipedrive, Google Analytics, Shopify, PostgreSQL, Salesforce, etc.)',
+      "Marketplace : ajout d'articles illimité", '10 imports autorisés (flyers, plaquettes, brochures, etc.)',
+      'QR Code personnalisable', 'Tracking IP', 'Support VIP prioritaire',
+    ],
+  },
+  {
+    name: 'ÉVÉNEMENT', price: '3 500', color: '#16a34a', isEvent: true,
+    subtitle: 'Salons, mariages, soirées, lancements — une carte dédiée à votre événement, avec son propre lien',
+    bg: 'rgba(34,197,94,.1)', border: '1px solid rgba(34,197,94,.3)', btnClass: 'sa-gr',
+    features: [
+      'Page publique dédiée (lien propre /e/...)', 'Compte à rebours en direct', 'Galerie photos & vidéos',
+      'QR code à télécharger', 'Formulaire de contact / RSVP', 'Analytics (vues, contacts, demandes)',
+    ],
+  },
+];
+
+const FAQS = [
+  { q: "C'est quoi exactement SocialApp ?", a: "SocialApp est votre profil digital tout-en-un : un lien unique et un QR code qui regroupe tous vos réseaux sociaux, WhatsApp, votre boutique et vos événements. Un seul scan, vos clients trouvent tout." },
+  { q: 'Combien ça coûte ?', a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO). L'offre BUSINESS est à 3 990 FCFA/mois ou 39 900 FCFA/an (10 mois payés pour 12 : 2 mois offerts). Module Événement disponible à 3 500 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
+  { q: "Qu'est-ce que le CRM ?", a: 'Le CRM intégré (offre BUSINESS) vous permet de capturer et gérer vos prospects. Tags intelligents (Prospect, Chaud, Client, Froid), notes, historique et export CSV. Transformez chaque visiteur en opportunité.' },
+  { q: 'Je peux vendre mes produits ?', a: 'Oui ! La marketplace affiche vos produits avec photos, prix et description. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS). Vos clients commandent via WhatsApp. Zéro commission.' },
+  { q: 'Le QR code peut-il être modifié sans le réimprimer ?', a: 'Oui ! Modifiez vos liens, votre boutique ou votre WhatsApp à tout moment — votre QR code sur vos flyers et cartes reste valide à vie.' },
+  { q: "C'est quoi le mode Événement ?", a: 'Une page publique dédiée à votre événement, avec son propre lien — compte à rebours en direct, galerie photos & vidéos, QR code téléchargeable, formulaire de contact ou RSVP. Disponible à 3 500 FCFA, quel que soit votre plan, via le bouton "Créez un évent".' },
+  { q: 'Comment créer un événement rapidement ?', a: 'Cliquez sur "Créez un évent" en haut de la page, remplissez le petit formulaire (titre, date ou salon, lieu), puis activez votre carte. Le lien public et le QR code deviennent disponibles dès l\'activation.' },
+  { q: 'Comment je reçois ma carte PVC ou NFC ?', a: 'Dès votre souscription PRO ou BUSINESS, notre équipe vous contacte sur WhatsApp pour personnaliser votre carte. Réception sous 7 jours.' },
+  { q: 'Comment payer ?', a: 'Paiement via Mobile Money (Orange Money, Wave, MTN). Contactez-nous sur WhatsApp au +225 05 76 03 12 12. Aucune carte bancaire requise.' },
+];
+
+/* ─────────────────────────────────────────────
+   BASCULE MENSUEL / ANNUEL
+───────────────────────────────────────────── */
+function BillingToggle({ value, onChange }) {
   const btn = (active) => ({
-    padding: compact ? '7px 16px' : '10px 22px',
-    borderRadius: '100px',
-    border: 'none',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    fontWeight: '700',
-    fontSize: compact ? '12px' : '13px',
-    color: active ? '#fff' : 'rgba(255,255,255,.55)',
+    padding: '9px 20px', borderRadius: '100px', border: 'none', cursor: 'pointer',
+    fontFamily: 'inherit', fontWeight: 700, fontSize: '13px',
+    color: active ? '#2a1305' : '#7b788a',
     background: active ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'transparent',
-    transition: 'all .2s',
-    whiteSpace: 'nowrap',
   });
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px', borderRadius: '100px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)' }}>
-      <button type="button" style={btn(value === 'monthly')} onClick={(e) => { e.stopPropagation(); onChange('monthly'); }}>Mensuel</button>
-      <button type="button" style={btn(value === 'annual')} onClick={(e) => { e.stopPropagation(); onChange('annual'); }}>
-        Annuel <span style={{ marginLeft: '4px', fontSize: compact ? '10px' : '11px', color: value === 'annual' ? '#fff' : '#22c55e' }}>2 mois offerts</span>
+    <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '100px', background: '#fff', border: '1px solid rgba(29,26,43,.12)' }}>
+      <button type="button" aria-pressed={value === 'monthly'} style={btn(value === 'monthly')} onClick={() => onChange('monthly')}>Mensuel</button>
+      <button type="button" aria-pressed={value === 'annual'} style={btn(value === 'annual')} onClick={() => onChange('annual')}>
+        Annuel <span style={{ fontSize: '11px', marginLeft: '4px' }}>2 mois offerts</span>
+      </button>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   CARTE D'OFFRE (page + modal)
+───────────────────────────────────────────── */
+function PlanCard({ p, billing, onChoose }) {
+  const isMonthly = !!p.monthly && billing === 'monthly';
+  return (
+    <div className="sa-card sa-pn" style={{ background: p.bg, border: p.border, marginTop: p.popular ? '14px' : 0 }}>
+      {p.popular && <div className="sa-pop sa-g">Plus populaire</div>}
+      <h5 style={{ color: p.color }}>{p.name}</h5>
+      <div className="sa-pr">{isMonthly ? p.monthly : p.price} <small>FCFA</small></div>
+      <div className="sa-sb2">{p.isEvent ? 'par événement · Quel que soit votre plan' : (isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel')}</div>
+      {p.monthly && !isMonthly && (
+        <div>
+          <div style={{ fontSize: '11px', color: '#5d5a6e', marginBottom: '6px' }}>10 mois payés sur 12 · au lieu de <b>{p.monthly} F</b> × 12</div>
+          <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: 700, color: '#15803d', background: 'rgba(34,197,94,.14)', border: '1px solid rgba(34,197,94,.3)', borderRadius: '100px', padding: '3px 10px', marginBottom: '8px' }}>{p.offer}</span>
+        </div>
+      )}
+      {p.monthly && isMonthly && (
+        <div style={{ fontSize: '11px', color: '#5d5a6e', marginBottom: '8px' }}>Passez à l'annuel : <b style={{ color: '#15803d' }}>39 900 F</b> ({p.offer})</div>
+      )}
+      <div className="sa-sj">{p.subtitle}</div>
+      <hr />
+      {p.features.map((f) => <div className="sa-f" key={f}>{f}</div>)}
+      <button type="button" className={'sa-btn ' + (p.btnClass || '')} style={p.btn} onClick={() => onChoose(p)}>
+        {p.isEvent ? 'Créer mon événement →' : `Choisir ${p.name}${isMonthly ? ' (mensuel)' : ''} →`}
       </button>
     </div>
   );
@@ -44,361 +133,354 @@ function BillingToggle({ value, onChange, compact = false }) {
    MODAL DE SÉLECTION D'OFFRE
 ───────────────────────────────────────────── */
 function PlanModal({ onClose, onSelect, billing, setBilling }) {
-  const plans = [
-    {
-      name: "BASIC", emoji: "⚡", price: "10 000", color: "#a78bfa",
-      subtitle: "Particulier, petit commerce, Étudiants, Freelances",
-      bg: "rgba(99,102,241,.08)", border: "1px solid rgba(99,102,241,.25)",
-      features: [
-        "Une carte de visite digitale",
-        "09 liens sociaux",
-        "QR Code personnalisable",
-        "02 imports autorisés (PDF, plaquette, brochure, etc.)",
-        "Marketplace : ajout jusqu'à 07 articles",
-        "05 formulaires personnalisés",
-        "Calendrier de réservation",
-      ],
-    },
-    {
-      name: "PRO", emoji: "🚀", price: "15 000", color: "#ff6b35", popular: true,
-      subtitle: "Prestataires de services, Professions libérales, Créateurs de contenu, Automobile, Commerçants, Événementiel",
-      bg: "rgba(255,107,53,.1)", border: "2px solid rgba(255,107,53,.55)",
-      features: [
-        "Une carte de visite digitale",
-        "12 liens sociaux",
-        "Carte NFC (logo + QR CODE)",
-        "Analytics & statistiques détaillées",
-        "Stat temps réel — flux visiteurs live",
-        "Calendrier de réservation (RDV en ligne)",
-        "Formulaires personnalisés illimités",
-        "Marketplace : ajout jusqu'à 10 articles",
-        "5 imports autorisés (flyers, plaquettes, brochures, etc.)",
-        "QR Code personnalisable",
-        "Support standard",
-      ],
-    },
-    {
-      name: "BUSINESS", emoji: "💼", price: "39 900", monthly: "3 990", offer: "2 mois offerts", color: "#f7c948",
-      subtitle: "PME, grandes entreprises, agences de communication, événementiel, réseaux de magasins, ONG, institutions, cliniques, banques et assurances",
-      bg: "rgba(247,201,72,.06)",
-      border: "1px solid rgba(247,201,72,.28)",
-      features: [
-        "Une carte de visite digitale",
-        "Carte NFC (logo + QR CODE)",
-        "Analytics avancés complets",
-        "CRM & Pipeline de leads",
-        "CRM WhatsApp complet",
-        "Campagnes WhatsApp IA (génération automatique)",
-        "Calendrier de réservation illimité",
-        "Formulaires illimités",
-        "Automatisations",
-        "Toutes les intégrations (HubSpot, Pipedrive, Google Analytics, Shopify, PostgreSQL, Mailchimp, Notion, Salesforce, etc.)",
-        "Marketplace : ajout d'articles illimité",
-        "10 imports autorisés (flyers, plaquettes, brochures, etc.)",
-        "QR Code personnalisable",
-        "Tracking IP",
-        "Sponsoring SocialApp : lancez vos campagnes Facebook & Instagram depuis votre tableau de bord, synchronisées avec votre CRM (BIENTÔT DISPONIBLE)",
-        "Support VIP prioritaire",
-      ],
-    },
-  ];
-
-  const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
 
   return (
-    <div onClick={handleBackdrop} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{ background: '#0a0818', border: '1px solid rgba(255,255,255,.1)', borderRadius: '28px', padding: '40px 36px', maxWidth: '940px', width: '100%', boxShadow: '0 40px 120px rgba(0,0,0,.8)', maxHeight: '92vh', overflowY: 'auto', position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: '18px', right: '20px', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.1)', borderRadius: '50%', width: '34px', height: '34px', color: 'rgba(255,255,255,.6)', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', lineHeight: 1 }}>×</button>
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,107,53,.1)', border: '1px solid rgba(255,107,53,.3)', borderRadius: '100px', padding: '5px 14px', fontSize: '11px', color: '#ff6b35', fontWeight: '700', marginBottom: '14px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff6b35' }} />
-            Choisissez votre offre
-          </div>
-          <h2 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-1px', color: '#fff', marginBottom: '8px' }}>Démarrez avec l'offre qui vous convient</h2>
-          <p style={{ color: 'rgba(255,255,255,.45)', fontSize: '14px', marginBottom: '18px' }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
-          <BillingToggle value={billing} onChange={setBilling} compact />
-          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.35)', marginTop: '8px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
+    <div className="sa-ov" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="sa-md" role="dialog" aria-modal="true" aria-label="Choisissez votre offre">
+        <button type="button" className="sa-mx" aria-label="Fermer" onClick={onClose}>×</button>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-1px', marginBottom: '8px' }}>Démarrez avec l'offre qui vous convient</h2>
+          <p style={{ color: '#5d5a6e', fontSize: '14px', marginBottom: '18px' }}>Paiement Mobile Money · Wave · Orange Money · Sans carte bancaire</p>
+          <BillingToggle value={billing} onChange={setBilling} />
+          <div style={{ fontSize: '11px', color: '#7b788a', marginTop: '8px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '18px' }} className="sa-modal-plans">
-          {plans.map((p, i) => {
-            const isMonthly = !!p.monthly && billing === 'monthly';
-            return (
-              <div key={i} style={{ background: p.bg, border: p.border, borderRadius: '22px', padding: p.popular ? '36px 24px 24px' : '24px', position: 'relative', cursor: 'pointer', transition: 'transform .2s, box-shadow .2s', marginTop: p.popular ? '14px' : '0' }} className="sa-modal-plan" onClick={() => onSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual')}>
-                {p.popular && (<div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '5px 16px', fontSize: '11px', fontWeight: '700', color: '#fff', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(255,107,53,.4)' }}>⭐ Plus populaire</div>)}
-                <div style={{ fontSize: '11px', fontWeight: '700', color: p.color, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '12px' }}>{p.emoji} {p.name}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#fff', letterSpacing: '-1px' }}>{isMonthly ? p.monthly : p.price}</span>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.4)' }}>FCFA</span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)', marginBottom: '6px' }}>{isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel'}</div>
-                {p.monthly && !isMonthly && (
-                  <div style={{ marginBottom: '8px' }}>
-                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.5)', marginBottom: '5px' }}>soit 10 mois payés sur 12 (au lieu de {p.monthly} F × 12)</div>
-                    <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: '700', color: '#22c55e', background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', borderRadius: '100px', padding: '3px 10px' }}>🎁 {p.offer}</span>
-                  </div>
-                )}
-                {p.monthly && isMonthly && (
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.5)', marginBottom: '8px' }}>Passez à l'annuel : <strong style={{ color: '#22c55e' }}>39 900 F</strong> ({p.offer})</div>
-                )}
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', marginBottom: '18px', lineHeight: '1.5', minHeight: '32px' }}>{p.subtitle}</div>
-                <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '14px' }} />
-                {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', gap: '7px', marginBottom: '8px', fontSize: '12px', color: 'rgba(255,255,255,.7)', alignItems: 'flex-start' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span>{f}</div>))}
-                <button type="button" style={{ display: 'block', width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px', border: 'none', background: p.popular ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : 'rgba(255,255,255,.1)', color: '#fff', fontWeight: '700', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', transition: 'transform .15s, box-shadow .15s' }} className="sa-modal-btn">Choisir {p.name} →</button>
-              </div>
-            );
-          })}
+        <div className="sa-mg">
+          {PLANS.filter((p) => !p.isEvent).map((p) => <PlanCard key={p.name} p={p} billing={billing} onChoose={(pl) => onSelect(pl.name.toLowerCase(), pl.monthly ? billing : 'annual')} />)}
         </div>
-        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.25)', fontSize: '12px', marginTop: '24px' }}>💬 Besoin d'aide ? WhatsApp <strong style={{ color: 'rgba(255,255,255,.5)' }}>+225 05 76 03 12 12</strong></p>
+        <p style={{ textAlign: 'center', color: '#7b788a', fontSize: '12px', marginTop: '24px' }}>Besoin d'aide ? WhatsApp <b>+225 05 76 03 12 12</b></p>
       </div>
-      <style>{`
-        @media(max-width:700px){.sa-modal-plans{grid-template-columns:1fr!important}}
-        .sa-modal-plan:hover{transform:translateY(-5px);box-shadow:0 16px 48px rgba(0,0,0,.5)}
-        .sa-modal-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,107,53,.3)}
-      `}</style>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────
-   MOCKUP ANIMÉ — BOUTIQUE MARKETPLACE
+   STYLES
 ───────────────────────────────────────────── */
-function MarketplaceMockup() {
-  const products = [
-    { emoji: '👟', bg: 'linear-gradient(135deg,#5a4a63,#241a2b)', price: '14 000', old: '20 000', badge: '-30%', badgeBg: '#ff6b35' },
-    { emoji: '👗', bg: 'linear-gradient(135deg,#7a4a3a,#2e1f18)', price: '10 000', old: null, badge: 'Disponible', badgeBg: '#22c55e' },
-    { emoji: '📱', bg: 'linear-gradient(135deg,#3a4a5a,#1a232e)', price: '180 000', old: null, badge: 'Épuisé', badgeBg: 'rgba(255,255,255,.28)' },
-    { emoji: '👜', bg: 'linear-gradient(135deg,#4a3a5a,#20182e)', price: '9 000', old: null, badge: '-20%', badgeBg: '#ff6b35' },
-  ];
-
-  return (
-    <div className="mp-scene">
-      <img src={marketplaceWoman} alt="Cliente ravie utilisant SocialApp" loading="lazy" className="sa-float mp-woman" />
-
-      <div className="mp-phone">
-        <div className="mp-screen">
-          <div className="mp-profile">
-            <div className="mp-avatar">S</div>
-            <div className="mp-brand">SocialApp <span style={{ color: '#22c55e' }}>✔</span></div>
-            <div className="mp-sub">Votre boutique, votre profil</div>
-            <div className="mp-cta">Ouvrir ma boutique →</div>
-          </div>
-
-          <div className="mp-tab">🛍 Boutique</div>
-
-          <div className="mp-grid">
-            {products.map((p, i) => (
-              <div key={i} className={`mp-card mp-card-${i + 1}`}>
-                <div className="mp-photo" style={{ background: p.bg }}>
-                  <span className="mp-badge" style={{ background: p.badgeBg }}>{p.badge}</span>
-                  <span className="mp-emoji">{p.emoji}</span>
-                </div>
-                <div className="mp-info">
-                  <span className="mp-price">{p.price} F</span>
-                  {p.old && <span className="mp-old">{p.old} F</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mp-contacts">
-            <div className="mp-row mp-row-1"><span className="mp-ico" style={{ background: '#ff6b35' }}>☎</span>Téléphone</div>
-            <div className="mp-row mp-row-2"><span className="mp-ico" style={{ background: '#1877F2' }}>f</span>Facebook</div>
-            <div className="mp-row mp-row-3"><span className="mp-ico" style={{ background: '#25D366' }}>✆</span>WhatsApp</div>
-          </div>
-        </div>
-      </div>
-
-      <style>{`
-        .mp-scene{ position:relative; display:flex; align-items:center; justify-content:center; }
-        .mp-woman{ height:400px; margin-right:-46px; z-index:1; filter:drop-shadow(0 20px 34px rgba(0,0,0,.5)); }
-        .mp-phone{ position:relative; width:240px; height:500px; background:#0e0709; border-radius:36px; border:2px solid rgba(255,255,255,.08); box-shadow:0 0 0 6px #04020e, 0 30px 70px rgba(0,0,0,.55); padding:8px; z-index:2; flex-shrink:0; }
-        .mp-screen{ position:relative; width:100%; height:100%; background:linear-gradient(180deg,#150d10,#0c070a); border-radius:28px; padding:24px 10px 12px; overflow:hidden; }
-        .mp-profile{ display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:8px; }
-        .mp-avatar{ width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#ff6b35,#f7c948); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:15px; margin-bottom:5px; }
-        .mp-brand{ font-size:10.5px; font-weight:700; color:#fff; display:flex; gap:4px; align-items:center; }
-        .mp-sub{ font-size:7px; color:rgba(255,255,255,.45); margin-top:2px; }
-        .mp-cta{ margin-top:6px; font-size:7px; font-weight:700; color:#fff; background:linear-gradient(90deg,#ff6b35,#f7c948); padding:4px 11px; border-radius:20px; animation:mpCta 2.4s ease-in-out infinite; }
-        .mp-tab{ display:inline-flex; width:fit-content; font-size:7px; font-weight:700; color:#fff; background:rgba(255,107,53,.18); border:1px solid rgba(255,107,53,.4); padding:4px 9px; border-radius:14px; margin-bottom:7px; }
-        .mp-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-        .mp-card{ position:relative; border-radius:11px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); overflow:hidden; height:90px; animation-duration:6s; animation-iteration-count:infinite; animation-timing-function:ease-out; }
-        .mp-card-1{ animation-name:mpCard1; }
-        .mp-card-2{ animation-name:mpCard2; }
-        .mp-card-3{ animation-name:mpCard3; }
-        .mp-card-4{ animation-name:mpCard4; }
-        .mp-photo{ position:relative; height:58px; display:flex; align-items:center; justify-content:center; }
-        .mp-emoji{ font-size:20px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
-        .mp-badge{ position:absolute; top:5px; left:5px; font-size:5.5px; font-weight:800; color:#fff; padding:2px 5px; border-radius:5px; white-space:nowrap; }
-        .mp-info{ padding:5px 7px; }
-        .mp-price{ font-size:8.5px; font-weight:800; color:#fff; }
-        .mp-old{ font-size:6px; color:rgba(255,255,255,.4); text-decoration:line-through; margin-left:4px; }
-        .mp-contacts{ margin-top:7px; display:flex; flex-direction:column; gap:4px; }
-        .mp-row{ display:flex; align-items:center; gap:6px; font-size:7px; font-weight:600; color:#fff; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:8px; padding:4px 7px; animation-duration:6s; animation-iteration-count:infinite; animation-timing-function:ease-out; }
-        .mp-row-1{ animation-name:mpRow1; }
-        .mp-row-2{ animation-name:mpRow2; }
-        .mp-row-3{ animation-name:mpRow3; }
-        .mp-ico{ width:14px; height:14px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:7.5px; color:#fff; flex-shrink:0; }
-
-        @keyframes mpCta{ 0%,100%{ box-shadow:0 3px 10px rgba(255,107,53,.25); } 50%{ box-shadow:0 3px 18px rgba(255,107,53,.6); } }
-
-        @keyframes mpCard1{ 0%,5%{opacity:0;transform:translateY(12px) scale(.93);} 11%{opacity:1;transform:translateY(-2px) scale(1.03);} 16%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
-        @keyframes mpCard2{ 0%,13%{opacity:0;transform:translateY(12px) scale(.93);} 19%{opacity:1;transform:translateY(-2px) scale(1.03);} 24%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
-        @keyframes mpCard3{ 0%,22%{opacity:0;transform:translateY(12px) scale(.93);} 28%{opacity:1;transform:translateY(-2px) scale(1.03);} 33%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
-        @keyframes mpCard4{ 0%,30%{opacity:0;transform:translateY(12px) scale(.93);} 36%{opacity:1;transform:translateY(-2px) scale(1.03);} 41%,90%{opacity:1;transform:translateY(0) scale(1);} 96%,100%{opacity:0;transform:translateY(12px) scale(.93);} }
-
-        @keyframes mpRow1{ 0%,40%{opacity:0;transform:translateY(8px);} 46%,90%{opacity:1;transform:translateY(0);} 96%,100%{opacity:0;transform:translateY(8px);} }
-        @keyframes mpRow2{ 0%,44%{opacity:0;transform:translateY(8px);} 50%,90%{opacity:1;transform:translateY(0);} 96%,100%{opacity:0;transform:translateY(8px);} }
-        @keyframes mpRow3{ 0%,48%{opacity:0;transform:translateY(8px);} 54%,90%{opacity:1;transform:translateY(0);} 96%,100%{opacity:0;transform:translateY(8px);} }
-
-        @media (max-width:640px){
-          .mp-woman{ height:260px; margin-right:-26px; }
-          .mp-phone{ width:186px; height:388px; }
-        }
-      `}</style>
-    </div>
-  );
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&display=swap');
+.sa-p{font-family:'Sora',system-ui,sans-serif;color:#1d1a2b;line-height:1.6;background-color:#f8f5ef;background-image:radial-gradient(900px 600px at 80% 0,rgba(255,107,53,.16),transparent 70%),radial-gradient(700px 600px at 0 22%,rgba(167,139,250,.16),transparent 70%),radial-gradient(800px 600px at 100% 45%,rgba(247,201,72,.2),transparent 70%),radial-gradient(800px 600px at 0 70%,rgba(236,72,153,.1),transparent 70%),radial-gradient(900px 600px at 70% 100%,rgba(255,107,53,.14),transparent 70%)}
+.sa-p *{box-sizing:border-box}.sa-p a{color:inherit;text-decoration:none}
+.sa-w{max-width:1280px;margin:0 auto;padding:0 40px}
+.sa-g{background:linear-gradient(135deg,#ff6b35,#f7c948)}
+.sa-gt{background:linear-gradient(135deg,#f0501a,#f2a900);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sa-nav{position:sticky;top:0;z-index:5;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;background:rgba(248,245,239,.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(29,26,43,.08)}
+.sa-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}
+.sa-mk{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff}
+.sa-lk{display:flex;gap:28px;font-size:13px;color:#5d5a6e}
+.sa-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 24px;border:0;border-radius:100px;font:700 13px 'Sora',sans-serif;color:#2a1305;cursor:pointer;background:linear-gradient(135deg,#ff6b35,#f7c948)}
+.sa-btn.sa-l{min-height:56px;padding:0 38px;font-size:16px;border-radius:14px;box-shadow:0 10px 28px rgba(255,107,53,.35)}
+.sa-btn.sa-s{background:#fff;color:#1d1a2b;border:1px solid rgba(29,26,43,.15)}
+.sa-btn.sa-gr{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+.sa-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;font-size:12px;font-weight:700;margin-bottom:18px}
+.sa-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.sa-p h1.sa-ttl span{display:inline}
+.sa-ttl .sa-ln{display:block;overflow:hidden;padding-bottom:.14em;margin-bottom:-.14em}
+.sa-ttl .sa-ln>span{display:block;transform:translateY(110%);opacity:0;animation:sa-up 1s cubic-bezier(.2,.8,.2,1) forwards,sa-flow 9s ease-in-out 1.4s infinite alternate;background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sa-ttl .sa-l1{background-image:linear-gradient(100deg,#f0501a 0%,#f2a900 45%,#f0501a 100%);animation-delay:.15s,1.4s}
+.sa-ttl .sa-l2{background-image:linear-gradient(100deg,#7c5cf0 0%,#f0501a 45%,#f2a900 75%,#7c5cf0 100%);animation-delay:.45s,1.4s}
+@keyframes sa-up{to{transform:none;opacity:1}}
+@keyframes sa-flow{from{background-position:0 0}to{background-position:100% 0}}
+@media(prefers-reduced-motion:reduce){.sa-ttl .sa-ln>span{animation:none;transform:none;opacity:1}}
+.sa-i{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.12em}
+.sa-ic{color:#2b2740}.sa-rw .sa-ic{color:#fff}.sa-rw .sa-ic svg{width:9px;height:9px}.sa-sb span{color:#4a4660}
+.sa-hero{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;padding:80px 0 90px}
+.sa-p h1{margin:0;font-size:62px;line-height:1.02;letter-spacing:-3px;font-weight:900}
+.sa-p h1 span{display:block}
+.sa-pitch{font-size:14px;color:#5d5a6e;line-height:1.8;margin:22px 0 14px;max-width:540px;padding:14px 18px;background:rgba(255,255,255,.7);border:1px solid rgba(29,26,43,.08);border-radius:14px}
+.sa-tag{font-size:20px;font-weight:700;margin:12px 0 18px;line-height:1.3}
+.sa-ck{display:flex;gap:10px;align-items:center;font-size:13px;color:#3d3a4f;margin-bottom:8px}
+.sa-ck i{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font:800 9px 'Sora';color:#fff;font-style:normal;background:linear-gradient(135deg,#ff6b35,#f7c948)}
+.sa-cta{display:flex;gap:14px;flex-wrap:wrap;margin:26px 0}
+.sa-av{display:flex;align-items:center;gap:14px;font-size:13px;color:#5d5a6e}
+.sa-av div div{width:32px;height:32px;border-radius:50%;border:2px solid #f8f5ef;margin-left:-10px;color:#fff;font:800 12px 'Sora';display:flex;align-items:center;justify-content:center}
+.sa-av div div:first-child{margin-left:0}
+.sa-card{background:rgba(255,255,255,.82);border:1px solid rgba(29,26,43,.08);border-radius:24px;box-shadow:0 24px 60px -24px rgba(80,50,20,.25)}
+.sa-st{position:relative}
+.sa-fb{position:absolute;background:#fff;border:1px solid rgba(29,26,43,.1);border-radius:14px;padding:10px 14px;box-shadow:0 14px 34px rgba(60,40,20,.18);font-size:11px;z-index:2}
+.sa-fb b{display:block;font-size:11px}.sa-fb span{color:#7b788a;font-size:10px}
+.sa-top{height:44px;display:flex;align-items:center;gap:7px;padding:0 16px;border-bottom:1px solid rgba(29,26,43,.07)}
+.sa-top i{width:10px;height:10px;border-radius:50%}
+.sa-top em{flex:1;margin-left:10px;background:#f1ede4;border-radius:6px;padding:3px 10px;font:10px 'Sora';color:#7b788a;font-style:normal}
+.sa-db{display:grid;grid-template-columns:52px 1fr;min-height:330px}
+.sa-sb{border-right:1px solid rgba(29,26,43,.07);padding:10px 0;display:flex;flex-direction:column;gap:8px;align-items:center;font-size:14px}
+.sa-sb span.sa-a{background:rgba(99,102,241,.15);border-radius:9px}
+.sa-sb span{width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+.sa-dc{padding:14px;display:flex;flex-direction:column;gap:11px}
+.sa-mc{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.sa-mc div{background:#f5f1e8;border-radius:12px;padding:10px;text-align:center;font-size:8px;color:#7b788a}
+.sa-mc b{display:block;font-size:18px;font-weight:900;line-height:1}
+.sa-bar{display:flex;align-items:center;gap:8px;font-size:9px;color:#7b788a;margin-top:5px}.sa-bar u{flex:1;height:5px;border-radius:3px;background:#e8e3d7;overflow:hidden;text-decoration:none}.sa-bar u i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#6366f1,#a78bfa)}
+.sa-chip{padding:4px 8px;border-radius:7px;font-size:9px;font-weight:700}
+.sa-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;text-align:center;padding:48px 40px;border-top:1px solid rgba(29,26,43,.07);border-bottom:1px solid rgba(29,26,43,.07);background:rgba(255,255,255,.4)}
+.sa-stats b{display:block;font-size:48px;font-weight:900;letter-spacing:-2px;line-height:1}.sa-stats span{font-size:13px;color:#7b788a}
+.sa-sec{padding:100px 0}
+.sa-hd{text-align:center;max-width:700px;margin:0 auto 60px}
+.sa-p h2{margin:0 0 16px;font-size:42px;line-height:1.1;letter-spacing:-1.5px;font-weight:900}
+.sa-sub{font-size:16px;color:#5d5a6e;line-height:1.75;margin:0}
+.sa-two{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.sa-it{display:flex;gap:14px;margin:0 0 16px}.sa-it b{display:block;font-size:15px;margin-bottom:3px}.sa-it span{font-size:13px;color:#5d5a6e;line-height:1.6}
+.sa-ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.sa-pl{display:inline-flex;margin-top:12px;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700}
+.sa-fg{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.sa-fc{padding:30px}.sa-fc .sa-ic{width:54px;height:54px;font-size:24px;border-radius:16px;margin-bottom:18px}.sa-fc h3{margin:0 0 10px;font-size:17px}.sa-fc p{margin:0;font-size:13px;color:#5d5a6e;line-height:1.75}
+.sa-ft{display:inline-block;margin-top:14px;padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700}
+.sa-tint1{background:linear-gradient(135deg,rgba(236,72,153,.1),rgba(99,102,241,.07))}.sa-tint2{background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(14,165,233,.08))}.sa-tint3{background:linear-gradient(180deg,rgba(255,107,53,.1),transparent)}
+.sa-mock{padding:26px;min-height:330px}
+.sa-mock h4{margin:0 0 14px;font-size:14px}
+.sa-phone{width:240px;margin:0 auto;background:#1a1218;border-radius:36px;padding:9px;box-shadow:0 0 0 5px #e9e2d3,0 30px 60px rgba(60,40,20,.3);color:#fff}
+.sa-scr{background:#150d10;border-radius:28px;padding:22px 10px 12px}
+.sa-pg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.sa-pg div{border-radius:11px;background:rgba(255,255,255,.06);overflow:hidden;font-size:9px;font-weight:800}
+.sa-pg i{display:block;height:52px;font-style:normal;font-size:22px;text-align:center;line-height:52px}.sa-pg b{display:block;padding:5px 7px}
+.sa-rw{display:flex;gap:8px;align-items:center;font-size:8px;font-weight:600;background:rgba(255,255,255,.05);border-radius:8px;padding:5px 8px;margin-top:5px}
+.sa-pls{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;align-items:start;padding-top:16px}
+.sa-pn{padding:30px;position:relative}
+.sa-pn h5{margin:0 0 14px;font-size:11px;letter-spacing:2.5px;font-weight:700}
+.sa-pr{font-size:38px;font-weight:900;letter-spacing:-1.5px}.sa-pr small{font-size:14px;font-weight:500;color:#7b788a;letter-spacing:0}
+.sa-pn .sa-sb2{font-size:12px;color:#7b788a;margin:2px 0 8px}.sa-pn .sa-sj{font-size:12px;color:#5d5a6e;line-height:1.55;min-height:56px;margin-bottom:18px}
+.sa-pn .sa-f{display:flex;gap:8px;font-size:12px;color:#3d3a4f;margin-bottom:9px}.sa-pn .sa-f::before{content:'✓';font-weight:700}
+.sa-pn hr{border:0;border-top:1px solid rgba(29,26,43,.09);margin:0 0 16px}
+.sa-pn .sa-btn{width:100%;border-radius:14px;margin-top:10px;min-height:48px}
+.sa-pop{position:absolute;top:-15px;left:50%;transform:translateX(-50%);padding:6px 18px;border-radius:100px;font-size:11px;font-weight:700;color:#2a1305;white-space:nowrap}
+.sa-stp{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}.sa-stp .sa-card{padding:32px;text-align:center}.sa-stp h3{margin:0 0 10px;font-size:18px}.sa-stp p{margin:0;font-size:14px;color:#5d5a6e}
+.sa-nm{width:40px;height:40px;border-radius:50%;margin:12px auto 16px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#2a1305}
+.sa-tg{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.sa-tg .sa-card{padding:28px}.sa-tg p{margin:12px 0 18px;font-size:14px;line-height:1.8;font-style:italic;color:#3d3a4f}
+.sa-fin{max-width:900px;margin:0 auto;border-radius:32px;padding:72px 56px;text-align:center;background:linear-gradient(135deg,rgba(255,107,53,.2),rgba(167,139,250,.18) 55%,rgba(247,201,72,.22));border:1px solid rgba(29,26,43,.08)}
+.sa-fin h2{font-size:42px}
+.sa-fq{max-width:740px;margin:0 auto}.sa-fq div{background:rgba(255,255,255,.75);border:1px solid rgba(29,26,43,.08);border-radius:16px;padding:18px 22px;margin-bottom:10px}.sa-fq b{display:flex;justify-content:space-between;font-size:14px}.sa-fq b::after{content:'+';color:#ff6b35;font-size:20px;line-height:1}.sa-fq span{display:block;margin-top:8px;font-size:13px;color:#5d5a6e;line-height:1.7}
+.sa-foot{position:relative;border-top:1px solid rgba(29,26,43,.08);background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,232,214,.55) 60%,rgba(233,228,250,.6));padding:64px 40px 28px}
+.sa-fi{max-width:1280px;margin:0 auto}
+.sa-fcta{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;padding:28px 32px;margin-bottom:48px;border-radius:20px;background:rgba(255,255,255,.75);border:1px solid rgba(29,26,43,.08)}
+.sa-fcta b{display:block;font-size:20px;letter-spacing:-.5px}.sa-fcta span{font-size:13px;color:#5d5a6e}
+.sa-fgd{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr 1.2fr;gap:40px;margin-bottom:40px;font-size:13px;color:#5d5a6e}
+.sa-fgd h6{margin:0 0 18px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#1d1a2b;font-weight:700}
+.sa-fgd a{display:block;margin-bottom:11px}.sa-fgd a:hover{color:#c2410c}
+.sa-fgd p{margin:0 0 16px;line-height:1.8;max-width:330px}
+.sa-pay{display:flex;gap:8px;flex-wrap:wrap}.sa-pay span{padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;background:#fff;border:1px solid rgba(29,26,43,.1);color:#3d3a4f}
+.sa-cp{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid rgba(29,26,43,.1);padding-top:22px;font-size:12px;color:#7b788a}
+.sa-cp div{display:flex;gap:22px;flex-wrap:wrap}
+.sa-fg .sa-fc{position:relative;overflow:hidden;transition:translate .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s,border-color .4s,background .4s}
+.sa-fg .sa-fc::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#ff6b35,#f7c948);transform:scaleX(0);transform-origin:left;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.sa-fg .sa-fc .sa-ic{transition:translate .45s cubic-bezier(.2,.8,.2,1),rotate .45s cubic-bezier(.2,.8,.2,1),scale .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s}
+.sa-fg .sa-fc .sa-ft{transition:translate .35s,box-shadow .35s}
+@media(hover:hover){
+.sa-fg .sa-fc:hover{translate:0 -8px;border-color:rgba(255,107,53,.35);background:#fff;box-shadow:0 30px 60px -24px rgba(120,60,20,.32)}
+.sa-fg .sa-fc:hover::before{transform:scaleX(1)}
+.sa-fg .sa-fc:hover .sa-ic{translate:0 -3px;rotate:-6deg;scale:1.08;box-shadow:0 10px 22px -8px rgba(60,40,20,.35)}
+.sa-fg .sa-fc:hover .sa-ft{translate:4px 0}
 }
+.sa-fg .sa-fc:active{translate:0 -3px}
+@keyframes sa-cardIn{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes sa-icIn{from{transform:scale(.6) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
+@supports (animation-timeline:view()){
+.sa-fg .sa-fc{animation:sa-cardIn linear both;animation-timeline:view();animation-range:entry 4% entry 46%}
+.sa-fg .sa-fc:nth-child(3n+2){animation-range:entry 11% entry 53%}
+.sa-fg .sa-fc:nth-child(3n){animation-range:entry 18% entry 60%}
+.sa-fg .sa-fc .sa-ic{animation:sa-icIn linear both;animation-timeline:view();animation-range:entry 20% entry 60%}
+}
+@media(prefers-reduced-motion:reduce){.sa-fg .sa-fc,.sa-fg .sa-fc .sa-ic{animation:none!important;transition:none}}
+
+.sa-pls .sa-pn{transform-origin:50% 100%;transition:translate .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}
+.sa-pls .sa-pn:nth-child(2)::after{content:'';position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;animation:sa-halo 3.2s ease-in-out infinite}
+.sa-pop{background-size:220% 100%;animation:sa-sheen 4s linear infinite}
+.sa-pn .sa-btn{transition:filter .25s,box-shadow .25s}.sa-pn .sa-btn:hover{filter:brightness(1.06);box-shadow:0 10px 24px -8px rgba(255,107,53,.5)}
+@media(hover:hover){.sa-pls .sa-pn:hover{translate:0 -10px;box-shadow:0 36px 70px -26px rgba(90,50,20,.4)}}
+@keyframes sa-halo{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.4)}60%{box-shadow:0 0 0 14px rgba(255,107,53,0)}}
+@keyframes sa-sheen{from{background-position:0 0}to{background-position:-220% 0}}
+@keyframes sa-planIn{from{opacity:0;transform:perspective(900px) rotateX(16deg) translateY(56px)}to{opacity:1;transform:none}}
+
+.sa-stp .sa-card{position:relative;transition:translate .35s,box-shadow .35s}
+@media(hover:hover){.sa-stp .sa-card:hover{translate:0 -6px}}
+.sa-stp .sa-card:not(:last-child)::after{content:'';position:absolute;top:114px;right:-24px;width:24px;height:2px;background:linear-gradient(90deg,#ff6b35,#f7c948);transform-origin:left}
+@keyframes sa-fromL{from{opacity:0;transform:translateX(-70px)}to{opacity:1;transform:none}}
+@keyframes sa-fromB{from{opacity:0;transform:translateY(60px)}to{opacity:1;transform:none}}
+@keyframes sa-fromR{from{opacity:0;transform:translateX(70px)}to{opacity:1;transform:none}}
+@keyframes sa-pop{0%{transform:scale(0)}70%{transform:scale(1.22)}100%{transform:scale(1)}}
+@keyframes sa-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+.sa-tg .sa-card{transition:translate .35s,box-shadow .35s}
+@media(hover:hover){.sa-tg .sa-card:hover{translate:0 -4px;box-shadow:0 28px 56px -26px rgba(240,160,0,.45)}}
+@keyframes sa-focusIn{from{opacity:0;filter:blur(12px);transform:scale(1.06)}to{opacity:1;filter:blur(0);transform:none}}
+@keyframes sa-stars{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@supports (animation-timeline:view()){
+.sa-pls .sa-pn{animation:sa-planIn linear both;animation-timeline:view();animation-range:entry 0% entry 48%}
+.sa-pls .sa-pn:nth-child(2){animation-range:entry 8% entry 56%}
+.sa-pls .sa-pn:nth-child(3){animation-range:entry 16% entry 64%}
+.sa-pls .sa-pn:nth-child(4){animation-range:entry 24% entry 72%}
+.sa-stp .sa-card:nth-child(1){animation:sa-fromL linear both;animation-timeline:view();animation-range:entry 0% entry 50%}
+.sa-stp .sa-card:nth-child(2){animation:sa-fromB linear both;animation-timeline:view();animation-range:entry 8% entry 58%}
+.sa-stp .sa-card:nth-child(3){animation:sa-fromR linear both;animation-timeline:view();animation-range:entry 16% entry 66%}
+.sa-stp .sa-nm{animation:sa-pop linear both;animation-timeline:view();animation-range:entry 30% entry 75%}
+.sa-stp .sa-card:not(:last-child)::after{animation:sa-draw linear both;animation-timeline:view();animation-range:entry 45% entry 85%}
+.sa-tg .sa-card{animation:sa-focusIn linear both;animation-timeline:view();animation-range:entry 0% entry 55%}
+.sa-tg .sa-card:nth-child(2){animation-range:entry 10% entry 65%}
+.sa-tg .sa-card:nth-child(3){animation-range:entry 20% entry 75%}
+.sa-tg .sa-card>div:first-child{animation:sa-stars linear both;animation-timeline:view();animation-range:entry 35% entry 80%}
+}
+@media(max-width:960px){.sa-stp .sa-card::after{display:none}}
+@media(prefers-reduced-motion:reduce){.sa-pls .sa-pn,.sa-stp .sa-card,.sa-stp .sa-nm,.sa-stp .sa-card::after,.sa-tg .sa-card,.sa-tg .sa-card>div:first-child,.sa-pop,.sa-pls .sa-pn::after{animation:none!important;transition:none}}
+
+.sa-stats>div{position:relative}
+.sa-stats>div:not(:last-child)::after{content:'';position:absolute;right:-16px;top:12%;height:76%;width:1px;background:linear-gradient(180deg,transparent,rgba(29,26,43,.22),transparent);transform-origin:top}
+.sa-stats b{display:block}
+@keyframes sa-statIn{from{opacity:0;transform:translateY(46%);letter-spacing:.14em;filter:blur(6px)}to{opacity:1;transform:none;letter-spacing:-2px;filter:none}}
+@keyframes sa-lblIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes sa-lineDown{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+
+.sa-fq div{position:relative;overflow:hidden;transition:background .3s,border-color .3s}
+.sa-fq div::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#ff6b35,#f7c948);transform:scaleY(0);transform-origin:top;transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+.sa-fq b::after{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+@media(hover:hover){.sa-fq div:hover{background:#fff;border-color:rgba(255,107,53,.3)}.sa-fq div:hover::before{transform:scaleY(1)}.sa-fq div:hover b::after{transform:rotate(90deg)}}
+@keyframes sa-unroll{from{clip-path:inset(0 0 100% 0);opacity:0}to{clip-path:inset(0 0 0 0);opacity:1}}
+
+.sa-fin{background-size:200% 200%;animation:sa-drift 14s ease-in-out infinite alternate}
+.sa-fin .sa-btn.sa-l:not(.sa-s){animation:sa-ring 2.8s ease-out infinite}
+@keyframes sa-drift{from{background-position:0 0}to{background-position:100% 100%}}
+@keyframes sa-ring{0%,100%{box-shadow:0 10px 28px rgba(255,107,53,.35),0 0 0 0 rgba(255,107,53,.45)}70%{box-shadow:0 10px 28px rgba(255,107,53,.35),0 0 0 18px rgba(255,107,53,0)}}
+@keyframes sa-expand{from{opacity:0;transform:scale(.9);border-radius:90px}to{opacity:1;transform:none;border-radius:32px}}
+@keyframes sa-rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@supports (animation-timeline:view()){
+.sa-stats>div b{animation:sa-statIn linear both;animation-timeline:view();animation-range:entry 0% entry 70%}
+.sa-stats>div span{animation:sa-lblIn linear both;animation-timeline:view();animation-range:entry 40% entry 90%}
+.sa-stats>div:nth-child(2) b{animation-range:entry 6% entry 76%}
+.sa-stats>div:nth-child(3) b{animation-range:entry 12% entry 82%}
+.sa-stats>div:nth-child(4) b{animation-range:entry 18% entry 88%}
+.sa-stats>div:not(:last-child)::after{animation:sa-lineDown linear both;animation-timeline:view();animation-range:entry 30% entry 100%}
+.sa-fq div{animation:sa-unroll linear both;animation-timeline:view();animation-range:entry 0% entry 55%}
+.sa-fin{animation:sa-expand linear both,sa-drift 14s ease-in-out infinite alternate;animation-timeline:view(),auto;animation-range:entry 0% entry 60%,normal}
+.sa-fin>*{animation:sa-rise linear both;animation-timeline:view();animation-range:entry 25% entry 65%}
+.sa-fin>:nth-child(2){animation-range:entry 32% entry 72%}
+.sa-fin>:nth-child(3){animation-range:entry 39% entry 79%}
+.sa-fin>:nth-child(4){animation-range:entry 46% entry 86%}
+.sa-fin>div .sa-btn.sa-l:not(.sa-s){animation:sa-ring 2.8s ease-out infinite;animation-timeline:auto;animation-range:normal}
+}
+@media(max-width:960px){.sa-stats>div::after{display:none}.sa-stats b{letter-spacing:-1px}}
+@media(prefers-reduced-motion:reduce){.sa-stats>div b,.sa-stats>div span,.sa-stats>div::after,.sa-fq div,.sa-fin,.sa-fin>*,.sa-fin .sa-btn{animation:none!important;transition:none}}
+@media(max-width:960px){.sa-w{padding:0 20px}.sa-nav{padding:0 20px}.sa-lk{display:none}.sa-hero,.sa-two,.sa-fg,.sa-pls,.sa-stp,.sa-tg,.sa-fgd{grid-template-columns:1fr}.sa-hero{gap:48px;padding:48px 0}.sa-p h1{font-size:40px;letter-spacing:-2px}.sa-p h2,.sa-fin h2{font-size:30px}.sa-sec{padding:64px 0}.sa-stats{grid-template-columns:repeat(2,1fr);padding:36px 20px}.sa-fb{display:none}.sa-fin{padding:48px 24px}.sa-cp,.sa-cp div{flex-direction:column;align-items:flex-start;gap:8px}.sa-foot{padding:48px 20px 24px}.sa-fcta{padding:24px}}
+
+
+.sa-p{overflow-x:clip;-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+.sa-nav{-webkit-backdrop-filter:blur(20px);padding-left:max(40px,env(safe-area-inset-left));padding-right:max(40px,env(safe-area-inset-right))}
+.sa-foot{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+
+.sa-burger{display:none;width:44px;height:44px;border-radius:12px;border:1px solid rgba(29,26,43,.15);background:#fff;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;flex:none}
+.sa-burger span{display:block;width:18px;height:2px;border-radius:2px;background:#1d1a2b;transition:transform .25s,opacity .25s}
+.sa-burger.sa-on span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.sa-burger.sa-on span:nth-child(2){opacity:0}
+.sa-burger.sa-on span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.sa-mmenu{display:none;position:absolute;top:100%;left:0;right:0;background:#fbf9f4;border-bottom:1px solid rgba(29,26,43,.1);box-shadow:0 24px 40px -20px rgba(60,40,20,.3);padding:8px 20px 20px}
+.sa-mmenu a{display:block;padding:15px 4px;font-size:15px;font-weight:600;color:#2b2740;border-bottom:1px solid rgba(29,26,43,.08)}
+.sa-p h1{font-size:clamp(34px,5.4vw,62px)}
+.sa-p h2,.sa-fin h2{font-size:clamp(26px,3.6vw,42px)}
+.sa-p img,.sa-p svg{max-width:100%}
+@media(max-width:1100px){
+.sa-pls{grid-template-columns:1fr 1fr}
+.sa-fgd{grid-template-columns:repeat(3,1fr)}.sa-fgd>div:first-child{grid-column:1/-1}
+.sa-w{padding:0 32px}
+}
+@media(max-width:960px){
+.sa-nav{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+.sa-burger{display:flex}.sa-mmenu.sa-open{display:block}
+.sa-fg{grid-template-columns:1fr 1fr}
+.sa-tg{grid-template-columns:1fr 1fr}.sa-tg .sa-card:last-child{grid-column:1/-1}
+.sa-stp{grid-template-columns:repeat(3,1fr);gap:16px}.sa-stp .sa-card{padding:24px 16px}.sa-stp h3{font-size:16px}
+.sa-fgd{grid-template-columns:1fr 1fr;gap:32px}.sa-fgd>div:last-child{grid-column:1/-1}
+.sa-stage{max-width:620px;margin:0 auto;width:100%;padding-left:0}
+.sa-two>.sa-phone,.sa-hero .sa-st{margin-left:auto;margin-right:auto}
+.sa-hero{padding-top:36px}
+}
+@media(max-width:640px){
+.sa-w{padding:0 18px}
+.sa-fg,.sa-pls,.sa-tg,.sa-stp{grid-template-columns:1fr}
+.sa-tg .sa-card:last-child{grid-column:auto}
+.sa-fgd{grid-template-columns:1fr 1fr}
+.sa-btn.sa-l{width:100%;padding:0 20px;min-height:54px;font-size:15px;white-space:normal;text-align:center}
+.sa-cta{flex-direction:column;gap:12px}.sa-cta .sa-btn{width:100%}
+.sa-nav .sa-btn.sa-s,.sa-nav .sa-btn.sa-gr,.sa-nav .sa-btn{min-height:40px;padding:0 14px;font-size:12px}
+.sa-nb{gap:8px!important}
+.sa-mc{grid-template-columns:repeat(2,1fr)}
+.sa-db{grid-template-columns:44px 1fr}
+.sa-proof,.sa-av{flex-wrap:wrap}
+.sa-hd{margin-bottom:40px}.sa-sec{padding:56px 0}
+.sa-fcta{flex-direction:column;align-items:flex-start}.sa-fcta .sa-btn{width:100%}.sa-fcta>div{width:100%}
+.sa-fq div{padding:16px 18px}
+.sa-pn{padding:26px 22px}
+.sa-stats b{font-size:36px}
+}
+@media(max-width:430px){.sa-bt{display:none}.sa-stats{gap:24px 12px}.sa-stats b{font-size:32px}.sa-p h1{font-size:34px;letter-spacing:-1.5px}.sa-fgd{grid-template-columns:1fr}.sa-phone{width:220px}}
+@media(max-width:340px){.sa-nav .sa-btn.sa-gr{display:none}}
+@media(hover:none){.sa-fg .sa-fc:active,.sa-pls .sa-pn:active,.sa-stp .sa-card:active,.sa-tg .sa-card:active{translate:0 -2px}}
+@media(min-width:1600px){.sa-w,.sa-fi,.sa-fgd,.sa-cp{max-width:1400px}}
+.sa-mmenu .sa-mcta{display:flex;margin-top:18px;min-height:50px;padding:0 24px;border:0;font-size:15px;color:#2a1305}
+@media(max-width:960px){.sa-nc{display:none!important}}
+
+.sa-p [id]{scroll-margin-top:72px}
+.sa-nav{padding-top:env(safe-area-inset-top);height:calc(64px + env(safe-area-inset-top))}
+:where(.sa-p button){font-family:inherit}
+:where(.sa-p *){margin:0;padding:0}
+.sa-fqb{all:unset;display:block;width:100%;cursor:pointer;box-sizing:border-box}
+.sa-fqb:focus-visible b{outline:2px solid #ff6b35;outline-offset:4px;border-radius:6px}
+.sa-fq .sa-fqi.open b::after{transform:rotate(45deg)!important}
+.sa-lnk{background:none;border:0;padding:0;margin:0 0 11px;font:inherit;color:inherit;cursor:pointer;text-align:left;display:block}
+.sa-lnk:hover{color:#c2410c}
+.sa-btn:focus-visible,.sa-burger:focus-visible{outline:2px solid #1d1a2b;outline-offset:3px}
+.sa-float{animation:sa-mkfloat 5s ease-in-out infinite}
+@keyframes sa-mkfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.sa-mpwrap{display:flex;align-items:center;justify-content:center}
+.sa-mpwoman{height:400px;margin-right:-46px;position:relative;z-index:1;filter:drop-shadow(0 20px 34px rgba(0,0,0,.3))}
+.sa-mpwrap .sa-phone{position:relative;z-index:2;margin:0;flex:none}
+.sa-ov{position:fixed;inset:0;z-index:9999;background:rgba(29,26,43,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px}
+.sa-md{position:relative;width:100%;max-width:1040px;max-height:92vh;overflow-y:auto;border-radius:28px;padding:40px 32px;background-color:#f8f5ef;background-image:radial-gradient(600px 400px at 90% 0,rgba(255,107,53,.16),transparent 70%),radial-gradient(600px 400px at 0 100%,rgba(167,139,250,.16),transparent 70%);border:1px solid rgba(29,26,43,.1);box-shadow:0 40px 120px rgba(29,26,43,.4)}
+.sa-mx{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(29,26,43,.15);background:#fff;font-size:22px;line-height:1;cursor:pointer;color:#1d1a2b}
+.sa-mg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;padding-top:16px}
+@media(max-width:900px){.sa-mg{grid-template-columns:1fr}.sa-md{padding:56px 18px 24px}}
+@media(max-width:640px){.sa-mpwoman{height:250px;margin-right:-26px}.sa-mpwrap .sa-phone{width:190px}}
+@media(prefers-reduced-motion:reduce){.sa-float{animation:none}}
+`;
 
 /* ─────────────────────────────────────────────
-   COMPOSANT PRINCIPAL
+   PAGE D'ACCUEIL
 ───────────────────────────────────────────── */
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [billing, setBilling] = useState('annual'); // 'annual' | 'monthly'
 
   const handleCTA = () => { if (user) { navigate('/dashboard'); } else { setShowPlanModal(true); } };
+  const openEvent = () => setShowEventModal(true);
   const handlePlanSelect = (planSlug, billingCycle = 'annual') => {
     setShowPlanModal(false);
     const extra = billingCycle === 'monthly' ? '&billing=monthly' : '';
     navigate(`/login?plan=${encodeURIComponent(planSlug)}${extra}`);
   };
+  const choosePlan = (p) => (p.isEvent ? openEvent() : handlePlanSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual'));
+  const goTop = () => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
+  // referme le menu mobile si l'écran s'élargit
   useEffect(() => {
-    const obs = new IntersectionObserver(entries => entries.forEach(e => e.target.classList.toggle('sa-vis', e.isIntersecting)), { threshold: 0.08 });
-    document.querySelectorAll('.sa-rv').forEach(el => obs.observe(el));
-    return () => obs.disconnect();
+    const onResize = () => { if (window.innerWidth > 960) setMenuOpen(false); };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const plans = [
-    { name: 'BASIC', emoji: '⚡', price: '10 000', color: '#a78bfa', subtitle: 'Particulier, Petit commerce, Étudiants, Freelances', bg: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.22)', btnBg: 'rgba(99,102,241,.25)', btnBorder: '1px solid rgba(99,102,241,.45)', features: [
-      'Une carte de visite digitale',
-      '09 liens sociaux',
-      'QR Code personnalisable',
-      '02 imports autorisés (PDF, plaquette, brochure, etc.)',
-      "Marketplace : ajout jusqu'à 07 articles",
-      '05 formulaires personnalisés',
-      'Calendrier de réservation',
-    ] },
-    { name: 'PRO', emoji: '🚀', price: '15 000', color: '#ff6b35', popular: true, subtitle: 'Prestataires de services, Professions libérales, Créateurs de contenu, Automobile, Commerçants, Événementiel', bg: 'rgba(255,107,53,.09)', border: '2px solid rgba(255,107,53,.55)', btnBg: 'linear-gradient(135deg,#ff6b35,#f7c948)', btnBorder: 'none', features: [
-      'Une carte de visite digitale',
-      '12 liens sociaux',
-      'Carte NFC (logo + QR CODE)',
-      'Analytics & statistiques détaillées',
-      'Stat temps réel — flux visiteurs live',
-      'Calendrier de réservation (RDV en ligne)',
-      'Formulaires personnalisés illimités',
-      "Marketplace : ajout jusqu'à 10 articles",
-      '5 imports autorisés (flyers, plaquettes, brochures, etc.)',
-      'QR Code personnalisable',
-      'Support standard',
-    ] },
-    { name: 'BUSINESS', emoji: '💼', price: '39 900', monthly: '3 990', offer: '2 mois offerts', color: '#f7c948', subtitle: 'PME, Grandes entreprises, Agences de communication, Événementiel, institutions, banques et assurances', bg: 'rgba(247,201,72,.06)', border: '1px solid rgba(247,201,72,.28)', btnBg: 'linear-gradient(135deg,#b45309,#f7c948)', btnBorder: 'none', features: [
-      'Une carte de visite digitale',
-      'Carte NFC (logo + QR CODE)',
-      'Analytics avancés complets',
-      'CRM & Pipeline de leads',
-      'CRM WhatsApp complet',
-      'Campagnes WhatsApp IA (génération automatique)',
-      'Calendrier de réservation illimité',
-      'Formulaires illimités',
-      'Automatisations',
-      'Toutes les intégrations (HubSpot, Pipedrive, Google Analytics, Shopify, PostgreSQL, Salesforce, etc.)',
-      "Marketplace : ajout d'articles illimité",
-      '10 imports autorisés (flyers, plaquettes, brochures, etc.)',
-      'QR Code personnalisable',
-      'Tracking IP',
-      'Support VIP prioritaire',
-    ] },
-  ];
-
-  const eventPlan = {
-    name: 'ÉVÉNEMENT', emoji: '🎉', price: '3 500', color: '#22c55e',
-    subtitle: 'Salons, mariages, soirées, lancements — une carte dédiée à votre événement, avec son propre lien',
-    bg: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.28)',
-    btnBg: 'linear-gradient(135deg,#22c55e,#16a34a)', btnBorder: 'none',
-    features: ['Page publique dédiée (lien propre /e/...)', 'Compte à rebours en direct', 'Galerie photos & vidéos', 'QR code à télécharger', 'Formulaire de contact / RSVP', 'Analytics (vues, contacts, demandes)'],
-    isEvent: true,
-  };
-
-  const faqs = [
-    { q: "C'est quoi exactement SocialApp ?", a: "SocialApp est votre profil digital tout-en-un : un lien unique et un QR code qui regroupe tous vos réseaux sociaux, WhatsApp, votre boutique et vos événements. Un seul scan, vos clients trouvent tout." },
-    { q: "Combien ça coûte ?", a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO). L'offre BUSINESS est à 3 990 FCFA/mois ou 39 900 FCFA/an (10 mois payés pour 12 : 2 mois offerts). Module Événement disponible à 3 500 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
-    { q: "Qu'est-ce que le CRM ?", a: "Le CRM intégré (offre BUSINESS) vous permet de capturer et gérer vos prospects. Tags intelligents (Prospect, Chaud, Client, Froid), notes, historique et export CSV. Transformez chaque visiteur en opportunité." },
-    { q: "Je peux vendre mes produits ?", a: "Oui ! La marketplace affiche vos produits avec photos, prix et description. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS). Vos clients commandent via WhatsApp. Zéro commission." },
-    { q: "Le QR code peut-il être modifié sans le réimprimer ?", a: "Oui ! Modifiez vos liens, votre boutique ou votre WhatsApp à tout moment — votre QR code sur vos flyers et cartes reste valide à vie." },
-    { q: "C'est quoi le mode Événement ?", a: "Une page publique dédiée à votre événement, avec son propre lien — compte à rebours en direct, galerie photos & vidéos, QR code téléchargeable, formulaire de contact ou RSVP. Disponible à 3 500 FCFA, quel que soit votre plan, via le bouton \"Créez un évent\"." },
-    { q: "Comment créer un événement rapidement ?", a: "Cliquez sur \"Créez un évent\" en haut de la page, remplissez le petit formulaire (titre, date ou salon, lieu), puis activez votre carte. Le lien public et le QR code deviennent disponibles dès l'activation." },
-    { q: "Comment je reçois ma carte PVC ou NFC ?", a: "Dès votre souscription PRO ou BUSINESS, notre équipe vous contacte sur WhatsApp pour personnaliser votre carte. Réception sous 7 jours." },
-    { q: "Comment payer ?", a: "Paiement via Mobile Money (Orange Money, Wave, MTN). Contactez-nous sur WhatsApp au +225 05 76 03 12 12. Aucune carte bancaire requise." },
-  ];
-
-  const S = {
-    page: { fontFamily: "'Sora',system-ui,sans-serif", background: '#04020e', color: '#fff', overflowX: 'hidden', minHeight: '100vh' },
-    nav: { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 48px', background: 'rgba(4,2,14,.88)', backdropFilter: 'blur(28px)', borderBottom: '1px solid rgba(255,255,255,.06)' },
-    navLogo: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navIcon: { width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '900', color: '#fff', flexShrink: 0, overflow: 'hidden' },
-    navLinks: { display: 'flex', gap: '28px', fontSize: '13px', color: 'rgba(255,255,255,.5)' },
-    navCta: { padding: '9px 22px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '100px', color: '#fff', fontWeight: '700', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', transition: 'transform .15s,box-shadow .15s' },
-    hero: { minHeight: '100vh', padding: '100px 48px 80px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center' },
-    heroGrid: { maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '72px', alignItems: 'center' },
-    heroBadge: { display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,107,53,.1)', border: '1px solid rgba(255,107,53,.3)', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', color: '#ff6b35', fontWeight: '700', marginBottom: '20px' },
-    heroH1Big: { fontSize: '64px', fontWeight: '900', lineHeight: '1.0', letterSpacing: '-3px', display: 'block', background: 'linear-gradient(135deg,#ff6b35 0%,#f7c948 50%,#fff 100%)', backgroundSize: '200% 200%', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' },
-    heroTagline: { fontSize: '20px', fontWeight: '700', color: 'rgba(255,255,255,.9)', margin: '12px 0 14px', lineHeight: '1.3' },
-    heroPitch: { fontSize: '14px', color: 'rgba(255,255,255,.5)', lineHeight: '1.8', marginBottom: '18px', maxWidth: '540px', padding: '14px 18px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: '14px' },
-    heroSub: { fontSize: '15px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '24px', maxWidth: '520px' },
-    heroCheck: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'rgba(255,255,255,.72)', marginBottom: '8px' },
-    heroCheckDot: { width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', flexShrink: 0, color: '#fff', fontWeight: '800' },
-    bpri: { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '16px 38px', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: '800', fontSize: '16px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', transition: 'transform .2s,box-shadow .2s' },
-    bsec: { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '15px 28px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.15)', borderRadius: '14px', color: 'rgba(255,255,255,.8)', fontWeight: '600', fontSize: '15px', textDecoration: 'none', transition: 'all .2s' },
-    dashWrap: { position: 'relative', width: '100%' },
-    dashGlow: { position: 'absolute', width: '420px', height: '420px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,107,53,.22),transparent 70%)', filter: 'blur(55px)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' },
-    dashFrame: { background: 'rgba(10,8,24,.97)', border: '1px solid rgba(255,255,255,.1)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04)' },
-    dashTopbar: { height: '44px', background: 'rgba(4,2,16,.7)', borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '8px' },
-    dashDot: { width: '10px', height: '10px', borderRadius: '50%' },
-    dashUrl: { flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: '6px', height: '22px', margin: '0 12px', display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '10px', color: 'rgba(255,255,255,.35)' },
-    dashBody: { display: 'grid', gridTemplateColumns: '52px 1fr', height: '340px' },
-    dashSidebar: { background: 'rgba(6,4,18,.97)', borderRight: '1px solid rgba(255,255,255,.06)', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' },
-    dashNavIcon: { width: '34px', height: '34px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', cursor: 'pointer' },
-    dashContent: { padding: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '11px' },
-    miniCards: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '7px' },
-    miniCard: { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', borderRadius: '12px', padding: '10px', textAlign: 'center' },
-    sec: { padding: '100px 48px' },
-    secInner: { maxWidth: '1400px', margin: '0 auto' },
-    secHead: { textAlign: 'center', marginBottom: '64px' },
-    secLabel: { display: 'inline-flex', alignItems: 'center', gap: '8px', borderRadius: '100px', padding: '6px 16px', fontSize: '12px', fontWeight: '700', marginBottom: '18px' },
-    secTitle: { fontSize: '44px', fontWeight: '900', letterSpacing: '-1.5px', marginBottom: '16px', lineHeight: '1.08' },
-    secSub: { color: 'rgba(255,255,255,.45)', fontSize: '16px', maxWidth: '560px', margin: '0 auto', lineHeight: '1.75' },
-    fcard: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '24px', padding: '30px', transition: 'all .25s' },
-    ficon: { width: '54px', height: '54px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' },
-    ctaOuter: { position: 'relative', overflow: 'hidden', borderRadius: '32px', padding: '80px 60px', textAlign: 'center', background: 'linear-gradient(135deg,rgba(255,107,53,.12) 0%,rgba(139,92,246,.1) 50%,rgba(247,201,72,.08) 100%)', border: '1px solid rgba(255,255,255,.1)', maxWidth: '900px', margin: '0 auto', boxShadow: '0 0 80px rgba(255,107,53,.15), 0 0 160px rgba(139,92,246,.08)' },
-    faqItem: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '16px', overflow: 'hidden', marginBottom: '10px' },
-    faqQ: { width: '100%', padding: '18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', color: '#fff', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', gap: '16px' },
-  };
-
-  const GradText = ({ children, from = '#ff6b35', to = '#f7c948' }) => (
-    <span style={{ background: `linear-gradient(135deg,${from},${to})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{children}</span>
-  );
-
-  const SectionLabel = ({ children, bg, border, color, dotBg }) => (
-    <div style={{ ...S.secLabel, background: bg, border, color }}>
-      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dotBg, animation: 'sa-dot 1.5s infinite' }} />
-      {children}
-    </div>
-  );
+  // fond clair le temps que la page d'accueil est affichée (évite le flash sombre / le rebond iOS)
+  useEffect(() => {
+    const b = document.body, h = document.documentElement;
+    const pb = b.style.background, ph = h.style.background;
+    b.style.background = '#f8f5ef'; h.style.background = '#f8f5ef';
+    return () => { b.style.background = pb; h.style.background = ph; };
+  }, []);
 
   return (
     <>
@@ -408,7 +490,7 @@ export default function Home() {
         <meta name="keywords" content="profil digital Côte d'Ivoire, QR code business Abidjan, lien en bio, carte digitale, CRM leads, marketplace Côte d'Ivoire, CRM WhatsApp, analytics profil, événement, SocialApp, page de liens Afrique, carte NFC" />
         <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
         <link rel="canonical" href="https://www.socialapp.work/" />
-        <meta name="theme-color" content="#ff6b35" />
+        <meta name="theme-color" content="#f8f5ef" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://www.socialapp.work/" />
         <meta property="og:title" content="SocialApp - Profil Digital & CRM tout-en-un | Côte d'Ivoire" />
@@ -419,651 +501,972 @@ export default function Home() {
         <meta name="twitter:title" content="SocialApp - Profil Digital & CRM | Côte d'Ivoire" />
         <meta name="twitter:description" content="Créez votre profil digital, gérez vos prospects CRM et boostez vos ventes. Dès 10 000 FCFA." />
         <script type="application/ld+json">{JSON.stringify({
-          "@context": "https://schema.org", "@type": "SoftwareApplication", "name": "SocialApp",
-          "url": "https://www.socialapp.work", "applicationCategory": "BusinessApplication",
-          "operatingSystem": "Web", "inLanguage": "fr",
-          "description": "Plateforme SaaS de profil digital tout-en-un avec QR code, CRM, marketplace et analytics pour entrepreneurs ivoiriens.",
-          "areaServed": { "@type": "Country", "name": "Côte d'Ivoire" },
-          "offers": [
-            { "@type": "Offer", "name": "BASIC", "price": "10000", "priceCurrency": "XOF" },
-            { "@type": "Offer", "name": "PRO", "price": "15000", "priceCurrency": "XOF" },
-            { "@type": "Offer", "name": "BUSINESS (annuel)", "price": "39900", "priceCurrency": "XOF" },
-            { "@type": "Offer", "name": "BUSINESS (mensuel)", "price": "3990", "priceCurrency": "XOF" },
-          ]
+          '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'SocialApp',
+          url: 'https://www.socialapp.work', applicationCategory: 'BusinessApplication',
+          operatingSystem: 'Web', inLanguage: 'fr',
+          description: 'Plateforme SaaS de profil digital tout-en-un avec QR code, CRM, marketplace et analytics pour entrepreneurs ivoiriens.',
+          areaServed: { '@type': 'Country', name: "Côte d'Ivoire" },
+          offers: [
+            { '@type': 'Offer', name: 'BASIC', price: '10000', priceCurrency: 'XOF' },
+            { '@type': 'Offer', name: 'PRO', price: '15000', priceCurrency: 'XOF' },
+            { '@type': 'Offer', name: 'BUSINESS (annuel)', price: '39900', priceCurrency: 'XOF' },
+            { '@type': 'Offer', name: 'BUSINESS (mensuel)', price: '3990', priceCurrency: 'XOF' },
+          ],
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
-          "@context": "https://schema.org", "@type": "FAQPage",
-          "mainEntity": [
-            { "@type": "Question", "name": "Combien coûte SocialApp en Côte d'Ivoire ?", "acceptedAnswer": { "@type": "Answer", "text": "Les offres commencent à 10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO) et BUSINESS à 3 990 FCFA/mois ou 39 900 FCFA/an (2 mois offerts). Paiement Mobile Money." } },
-            { "@type": "Question", "name": "Puis-je vendre mes produits sur SocialApp ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, marketplace intégrée avec 0% de commission. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS)." } },
-            { "@type": "Question", "name": "C'est quoi le CRM SocialApp ?", "acceptedAnswer": { "@type": "Answer", "text": "Gestion de leads avec tags, notes, pipeline et export CSV. Disponible avec l'offre BUSINESS." } },
-          ]
+          '@context': 'https://schema.org', '@type': 'FAQPage',
+          mainEntity: [
+            { '@type': 'Question', name: "Combien coûte SocialApp en Côte d'Ivoire ?", acceptedAnswer: { '@type': 'Answer', text: 'Les offres commencent à 10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO) et BUSINESS à 3 990 FCFA/mois ou 39 900 FCFA/an (2 mois offerts). Paiement Mobile Money.' } },
+            { '@type': 'Question', name: 'Puis-je vendre mes produits sur SocialApp ?', acceptedAnswer: { '@type': 'Answer', text: 'Oui, marketplace intégrée avec 0% de commission. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS).' } },
+            { '@type': 'Question', name: "C'est quoi le CRM SocialApp ?", acceptedAnswer: { '@type': 'Answer', text: "Gestion de leads avec tags, notes, pipeline et export CSV. Disponible avec l'offre BUSINESS." } },
+          ],
         })}</script>
       </Helmet>
 
-      <div style={S.page}>
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&display=swap');
-          *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-          body{-webkit-font-smoothing:antialiased}
-          @keyframes sa-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
-          @keyframes sa-dot{0%,100%{opacity:1}50%{opacity:.3}}
-          @keyframes sa-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.5)}70%{box-shadow:0 0 0 18px rgba(255,107,53,0)}}
-          @keyframes sa-glow{0%,100%{opacity:.7}50%{opacity:1}}
-          @keyframes sa-shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-          @keyframes sa-fadeup{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
-          .sa-rv{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
-          .sa-vis{opacity:1!important;transform:translateY(0)!important}
-          .sa-d1{transition-delay:.08s}.sa-d2{transition-delay:.16s}.sa-d3{transition-delay:.24s}.sa-d4{transition-delay:.32s}
-          .sa-float{animation:sa-float 5s ease-in-out infinite}
-          .sa-pulse-btn{animation:sa-pulse 2.5s infinite}
-          .sa-nav-link{color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s;font-size:13px}
-          .sa-nav-link:hover{color:#fff}
-          .sa-event-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(34,197,94,.5)!important}
-          .sa-hamburger-btn{display:none}
-          .sa-bpri:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(255,107,53,.45)!important}
-          .sa-bsec:hover{background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.3)!important}
-          .sa-fcard:hover{transform:translateY(-6px);border-color:rgba(255,255,255,.16)!important;background:rgba(255,255,255,.07)!important}
-          .sa-plan:hover{transform:translateY(-8px)}
-          .sa-step:hover{transform:translateY(-6px);border-color:rgba(255,255,255,.16)!important}
-          .sa-tcard:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.15)!important}
-          .sa-faq:hover{border-color:rgba(255,255,255,.14)!important}
-          .sa-lead:hover{background:rgba(255,255,255,.07)!important}
-          .sa-dash-icon.active{background:rgba(99,102,241,.25)}
-          .sa-dash-icon:hover:not(.active){background:rgba(255,255,255,.06)}
-          .sa-plan-pro::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.04) 50%,transparent 60%);transform:translateX(-100%);animation:sa-shimmer 3s infinite;border-radius:24px}
-          .sa-ftag{display:inline-flex;align-items:center;gap:4px;margin-top:14px;padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700}
-          .sa-fbadge{position:absolute;background:rgba(10,8,24,.95);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 14px;box-shadow:0 16px 40px rgba(0,0,0,.5);backdrop-filter:blur(20px)}
-          .sa-footer-link{color:rgba(255,255,255,.35);font-size:12px;text-decoration:none;transition:color .2s}
-          .sa-footer-link:hover{color:rgba(255,255,255,.7)}
-          @media(max-width:960px){
-            .sa-hero-grid,.sa-twocol,.sa-plans,.sa-fg3,.sa-tgrid,.sa-steps{grid-template-columns:1fr!important}
-            .sa-stats-grid{grid-template-columns:repeat(2,1fr)!important}
-            .sa-hero-h1{font-size:40px!important;letter-spacing:-2px!important}
-            .sa-nav-links{display:none!important}
-            .sa-desktop-cta{display:none!important}
-            .sa-hamburger-btn{display:flex!important}
-            .sa-hero-sec{padding:100px 20px 60px!important}
-            .sa-sec{padding:70px 20px!important}
-            .sa-dash-mockup{margin-top:48px!important}
-            .sa-fbadge{display:none!important}
-            .sa-cta-outer{padding:48px 24px!important}
-            .sa-nav-brand-text{display:none!important}
-            .sa-mockup-overflow{width:100%!important;max-width:100%!important}
-            .sa-footer-top{flex-direction:column!important;align-items:center!important;text-align:center!important}
-            .sa-footer-grid{grid-template-columns:1fr!important;text-align:center!important;gap:32px!important}
-            .sa-footer-brand{align-items:center!important}
-            .sa-footer-legal{flex-direction:column!important;text-align:center!important;gap:14px!important}
-            .sa-footer-legal-links{flex-direction:column!important;gap:10px!important}
-            .sa-footer-legal-links .sa-footer-dot{display:none!important}
-          }
-          @media(max-width:480px){
-            .sa-dash-mockup .sa-dash-body{grid-template-columns:44px 1fr!important;height:auto!important}
-            .sa-dash-mockup .sa-mini-cards{grid-template-columns:repeat(2,1fr)!important}
-          }
-        `}</style>
+      <style>{CSS}</style>
 
-        {/* ── Modal sélection d'offre ── */}
-        {showPlanModal && (<PlanModal onClose={() => setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />)}
-        {showEventModal && (<EventQuickCreateModal onClose={() => setShowEventModal(false)} />)}
+      {showPlanModal && <PlanModal onClose={() => setShowPlanModal(false)} onSelect={handlePlanSelect} billing={billing} setBilling={setBilling} />}
+      {showEventModal && <EventQuickCreateModal onClose={() => setShowEventModal(false)} />}
 
-        {/* ════════════ NAV ════════════ */}
-        <nav style={S.nav}>
-          <div
-            style={{ ...S.navLogo, cursor: 'pointer' }}
-            role="button"
-            tabIndex={0}
-            aria-label="Retour à l'accueil SocialApp"
-            onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); } }}
-          >
-            <div style={S.navIcon}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
-            <span className="sa-nav-brand-text" style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-.5px' }}>SocialApp</span>
-          </div>
-          <div className="sa-nav-links" style={S.navLinks}>
-            {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (<a key={h} href={h} className="sa-nav-link">{l}</a>))}
-          </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button
-              type="button"
-              style={{
-                background: 'linear-gradient(135deg,#22c55e,#16a34a)',
-                border: 'none',
-                borderRadius: '100px',
-                color: '#fff',
-                fontWeight: '700',
-                fontSize: '13px',
-                padding: '9px 18px',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                boxShadow: '0 2px 10px rgba(34,197,94,.35)',
-                transition: 'transform .15s, box-shadow .15s',
-                whiteSpace: 'nowrap',
-              }}
-              className="sa-event-btn"
-              onClick={() => setShowEventModal(true)}
-            >
-              🎉 Créez un évent
-            </button>
-            <button type="button" style={S.navCta} className="sa-bpri sa-desktop-cta" onClick={handleCTA}>Commencer →</button>
-            <button
-              type="button"
-              aria-label="Ouvrir le menu"
-              aria-expanded={mobileMenuOpen}
-              onClick={() => setMobileMenuOpen((v) => !v)}
-              className="sa-hamburger-btn"
-              style={{
-                width: '38px', height: '38px', borderRadius: '10px',
-                background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)',
-                alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0,
-              }}
-            >
-              <div style={{ width: '16px' }}>
-                <span style={{ display: 'block', height: '2px', background: '#fff', borderRadius: '2px', marginBottom: '4px', transform: mobileMenuOpen ? 'translateY(6px) rotate(45deg)' : 'none', transition: 'transform .2s' }} />
-                <span style={{ display: 'block', height: '2px', background: '#fff', borderRadius: '2px', marginBottom: '4px', opacity: mobileMenuOpen ? 0 : 1, transition: 'opacity .2s' }} />
-                <span style={{ display: 'block', height: '2px', background: '#fff', borderRadius: '2px', transform: mobileMenuOpen ? 'translateY(-6px) rotate(-45deg)' : 'none', transition: 'transform .2s' }} />
-              </div>
-            </button>
-          </div>
-        </nav>
-
-        {mobileMenuOpen && (
-          <div
-            onClick={() => setMobileMenuOpen(false)}
-            className="sa-mobile-menu-overlay"
-            style={{ position: 'fixed', inset: 0, top: '64px', zIndex: 190, background: 'rgba(0,0,0,.6)' }}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: '#0a0818', borderBottom: '1px solid rgba(255,255,255,.08)',
-                padding: '20px 24px 28px', display: 'flex', flexDirection: 'column', gap: '4px',
-                animation: 'sa-fadeup .25s ease both',
-              }}
-            >
-              {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (
-                <a key={h} href={h} onClick={() => setMobileMenuOpen(false)} style={{ color: 'rgba(255,255,255,.75)', textDecoration: 'none', fontSize: '15px', fontWeight: '600', padding: '12px 4px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>{l}</a>
-              ))}
-              <button
-                type="button"
-                style={{ ...S.navCta, marginTop: '14px', padding: '13px', fontSize: '14px' }}
-                onClick={() => { setMobileMenuOpen(false); handleCTA(); }}
-              >
-                {user ? 'Mon tableau de bord →' : 'Commencer →'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ════════════ HERO ════════════ */}
-        <section style={{ ...S.hero }} className="sa-hero-sec">
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% -10%,rgba(255,107,53,.14),transparent),radial-gradient(ellipse 50% 40% at 80% 60%,rgba(168,85,247,.09),transparent),radial-gradient(ellipse 40% 30% at 10% 80%,rgba(59,130,246,.07),transparent)', pointerEvents: 'none' }} />
-
-          <div style={{ ...S.heroGrid, maxWidth: '1400px' }} className="sa-hero-grid">
-            {/* ── LEFT ── */}
-            <div style={{ animation: 'sa-fadeup .9s ease both' }}>
-              <div style={S.heroBadge}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff6b35', animation: 'sa-dot 2s infinite' }} />
-                Fait pour la Côte d'Ivoire 🇨🇮
-              </div>
-              <h1>
-                <span style={S.heroH1Big} className="sa-hero-h1">Votre profil digital</span>
-                <span style={{ ...S.heroH1Big, background: 'linear-gradient(135deg,#a78bfa 0%,#ff6b35 50%,#f7c948 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }} className="sa-hero-h1">et CRM tout-en-un.</span>
-              </h1>
-              <div style={S.heroPitch}>
-                SocialApp est une plateforme tout-en-un qui permet aux entrepreneurs, entreprises, commerciaux et créateurs de contenu de créer un profil professionnel digital, <strong style={{ color: 'rgba(255,255,255,.85)' }}>partager leurs contacts via QR Code,</strong> collecter des prospects et gérer leurs relations clients grâce à un CRM intégré.
-              </div>
-              <p style={S.heroTagline}>Transformez chaque scan en contact,<br />client ou opportunité.</p>
-              <div style={{ marginBottom: '32px' }}>
-                {[
-                  'Créez votre carte de visite digitale professionnel avec QR CODE en quelques minutes',
-                  'Partagez vos coordonnées, réseaux sociaux et services via un QR Code unique',
-                  'Collectez automatiquement les contacts et prospects intéressés',
-                  'Gérez vos clients et opportunités avec un CRM intégré',
-                  'Suivez vos statistiques, visites, clics et performances en temps réel',
-                ].map((t, i) => (
-                  <div key={i} style={S.heroCheck}>
-                    <div style={S.heroCheckDot}>✓</div>
-                    {t}
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '28px' }}>
-                <button type="button" style={S.bpri} className="sa-bpri sa-pulse-btn" onClick={handleCTA}>
-                  {user ? 'Mon tableau de bord →' : 'Créer ma carte de visite gratuitement →'}
-                </button>
-                <a href="#features" style={S.bsec} className="sa-bsec">Voir les fonctionnalités</a>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {['#ff6b35', '#a78bfa', '#22c55e', '#f7c948', '#0ea5e9'].map((c, i) => (
-                    <div key={i} style={{ width: '32px', height: '32px', borderRadius: '50%', background: `linear-gradient(135deg,${c},${c}99)`, border: '2px solid #04020e', marginLeft: i === 0 ? 0 : '-10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#fff', zIndex: 5 - i, position: 'relative', flexShrink: 0 }}>
-                      {['K', 'D', 'J', 'A', 'M'][i]}
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#fff' }}>+500 utilisateurs</span>
-                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)' }}>sur SocialApp</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
-                    {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#f7c948', fontSize: '12px' }}>★</span>)}
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginLeft: '4px' }}>4.9/5</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── RIGHT: Dashboard mockup ── */}
-            <div style={S.dashWrap} className="sa-dash-mockup">
-              <div style={S.dashGlow} />
-              <div className="sa-fbadge" style={{ top: '-18px', right: '-18px', animation: 'sa-float 4s ease-in-out infinite .5s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(34,197,94,.2)', border: '1px solid rgba(34,197,94,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>👤</div>
-                  <div><div style={{ fontSize: '11px', fontWeight: '700', color: '#fff' }}>Nouveau lead !</div><div style={{ fontSize: '10px', color: 'rgba(255,255,255,.4)' }}>Kofi M. · via QR Code</div></div>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', marginLeft: '6px', animation: 'sa-dot 1.5s infinite' }} />
-                </div>
-              </div>
-              <div className="sa-fbadge" style={{ top: '50%', right: '-28px', transform: 'translateY(-50%)', animation: 'sa-float 5s ease-in-out infinite .8s' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,.5)', marginBottom: '2px' }}>Vues aujourd'hui</div>
-                  <div style={{ fontSize: '22px', fontWeight: '900', color: '#ff6b35' }}>+247</div>
-                  <div style={{ fontSize: '10px', color: '#22c55e', fontWeight: '600' }}>↑ 34% vs hier</div>
-                </div>
-              </div>
-              <div className="sa-fbadge" style={{ bottom: '-14px', left: '-18px', animation: 'sa-float 4.5s ease-in-out infinite 1.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>🛍️</span>
-                  <div><div style={{ fontSize: '11px', fontWeight: '700', color: '#fff' }}>Commande WhatsApp</div><div style={{ fontSize: '10px', color: 'rgba(255,255,255,.4)' }}>Robe Ankara · 8 500 FCFA</div></div>
-                </div>
-              </div>
-              <div style={S.dashFrame} className="sa-float">
-                <div style={S.dashTopbar}>
-                  <div style={{ ...S.dashDot, background: '#ef4444' }} /><div style={{ ...S.dashDot, background: '#f59e0b' }} /><div style={{ ...S.dashDot, background: '#22c55e' }} />
-                  <div style={S.dashUrl}>🔒 socialapp.work/dashboard</div>
-                  <div style={{ display: 'flex', gap: '4px' }}><div style={{ width: '18px', height: '12px', background: 'rgba(255,255,255,.1)', borderRadius: '3px' }} /><div style={{ width: '18px', height: '12px', background: 'rgba(255,255,255,.1)', borderRadius: '3px' }} /></div>
-                </div>
-                <div style={S.dashBody} className="sa-dash-body">
-                  <div style={S.dashSidebar}>
-                    {[['📊', true], ['📈', false], ['🔴', false], ['👥', false], ['🛍️', false], ['🎉', false], ['📄', false]].map(([icon, active], i) => (<div key={i} style={{ ...S.dashNavIcon, background: active ? 'rgba(99,102,241,.25)' : 'transparent' }} className="sa-dash-icon">{icon}</div>))}
-                    <div style={{ flex: 1 }} /><div style={S.dashNavIcon} className="sa-dash-icon">⚙️</div>
-                  </div>
-                  <div style={S.dashContent}>
-                    <div><div style={{ fontSize: '13px', fontWeight: '800', color: '#fff', marginBottom: '2px' }}>Dashboard</div><div style={{ fontSize: '9px', color: 'rgba(255,255,255,.35)' }}>Bienvenue · Dorine Fashion</div></div>
-                    <div style={S.miniCards} className="sa-mini-cards">
-                      {[['450', '#6366f1', 'Vues'], ['89', '#f59e0b', 'Clics'], ['22%', '#22c55e', 'CTR'], ['12', '#ec4899', 'Leads']].map(([v, c, l]) => (<div key={l} style={S.miniCard}><div style={{ fontSize: '18px', fontWeight: '900', color: c, lineHeight: 1 }}>{v}</div><div style={{ fontSize: '8px', color: 'rgba(255,255,255,.4)', marginTop: '3px' }}>{l}</div></div>))}
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '12px', padding: '10px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: 'rgba(255,255,255,.5)', marginBottom: '8px' }}>🌍 Top pays</div>
-                      {[['🇨🇮 CI', '85%', '#6366f1,#a78bfa'], ['🇫🇷 FR', '40%', '#0ea5e9,#6366f1'], ['🇸🇳 SN', '25%', '#0ea5e9,#6366f1']].map(([l, w, g]) => (<div key={l} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}><div style={{ fontSize: '9px', color: 'rgba(255,255,255,.4)', width: '36px' }}>{l}</div><div style={{ flex: 1, height: '5px', background: 'rgba(255,255,255,.07)', borderRadius: '3px', overflow: 'hidden' }}><div style={{ height: '100%', width: w, background: `linear-gradient(90deg,${g})`, borderRadius: '3px' }} /></div></div>))}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: '8px' }}>
-                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', animation: 'sa-dot 1.5s infinite', flexShrink: 0 }} />
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#22c55e' }}>3 visiteurs en direct</div>
-                      <div style={{ marginLeft: 'auto', fontSize: '9px', color: 'rgba(255,255,255,.3)' }}>🇨🇮 🇫🇷 🇧🇯</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                      {[['4 Prospects', 'rgba(99,102,241,.15)', 'rgba(99,102,241,.3)', '#a78bfa'], ['2 Chauds 🔥', 'rgba(239,68,68,.15)', 'rgba(239,68,68,.3)', '#f87171'], ['6 Clients ✅', 'rgba(34,197,94,.15)', 'rgba(34,197,94,.3)', '#4ade80']].map(([l, bg, bd, c]) => (<div key={l} style={{ padding: '4px 8px', borderRadius: '7px', background: bg, border: `1px solid ${bd}`, color: c, fontSize: '9px', fontWeight: '700' }}>{l}</div>))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ STATS ════════════ */}
-        <div style={{ padding: '48px 48px', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.01)' }}>
-          <div className="sa-stats-grid sa-rv" style={{ maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '32px', textAlign: 'center' }}>
-            {[['+30%', 'gt', 'de followers en plus'], ['1 scan', 'gt', 'pour tout partager'], ['∞', 'gt-gr', 'produits avec Business'], ['100%', 'gt-pu', 'personnalisable']].map(([v, cls, l]) => (
-              <div key={l}>
-                <div style={{ fontSize: '48px', fontWeight: '900', letterSpacing: '-2px', lineHeight: 1, background: cls === 'gt' ? 'linear-gradient(135deg,#ff6b35,#f7c948)' : cls === 'gt-gr' ? 'linear-gradient(135deg,#22c55e,#86efac)' : 'linear-gradient(135deg,#a855f7,#d946ef)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{v}</div>
-                <div style={{ color: 'rgba(255,255,255,.4)', fontSize: '13px', marginTop: '8px' }}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ════════════ PROFIL DIGITAL ════════════ */}
-        <section id="profil-digital" style={S.sec} className="sa-sec">
-          <div style={S.secInner}>
-            <div className="sa-twocol sa-rv" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
-              <div>
-                <SectionLabel bg="rgba(255,107,53,.1)" border="1px solid rgba(255,107,53,.3)" color="#ff6b35" dotBg="#ff6b35">Profil digital</SectionLabel>
-                <h2 style={S.secTitle}>Un seul lien pour<br /><GradText>toute votre présence Digitale</GradText></h2>
-                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Votre carte de visite digitale SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
-                {[
-                  { icon: '🎨', bg: 'rgba(255,107,53,.1)', bd: 'rgba(255,107,53,.2)', title: 'Personnalisation complète', desc: 'Couleurs, photo, username unique. Un profil à votre image, sans code.' },
-                  { icon: '📱', bg: 'rgba(99,102,241,.1)', bd: 'rgba(99,102,241,.2)', title: 'Accessible partout', desc: 'Lien direct ou QR code à scanner, imprimable sur carte de visite ou vitrine.' },
-                  { icon: '✅', bg: 'rgba(34,197,94,.1)', bd: 'rgba(34,197,94,.2)', title: 'Badge vérifié', desc: 'Renforcez la confiance de vos visiteurs dès le premier coup d\'œil.' },
-                ].map((f, i) => (<div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '16px' }}><div style={{ width: '40px', height: '40px', borderRadius: '12px', background: f.bg, border: `1px solid ${f.bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{f.icon}</div><div><div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>{f.title}</div><div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', lineHeight: '1.6' }}>{f.desc}</div></div></div>))}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', color: '#a78bfa', fontWeight: '600' }}>✓ Inclus dans toutes les offres</div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <img src={profilMockup} alt="Profil digital SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '80%', maxWidth: '480px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.25))' }} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ FEATURES ════════════ */}
-        <section id="features" style={{ ...S.sec }} className="sa-sec">
-          <div style={S.secInner}>
-            <div style={S.secHead} className="sa-rv">
-              <SectionLabel bg="rgba(99,102,241,.1)" border="1px solid rgba(99,102,241,.3)" color="#a78bfa" dotBg="#a78bfa">Plateforme tout-en-un</SectionLabel>
-              <h2 style={S.secTitle}>Tout ce dont vous avez besoin<br /><GradText>depuis une seule plateforme</GradText></h2>
-              <p style={S.secSub}>Dashboard complet, analytics temps réel, CRM, automatisations — conçu pour les entrepreneurs ivoiriens.</p>
-            </div>
-            <div className="sa-fg3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
-              {[
-                { icon: '🔗', bg: 'rgba(99,102,241,.15)', title: 'Page de liens personnalisée', desc: 'Créez votre carte de visite digitale avec, WhatsApp, Instagram, TikTok, Facebook, YouTube sur une seule page avec username personnalisé et badge vérifié.', tag: '✓ Toutes les offres', tagBg: 'rgba(99,102,241,.15)', tagBd: 'rgba(99,102,241,.3)', tagC: '#a78bfa' },
-                { icon: '📊', bg: 'rgba(34,197,94,.15)', title: 'Analytics & Temps réel', desc: "Vues, clics par lien, pays des visiteurs, flux live. Sachez exactement qui scanne votre QR code et d'où.", tag: '🚀 PRO & BUSINESS', tagBg: 'rgba(255,107,53,.15)', tagBd: 'rgba(255,107,53,.3)', tagC: '#ff6b35' },
-                { icon: '🛍️', bg: 'rgba(245,158,11,.15)', title: 'Marketplace intégrée', desc: 'Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission sur vos ventes.', tag: '✓ Toutes les offres', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
-                { icon: '👥', bg: 'rgba(236,72,153,.15)', title: 'CRM & Pipeline de leads', desc: 'Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.', tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
-                { icon: '🎉', bg: 'rgba(255,107,53,.15)', title: 'Mode Événement', desc: 'Compte à rebours live, galerie photos & vidéos (50 Mo), bouton réservation. Parfait pour soirées, salons et concerts.', tag: '🎉 Option — 3 500 FCFA', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
-                { icon: '📅', bg: 'rgba(93,202,165,.15)', title: 'Calendrier de réservation', desc: 'Vos clients réservent un créneau ou une place directement depuis votre profil public, sans échange de messages.', tag: '✓ Toutes les offres', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
-                { icon: '📝', bg: 'rgba(59,130,246,.15)', title: 'Formulaires personnalisés', desc: 'Créez des formulaires sur mesure (contact, devis, inscription) et recevez les réponses directement dans votre dashboard.', tag: '✓ Toutes les offres', tagBg: 'rgba(34,197,94,.15)', tagBd: 'rgba(34,197,94,.3)', tagC: '#22c55e' },
-                { icon: '🤖', bg: 'rgba(37,211,102,.15)', title: 'Campagnes WhatsApp IA', desc: "Décrivez votre offre, l'IA génère vos messages de campagne (promo, relance, nouveauté) prêts à envoyer.", tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
-                { icon: '⚡', bg: 'rgba(139,92,246,.15)', title: 'Automatisations & Intégrations', desc: 'Automatisez vos réponses, connectez vos outils. Webhooks, notifications push, flux temps réel.', tag: '💼 BUSINESS', tagBg: 'rgba(247,201,72,.15)', tagBd: 'rgba(247,201,72,.3)', tagC: '#f7c948' },
-              ].map((f, i) => (
-                <div key={i} style={S.fcard} className={`sa-fcard sa-rv sa-d${(i % 4) + 1}`}>
-                  <div style={{ ...S.ficon, background: f.bg }}>{f.icon}</div>
-                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '10px' }}>{f.title}</div>
-                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', lineHeight: '1.75' }}>{f.desc}</div>
-                  <div className="sa-ftag" style={{ background: f.tagBg, border: `1px solid ${f.tagBd}`, color: f.tagC }}>{f.tag}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ CRM ════════════ */}
-        <section id="crm" style={{ ...S.sec, background: 'linear-gradient(135deg,rgba(236,72,153,.05),rgba(99,102,241,.04))', borderTop: '1px solid rgba(236,72,153,.1)', borderBottom: '1px solid rgba(236,72,153,.1)' }} className="sa-sec">
-          <div style={S.secInner}>
-            <div className="sa-twocol sa-rv" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <picture>
-                  <source srcSet={leadsCrmMockupWebp} type="image/webp" />
-                  <img src={leadsCrmMockup} alt="Leads & CRM SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '110%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(236,72,153,.25))' }} />
-                </picture>
-              </div>
-              <div>
-                <SectionLabel bg="rgba(236,72,153,.1)" border="1px solid rgba(236,72,153,.3)" color="#f472b6" dotBg="#f472b6">CRM intégré</SectionLabel>
-                <h2 style={S.secTitle}>Transformez vos visiteurs<br />en <GradText>clients fidèles</GradText></h2>
-                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Chaque scan de votre QR code est une opportunité. Capturez vos leads, suivez leur parcours et concluez plus de ventes — tout depuis votre dashboard.</p>
-                {[
-                  { icon: '🏷️', bg: 'rgba(236,72,153,.1)', bd: 'rgba(236,72,153,.2)', title: 'Tags intelligents', desc: 'Prospect, Chaud, Client, Froid, Perdu. Filtrez et agissez en priorité.' },
-                  { icon: '📋', bg: 'rgba(99,102,241,.1)', bd: 'rgba(99,102,241,.2)', title: 'Notes & historique', desc: 'Ajoutez des notes sur chaque contact. Gardez le contexte de vos échanges.' },
-                  { icon: '📥', bg: 'rgba(34,197,94,.1)', bd: 'rgba(34,197,94,.2)', title: 'Export CSV', desc: 'Exportez tous vos leads en un clic. Compatible Excel & Google Sheets.' },
-                ].map((f, i) => (<div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '16px' }}><div style={{ width: '40px', height: '40px', borderRadius: '12px', background: f.bg, border: `1px solid ${f.bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{f.icon}</div><div><div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>{f.title}</div><div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', lineHeight: '1.6' }}>{f.desc}</div></div></div>))}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(247,201,72,.12)', border: '1px solid rgba(247,201,72,.3)', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', color: '#f7c948', fontWeight: '600' }}>💼 Disponible avec l'offre BUSINESS</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ ANALYTICS ════════════ */}
-        <section id="analytics" style={{ ...S.sec, background: 'linear-gradient(135deg,rgba(99,102,241,.05),rgba(14,165,233,.04))', borderTop: '1px solid rgba(99,102,241,.1)', borderBottom: '1px solid rgba(99,102,241,.1)' }} className="sa-sec">
-          <div style={S.secInner}>
-            <div className="sa-twocol sa-rv" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
-              <div>
-                <SectionLabel bg="rgba(99,102,241,.1)" border="1px solid rgba(99,102,241,.3)" color="#a78bfa" dotBg="#a78bfa">Analytics avancés</SectionLabel>
-                <h2 style={S.secTitle}>Analysez chaque<br />interaction <GradText>en temps réel</GradText></h2>
-                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Sachez exactement qui visite votre profil, d'où ils viennent et sur quels liens ils cliquent. Des données actionnables pour optimiser votre présence digitale.</p>
-                {[
-                  { icon: '🌍', bg: 'rgba(99,102,241,.12)', bd: 'rgba(99,102,241,.25)', title: 'Statistiques géographiques', desc: "Visualisez d'où viennent vos visiteurs, pays par pays." },
-                  { icon: '🔴', bg: 'rgba(34,197,94,.12)', bd: 'rgba(34,197,94,.25)', title: 'Flux visiteurs en direct', desc: 'Voir qui est sur votre page maintenant, en temps réel.' },
-                  { icon: '📊', bg: 'rgba(245,158,11,.12)', bd: 'rgba(245,158,11,.25)', title: 'Top liens & taux de clic', desc: 'Identifiez vos liens les plus performants.' },
-                ].map((f, i) => (<div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '16px' }}><div style={{ width: '40px', height: '40px', borderRadius: '12px', background: f.bg, border: `1px solid ${f.bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{f.icon}</div><div><div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>{f.title}</div><div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', lineHeight: '1.6' }}>{f.desc}</div></div></div>))}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,107,53,.12)', border: '1px solid rgba(255,107,53,.3)', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', color: '#ff6b35', fontWeight: '600' }}>🚀 Disponible avec PRO & BUSINESS</div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <picture>
-                  <source srcSet={tempsReelMockupWebp} type="image/webp" />
-                  <img src={tempsReelMockup} alt="Analytics temps réel SocialApp" loading="lazy" className="sa-float sa-mockup-overflow" style={{ width: '120%', maxWidth: '700px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(99,102,241,.3))' }} />
-                </picture>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ MARKETPLACE ════════════ */}
-        <section id="marketplace" style={{ ...S.sec, background: 'linear-gradient(180deg,rgba(255,107,53,.04) 0%,transparent 100%)', borderTop: '1px solid rgba(255,107,53,.1)', borderBottom: '1px solid rgba(255,107,53,.1)' }} className="sa-sec">
-          <div style={S.secInner}>
-            <div style={S.secHead} className="sa-rv">
-              <SectionLabel bg="rgba(255,107,53,.1)" border="1px solid rgba(255,107,53,.3)" color="#ff6b35" dotBg="#ff6b35">Marketplace 🔥</SectionLabel>
-              <h2 style={S.secTitle}>Votre boutique directement<br />sur votre <GradText>profil public</GradText></h2>
-              <p style={S.secSub}>Vendez sans créer un site web. Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission.</p>
-            </div>
-            <div className="sa-twocol" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <MarketplaceMockup />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                {[
-                  { icon: '📸', bg: 'rgba(255,107,53,.1)', bd: 'rgba(255,107,53,.2)', title: 'Photos, prix & badges promotionnels', desc: 'Prix barrés, réductions en %, badge disponible/épuisé.' },
-                  { icon: '💰', bg: 'rgba(34,197,94,.1)', bd: 'rgba(34,197,94,.2)', title: 'Zéro commission — toujours', desc: '100% de vos ventes vous reviennent. SocialApp ne prend rien.' },
-                  { icon: '📱', bg: 'rgba(37,211,102,.1)', bd: 'rgba(37,211,102,.2)', title: 'Commandes directes sur WhatsApp', desc: 'Bouton de contact direct. Votre client vous écrit en 1 tap.' },
-                  { icon: '📄', bg: 'rgba(245,158,11,.1)', bd: 'rgba(245,158,11,.2)', title: 'Documents PDF joints', desc: 'Menus, catalogues, brochures — accessibles sur votre profil.' },
-                ].map((f, i) => (<div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}><div style={{ width: '42px', height: '42px', borderRadius: '12px', background: f.bg, border: `1px solid ${f.bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{f.icon}</div><div><div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>{f.title}</div><div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', lineHeight: '1.6' }}>{f.desc}</div></div></div>))}
-                <button type="button" style={{ ...S.bpri, width: 'fit-content', animation: 'none' }} className="sa-bpri" onClick={handleCTA}>Ouvrir ma boutique →</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ ÉVÉNEMENT ════════════ */}
-        <section id="event" style={S.sec} className="sa-sec">
-          <div style={S.secInner}>
-            <div className="sa-twocol" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
-              <div>
-                <SectionLabel bg="rgba(34,197,94,.1)" border="1px solid rgba(34,197,94,.3)" color="#22c55e" dotBg="#22c55e">Soirées, salons & concerts</SectionLabel>
-                <h2 style={S.secTitle}>Mode <GradText>Événement</GradText></h2>
-                <p style={{ fontSize: '16px', color: 'rgba(255,255,255,.55)', lineHeight: '1.85', marginBottom: '28px' }}>Créez une page d'événement dédiée en 2 minutes, avec son propre lien — compte à rebours live, galerie médias, réservation en ligne.</p>
-                {[
-                  { icon: '⏱', bg: 'rgba(34,197,94,.15)', title: 'Compte à rebours en direct', desc: 'Jours, heures, minutes, secondes — en temps réel.' },
-                  { icon: '📸', bg: 'rgba(255,107,53,.15)', title: 'Galerie photos & vidéos', desc: "Carrousel jusqu'à 50 Mo pour présenter l'ambiance." },
-                  { icon: '🎟', bg: 'rgba(247,201,72,.15)', title: 'Bouton de réservation', desc: 'Redirigez vers votre lien de paiement ou de billets.' },
-                  { icon: '🎨', bg: 'rgba(139,92,246,.15)', title: 'Couleurs personnalisables', desc: "Sunset, Océan, Rose, Forêt — adaptez l'ambiance." },
-                ].map((f, i) => (<div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '16px' }}><div style={{ width: '38px', height: '38px', borderRadius: '10px', background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{f.icon}</div><div><div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '3px' }}>{f.title}</div><div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)' }}>{f.desc}</div></div></div>))}
-                <div style={{ background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: '14px', padding: '16px 20px', marginTop: '8px' }}>
-                  <div style={{ fontSize: '22px', fontWeight: '900', color: '#22c55e' }}>3 500 FCFA</div>
-                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', marginTop: '4px' }}>par événement · Quel que soit votre plan</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <picture>
-                  <source srcSet={eventMockupWebp} type="image/webp" />
-                  <img src={eventMockup} alt="Mode Événement SocialApp" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', borderRadius: '24px', boxShadow: '0 40px 80px rgba(0,0,0,.5)', objectFit: 'contain', animationDuration: '5.5s' }} />
-                </picture>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ OFFRES ════════════ */}
-        <section id="pricing" style={{ ...S.sec, background: 'rgba(255,255,255,.01)' }} className="sa-sec">
-          <div style={S.secInner}>
-            <div style={{ ...S.secHead, marginBottom: '40px' }} className="sa-rv">
-              <h2 style={S.secTitle}>Des prix faits pour <GradText>l'Afrique</GradText></h2>
-              <p style={{ ...S.secSub, marginBottom: '24px' }}>Paiement Mobile Money · Pas de carte bancaire nécessaire</p>
-              <BillingToggle value={billing} onChange={setBilling} />
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginTop: '10px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
-            </div>
-            <div className="sa-plans sa-rv" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '20px', alignItems: 'start', paddingTop: '16px' }}>
-              {[...plans, eventPlan].map((p, i) => {
-                const isMonthly = !!p.monthly && billing === 'monthly';
-                return (
-                  <div key={i} className={`sa-plan${p.popular ? ' sa-plan-pro' : ''}`} style={{ borderRadius: '26px', padding: p.popular ? '44px 32px 32px' : '32px', position: 'relative', background: p.bg, border: p.border, transition: 'transform .25s,box-shadow .25s', overflow: 'visible', marginTop: p.popular ? '14px' : '0' }}>
-                    {p.popular && (<div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', borderRadius: '100px', padding: '6px 20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', color: '#fff', boxShadow: '0 4px 16px rgba(255,107,53,.4)', zIndex: 2 }}>⭐ Plus populaire</div>)}
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: p.color, letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: '16px' }}>{p.emoji} {p.name}</div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginBottom: '6px' }}><span style={{ fontSize: '38px', fontWeight: '900', letterSpacing: '-1.5px' }}>{isMonthly ? p.monthly : p.price}</span><span style={{ fontSize: '14px', color: 'rgba(255,255,255,.4)' }}>FCFA</span></div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.35)', marginBottom: p.monthly ? '6px' : '8px' }}>{p.isEvent ? 'par événement · Quel que soit votre plan' : (isMonthly ? '/ Paiement mensuel' : '/ Paiement annuel')}</div>
-                    {p.monthly && !isMonthly && (
-                      <div style={{ marginBottom: '10px' }}>
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.55)', marginBottom: '6px' }}>10 mois payés sur 12 · au lieu de <strong style={{ color: '#fff' }}>{p.monthly} F</strong> × 12</div>
-                        <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: '700', color: '#22c55e', background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', borderRadius: '100px', padding: '4px 12px' }}>🎁 {p.offer}</span>
-                      </div>
-                    )}
-                    {p.monthly && isMonthly && (
-                      <div style={{ marginBottom: '10px', fontSize: '12px', color: 'rgba(255,255,255,.55)' }}>
-                        Passez à l'annuel : <strong style={{ color: '#22c55e' }}>39 900 F</strong> ({p.offer})
-                      </div>
-                    )}
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.45)', lineHeight: '1.55', marginBottom: '22px', minHeight: '36px' }}>{p.subtitle}</div>
-                    <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,.08)', marginBottom: '20px' }} />
-                    {p.features.map((f, j) => (<div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px', fontSize: '13px', color: 'rgba(255,255,255,.75)' }}><span style={{ color: p.color, flexShrink: 0 }}>✓</span><span>{f}</span></div>))}
-                    <button type="button" onClick={() => (p.isEvent ? setShowEventModal(true) : handlePlanSelect(p.name.toLowerCase(), p.monthly ? billing : 'annual'))} style={{ display: 'block', width: '100%', padding: '14px', border: p.btnBorder, borderRadius: '14px', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', background: p.btnBg, marginTop: '8px', transition: 'transform .2s,box-shadow .2s' }}>{p.isEvent ? 'Créer mon événement →' : `Choisir ${p.name}${isMonthly ? ' (mensuel)' : ''} →`}</button>
-                  </div>
-                );
-              })}
-            </div>
-            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.3)', fontSize: '13px', marginTop: '24px' }} className="sa-rv">💬 Questions ? WhatsApp <strong style={{ color: 'rgba(255,255,255,.6)' }}>+225 05 76 03 12 12</strong></p>
-          </div>
-        </section>
-
-        {/* ════════════ COMMENT ÇA MARCHE ════════════ */}
-        <section id="how" style={{ ...S.sec, background: 'rgba(255,255,255,.01)' }} className="sa-sec">
-          <div style={S.secInner}>
-            <div style={S.secHead} className="sa-rv">
-              <h2 style={S.secTitle}>Prêt en <GradText>5 minutes</GradText></h2>
-              <p style={S.secSub}>Créez votre carte de visite digitale complète en quelques étapes simples.</p>
-            </div>
-            <div className="sa-steps sa-rv" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px' }}>
-              {[
-                { icon: '👤', n: '1', title: 'Créez votre carte de visite digitale', desc: 'Nom, photo, bio, vos liens sociaux. En 5 minutes votre vitrine est prête.' },
-                { icon: '🛍️', n: '2', title: 'Ajoutez vos produits', desc: 'Photos, prix, descriptions. Votre boutique est visible directement sur votre page.' },
-                { icon: '📲', n: '3', title: 'Partagez votre QR code', desc: 'Sur vos flyers, cartes de visite, vitrine. Un scan et vos clients trouvent tout.' },
-              ].map((s, i) => (<div key={i} className={`sa-step sa-d${i + 1}`} style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '24px', padding: '32px', textAlign: 'center', transition: 'all .25s', cursor: 'default' }}><div style={{ fontSize: '36px', marginBottom: '14px' }}>{s.icon}</div><div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '900', margin: '0 auto 18px' }}>{s.n}</div><h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '10px' }}>{s.title}</h3><p style={{ fontSize: '14px', color: 'rgba(255,255,255,.5)', lineHeight: '1.7' }}>{s.desc}</p></div>))}
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ TÉMOIGNAGES ════════════ */}
-        <section style={S.sec} className="sa-sec">
-          <div style={S.secInner}>
-            <div style={S.secHead} className="sa-rv">
-              <h2 style={S.secTitle}>Ils utilisent déjà <GradText>SocialApp</GradText></h2>
-              <p style={S.secSub}>Ce qu'ils en disent</p>
-            </div>
-            <div className="sa-tgrid sa-rv" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '22px' }}>
-              {[
-                { init: 'K', name: 'Koffi Mensah', role: 'Influenceur · Abidjan', text: '"Depuis que j\'utilise SocialApp, mes abonnés Instagram ont augmenté de 40% en 2 mois. Les analytics me montrent d\'où viennent mes visiteurs. Indispensable !"' },
-                { init: 'D', name: 'Dorine Ouattara', role: 'Commerçante · Cocody', text: '"Mes clients scannent mon QR code, voient mes produits et me contactent sur WhatsApp. Le CRM m\'aide à suivre mes prospects. Mon business a vraiment décollé !"' },
-                { init: 'J', name: 'Jean-Baptiste K.', role: 'Organisateur · Plateau', text: '"J\'ai organisé ma soirée avec le mode Événement. Le compte à rebours et la réservation ont boosté mes ventes de billets de 60%. Je recommande !"' },
-              ].map((t, i) => (<div key={i} className={`sa-tcard sa-d${i + 1}`} style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '24px', padding: '28px', transition: 'all .2s' }}><div style={{ color: '#f7c948', fontSize: '18px', letterSpacing: '3px', marginBottom: '14px' }}>★★★★★</div><p style={{ color: 'rgba(255,255,255,.7)', fontSize: '14px', lineHeight: '1.8', marginBottom: '18px', fontStyle: 'italic' }}>{t.text}</p><div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg,#ff6b35,#f7c948)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', flexShrink: 0, color: '#fff' }}>{t.init}</div><div><div style={{ fontWeight: '700', fontSize: '14px' }}>{t.name}</div><div style={{ color: 'rgba(255,255,255,.4)', fontSize: '12px' }}>{t.role}</div></div></div></div>))}
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ CTA FINAL ════════════ */}
-        <section style={{ padding: '60px 48px' }} className="sa-sec">
-          <div style={S.ctaOuter} className="sa-cta-outer sa-rv">
-            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '220px', height: '220px', borderRadius: '50%', background: 'rgba(255,107,53,.12)', filter: 'blur(60px)', animation: 'sa-glow 3s ease-in-out infinite', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(139,92,246,.1)', filter: 'blur(60px)', animation: 'sa-glow 3s ease-in-out infinite .8s', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(247,201,72,.05)', filter: 'blur(80px)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent)' }} />
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '28px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {['#ff6b35', '#a78bfa', '#22c55e', '#f7c948', '#0ea5e9'].map((c, i) => (<div key={i} style={{ width: '34px', height: '34px', borderRadius: '50%', background: `linear-gradient(135deg,${c},${c}99)`, border: '2.5px solid rgba(10,8,24,.9)', marginLeft: i === 0 ? 0 : '-10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', color: '#fff', zIndex: 5 - i, position: 'relative', flexShrink: 0 }}>{['K', 'D', 'J', 'A', 'M'][i]}</div>))}
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#fff', lineHeight: 1.2 }}>+500 utilisateurs sur SocialApp</div>
-                  <div style={{ display: 'flex', gap: '2px', marginTop: '4px', alignItems: 'center' }}>
-                    {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#f7c948', fontSize: '13px' }}>★</span>)}
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.45)', marginLeft: '5px' }}>4.9/5</span>
-                  </div>
-                </div>
-              </div>
-              <div style={{ fontSize: '52px', marginBottom: '24px' }}>🚀</div>
-              <h2 style={{ fontSize: '42px', fontWeight: '900', letterSpacing: '-1.5px', marginBottom: '16px', lineHeight: '1.08' }}>
-                Prêt à transformer votre<br /><GradText>présence digitale ?</GradText>
-              </h2>
-              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '18px', lineHeight: '1.85', marginBottom: '40px', maxWidth: '560px', margin: '0 auto 40px' }}>
-                Rejoignez des centaines d'entrepreneurs ivoiriens et Africains qui utilisent SocialApp pour partager leurs réseaux, vendre leurs produits et gérer leurs leads.
-              </p>
-              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-                <button type="button" style={{ ...S.bpri, fontSize: '17px', padding: '18px 48px' }} className="sa-bpri sa-pulse-btn" onClick={handleCTA}>
-                  {user ? 'Accéder à mon dashboard →' : 'Créer ma carte de visite gratuitement →'}
-                </button>
-                <a href="#pricing" style={{ ...S.bsec, fontSize: '15px', padding: '17px 32px' }} className="sa-bsec">Voir les offres</a>
-              </div>
-              <p style={{ color: 'rgba(255,255,255,.35)', fontSize: '13px', marginTop: '12px' }}>Paiement Mobile Money · Wave · Orange Money</p>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ FAQ ════════════ */}
-        <section id="faq" style={{ padding: '80px 48px' }} className="sa-sec">
-          <div style={{ maxWidth: '740px', margin: '0 auto' }}>
-            <div style={{ ...S.secHead, marginBottom: '48px' }} className="sa-rv">
-              <h2 style={S.secTitle}>Questions <GradText>fréquentes</GradText></h2>
-            </div>
-            <div className="sa-rv">
-              {faqs.map((f, i) => (
-                <div key={i} style={S.faqItem} className="sa-faq">
-                  <button type="button" aria-expanded={openFaq === i} style={S.faqQ} onClick={() => setOpenFaq(prev => prev === i ? null : i)}>
-                    {f.q}
-                    <span style={{ fontSize: '20px', flexShrink: 0, color: '#ff6b35', transition: 'transform .3s', transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0)', display: 'inline-block' }}>+</span>
-                  </button>
-                  {openFaq === i && (<div style={{ padding: '0 22px 18px', color: 'rgba(255,255,255,.55)', fontSize: '14px', lineHeight: '1.8' }}>{f.a}</div>)}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ FOOTER ════════════ */}
-        <footer style={{ padding: '56px 48px 28px', borderTop: '1px solid rgba(255,255,255,.08)', background: 'rgba(0,0,0,.25)' }}>
-          <div className="sa-footer-grid" style={{ maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr', gap: '48px', marginBottom: '40px' }}>
-
-            {/* Colonne marque */}
-            <div className="sa-footer-brand" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                <div style={{ ...S.navIcon, width: '32px', height: '32px', borderRadius: '9px', fontSize: '14px' }}>
-                  <img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-                <span style={{ fontWeight: '800', fontSize: '17px' }}>SocialApp</span>
-              </div>
-              <p style={{ color: 'rgba(255,255,255,.45)', fontSize: '13px', lineHeight: '1.8', maxWidth: '340px', marginBottom: '18px' }}>
-                Plateforme SaaS ivoirienne 🇨🇮 : profil digital, CRM, QR Code et marketplace pour développer votre activité. Mise en ligne en 5 minutes, accessible partout en Afrique.
-              </p>
-              <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', padding: '9px 18px', background: 'rgba(37,211,102,.1)', border: '1px solid rgba(37,211,102,.3)', borderRadius: '100px', color: '#25D366', fontWeight: '600', fontSize: '13px', textDecoration: 'none' }}>💬 WhatsApp</a>
-            </div>
-
-            {/* Colonne liens plateforme */}
-            <div className="sa-footer-col" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,.8)', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: '18px' }}>Plateforme</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
-                {[['#features', 'Fonctionnalités'], ['#crm', 'CRM'], ['#marketplace', 'Boutique'], ['#pricing', 'Tarifs'], ['#faq', 'FAQ']].map(([h, l]) => (
-                  <a key={h} href={h} className="sa-footer-link">{l}</a>
-                ))}
-              </div>
-            </div>
-
-            {/* Colonne compte / légal */}
-            <div className="sa-footer-col" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,.8)', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: '18px' }}>Compte</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
-                <button type="button" onClick={handleCTA} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }} className="sa-footer-link">
-                  {user ? 'Mon dashboard' : 'Se connecter'}
-                </button>
-                <a href="/privacy-policy" className="sa-footer-link">Politique de confidentialité</a>
-                <a href="/terms-of-service" className="sa-footer-link">Conditions d'utilisation</a>
-              </div>
-            </div>
-          </div>
-
-          {/* Barre légale — séparateur unique */}
-          <div className="sa-footer-legal" style={{ maxWidth: '1400px', margin: '0 auto', borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <p style={{ color: 'rgba(255,255,255,.4)', fontSize: '12px' }}>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire 🇨🇮</p>
-            <p style={{ color: 'rgba(255,255,255,.3)', fontSize: '12px' }}>Mobile Money · Wave · Orange Money</p>
-          </div>
-        </footer>
-
+      <div className="sa-p">
+<svg width="0" height="0" style={{position:"absolute"}} aria-hidden="true">
+<defs>
+<symbol id="i-link" viewBox="0 0 24 24">
+<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5">
+</path>
+</symbol>
+<symbol id="i-chart" viewBox="0 0 24 24">
+<path d="M3 3v18h18M7 16v-5M12 16V7M17 16v-8">
+</path>
+</symbol>
+<symbol id="i-trend" viewBox="0 0 24 24">
+<path d="M3 17l6-6 4 4 8-8M15 7h6v6">
+</path>
+</symbol>
+<symbol id="i-live" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="2">
+</circle>
+<path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5">
+</path>
+</symbol>
+<symbol id="i-users" viewBox="0 0 24 24">
+<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8">
+</path>
+<circle cx="9" cy="7" r="4">
+</circle>
+</symbol>
+<symbol id="i-bag" viewBox="0 0 24 24">
+<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0">
+</path>
+</symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24">
+<rect x="3" y="4" width="18" height="18" rx="2">
+</rect>
+<path d="M16 2v4M8 2v4M3 10h18">
+</path>
+</symbol>
+<symbol id="i-form" viewBox="0 0 24 24">
+<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8">
+</path>
+</symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24">
+<path d="M13 2 3 14h9l-1 8 10-12h-9z">
+</path>
+</symbol>
+<symbol id="i-ticket" viewBox="0 0 24 24">
+<path d="M2 9a3 3 0 0 1 0 6v3h20v-3a3 3 0 0 1 0-6V6H2zM13 6v12">
+</path>
+</symbol>
+<symbol id="i-tag" viewBox="0 0 24 24">
+<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z">
+</path>
+<circle cx="7" cy="7" r="1">
+</circle>
+</symbol>
+<symbol id="i-note" viewBox="0 0 24 24">
+<rect x="8" y="2" width="8" height="4" rx="1">
+</rect>
+<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2">
+</path>
+</symbol>
+<symbol id="i-download" viewBox="0 0 24 24">
+<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3">
+</path>
+</symbol>
+<symbol id="i-globe" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20">
+</path>
+</symbol>
+<symbol id="i-image" viewBox="0 0 24 24">
+<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+</path>
+<circle cx="12" cy="13" r="4">
+</circle>
+</symbol>
+<symbol id="i-phone" viewBox="0 0 24 24">
+<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z">
+</path>
+</symbol>
+<symbol id="i-chat" viewBox="0 0 24 24">
+<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l1.9-5.4A8.4 8.4 0 1 1 21 11.5z">
+</path>
+</symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24">
+<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6">
+</path>
+</symbol>
+<symbol id="i-badge" viewBox="0 0 24 24">
+<path d="M12 2l2.4 1.8 3-.2 1 2.8 2.5 1.7-.9 2.9.9 2.9-2.5 1.7-1 2.8-3-.2L12 22l-2.4-1.8-3 .2-1-2.8-2.5-1.7.9-2.9-.9-2.9 2.5-1.7 1-2.8 3 .2z">
+</path>
+<path d="m9 12 2 2 4-4">
+</path>
+</symbol>
+<symbol id="i-qr" viewBox="0 0 24 24">
+<rect x="3" y="3" width="7" height="7">
+</rect>
+<rect x="14" y="3" width="7" height="7">
+</rect>
+<rect x="3" y="14" width="7" height="7">
+</rect>
+<path d="M14 14h3v3M21 14v.01M14 21h3M21 17v4">
+</path>
+</symbol>
+<symbol id="i-clock" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M12 6v6l4 2">
+</path>
+</symbol>
+<symbol id="i-coin" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2">
+</path>
+</symbol>
+<symbol id="i-user" viewBox="0 0 24 24">
+<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2">
+</path>
+<circle cx="12" cy="7" r="4">
+</circle>
+</symbol>
+<symbol id="i-send" viewBox="0 0 24 24">
+<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z">
+</path>
+</symbol>
+</defs>
+</svg> <nav className="sa-nav">
+<div className="sa-brand" role="button" tabIndex={0} aria-label="Retour à l'accueil SocialApp" style={{ cursor: 'pointer' }} onClick={goTop} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') goTop(); }}>
+<div className="sa-mk sa-g" style={{ overflow: 'hidden' }}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div><span className="sa-bt">SocialApp</span>
+</div>
+<div className="sa-lk">{NAV_LINKS.map(([h, l]) => <a key={h} href={h}>{l}</a>)}</div>
+<div className="sa-nb" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+<button type="button" className="sa-btn sa-gr" onClick={openEvent}>Créez un évent</button>
+<button type="button" className="sa-btn sa-nc" onClick={handleCTA}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
+<button type="button" className={'sa-burger' + (menuOpen ? ' on' : '')} aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}><span /><span /><span /></button>
+</div>
+<div className={'sa-mmenu' + (menuOpen ? ' open' : '')}>
+{NAV_LINKS.map(([h, l]) => <a key={h} href={h} onClick={() => setMenuOpen(false)}>{l}</a>)}
+<button type="button" className="sa-btn sa-mcta" onClick={() => { setMenuOpen(false); handleCTA(); }}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
+</div>
+</nav> <div className="sa-w">
+<header className="sa-hero">
+<div>
+<h1 className="sa-ttl">
+<span className="sa-ln">
+<span className="sa-l1">Votre profil digital</span>
+</span>
+<span className="sa-ln">
+<span className="sa-l2">et CRM <span style={{whiteSpace:"nowrap"}}>tout-en-un.</span>
+</span>
+</span>
+</h1>
+<div className="sa-pitch">SocialApp est une plateforme tout-en-un qui permet aux entrepreneurs, entreprises, commerciaux et créateurs de contenu de créer un profil professionnel digital, <b>partager leurs contacts via QR Code,</b> collecter des prospects et gérer leurs relations clients grâce à un CRM intégré.</div>
+<p className="sa-tag">Transformez chaque scan en contact,<br />client ou opportunité.</p>
+<div className="sa-ck">
+<i>✓</i>Créez votre carte de visite digitale professionnel avec QR CODE en quelques minutes</div>
+<div className="sa-ck">
+<i>✓</i>Partagez vos coordonnées, réseaux sociaux et services via un QR Code unique</div>
+<div className="sa-ck">
+<i>✓</i>Collectez automatiquement les contacts et prospects intéressés</div>
+<div className="sa-ck">
+<i>✓</i>Gérez vos clients et opportunités avec un CRM intégré</div>
+<div className="sa-ck">
+<i>✓</i>Suivez vos statistiques, visites, clics et performances en temps réel</div>
+<div className="sa-cta">
+<button type="button" className="sa-btn sa-l" onClick={handleCTA}>{user ? 'Mon tableau de bord →' : 'Créer ma carte de visite gratuitement →'}</button>
+<a className="sa-btn sa-s sa-l" style={{boxShadow:"none",fontSize:"15px",padding:"0 28px"}} href="#f">Voir les fonctionnalités</a>
+</div>
+<div className="sa-av">
+<div style={{display:"flex"}}>
+<div style={{background:"#ff6b35"}}>K</div>
+<div style={{background:"#a78bfa"}}>D</div>
+<div style={{background:"#22c55e"}}>J</div>
+<div style={{background:"#f0a500"}}>A</div>
+<div style={{background:"#0ea5e9"}}>M</div>
+</div>
+<span>
+<b style={{fontSize:"15px",color:"#1d1a2b"}}>+500 utilisateurs</b> sur SocialApp<br />
+<span style={{color:"#f0a500"}}>★★★★★</span> 4.9/5</span>
+</div>
+</div>
+<div className="sa-st">
+<div className="sa-fb" style={{top:"-18px",right:"-14px"}}>
+<b style={{display:"inline"}}>Nouveau lead !</b>
+<br />
+<span>Kofi M. · via QR Code</span>
+</div>
+<div className="sa-fb" style={{top:"46%",right:"-26px",textAlign:"center"}}>
+<span>Vues aujourd'hui</span>
+<b style={{fontSize:"22px",color:"#ff6b35"}}>+247</b>
+<span style={{color:"#16a34a"}}>↑ 34% vs hier</span>
+</div>
+<div className="sa-fb" style={{bottom:"-14px",left:"-18px"}}>
+<b style={{display:"inline"}}>Commande WhatsApp</b>
+<br />
+<span>Robe Ankara · 8 500 FCFA</span>
+</div>
+<div className="sa-card" style={{overflow:"hidden"}}>
+<div className="sa-top">
+<i style={{background:"#ef4444"}}>
+</i>
+<i style={{background:"#f59e0b"}}>
+</i>
+<i style={{background:"#22c55e"}}>
+</i>
+<em>socialapp.work/dashboard</em>
+</div>
+<div className="sa-db">
+<div className="sa-sb">
+<span className="sa-a">
+<svg className="sa-i">
+<use href="#i-chart">
+</use>
+</svg>
+</span>
+<span>
+<svg className="sa-i">
+<use href="#i-trend">
+</use>
+</svg>
+</span>
+<span>
+<svg className="sa-i">
+<use href="#i-live">
+</use>
+</svg>
+</span>
+<span>
+<svg className="sa-i">
+<use href="#i-users">
+</use>
+</svg>
+</span>
+<span>
+<svg className="sa-i">
+<use href="#i-bag">
+</use>
+</svg>
+</span>
+<span>
+<svg className="sa-i">
+<use href="#i-ticket">
+</use>
+</svg>
+</span>
+<span>
+<svg className="sa-i">
+<use href="#i-form">
+</use>
+</svg>
+</span>
+</div>
+<div className="sa-dc">
+<div>
+<b style={{fontSize:"13px"}}>Dashboard</b>
+<br />
+<span style={{fontSize:"9px",color:"#7b788a"}}>Bienvenue · Dorine Fashion</span>
+</div>
+<div className="sa-mc">
+<div>
+<b style={{color:"#6366f1"}}>450</b>Vues</div>
+<div>
+<b style={{color:"#f59e0b"}}>89</b>Clics</div>
+<div>
+<b style={{color:"#16a34a"}}>22%</b>CTR</div>
+<div>
+<b style={{color:"#ec4899"}}>12</b>Leads</div>
+</div>
+<div style={{background:"#f5f1e8",borderRadius:"12px",padding:"10px"}}>
+<b style={{fontSize:"10px",color:"#5d5a6e"}}>Top pays</b>
+<div className="sa-bar">CI<u>
+<i style={{width:"85%"}}>
+</i>
+</u>
+</div>
+<div className="sa-bar">FR<u>
+<i style={{width:"40%"}}>
+</i>
+</u>
+</div>
+<div className="sa-bar">SN<u>
+<i style={{width:"25%"}}>
+</i>
+</u>
+</div>
+</div>
+<div style={{display:"flex",gap:"8px",alignItems:"center",padding:"6px 8px",background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.25)",borderRadius:"8px",fontSize:"10px",fontWeight:"700",color:"#16a34a"}}>● 3 visiteurs en direct</div>
+<div style={{display:"flex",gap:"5px"}}>
+<span className="sa-chip" style={{background:"rgba(99,102,241,.14)",color:"#4f46e5"}}>4 Prospects</span>
+<span className="sa-chip" style={{background:"rgba(239,68,68,.12)",color:"#dc2626"}}>2 Chauds </span>
+<span className="sa-chip" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>6 Clients </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</header>
+</div>
+<div className="sa-stats">
+<div>
+<b className="sa-gt">+30%</b>
+<span>de followers en plus</span>
+</div>
+<div>
+<b className="sa-gt">1 scan</b>
+<span>pour tout partager</span>
+</div>
+<div>
+<b style={{background:"linear-gradient(135deg,#16a34a,#4ade80)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>∞</b>
+<span>produits avec Business</span>
+</div>
+<div>
+<b style={{background:"linear-gradient(135deg,#9333ea,#d946ef)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>100%</b>
+<span>personnalisable</span>
+</div>
+</div>
+<section className="sa-sec">
+<div className="sa-w sa-two">
+<div>
+<div className="sa-badge" style={{background:"rgba(255,107,53,.12)",border:"1px solid rgba(255,107,53,.3)",color:"#c2410c"}}>
+<span className="sa-dot">
+</span>Profil digital</div>
+<h2>Un seul lien pour<br />
+<span className="sa-gt">toute votre présence Digitale</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Votre carte de visite digitale SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.12)"}}>
+<svg className="sa-i">
+<use href="#i-sliders">
+</use>
+</svg>
+</div>
+<div>
+<b>Personnalisation complète</b>
+<span>Couleurs, photo, username unique. Un profil à votre image, sans code.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.12)"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</div>
+<div>
+<b>Accessible partout</b>
+<span>Lien direct ou QR code à scanner, imprimable sur carte de visite ou vitrine.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.12)"}}>
+<svg className="sa-i">
+<use href="#i-badge">
+</use>
+</svg>
+</div>
+<div>
+<b>Badge vérifié</b>
+<span>Renforcez la confiance de vos visiteurs dès le premier coup d'œil.</span>
+</div>
+</div>
+<span className="sa-pl" style={{background:"rgba(99,102,241,.12)",color:"#4f46e5"}}>✓ Inclus dans toutes les offres</span>
+</div>
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><img src={profilMockup} alt="Profil digital SocialApp" loading="lazy" className="sa-float" style={{ width: '80%', maxWidth: '480px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.25))' }} /></div>
+</div>
+</section>
+<section className="sa-sec" id="f" style={{paddingTop:"20px"}}>
+<div className="sa-w">
+<div className="sa-hd">
+<div className="sa-badge" style={{background:"rgba(99,102,241,.12)",border:"1px solid rgba(99,102,241,.3)",color:"#4f46e5"}}>
+<span className="sa-dot">
+</span>Plateforme tout-en-un</div>
+<h2>Tout ce dont vous avez besoin<br />
+<span className="sa-gt">depuis une seule plateforme</span>
+</h2>
+<p className="sa-sub">Dashboard complet, analytics temps réel, CRM, automatisations — conçu pour les entrepreneurs ivoiriens.</p>
+</div>
+<div className="sa-fg">
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.14)"}}>
+<svg className="sa-i">
+<use href="#i-link">
+</use>
+</svg>
+</div>
+<h3>Page de liens personnalisée</h3>
+<p>Créez votre carte de visite digitale avec WhatsApp, Instagram, TikTok, Facebook, YouTube sur une seule page avec username personnalisé et badge vérifié.</p>
+<span className="sa-ft" style={{background:"rgba(99,102,241,.14)",color:"#4f46e5"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.14)"}}>
+<svg className="sa-i">
+<use href="#i-chart">
+</use>
+</svg>
+</div>
+<h3>Analytics & Temps réel</h3>
+<p>Vues, clics par lien, pays des visiteurs, flux live. Sachez exactement qui scanne votre QR code et d'où.</p>
+<span className="sa-ft" style={{background:"rgba(255,107,53,.14)",color:"#c2410c"}}>PRO & BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-bag">
+</use>
+</svg>
+</div>
+<h3>Marketplace intégrée</h3>
+<p>Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission sur vos ventes.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(236,72,153,.14)"}}>
+<svg className="sa-i">
+<use href="#i-users">
+</use>
+</svg>
+</div>
+<h3>CRM & Pipeline de leads</h3>
+<p>Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.14)"}}>
+<svg className="sa-i">
+<use href="#i-ticket">
+</use>
+</svg>
+</div>
+<h3>Mode Événement</h3>
+<p>Compte à rebours live, galerie photos & vidéos (50 Mo), bouton réservation. Parfait pour soirées, salons et concerts.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>Option — 3 500 FCFA</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(93,202,165,.2)"}}>
+<svg className="sa-i">
+<use href="#i-calendar">
+</use>
+</svg>
+</div>
+<h3>Calendrier de réservation</h3>
+<p>Vos clients réservent un créneau ou une place directement depuis votre profil public, sans échange de messages.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(59,130,246,.14)"}}>
+<svg className="sa-i">
+<use href="#i-form">
+</use>
+</svg>
+</div>
+<h3>Formulaires personnalisés</h3>
+<p>Créez des formulaires sur mesure (contact, devis, inscription) et recevez les réponses directement dans votre dashboard.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(37,211,102,.16)"}}>
+<svg className="sa-i">
+<use href="#i-send">
+</use>
+</svg>
+</div>
+<h3>Campagnes WhatsApp IA</h3>
+<p>Décrivez votre offre, l'IA génère vos messages de campagne (promo, relance, nouveauté) prêts à envoyer.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(139,92,246,.14)"}}>
+<svg className="sa-i">
+<use href="#i-bolt">
+</use>
+</svg>
+</div>
+<h3>Automatisations & Intégrations</h3>
+<p>Automatisez vos réponses, connectez vos outils. Webhooks, notifications push, flux temps réel.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec sa-tint1" id="crm">
+<div className="sa-w sa-two">
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><picture><source srcSet={leadsCrmMockupWebp} type="image/webp" /><img src={leadsCrmMockup} alt="Leads & CRM SocialApp" loading="lazy" className="sa-float" style={{ width: '100%', maxWidth: '640px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(236,72,153,.25))' }} /></picture></div>
+<div>
+<div className="sa-badge" style={{background:"rgba(236,72,153,.12)",border:"1px solid rgba(236,72,153,.3)",color:"#be185d"}}>
+<span className="sa-dot">
+</span>CRM intégré</div>
+<h2>Transformez vos visiteurs<br />en <span className="sa-gt">clients fidèles</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Chaque scan de votre QR code est une opportunité. Capturez vos leads, suivez leur parcours et concluez plus de ventes — tout depuis votre dashboard.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(236,72,153,.12)"}}>
+<svg className="sa-i">
+<use href="#i-tag">
+</use>
+</svg>
+</div>
+<div>
+<b>Tags intelligents</b>
+<span>Prospect, Chaud, Client, Froid, Perdu. Filtrez et agissez en priorité.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.12)"}}>
+<svg className="sa-i">
+<use href="#i-note">
+</use>
+</svg>
+</div>
+<div>
+<b>Notes & historique</b>
+<span>Ajoutez des notes sur chaque contact. Gardez le contexte de vos échanges.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.12)"}}>
+<svg className="sa-i">
+<use href="#i-download">
+</use>
+</svg>
+</div>
+<div>
+<b>Export CSV</b>
+<span>Exportez tous vos leads en un clic. Compatible Excel & Google Sheets.</span>
+</div>
+</div>
+<span className="sa-pl" style={{background:"rgba(247,201,72,.3)",color:"#8a6100"}}>Disponible avec l'offre BUSINESS</span>
+</div>
+</div>
+</section>
+<section className="sa-sec sa-tint2" id="a">
+<div className="sa-w sa-two">
+<div>
+<div className="sa-badge" style={{background:"rgba(99,102,241,.12)",border:"1px solid rgba(99,102,241,.3)",color:"#4f46e5"}}>
+<span className="sa-dot">
+</span>Analytics avancés</div>
+<h2>Analysez chaque<br />interaction <span className="sa-gt">en temps réel</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Sachez exactement qui visite votre profil, d'où ils viennent et sur quels liens ils cliquent. Des données actionnables pour optimiser votre présence digitale.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.14)"}}>
+<svg className="sa-i">
+<use href="#i-globe">
+</use>
+</svg>
+</div>
+<div>
+<b>Statistiques géographiques</b>
+<span>Visualisez d'où viennent vos visiteurs, pays par pays.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.14)"}}>
+<svg className="sa-i">
+<use href="#i-live">
+</use>
+</svg>
+</div>
+<div>
+<b>Flux visiteurs en direct</b>
+<span>Voir qui est sur votre page maintenant, en temps réel.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-chart">
+</use>
+</svg>
+</div>
+<div>
+<b>Top liens & taux de clic</b>
+<span>Identifiez vos liens les plus performants.</span>
+</div>
+</div>
+<span className="sa-pl" style={{background:"rgba(255,107,53,.12)",color:"#c2410c"}}>Disponible avec PRO & BUSINESS</span>
+</div>
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><picture><source srcSet={tempsReelMockupWebp} type="image/webp" /><img src={tempsReelMockup} alt="Analytics temps réel SocialApp" loading="lazy" className="sa-float" style={{ width: '100%', maxWidth: '640px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(99,102,241,.3))' }} /></picture></div>
+</div>
+</section>
+<section className="sa-sec sa-tint3" id="m">
+<div className="sa-w">
+<div className="sa-hd">
+<div className="sa-badge" style={{background:"rgba(255,107,53,.12)",border:"1px solid rgba(255,107,53,.3)",color:"#c2410c"}}>
+<span className="sa-dot">
+</span>Marketplace </div>
+<h2>Votre boutique directement<br />sur votre <span className="sa-gt">profil public</span>
+</h2>
+<p className="sa-sub">Vendez sans créer un site web. Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission.</p>
+</div>
+<div className="sa-two">
+<div className="sa-mpwrap"><img src={marketplaceWoman} alt="Cliente ravie utilisant SocialApp" loading="lazy" className="sa-float sa-mpwoman" /><div className="sa-phone">
+<div className="sa-scr">
+<div style={{textAlign:"center"}}>
+<div className="sa-mk sa-g" style={{margin:"0 auto 5px"}}>S</div>
+<b style={{fontSize:"10.5px"}}>SocialApp <span style={{color:"#22c55e"}}>
+<svg className="sa-i">
+<use href="#i-badge">
+</use>
+</svg>
+</span>
+</b>
+<div style={{fontSize:"7px",opacity:".5"}}>Votre boutique, votre profil</div>
+<div className="sa-g" style={{display:"inline-block",marginTop:"6px",fontSize:"7px",fontWeight:"700",color:"#2a1305",padding:"4px 11px",borderRadius:"20px"}}>Ouvrir ma boutique →</div>
+</div>
+<div className="sa-pg">
+<div>
+<i style={{background:"linear-gradient(135deg,#5a4a63,#241a2b)"}}>
+</i>
+<b>14 000 F <s style={{opacity:".4",fontWeight:"500"}}>20 000 F</s>
+</b>
+</div>
+<div>
+<i style={{background:"linear-gradient(135deg,#7a4a3a,#2e1f18)"}}>
+</i>
+<b>10 000 F</b>
+</div>
+<div>
+<i style={{background:"linear-gradient(135deg,#3a4a5a,#1a232e)"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</i>
+<b>180 000 F</b>
+</div>
+<div>
+<i style={{background:"linear-gradient(135deg,#4a3a5a,#20182e)"}}>
+</i>
+<b>9 000 F</b>
+</div>
+</div>
+<div className="sa-rw">
+<span className="sa-ic" style={{width:"14px",height:"14px",borderRadius:"4px",fontSize:"7px",background:"#ff6b35"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</span>Téléphone</div>
+<div className="sa-rw">
+<span className="sa-ic" style={{width:"14px",height:"14px",borderRadius:"4px",fontSize:"7px",background:"#25D366"}}>
+<svg className="sa-i">
+<use href="#i-chat">
+</use>
+</svg>
+</span>WhatsApp</div>
+</div>
+</div>
+</div>
+<div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.12)"}}>
+<svg className="sa-i">
+<use href="#i-image">
+</use>
+</svg>
+</div>
+<div>
+<b>Photos, prix & badges promotionnels</b>
+<span>Prix barrés, réductions en %, badge disponible/épuisé.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.12)"}}>
+<svg className="sa-i">
+<use href="#i-coin">
+</use>
+</svg>
+</div>
+<div>
+<b>Zéro commission — toujours</b>
+<span>100% de vos ventes vous reviennent. SocialApp ne prend rien.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(37,211,102,.14)"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</div>
+<div>
+<b>Commandes directes sur WhatsApp</b>
+<span>Bouton de contact direct. Votre client vous écrit en 1 tap.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-form">
+</use>
+</svg>
+</div>
+<div>
+<b>Documents PDF joints</b>
+<span>Menus, catalogues, brochures — accessibles sur votre profil.</span>
+</div>
+</div>
+<button type="button" className="sa-btn sa-l" style={{marginTop:"12px"}} onClick={handleCTA}>Ouvrir ma boutique →</button>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec" id="e">
+<div className="sa-w sa-two">
+<div>
+<div className="sa-badge" style={{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",color:"#15803d"}}>
+<span className="sa-dot">
+</span>Soirées, salons & concerts</div>
+<h2>Mode <span className="sa-gt">Événement</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Créez une page d'événement dédiée en 2 minutes, avec son propre lien — compte à rebours live, galerie médias, réservation en ligne.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.16)"}}>
+<svg className="sa-i">
+<use href="#i-clock">
+</use>
+</svg>
+</div>
+<div>
+<b>Compte à rebours en direct</b>
+<span>Jours, heures, minutes, secondes — en temps réel.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.14)"}}>
+<svg className="sa-i">
+<use href="#i-image">
+</use>
+</svg>
+</div>
+<div>
+<b>Galerie photos & vidéos</b>
+<span>Carrousel jusqu'à 50 Mo pour présenter l'ambiance.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(247,201,72,.28)"}}>
+<svg className="sa-i">
+<use href="#i-ticket">
+</use>
+</svg>
+</div>
+<div>
+<b>Bouton de réservation</b>
+<span>Redirigez vers votre lien de paiement ou de billets.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(139,92,246,.14)"}}>
+<svg className="sa-i">
+<use href="#i-sliders">
+</use>
+</svg>
+</div>
+<div>
+<b>Couleurs personnalisables</b>
+<span>Sunset, Océan, Rose, Forêt — adaptez l'ambiance.</span>
+</div>
+</div>
+<div style={{background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.25)",borderRadius:"14px",padding:"16px 20px",marginTop:"8px"}}>
+<b style={{fontSize:"22px",color:"#16a34a",fontWeight:"900"}}>3 500 FCFA</b>
+<div style={{fontSize:"13px",color:"#5d5a6e",marginTop:"4px"}}>par événement · Quel que soit votre plan</div>
+</div>
+</div>
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><picture><source srcSet={eventMockupWebp} type="image/webp" /><img src={eventMockup} alt="Mode Événement SocialApp" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', borderRadius: '24px', boxShadow: '0 40px 80px rgba(0,0,0,.35)', objectFit: 'contain' }} /></picture></div>
+</div>
+</section> <section className="sa-sec" id="t" style={{ background: 'rgba(255,255,255,.35)' }}>
+<div className="sa-w">
+<div className="sa-hd" style={{ marginBottom: '36px' }}>
+<h2>Des prix faits pour <span className="sa-gt">l'Afrique</span></h2>
+<p className="sa-sub">Paiement Mobile Money · Pas de carte bancaire nécessaire</p>
+<div style={{ marginTop: '20px' }}><BillingToggle value={billing} onChange={setBilling} /></div>
+<div style={{ fontSize: '12px', color: '#7b788a', marginTop: '10px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
+</div>
+<div className="sa-pls">{PLANS.map((p) => <PlanCard key={p.name} p={p} billing={billing} onChoose={choosePlan} />)}</div>
+<p style={{ textAlign: 'center', color: '#7b788a', fontSize: '13px', marginTop: '28px' }}>Questions ? WhatsApp <b>+225 05 76 03 12 12</b></p>
+</div>
+</section> <section className="sa-sec">
+<div className="sa-w">
+<div className="sa-hd">
+<h2>Prêt en <span className="sa-gt">5 minutes</span>
+</h2>
+<p className="sa-sub">Créez votre carte de visite digitale complète en quelques étapes simples.</p>
+</div>
+<div className="sa-stp">
+<div className="sa-card">
+<div style={{fontSize:"32px",color:"#c2410c"}}>
+<svg className="sa-i">
+<use href="#i-user">
+</use>
+</svg>
+</div>
+<div className="sa-nm sa-g">1</div>
+<h3>Créez votre carte de visite digitale</h3>
+<p>Nom, photo, bio, vos liens sociaux. En 5 minutes votre vitrine est prête.</p>
+</div>
+<div className="sa-card">
+<div style={{fontSize:"32px",color:"#c2410c"}}>
+<svg className="sa-i">
+<use href="#i-bag">
+</use>
+</svg>
+</div>
+<div className="sa-nm sa-g">2</div>
+<h3>Ajoutez vos produits</h3>
+<p>Photos, prix, descriptions. Votre boutique est visible directement sur votre page.</p>
+</div>
+<div className="sa-card">
+<div style={{fontSize:"32px",color:"#c2410c"}}>
+<svg className="sa-i">
+<use href="#i-qr">
+</use>
+</svg>
+</div>
+<div className="sa-nm sa-g">3</div>
+<h3>Partagez votre QR code</h3>
+<p>Sur vos flyers, cartes de visite, vitrine. Un scan et vos clients trouvent tout.</p>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec" style={{paddingTop:"20px"}}>
+<div className="sa-w">
+<div className="sa-hd">
+<h2>Ils utilisent déjà <span className="sa-gt">SocialApp</span>
+</h2>
+<p className="sa-sub">Ce qu'ils en disent</p>
+</div>
+<div className="sa-tg">
+<div className="sa-card">
+<div style={{color:"#f0a500",letterSpacing:"3px",fontSize:"18px"}}>★★★★★</div>
+<p>"Depuis que j'utilise SocialApp, mes abonnés Instagram ont augmenté de 40% en 2 mois. Les analytics me montrent d'où viennent mes visiteurs. Indispensable !"</p>
+<b>Koffi Mensah</b>
+<div style={{fontSize:"12px",color:"#7b788a"}}>Influenceur · Abidjan</div>
+</div>
+<div className="sa-card">
+<div style={{color:"#f0a500",letterSpacing:"3px",fontSize:"18px"}}>★★★★★</div>
+<p>"Mes clients scannent mon QR code, voient mes produits et me contactent sur WhatsApp. Le CRM m'aide à suivre mes prospects. Mon business a vraiment décollé !"</p>
+<b>Dorine Ouattara</b>
+<div style={{fontSize:"12px",color:"#7b788a"}}>Commerçante · Cocody</div>
+</div>
+<div className="sa-card">
+<div style={{color:"#f0a500",letterSpacing:"3px",fontSize:"18px"}}>★★★★★</div>
+<p>"J'ai organisé ma soirée avec le mode Événement. Le compte à rebours et la réservation ont boosté mes ventes de billets de 60%. Je recommande !"</p>
+<b>Jean-Baptiste K.</b>
+<div style={{fontSize:"12px",color:"#7b788a"}}>Organisateur · Plateau</div>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec" style={{paddingTop:"20px"}}>
+<div className="sa-w">
+<div className="sa-fin">
+<h2>Prêt à transformer votre<br />
+<span className="sa-gt">présence digitale ?</span>
+</h2>
+<p className="sa-sub" style={{maxWidth:"560px",margin:"0 auto 32px",fontSize:"18px"}}>Rejoignez des centaines d'entrepreneurs ivoiriens et Africains qui utilisent SocialApp pour partager leurs réseaux, vendre leurs produits et gérer leurs leads.</p>
+<div style={{display:"flex",gap:"16px",justifyContent:"center",flexWrap:"wrap"}}>
+<button type="button" className="sa-btn sa-l" onClick={handleCTA}>{user ? 'Accéder à mon dashboard →' : 'Créer ma carte de visite gratuitement →'}</button>
+<a className="sa-btn sa-s sa-l" style={{boxShadow:"none",fontSize:"15px",padding:"0 32px"}} href="#t">Voir les offres</a>
+</div>
+<p style={{color:"#7b788a",fontSize:"13px",margin:"20px 0 0"}}>Paiement Mobile Money · Wave · Orange Money</p>
+</div>
+</div>
+</section> <section className="sa-sec" id="q" style={{ paddingTop: '20px' }}>
+<div className="sa-w">
+<div className="sa-hd" style={{ marginBottom: '40px' }}><h2>Questions <span className="sa-gt">fréquentes</span></h2></div>
+<div className="sa-fq">{FAQS.map((f, i) => (
+<div key={i} className={'sa-fqi' + (openFaq === i ? ' open' : '')}>
+<button type="button" className="sa-fqb" aria-expanded={openFaq === i} onClick={() => setOpenFaq((v) => (v === i ? null : i))}><b>{f.q}</b></button>
+{openFaq === i && <span>{f.a}</span>}
+</div>))}</div>
+</div>
+</section> <footer className="sa-foot">
+<div className="sa-fi">
+<div className="sa-fcta">
+<div>
+<b>Prêt à lancer votre carte de visite digitale ?</b>
+<span>Mise en ligne en 5 minutes · Paiement Mobile Money, sans carte bancaire</span>
+</div>
+<div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
+<button type="button" className="sa-btn" onClick={handleCTA}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
+<a className="sa-btn sa-s" href="https://wa.me/2250576031212">Nous écrire sur WhatsApp</a>
+</div>
+</div>
+<div className="sa-fgd">
+<div>
+<div className="sa-brand" style={{marginBottom:"16px",color:"#1d1a2b"}}>
+<div className="sa-mk sa-g" style={{width:"32px",height:"32px",overflow:"hidden"}}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>SocialApp</div>
+<p>La plateforme SaaS africaine qui propulse votre activité : carte de visite digitale innovante, CRM intégré, QR Code intelligent et marketplace professionnelle. Une solution tout-en-un conçue pour connecter, gérer et développer votre activité partout en Afrique.</p>
+<div className="sa-pay">
+<span>Orange Money</span>
+<span>Wave</span>
+<span>MTN</span>
+</div>
+</div>
+<div>
+<h6>Plateforme</h6>
+<a href="#f">Fonctionnalités</a>
+<a href="#crm">CRM</a>
+<a href="#a">Analytics</a>
+<a href="#m">Boutique</a>
+<a href="#e">Mode Événement</a>
+</div>
+<div>
+<h6>Offres</h6>
+<a href="#t">BASIC · 10 000 F</a>
+<a href="#t">PRO · 15 000 F</a>
+<a href="#t">BUSINESS · 39 900 F</a>
+<a href="#t">ÉVÉNEMENT · 3 500 F</a>
+</div>
+<div>
+<h6>Compte</h6>
+<button type="button" className="sa-lnk" onClick={handleCTA}>{user ? 'Mon dashboard' : 'Se connecter'}</button>
+<button type="button" onClick={handleCTA}>Créer ma carte</button>
+<a href="#q">Questions fréquentes</a>
+<a href="/privacy-policy">Politique de confidentialité</a>
+<a href="/terms-of-service">Conditions d'utilisation</a>
+</div>
+<div>
+<h6>Contact</h6>
+<a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer">+225 05 76 03 12 12</a>
+<a>Côte d'Ivoire</a>
+</div>
+</div>
+<div className="sa-cp">
+<span>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire </span>
+<div>
+<a href="/privacy-policy">Confidentialité</a>
+<a href="/terms-of-service">Conditions</a>
+<span>Mobile Money · Wave · Orange Money</span>
+</div>
+</div>
+</div>
+</footer>
       </div>
     </>
   );

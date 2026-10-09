@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Check, Trash2, RotateCcw, Loader2, AlarmClock, CalendarDays, Inbox, ChevronDown, Search, X, UserRound } from 'lucide-react';
+import { Plus, Check, Trash2, RotateCcw, Loader2, AlarmClock, CalendarDays, Inbox, ChevronDown, ChevronLeft, ChevronRight, Minus, Search, X, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../supabase';
 import { useCrmTasks, bucketTasks } from '../../hooks/useCrmTasks';
@@ -12,6 +12,9 @@ import { useCrmTasks, bucketTasks } from '../../hooks/useCrmTasks';
  * Dans un lead : <TasksCRMPanel profileId={id} leadId={lead.id} compact />
  *
  * Responsive : Android, iOS (iPhone/iPad), tablettes, desktop.
+ *  - Date/heure : sélecteur PERSONNALISÉ (calendrier + heure) à la place du
+ *    <input type="datetime-local"> natif, dont la fenêtre déborde de l'écran
+ *    (émulateurs DevTools, certains navigateurs mobiles).
  *  - Le <select> natif est remplacé par un sélecteur de contact :
  *      < 640px  → feuille basse (bottom sheet) avec recherche
  *      ≥ 640px  → boîte de dialogue centrée avec recherche
@@ -75,13 +78,6 @@ select.tcp-input{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 12px center;
 }
-/* iOS : datetime-local rendu comme un vrai champ (sinon hauteur/alignement cassés) */
-input[type="datetime-local"].tcp-input{
-  display:block; min-width:0; max-width:100%; text-align:left;
-  min-height:46px; line-height:1.3;
-}
-input[type="datetime-local"].tcp-input::-webkit-date-and-time-value{ text-align:left; min-height:1.3em; }
-
 .tcp-trigger{
   display:flex; align-items:center; gap:8px; text-align:left; cursor:pointer;
   justify-content:space-between;
@@ -161,6 +157,35 @@ input[type="datetime-local"].tcp-input::-webkit-date-and-time-value{ text-align:
 .tcp-option span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tcp-empty{ padding:20px; text-align:center; color:#9ca3af; font-size:14px; }
 
+/* ───── Sélecteur date / heure ───── */
+.tcp-pick-body{ overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:0 14px 8px; flex:1; }
+.tcp-cal-head{ display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.tcp-cal-title{ flex:1; text-align:center; font-weight:700; font-size:15px; text-transform:capitalize; }
+.tcp-cal-grid{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:2px; }
+.tcp-cal-dow{ text-align:center; font-size:12px; font-weight:700; color:#9ca3af; padding:6px 0; text-transform:uppercase; }
+.tcp-day{
+  aspect-ratio:1 / 1; min-height:40px; max-height:48px; width:100%;
+  border:none; background:transparent; border-radius:999px;
+  font-size:15px; color:#111827; cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.tcp-day.out{ color:#c4c8d0; }
+.tcp-day.today{ box-shadow:inset 0 0 0 1.5px #6366f1; }
+.tcp-day.sel{ background:#6366f1; color:#fff; font-weight:700; box-shadow:none; }
+.tcp-time{ display:flex; align-items:center; justify-content:center; gap:10px; margin:12px 0 6px; }
+.tcp-colon{ font-size:24px; font-weight:700; color:#9ca3af; padding-bottom:2px; }
+.tcp-step{ display:flex; align-items:center; gap:6px; }
+.tcp-step b{ min-width:48px; text-align:center; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; }
+.tcp-step button{
+  width:44px; height:44px; border-radius:12px; border:1px solid #d1d5db; background:#fff; color:#374151;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.tcp-pick-foot{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 14px 14px; border-top:1px solid #eef0f4;
+}
+.tcp-pick-foot .tcp-submit{ min-width:130px; padding:0 18px; }
+
 @keyframes tcpFade{ from{opacity:0} to{opacity:1} }
 @keyframes tcpUp{ from{transform:translateY(24px);opacity:.6} to{transform:none;opacity:1} }
 
@@ -198,6 +223,157 @@ input[type="datetime-local"].tcp-input::-webkit-date-and-time-value{ text-align:
   .tcp-overlay, .tcp-sheet{ animation:none; }
 }
 `;
+
+/* ───────────────────────── Sélecteur date / heure ───────────────────────── */
+const WEEKDAYS   = ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'];
+const TIME_CHIPS = ['08:00', '09:00', '12:00', '14:00', '18:00'];
+const pad2    = (n) => String(n).padStart(2, '0');
+const sameDay = (a, b) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+function Stepper({ label, value, onDec, onInc }) {
+  return (
+    <div className="tcp-step" role="group" aria-label={label}>
+      <button type="button" aria-label={`${label} moins`} onClick={onDec}><Minus size={18} /></button>
+      <b>{value}</b>
+      <button type="button" aria-label={`${label} plus`} onClick={onInc}><Plus size={18} /></button>
+    </div>
+  );
+}
+
+function DateTimePicker({ value, onChange }) {
+  const [open, setOpen]   = useState(false);
+  const [draft, setDraft] = useState(() => new Date());
+  const [view, setView]   = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+
+  const current  = value ? new Date(value) : null;
+  const hasValue = !!current && !isNaN(current);
+  const today    = new Date();
+
+  const openSheet = () => {
+    let d;
+    if (hasValue) d = new Date(current);
+    else { d = new Date(); d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0); }
+    setDraft(d);
+    setView(new Date(d.getFullYear(), d.getMonth(), 1));
+    setOpen(true);
+  };
+  const close = () => setOpen(false);
+
+  // Bloque le scroll de la page derrière + Échap pour fermer
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  // 6 semaines complètes (42 cases), lundi en premier : hauteur stable d'un mois à l'autre
+  const cells = useMemo(() => {
+    const first  = new Date(view.getFullYear(), view.getMonth(), 1);
+    const offset = (first.getDay() + 6) % 7;
+    return Array.from({ length: 42 }, (_, i) => new Date(view.getFullYear(), view.getMonth(), 1 - offset + i));
+  }, [view]);
+
+  const shiftMonth = (n) => setView(v => new Date(v.getFullYear(), v.getMonth() + n, 1));
+  const pickDay = (c) => {
+    const d = new Date(draft);
+    d.setFullYear(c.getFullYear(), c.getMonth(), c.getDate());
+    setDraft(d);
+    if (c.getMonth() !== view.getMonth()) setView(new Date(c.getFullYear(), c.getMonth(), 1));
+  };
+  const setTime = (h, m) => { const d = new Date(draft); d.setHours(h, m, 0, 0); setDraft(d); };
+  const addHours = (n) => setTime((draft.getHours() + n + 24) % 24, draft.getMinutes());
+  const addMins  = (n) => setTime(draft.getHours(), (draft.getMinutes() + n + 60) % 60);
+
+  const apply = () => { onChange(toLocalInput(draft)); close(); };
+  const clear = () => { onChange(''); close(); };
+
+  const monthLabel = view.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const hhmm = `${pad2(draft.getHours())}:${pad2(draft.getMinutes())}`;
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`tcp-input tcp-trigger ${hasValue ? '' : 'tcp-placeholder'}`}
+        onClick={openSheet}
+        aria-haspopup="dialog"
+        aria-label="Échéance"
+      >
+        <span>{hasValue ? fmtDue(value) : 'Choisir date et heure'}</span>
+        <CalendarDays size={16} color="#6b7280" />
+      </button>
+
+      {open && createPortal(
+        <div className="tcp-overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+          <div className="tcp-sheet" role="dialog" aria-modal="true" aria-label="Choisir la date et l'heure">
+            <div className="tcp-sheet-head">
+              <h4>Échéance</h4>
+              <button type="button" className="tcp-icon" aria-label="Fermer" onClick={close} style={{ color: '#6b7280', borderColor: '#e5e7eb' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="tcp-pick-body">
+              <div className="tcp-cal-head">
+                <button type="button" className="tcp-icon" aria-label="Mois précédent" onClick={() => shiftMonth(-1)} style={{ color: '#374151', borderColor: '#e5e7eb' }}>
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="tcp-cal-title">{monthLabel}</div>
+                <button type="button" className="tcp-icon" aria-label="Mois suivant" onClick={() => shiftMonth(1)} style={{ color: '#374151', borderColor: '#e5e7eb' }}>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div className="tcp-cal-grid">
+                {WEEKDAYS.map(w => <div key={w} className="tcp-cal-dow">{w}</div>)}
+                {cells.map(c => (
+                  <button
+                    type="button" key={c.getTime()}
+                    className={`tcp-day ${c.getMonth() !== view.getMonth() ? 'out' : ''} ${sameDay(c, today) ? 'today' : ''} ${sameDay(c, draft) ? 'sel' : ''}`}
+                    aria-label={c.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    aria-pressed={sameDay(c, draft)}
+                    onClick={() => pickDay(c)}
+                  >
+                    {c.getDate()}
+                  </button>
+                ))}
+              </div>
+
+              <div className="tcp-time">
+                <Stepper label="Heures" value={pad2(draft.getHours())} onDec={() => addHours(-1)} onInc={() => addHours(1)} />
+                <span className="tcp-colon">:</span>
+                <Stepper label="Minutes" value={pad2(draft.getMinutes())} onDec={() => addMins(-5)} onInc={() => addMins(5)} />
+              </div>
+              <div className="tcp-quick" style={{ justifyContent: 'center', marginBottom: 6 }}>
+                {TIME_CHIPS.map(t => (
+                  <button
+                    type="button" key={t}
+                    className={`tcp-chip ${hhmm === t ? 'on' : ''}`}
+                    onClick={() => { const [h, m] = t.split(':').map(Number); setTime(h, m); }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="tcp-pick-foot">
+              <button type="button" className="tcp-chip link" onClick={clear}>Effacer</button>
+              <button type="button" className="tcp-submit" onClick={apply}>
+                <Check size={16} /> Valider
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 /* ───────────────────────── Sélecteur de contact ───────────────────────── */
 function LeadPicker({ leads, value, onChange }) {
@@ -415,7 +591,7 @@ export default function TasksCRMPanel({ profileId, leadId = null, compact = fals
           })}
         </div>
         <div className="tcp-fields">
-          <input type="datetime-local" className="tcp-input" value={dueAt} onChange={(e) => setDueAt(e.target.value)} aria-label="Échéance" />
+          <DateTimePicker value={dueAt} onChange={setDueAt} />
           <div className="tcp-seg" role="radiogroup" aria-label="Priorité">
             {PRIORITIES.map(p => (
               <button

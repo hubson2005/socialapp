@@ -166,7 +166,7 @@ async function _executeAction({
         email:      context.email  || null,
         phone:      context.phone  || null,
         notes:      context.notes  || config.notes  || null,
-        source:     context.source || 'automatisation',
+        source:     _leadSource(context.source),
         status:     config.status  || 'prospect',
         score:      config.score   ?? 50,
         tags:       config.tag     ? [config.tag] : [],
@@ -310,6 +310,22 @@ async function _executeAction({
       console.warn(`[AutomationEngine] Action inconnue: "${actionType}"`);
       return null;
   }
+}
+
+// ─── Source d'un lead ─────────────────────────────────────────────
+// La contrainte SQL leads_source_check n'accepte que ces 8 valeurs. Les webhooks envoient le nom du
+// déclencheur (calendly_booked, payment_received…) : on le traduit, sinon « Créer un lead » échoue.
+// (Même table de correspondance que la fonction SQL create_public_lead.)
+const LEAD_SOURCES = ['manuel', 'qrcode', 'socialapp', 'rsvp', 'marketplace', 'formulaire', 'automatisation', 'calendrier'];
+const LEAD_SOURCE_ALIASES: Record<string, string> = {
+  calendly_booked: 'calendrier', new_booking: 'calendrier', new_event_registration: 'rsvp',
+  form_submit: 'formulaire', qr_scan: 'qrcode', marketplace_click: 'marketplace', marketplace_buy: 'marketplace',
+  whatsapp_click: 'socialapp', public_profile: 'socialapp',
+};
+function _leadSource(raw: unknown): string {
+  const s = String(raw ?? '').trim();
+  if (!s) return 'automatisation';
+  return LEAD_SOURCES.includes(s) ? s : (LEAD_SOURCE_ALIASES[s] || 'automatisation');
 }
 
 // ─── Résolution des actions (compat legacy) ───────────────────────

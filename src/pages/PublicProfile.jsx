@@ -1346,12 +1346,10 @@ export default function PublicProfile({ previewProfile = null }) {
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
         {topSocialLinks.length > 0 && (
-          <div className="pp-content-col" style={{
-            display:'flex', flexWrap:'nowrap', alignItems:'center', justifyContent:'center',
-            gap:'6px', marginBottom:'14px', boxSizing:'border-box',
-            // 1 ou 2 boutons : on limite la largeur pour ne pas les étirer sur toute la ligne
-            maxWidth: topSocialLinks.length === 1 ? '150px' : topSocialLinks.length === 2 ? '260px' : undefined,
-          }}>
+  <div className="pp-content-col" style={{
+    display:'flex', flexWrap:'nowrap', alignItems:'center', justifyContent:'center',
+    gap:'8px', marginBottom:'14px', boxSizing:'border-box',
+  }}>
             {topSocialLinks.map((link, i) => {
               const platform = resolvePlatform(link);
               const color = platform.color || '#6366f1';
@@ -1363,7 +1361,7 @@ export default function PublicProfile({ previewProfile = null }) {
                   className="pp-link-btn-el"
                   style={{
                     '--pp-hover-bg': color,
-                    flex:'1 1 0', minWidth:0,
+                    flex:'0 1 auto', minWidth:0,
                     display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px',
                     height:'38px', padding:'0 8px 0 4px', borderRadius:'999px',
                     boxSizing:'border-box',

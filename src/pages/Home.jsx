@@ -11,11 +11,18 @@ import tempsReelMockupWebp from '../assets/TEMPS_REEL.webp';
 import leadsCrmMockup from '../assets/LEADS_CRM.png';
 import leadsCrmMockupWebp from '../assets/LEADS_CRM.webp';
 import profilMockup from '../assets/INTERFACE_SOCIALAPP.png';
+import tabletWebp from '../assets/DASHBOARD_TABLETTE.webp';
+import tabletPng from '../assets/DASHBOARD_TABLETTE.png';
 import EventQuickCreateModal from '../components/EventQuickCreateModal';
 
 /* ─────────────────────────────────────────────
    DONNÉES
 ───────────────────────────────────────────── */
+// Activité des 7 derniers jours : [jour, vues, clics] (chaque série a sa propre échelle)
+const DAYS = [['Sam', 64, 1], ['Dim', 4, 1], ['Lun', 61, 1], ['Mar', 123, 27], ['Mer', 52, 10], ['Jeu', 117, 17], ['Ven', 29, 32]];
+const MAX_V = Math.max(...DAYS.map((d) => d[1]));
+const MAX_C = Math.max(...DAYS.map((d) => d[2]));
+
 const NAV_LINKS = [['#f', 'Fonctionnalités'], ['#crm', 'CRM'], ['#m', 'Boutique'], ['#t', 'Tarifs'], ['#q', 'FAQ']];
 
 const PLANS = [
@@ -164,8 +171,6 @@ function PlanModal({ onClose, onSelect, billing, setBilling }) {
    HERO : tablette (dashboard) puis téléphone (profil public), en boucle
 ───────────────────────────────────────────── */
 function HeroDevices() {
-  const side = ['chart', 'trend', 'live', 'users', 'bag', 'ticket', 'form'];
-  const bars = [38, 52, 44, 68, 58, 82, 100];
   const rows = [
     { l: 'WhatsApp', c: '#25D366', i: 'chat' },
     { l: 'Instagram', c: '#E1306C', i: 'image' },
@@ -177,34 +182,22 @@ function HeroDevices() {
     <div className="sa-dvw" aria-label="Aperçu du tableau de bord et du profil public SocialApp">
       <div className="sa-dv">
         <div className="sa-dv-tab">
-          <div className="sa-dv-bez">
-            <div className="sa-dv-scr">
-              <div className="sa-dv-side">
-                {side.map((n, i) => <span key={n} className={i === 0 ? 'a' : ''}><Ic n={n} /></span>)}
-              </div>
-              <div className="sa-dv-main">
-                <div className="sa-dv-h">
-                  <div><b>Dashboard</b><small>Bienvenue · Dorine Fashion</small></div>
-                  <span className="sa-dv-live"><i />3 visiteurs en direct</span>
-                </div>
-                <div className="sa-dv-kpi">
-                  {[['450', 'Vues', '#6366f1'], ['89', 'Clics', '#f59e0b'], ['22%', 'CTR', '#16a34a'], ['12', 'Leads', '#ec4899']].map(([v, l, c]) => (
-                    <div key={l}><b style={{ color: c }}>{v}</b><small>{l}</small></div>
-                  ))}
-                </div>
-                <div className="sa-dv-two">
-                  <div className="sa-dv-box">
-                    <small>Visites · 7 jours</small>
-                    <div className="sa-dv-bars">{bars.map((h, i) => <i key={i} style={{ height: h + '%', animationDelay: i * 70 + 'ms' }} />)}</div>
+          <div className="sa-tstage">
+            <picture>
+              <source srcSet={tabletWebp} type="image/webp" />
+              <img src={tabletPng} alt="Tablette affichant le tableau de bord Analytics" width="1976" height="1312" decoding="async" />
+            </picture>
+            <div className="sa-tchart" role="img" aria-label="Activité des 7 derniers jours : vues et clics par jour">
+              <div className="sa-tt">Activité — 7 derniers jours</div>
+              <div className="sa-tleg"><span><i className="sa-lv" />Vues</span><span><i className="sa-lc" />Clics</span></div>
+              <div className="sa-tplot">
+                {DAYS.map(([j, v, c], i) => (
+                  <div className="sa-tday" key={j}>
+                    <div className="sa-tbar sa-tv" style={{ '--h': (v / MAX_V * 100).toFixed(1) + 'px', '--i': i, '--k': 0 }} />
+                    <div className="sa-tbar sa-tc" style={{ '--h': (c / MAX_C * 100).toFixed(1) + 'px', '--i': i, '--k': 1 }} />
+                    <div className="sa-tlab">{j}</div>
                   </div>
-                  <div className="sa-dv-box">
-                    <small>Top pays</small>
-                    {[['CI', 85], ['FR', 40], ['SN', 25]].map(([c, w]) => (
-                      <div className="sa-dv-ctry" key={c}><em>{c}</em><u><i style={{ width: w + '%' }} /></u></div>
-                    ))}
-                  </div>
-                </div>
-                <div className="sa-dv-chips"><span style={{ background: 'rgba(99,102,241,.14)', color: '#4f46e5' }}>4 Prospects</span><span style={{ background: 'rgba(239,68,68,.12)', color: '#dc2626' }}>2 Chauds</span><span style={{ background: 'rgba(34,197,94,.14)', color: '#15803d' }}>6 Clients</span></div>
+                ))}
               </div>
             </div>
           </div>
@@ -250,7 +243,7 @@ function HeroDevices() {
    STYLES
 ───────────────────────────────────────────── */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&family=Inter:wght@500;600;700&display=swap');
 .sa-p{font-family:'Sora',system-ui,sans-serif;color:#1d1a2b;line-height:1.6;background-color:#f8f5ef;background-image:radial-gradient(900px 600px at 80% 0,rgba(255,107,53,.16),transparent 70%),radial-gradient(700px 600px at 0 22%,rgba(167,139,250,.16),transparent 70%),radial-gradient(800px 600px at 100% 45%,rgba(247,201,72,.2),transparent 70%),radial-gradient(800px 600px at 0 70%,rgba(236,72,153,.1),transparent 70%),radial-gradient(900px 600px at 70% 100%,rgba(255,107,53,.14),transparent 70%)}
 .sa-p *{box-sizing:border-box}.sa-p a{color:inherit;text-decoration:none}
 .sa-w{max-width:1280px;margin:0 auto;padding:0 40px}
@@ -574,8 +567,8 @@ const CSS = `
 .sa-dv-shop i{display:block;height:52px}.sa-dv-shop b{display:block;padding:5px 8px;font-size:10px}
 .sa-dv-fb{position:absolute;z-index:3;padding:10px 14px;border-radius:14px;background:#fff;border:1px solid rgba(29,26,43,.1);box-shadow:0 16px 36px rgba(60,40,20,.2);opacity:0}
 .sa-dv-fb b{display:block;font-size:11px}.sa-dv-fb small{display:block;font-size:10px;color:#7b788a}
-.sa-dv-b1{left:372px;top:20px;animation:sa-dvB1 14s ease-in-out infinite}
-.sa-dv-b2{left:468px;top:214px;text-align:center;animation:sa-dvB1 14s ease-in-out infinite .15s}
+.sa-dv-b1{left:372px;top:34px;animation:sa-dvB1 14s ease-in-out infinite}
+.sa-dv-b2{left:454px;top:236px;text-align:center;animation:sa-dvB1 14s ease-in-out infinite .15s}
 .sa-dv-b3{left:12px;top:372px;animation:sa-dvB3 14s ease-in-out infinite}
 .sa-dv-pills{position:absolute;left:0;right:0;top:442px;display:flex;justify-content:center;gap:10px}
 .sa-dv-pills span{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:100px;font-size:12px;font-weight:700;border:1px solid rgba(29,26,43,.12)}
@@ -595,6 +588,23 @@ const CSS = `
 @media(max-width:640px){.sa-dvw{--k:.64}}
 @media(max-width:430px){.sa-dvw{--k:.54}}
 @media(prefers-reduced-motion:reduce){.sa-dv-tab{opacity:1;animation:none}.sa-dv-phone,.sa-dv-fb,.sa-dv-pills{display:none}.sa-dv-bars i{animation:none}}
+
+.sa-dv-tab{left:10px;top:60px;width:540px;height:359px}
+.sa-tstage{position:absolute;left:0;top:0;width:1976px;height:1312px;transform:scale(.27328);transform-origin:0 0;filter:drop-shadow(0 110px 110px rgba(60,30,10,.3))}
+.sa-tstage picture{display:block}
+.sa-tstage img{position:absolute;left:0;top:0;width:1976px;height:1312px;max-width:none;display:block}
+.sa-tchart{position:absolute;left:0;top:0;width:1850px;height:215px;transform-origin:0 0;transform:matrix3d(1.012488429,0.1702374219,0,0.0001253177483,0.2278952721,0.9780024482,0,-6.036104797e-05,0,0,1,0,232.6,377.6,0,1);background:#fefefe;border-radius:18px;box-shadow:0 0 0 1px #fefefe;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}
+.sa-tt{position:absolute;left:21px;top:20px;font-size:21px;font-weight:700;color:#0f172a;letter-spacing:-.01em;line-height:28px;white-space:nowrap}
+.sa-tleg{position:absolute;right:16px;top:22px;display:flex;gap:22px;font-size:14px;font-weight:500;color:#0f172a;line-height:22px}
+.sa-tleg i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:8px;vertical-align:-2px}
+.sa-lv{background:#fe6b19}.sa-lc{background:#17b154}
+.sa-tplot{position:absolute;left:14px;right:16px;top:72px;height:100px;display:flex;align-items:flex-end}
+.sa-tday{flex:1;min-width:0;display:flex;align-items:flex-end;justify-content:center;gap:4px;height:100%;position:relative}
+.sa-tbar{width:124px;height:var(--h);min-height:3px;border-radius:7px;animation:sa-rise 14s cubic-bezier(.22,1,.36,1) infinite both;animation-delay:calc(var(--i)*110ms + var(--k)*60ms)}
+.sa-tv{background:#fe6b19}.sa-tc{background:#17b154}
+.sa-tlab{position:absolute;left:0;right:0;top:108px;text-align:center;font-size:15px;font-weight:500;color:#475569}
+@keyframes sa-rise{0%,7%{height:0}18%{height:var(--h)}44%{height:var(--h)}50%,100%{height:0}}
+@media(prefers-reduced-motion:reduce){.sa-tbar{animation:none}}
 
 `;
 

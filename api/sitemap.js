@@ -48,7 +48,7 @@ async function fetchAllProfiles(supabase) {
       .from("link_profiles")
       .select("username")
       .not("username", "is", null)
-      // .eq("is_public", true)   // ← à activer si une colonne indique qu'un profil est public/actif
+      .eq("is_public", true) // seuls les profils publics sont indexés
       .order("username", { ascending: true }) // ordre stable, indispensable pour paginer
       .range(from, from + PAGE_SIZE - 1);
     if (error) throw error;

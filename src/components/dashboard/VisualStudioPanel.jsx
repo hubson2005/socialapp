@@ -64,6 +64,7 @@ const fmtDate = (iso) => (iso
 
 /* ───────────────────────── Composition de l'image ───────────────────────── */
 // <draw>
+const MONTHLY_QUOTA = 3; // doit correspondre au trigger SQL tracked_link_quota_check
 const MAX_SIDE = 2048; // limite la taille du canvas (mémoire des téléphones)
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -287,6 +288,7 @@ export default function VisualStudioPanel({ profileId }) {
   const [clicks, setClicks]       = useState([]);
   const [loadingClicks, setLC]    = useState(false);
   const [hideBots, setHideBots]   = useState(true);
+  const [usedThisMonth, setUsed] = useState(0);
 
   const [img, setImg]             = useState(null);
   const [imgName, setImgName]     = useState('');
@@ -319,6 +321,15 @@ export default function VisualStudioPanel({ profileId }) {
     setLL(false);
   }, [profileId]);
   useEffect(() => { loadLinks(); }, [loadLinks]);
+
+  /* ── Quota mensuel (compteur jamais décrémenté côté base) ── */
+  const loadQuota = useCallback(async () => {
+    const d = new Date();
+    const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    const { data } = await supabase.from('tracked_link_quota').select('n').eq('month', month).maybeSingle();
+    setUsed(data?.n || 0);
+  }, []);
+  useEffect(() => { loadQuota(); }, [loadQuota]);
 
   /* ── Chargement des clics du lien sélectionné ── */
   const loadClicks = useCallback(async (id) => {
@@ -362,6 +373,7 @@ export default function VisualStudioPanel({ profileId }) {
   /* ── Création d'un lien ── */
   const createLink = async () => {
     if (creating) return;
+    if (usedThisMonth >= MONTHLY_QUOTA) { toast.error(`Quota atteint : ${MONTHLY_QUOTA} liens par mois. Il se renouvelle le 1er du mois prochain.`); return; }
     let destination;
     try { destination = normalizeUrl(dest); } catch (e) { toast.error(e.message); return; }
     setCreating(true);
@@ -383,6 +395,7 @@ export default function VisualStudioPanel({ profileId }) {
       setLinks((prev) => [created, ...prev]);
       setSelected(created.id);
       setName(''); setDest('');
+      setUsed((n) => n + 1);
       toast.success('Lien créé : ' + shortUrlOf(created.code));
     }
     setCreating(false);
@@ -475,7 +488,7 @@ export default function VisualStudioPanel({ profileId }) {
             <input id="vsp-dest" className="vsp-input" placeholder="https://socialapp.work/mon-profil" value={dest}
               inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="done"
               onChange={(e) => setDest(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createLink()} />
-            <button type="button" className="vsp-btn primary block" onClick={createLink} disabled={creating || !dest.trim()}>
+            <button type="button" className="vsp-btn primary block" onClick={createLink} disabled={creating || !dest.trim() || usedThisMonth >= MONTHLY_QUOTA}>
               {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Créer le lien tracké
             </button>
             <p className="vsp-hint">Ou touchez un lien existant dans la liste plus bas pour le réutiliser.</p>
@@ -529,7 +542,7 @@ export default function VisualStudioPanel({ profileId }) {
       {/* ── Mes liens ── */}
       <div className="vsp-card" style={{ marginTop: 12 }}>
         <h3 className="vsp-step" style={{ justifyContent: 'space-between' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Link2 size={16} /> Mes liens trackés ({links.length})</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Link2 size={16} /> Mes liens trackés ({links.length}) · {usedThisMonth}/{MONTHLY_QUOTA} ce mois-ci</span>
           <button type="button" className="vsp-icon" aria-label="Actualiser" onClick={loadLinks}><RefreshCw size={16} /></button>
         </h3>
         {loadingLinks ? (
@@ -577,7 +590,7 @@ export default function VisualStudioPanel({ profileId }) {
           <div className="vsp-tools">
             <label className="vsp-check">
               <input type="checkbox" checked={hideBots} onChange={(e) => setHideBots(e.target.checked)} />
-              Masquer les robots (aperçus de liens)
+              Masquer les robots ({clicks.filter((c) => c.is_bot).length}) — aperçus de liens
             </label>
             <button type="button" className="vsp-btn" onClick={exportCsv}><FileDown size={16} /> Export CSV</button>
           </div>

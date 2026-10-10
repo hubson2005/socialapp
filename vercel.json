@@ -9,14 +9,14 @@
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/sitemap.xml"
+      "destination": "/api/sitemap"
     },
     {
       "source": "/r/:code",
       "destination": "/api/r?code=:code"
     },
     {
-      "source": "/:username((?!(?:api|assets|fonts|admin|dashboard|login|signup|register|pricing|auth|reset-password|forgot-password|e|event|events|booking|marketplace|payment|success|cancel|terms|privacy|blog|sitemap|robots|manifest|favicon|preview-profile)$)[A-Za-z0-9_-]{1,64})",
+      "source": "/:username((?!(?:api|assets|fonts|admin|dashboard|login|signup|register|pricing|auth|reset-password|forgot-password|delete-account|e|event|events|booking|marketplace|payment|success|cancel|terms|terms-of-service|privacy|privacy-policy|blog|sitemap|robots|manifest|favicon|preview-profile|r|webhooks|home)$)[A-Za-z0-9_-]{1,64})",
       "destination": "/api/profile?username=:username"
     },
     {

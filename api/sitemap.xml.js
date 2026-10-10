@@ -1,65 +1,82 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
-);
+const BASE_URL = "https://www.socialapp.work";
+const PAGE_SIZE = 1000;   // Supabase renvoie au maximum 1000 lignes par requête
+const MAX_URLS = 50000;   // limite d'un fichier sitemap (au-delà : sitemap index)
+
+// Pages publiques indexables (pas de /login, /dashboard…)
+const STATIC_PAGES = ["/", "/privacy-policy", "/terms-of-service"];
+
+// Noms réservés : ce ne sont pas des profils
+const RESERVED = new Set([
+  "login", "dashboard", "api", "e", "admin", "privacy-policy", "terms-of-service", "sitemap.xml", "robots.txt",
+]);
+
+// Un identifiant valide : lettres, chiffres, point, tiret, souligné
+const VALID_USERNAME = /^[A-Za-z0-9._-]{1,60}$/;
+
+const escapeXml = (s) =>
+  String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
+async function fetchAllProfiles(supabase) {
+  const rows = [];
+  for (let from = 0; rows.length < MAX_URLS; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("link_profiles")
+      .select("username, updated_at")
+      .not("username", "is", null)
+      // .eq("is_public", true)   // ← à activer si une colonne indique qu'un profil est public/actif
+      .order("username", { ascending: true }) // ordre stable, indispensable pour paginer
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
 
 export default async function handler(req, res) {
   try {
-    const { data: profiles, error } = await supabase
-      .from("link_profiles")
-      .select("username, updated_at")
-      .not("username", "is", null);
+    const supabase = createClient(
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+    );
 
-    if (error) throw error;
+    const profiles = await fetchAllProfiles(supabase);
 
-    const baseUrl = "https://www.socialapp.work";
+    const seen = new Set();
+    const urls = [];
 
-    const staticPages = [
-      "",
-      "/privacy-policy",
-      "/terms-of-service",
-    ];
+    for (const page of STATIC_PAGES) {
+      urls.push(`  <url>\n    <loc>${BASE_URL}${page === "/" ? "/" : page}</loc>\n  </url>`);
+    }
 
-    let urls = "";
+    for (const p of profiles) {
+      const name = String(p.username || "").trim();
+      const key = name.toLowerCase();
+      if (!VALID_USERNAME.test(name) || RESERVED.has(key) || seen.has(key)) continue;
+      seen.add(key);
 
-    staticPages.forEach((page) => {
-      urls += `
-      <url>
-        <loc>${baseUrl}${page}</loc>
-        <changefreq>weekly</changefreq>
-        <priority>${page === "" ? "1.0" : "0.5"}</priority>
-      </url>`;
-    });
+      const loc = `${BASE_URL}/${encodeURIComponent(name)}`;
+      const d = p.updated_at ? new Date(p.updated_at) : null;
+      const lastmod = d && !Number.isNaN(d.getTime()) ? `\n    <lastmod>${d.toISOString()}</lastmod>` : "";
+      urls.push(`  <url>\n    <loc>${escapeXml(loc)}</loc>${lastmod}\n  </url>`);
+    }
 
-    profiles.forEach((profile) => {
-      urls += `
-      <url>
-        <loc>${baseUrl}/${profile.username}</loc>
-        <lastmod>${new Date(
-          profile.updated_at || Date.now()
-        ).toISOString()}</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>0.8</priority>
-      </url>`;
-    });
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-
-<urlset
-xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-${urls}
-
-</urlset>`;
-
-    res.setHeader("Content-Type", "application/xml");
-    res.setHeader("Cache-Control", "s-maxage=3600");
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
     res.status(200).send(xml);
-
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur sitemap");
+    console.error("sitemap error:", err);
+    res.status(500).setHeader("Content-Type", "text/plain; charset=utf-8").send("Erreur sitemap");
   }
 }

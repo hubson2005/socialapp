@@ -5,8 +5,8 @@
 //   SUPABASE_URL                 ex. https://xxxx.supabase.co
 //   SUPABASE_SERVICE_ROLE_KEY    clé service_role (JAMAIS dans le code client)
 
-const SB_URL = process.env.https://gxguirtpunmiiuxpxlap.supabase.co;
-const SB_KEY = process.env.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4Z3VpcnRwdW5taWl1eHB4bGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDc1MDUsImV4cCI6MjA5MjAyMzUwNX0.PTMByHRhVtESEl2DdLgrDaBYb7HJjJ7GldolEIx4gLE;
+const SB_URL = process.env.SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const BOT_RE = /bot|crawler|spider|facebookexternalhit|facebot|whatsapp|telegrambot|twitterbot|slackbot|linkedinbot|pinterest|embedly|discordbot|preview|curl|wget|python-requests|headless|monitor/i;
 

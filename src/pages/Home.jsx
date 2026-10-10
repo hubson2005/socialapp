@@ -61,8 +61,9 @@ const PLANS = [
     btn: { background: 'linear-gradient(135deg,#d98a0b,#f7c948)' },
     features: [
       'Une carte de visite digitale', 'Carte NFC (logo + QR CODE)', 'Analytics avancés complets',
-      'CRM & Pipeline de leads', 'CRM WhatsApp complet', 'Campagnes WhatsApp IA (génération automatique)',
-      'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations',
+      'CRM & Pipeline de leads', 'Fiche contact : historique complet', 'Tâches & rappels CRM',
+      'CRM WhatsApp complet', 'Campagnes WhatsApp IA (génération automatique)',
+      'Calendrier de réservation illimité', 'Formulaires illimités', 'Automatisations & relances avec délai',
       'Toutes les intégrations (HubSpot, Pipedrive, Google Analytics, Shopify, PostgreSQL, Salesforce, etc.)',
       "Marketplace : ajout d'articles illimité", '10 imports autorisés (flyers, plaquettes, brochures, etc.)',
       'QR Code personnalisable', 'Tracking IP', 'Support VIP prioritaire',
@@ -82,7 +83,8 @@ const PLANS = [
 const FAQS = [
   { q: "C'est quoi exactement SocialApp ?", a: "SocialApp est votre profil digital tout-en-un : un lien unique et un QR code qui regroupe tous vos réseaux sociaux, WhatsApp, votre boutique et vos événements. Un seul scan, vos clients trouvent tout." },
   { q: 'Combien ça coûte ?', a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO). L'offre BUSINESS est à 3 990 FCFA/mois ou 39 900 FCFA/an (10 mois payés pour 12 : 2 mois offerts). Module Événement disponible à 3 500 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
-  { q: "Qu'est-ce que le CRM ?", a: 'Le CRM intégré (offre BUSINESS) vous permet de capturer et gérer vos prospects. Tags intelligents (Prospect, Chaud, Client, Froid), notes, historique et export CSV. Transformez chaque visiteur en opportunité.' },
+  { q: "Qu'est-ce que le CRM ?", a: 'Le CRM intégré (offre BUSINESS) vous permet de capturer et gérer vos prospects. Tags intelligents (Prospect, Chaud, Client, Froid), fiche contact avec historique complet (réservations, formulaires, achats, notes), tâches avec rappels et export CSV. Les numéros de téléphone sont vérifiés et un même client n\'apparaît qu\'une seule fois. Transformez chaque visiteur en opportunité.' },
+  { q: 'Puis-je programmer des relances automatiques ?', a: "Oui, avec l'offre BUSINESS. Dans Automatisations, enchaînez plusieurs étapes : créer le contact, attendre (de quelques minutes à 30 jours), puis créer une tâche de relance, ajouter un tag ou vous notifier. La relance s'annule toute seule si le contact répond ou change de statut. Vous êtes aussi alerté dans la cloche quand une tâche arrive à échéance." },
   { q: 'Je peux vendre mes produits ?', a: 'Oui ! La marketplace affiche vos produits avec photos, prix et description. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS). Vos clients commandent via WhatsApp. Zéro commission.' },
   { q: 'Le QR code peut-il être modifié sans le réimprimer ?', a: 'Oui ! Modifiez vos liens, votre boutique ou votre WhatsApp à tout moment — votre QR code sur vos flyers et cartes reste valide à vie.' },
   { q: "C'est quoi le mode Événement ?", a: 'Une page publique dédiée à votre événement, avec son propre lien — compte à rebours en direct, galerie photos & vidéos, QR code téléchargeable, formulaire de contact ou RSVP. Disponible à 3 500 FCFA, quel que soit votre plan, via le bouton "Créez un évent".' },
@@ -721,8 +723,8 @@ export default function Home() {
     <>
       <Helmet>
         <title>SocialApp - Votre profil digital et CRM tout-en-un | Côte d'Ivoire</title>
-        <meta name="description" content="SocialApp est une plateforme SaaS ivoirienne de profil digital intelligent. CRM, QR Code, Marketplace, Analytics temps réel. Pour professionnels, commerçants et créateurs. Dès 10 000 FCFA/an." />
-        <meta name="keywords" content="profil digital Côte d'Ivoire, QR code business Abidjan, lien en bio, carte digitale, CRM leads, marketplace Côte d'Ivoire, CRM WhatsApp, analytics profil, événement, SocialApp, page de liens Afrique, carte NFC" />
+        <meta name="description" content="SocialApp est une plateforme SaaS ivoirienne de profil digital intelligent. CRM avec tâches et relances automatiques, QR Code, Marketplace, Analytics temps réel. Pour professionnels, commerçants et créateurs. Dès 10 000 FCFA/an." />
+        <meta name="keywords" content="profil digital Côte d'Ivoire, QR code business Abidjan, lien en bio, carte digitale, CRM leads, marketplace Côte d'Ivoire, CRM WhatsApp, analytics profil, événement, SocialApp, page de liens Afrique, carte NFC, relances automatiques, tâches CRM, suivi des prospects" />
         <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
         <link rel="canonical" href="https://www.socialapp.work/" />
         <meta name="theme-color" content="#f8f5ef" />
@@ -753,7 +755,7 @@ export default function Home() {
           mainEntity: [
             { '@type': 'Question', name: "Combien coûte SocialApp en Côte d'Ivoire ?", acceptedAnswer: { '@type': 'Answer', text: 'Les offres commencent à 10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO) et BUSINESS à 3 990 FCFA/mois ou 39 900 FCFA/an (2 mois offerts). Paiement Mobile Money.' } },
             { '@type': 'Question', name: 'Puis-je vendre mes produits sur SocialApp ?', acceptedAnswer: { '@type': 'Answer', text: 'Oui, marketplace intégrée avec 0% de commission. 7 articles (BASIC), 10 (PRO), illimités (BUSINESS).' } },
-            { '@type': 'Question', name: "C'est quoi le CRM SocialApp ?", acceptedAnswer: { '@type': 'Answer', text: "Gestion de leads avec tags, notes, pipeline et export CSV. Disponible avec l'offre BUSINESS." } },
+            { '@type': 'Question', name: "C'est quoi le CRM SocialApp ?", acceptedAnswer: { '@type': 'Answer', text: "Gestion de leads avec tags, fiche contact complète, tâches et rappels, relances automatiques avec délai, pipeline et export CSV. Disponible avec l'offre BUSINESS." } },
           ],
         })}</script>
       </Helmet>
@@ -926,7 +928,7 @@ export default function Home() {
 <div className="sa-ck">
 <i>✓</i>Collectez automatiquement les contacts et prospects intéressés</div>
 <div className="sa-ck">
-<i>✓</i>Gérez vos clients et opportunités avec un CRM intégré</div>
+<i>✓</i>Gérez vos clients avec un CRM intégré : tâches, rappels et relances automatiques</div>
 <div className="sa-ck">
 <i>✓</i>Suivez vos statistiques, visites, clics et performances en temps réel</div>
 <div className="sa-cta">
@@ -1071,7 +1073,7 @@ export default function Home() {
 </svg>
 </div>
 <h3>CRM & Pipeline de leads</h3>
-<p>Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.</p>
+<p>Capturez, tagguez et suivez vos prospects. Pipeline Prospect, Chaud, Client, fiche contact complète et export CSV.</p>
 <span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
 </div>
 <div className="sa-card sa-fc">
@@ -1126,7 +1128,40 @@ export default function Home() {
 </svg>
 </div>
 <h3>Automatisations & Intégrations</h3>
-<p>Automatisez vos réponses, connectez vos outils. Webhooks, notifications push, flux temps réel.</p>
+<p>Enchaînez des étapes : créez le contact, attendez, puis relancez. L'attente s'annule si le client répond. Webhooks et notifications push.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-clock">
+</use>
+</svg>
+</div>
+<h3>Tâches & rappels</h3>
+<p>Planifiez chaque relance avec une échéance et une priorité. Un rappel arrive dans votre cloche au bon moment : plus aucun prospect oublié.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(236,72,153,.14)"}}>
+<svg className="sa-i">
+<use href="#i-users">
+</use>
+</svg>
+</div>
+<h3>Fiche contact complète</h3>
+<p>Premier contact, réservations, formulaires, achats et notes réunis dans un seul historique. Vous savez tout avant de répondre.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(14,165,233,.14)"}}>
+<svg className="sa-i">
+<use href="#i-live">
+</use>
+</svg>
+</div>
+<h3>Visiteurs sans robots</h3>
+<p>Journal de chaque visite de votre profil, avec les robots et tests automatiques masqués. Vos chiffres reflètent de vrais visiteurs.</p>
 <span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
 </div>
 </div>
@@ -1141,7 +1176,7 @@ export default function Home() {
 </span>CRM intégré</div>
 <h2>Transformez vos visiteurs<br />en <span className="sa-gt">clients fidèles</span>
 </h2>
-<p className="sa-sub" style={{marginBottom:"28px"}}>Chaque scan de votre QR code est une opportunité. Capturez vos leads, suivez leur parcours et concluez plus de ventes — tout depuis votre dashboard.</p>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Chaque scan de votre QR code est une opportunité. Capturez vos leads, relancez-les au bon moment et concluez plus de ventes — tout depuis votre dashboard.</p>
 <div className="sa-it">
 <div className="sa-ic" style={{background:"rgba(236,72,153,.12)"}}>
 <svg className="sa-i">
@@ -1162,8 +1197,44 @@ export default function Home() {
 </svg>
 </div>
 <div>
-<b>Notes & historique</b>
-<span>Ajoutez des notes sur chaque contact. Gardez le contexte de vos échanges.</span>
+<b>Fiche contact complète</b>
+<span>Premier contact, réservations, formulaires, achats et notes sur une seule frise chronologique.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-clock">
+</use>
+</svg>
+</div>
+<div>
+<b>Tâches & rappels</b>
+<span>Une échéance, une priorité, et une alerte dans votre cloche le moment venu.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(139,92,246,.14)"}}>
+<svg className="sa-i">
+<use href="#i-bolt">
+</use>
+</svg>
+</div>
+<div>
+<b>Relances automatiques</b>
+<span>Créez le contact, attendez quelques heures ou jours, puis relancez. Annulation si le client répond.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(14,165,233,.14)"}}>
+<svg className="sa-i">
+<use href="#i-badge">
+</use>
+</svg>
+</div>
+<div>
+<b>Contacts propres</b>
+<span>Numéros de téléphone vérifiés, doublons évités : un même client n'apparaît qu'une fois.</span>
 </div>
 </div>
 <div className="sa-it">
@@ -1225,6 +1296,18 @@ export default function Home() {
 <div>
 <b>Top liens & taux de clic</b>
 <span>Identifiez vos liens les plus performants.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(14,165,233,.14)"}}>
+<svg className="sa-i">
+<use href="#i-users">
+</use>
+</svg>
+</div>
+<div>
+<b>Visiteurs sans robots</b>
+<span>Chaque visite est enregistrée, robots et tests automatiques masqués (offre BUSINESS).</span>
 </div>
 </div>
 <span className="sa-pl" style={{background:"rgba(255,107,53,.12)",color:"#c2410c"}}>Disponible avec PRO & BUSINESS</span>

@@ -12,6 +12,8 @@ import leadsCrmMockup from '../assets/LEADS_CRM.png';
 import leadsCrmMockupWebp from '../assets/LEADS_CRM.webp';
 import profilMockup from '../assets/INTERFACE_SOCIALAPP.png';
 import tabletWebp from '../assets/DASHBOARD_TABLETTE.webp';
+import tabletPng from '../assets/DASHBOARD_TABLETTE.png';
+import phoneWebp from '../assets/TELEPHONE_SOCIALAPP.webp';
 import EventQuickCreateModal from '../components/EventQuickCreateModal';
 
 /* ─────────────────────────────────────────────
@@ -84,11 +86,6 @@ const FAQS = [
   { q: 'Comment je reçois ma carte PVC ou NFC ?', a: 'Dès votre souscription PRO ou BUSINESS, notre équipe vous contacte sur WhatsApp pour personnaliser votre carte. Réception sous 7 jours.' },
   { q: 'Comment payer ?', a: 'Paiement via Mobile Money (Orange Money, Wave, MTN). Contactez-nous sur WhatsApp au +225 05 76 03 12 12. Aucune carte bancaire requise.' },
 ];
-
-/* ─────────────────────────────────────────────
-   ICÔNE SVG (sprite défini dans la page)
-───────────────────────────────────────────── */
-const Ic = ({ n }) => <svg className="sa-i"><use href={'#i-' + n} /></svg>;
 
 /* ─────────────────────────────────────────────
    BASCULE MENSUEL / ANNUEL
@@ -172,29 +169,105 @@ function PlanModal({ onClose, onSelect, billing, setBilling }) {
 }
 
 /* ─────────────────────────────────────────────
+   TÉLÉPHONE : image + bandes de réseaux redessinées en vectoriel
+───────────────────────────────────────────── */
+const stroke = 'fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"';
+
+const links = [
+  { t: "TikTok SocialApp", bg: "#0b0b0d",
+    glyph: '<g ' + stroke + '><ellipse cx="41" cy="68" rx="9" ry="7"/><path d="M49 66V31"/><path d="M49 31c11 1 17 8 19 19"/></g>' },
+  { t: "LinkedIn SocialApp", bg: "#1f70c8",
+    glyph: '<g ' + stroke + '><rect x="27" y="38" width="46" height="32" rx="6"/><path d="M40 38v-5a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v5"/><path d="M27 54h46"/></g>' },
+  { t: "Instagram SocialApp", bg: "url(#sa-ig)",
+    glyph: '<g ' + stroke + '><rect x="24" y="36" width="52" height="38" rx="8"/><path d="M38 36l4-8h16l4 8"/><circle cx="50" cy="55" r="11"/></g>' },
+  { t: "www.socialapp.work", bg: "#5a58d2",
+    glyph: '<g ' + stroke + '><circle cx="50" cy="50" r="24"/><ellipse cx="50" cy="50" rx="10" ry="24"/><path d="M26 50h48"/></g>' },
+  { t: "Wave", bg: "#27bfc6",
+    glyph: '<svg x="3" y="3" width="94" height="94" viewBox="96.80 242.00 200.30 200.30"><g transform="translate(0,739) scale(0.1,-0.1)" fill="#fff" stroke="none"><path d="M2013 4836 c-61 -20 -127 -61 -159 -98 -54 -65 -73 -125 -101 -327 -14 -105 -29 -190 -34 -189 -4 2 -51 40 -104 86 -53 45 -105 82 -115 82 -11 0 -38 -16 -60 -36 -66 -60 -85 -165 -45 -244 8 -14 59 -70 115 -125 136 -134 154 -166 149 -258 -2 -40 -3 -124 -3 -187 0 -104 2 -121 27 -174 15 -33 39 -75 52 -92 24 -31 26 -32 53 -18 52 27 146 11 195 -34 25 -22 57 -86 57 -112 0 -18 6 -20 63 -20 l63 0 12 44 c23 89 106 145 194 132 93 -14 90 -14 125 37 76 114 84 198 44 487 -122 878 -118 853 -167 917 -42 56 -76 84 -133 111 -65 30 -166 38 -228 18z m12 -252 c36 -37 -5 -102 -52 -83 -18 6 -23 16 -23 42 0 54 40 76 75 41z m219 0 c22 -22 20 -60 -5 -78 -35 -24 -69 -3 -69 45 0 46 42 65 74 33z m-21 -178 l58 -18 -25 -19 c-41 -33 -109 -59 -153 -59 -49 0 -77 9 -135 46 l-43 27 65 23 c75 27 142 27 233 0z m-46 -317 c140 -68 212 -351 143 -570 -65 -211 -218 -286 -342 -166 -126 122 -157 421 -64 606 68 133 161 179 263 130z"/></g></svg>' },
+  { t: "MTN Mobile Money", bg: "#f6c90e",
+    glyph: '<g fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"><rect x="36" y="24" width="28" height="52" rx="6"/><path d="M46 68h8"/></g><circle cx="50" cy="48" r="7" fill="#1a1a1a"/>' },
+  { t: "Adresse Bitcoin", sub: "bc1qexample7k3k9m2p2w8n4r6t0y2w8q3z5c7d9f", bg: "#f7931a",
+    glyph: '<path d="M44 22v10M56 22v10M44 68v10M56 68v10" stroke="#fff" stroke-width="5" stroke-linecap="round"/><text x="50" y="66" text-anchor="middle" font-size="52" font-weight="800" fill="#fff" font-family="Inter, system-ui, sans-serif">B</text>' }
+];
+const defs = '<defs><linearGradient id="sa-ig" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fdc25a"/><stop offset=".35" stop-color="#f6652f"/><stop offset=".65" stop-color="#d62976"/><stop offset="1" stop-color="#7a35c4"/></linearGradient></defs>';
+
+const P = {
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>'
+};
+
+const PBTN_LABEL_W = { WhatsApp: 84, Téléphone: 92, Facebook: 80 }; // largeur imposée du libellé (perspective)
+const PBTNS = [
+  { cx: 417.5, cy: 822.7, w: 166, h: 71.4, a: 2.2, g: 'sa-gGreen', ic: P.chat, label: 'WhatsApp' },
+  { cx: 588.7, cy: 829.5, w: 153.4, h: 69.3, a: 2.0, g: 'sa-gGreen', ic: P.phone, label: 'Téléphone' },
+  { cx: 750.4, cy: 836.8, w: 139.6, h: 67.6, a: 2.2, g: 'sa-gBlue', ic: P.like, label: 'Facebook' },
+];
+
+function PhoneVisual() {
+  const T = (x, y, a, len) => ({ x, y, transform: `rotate(${a} ${x} ${y})`, textLength: len, lengthAdjust: 'spacingAndGlyphs' });
+  return (
+    <div className="sa-ph-stage">
+      <img src={phoneWebp} alt="Téléphone affichant un profil SocialApp avec ses liens de réseaux sociaux" width="1080" height="2280" decoding="async" />
+      <svg className="sa-ph-hdr" viewBox="0 0 1080 2280" aria-hidden="true">
+        <defs>
+          <linearGradient id="sa-gGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#58cf83" /><stop offset="1" stopColor="#38b062" /></linearGradient>
+          <linearGradient id="sa-gBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3f8be3" /><stop offset="1" stopColor="#2467c2" /></linearGradient>
+          <filter id="sa-pillShadow" x="-20%" y="-30%" width="140%" height="190%"><feDropShadow dx="0" dy="5" stdDeviation="5" floodColor="#000" floodOpacity=".35" /></filter>
+        </defs>
+        <text {...T(457.1, 680.8, 2.1, 173.5)} fontSize="34" fontWeight="700" fill="#fff">Sara Kouamé</text>
+        <text {...T(457.3, 722.8, 2.3, 274.3)} fontSize="20" fontWeight="500" fill="rgba(255,255,255,.80)">Directrice Marketing · SocialApp</text>
+        <text {...T(235.9, 332.7, 3, 156.4)} fontSize="32" fontWeight="800" fill="#fff">Votre profil</text>
+        <text {...T(237.5, 368.7, 3, 96.1)} fontSize="32" fontWeight="800" fill="#ff7a1a">digital,</text>
+        <text {...T(237.5, 404.0, 3, 153.4)} fontSize="32" fontWeight="800" fill="#fff">votre <tspan fill="#8b5cf6">CRM.</tspan></text>
+        {PBTNS.map((b) => {
+          const icon = 26, gap = 9, iw = icon * 0.86, tl = PBTN_LABEL_W[b.label], x0 = -(iw + gap + tl) / 2;
+          return (
+            <g key={b.label} transform={`translate(${b.cx} ${b.cy}) rotate(${b.a})`}>
+              <rect x={-b.w / 2} y={-b.h / 2} width={b.w} height={b.h} rx={b.h * 0.42} ry={b.h / 2} fill={`url(#${b.g})`} stroke="rgba(255,255,255,.3)" strokeWidth="1.6" filter="url(#sa-pillShadow)" />
+              <rect x={-b.w / 2 + 6} y={-b.h / 2 + 3} width={b.w - 12} height={b.h * 0.42} rx={b.h * 0.3} ry={b.h * 0.2} fill="rgba(255,255,255,.16)" />
+              <g transform={`translate(${x0} ${-icon / 2}) scale(${(icon / 24) * 0.86} ${icon / 24})`} fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: b.ic }} />
+              <text x={x0 + iw + gap} y="1" fontSize="23" fontWeight="700" fill="#fff" dominantBaseline="central" textLength={tl} lengthAdjust="spacingAndGlyphs">{b.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="sa-ph-plane" aria-hidden="true">
+        {links.map((l, i) => (
+          <div className="sa-ph-item sa-ph-band" style={{ '--n': i }} key={l.t}>
+            <div className="sa-ph-ico"><svg viewBox="0 0 100 100" aria-hidden="true" dangerouslySetInnerHTML={{ __html: (i === 2 ? defs : '') + '<circle cx="50" cy="50" r="50" fill="' + l.bg + '"/>' + l.glyph }} /></div>
+            {l.sub ? <div className="sa-ph-label sa-ph-two"><b>{l.t}</b><span>{l.sub}</span></div> : <div className="sa-ph-label">{l.t}</div>}
+            {l.sub && <div className="sa-ph-copy"><svg viewBox="0 0 100 100" fill="none" stroke="#fff" strokeWidth="6" strokeLinejoin="round"><rect x="30" y="24" width="38" height="44" rx="8" /><rect x="40" y="38" width="38" height="44" rx="8" fill="rgba(60,40,32,.9)" /></svg></div>}
+          </div>
+        ))}
+        <div className="sa-ph-item sa-ph-support" style={{ '--n': 7 }}>
+          <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"><path d="M7 6h26a4 4 0 0 1 4 4v15a4 4 0 0 1-4 4H20l-8 7v-7H7a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z" /></svg>
+          Contactez notre support
+        </div>
+        <div className="sa-ph-item sa-ph-foot" style={{ '--n': 8 }}>
+          <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M16 24l8-8M14 18l-3 3a5 5 0 0 0 7 7l3-3M26 22l3-3a5 5 0 0 0-7-7l-3 3" /></svg>
+          Créé avec SocialApp
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    HERO : tablette (dashboard) puis téléphone (profil public), en boucle
 ───────────────────────────────────────────── */
+const Ic = ({ n }) => <svg className="sa-i"><use href={'#i-' + n} /></svg>;
+
 function HeroDevices() {
-  const rows = [
-    { l: 'WhatsApp', c: '#25D366', i: 'chat' },
-    { l: 'Instagram', c: '#E1306C', i: 'image' },
-    { l: 'Boutique', c: '#ff6b35', i: 'bag' },
-    { l: 'Facebook', c: '#1877F2', t: 'f' },
-  ];
   return (
     <div className="sa-dvw" aria-label="Aperçu du tableau de bord et du profil public SocialApp">
       <div className="sa-dv">
         <div className="sa-dv-tab">
           <div className="sa-tstage">
-  <img
-    src={tabletWebp}
-    alt="Tablette affichant le tableau de bord Analytics"
-    width="1976"
-    height="1312"
-    decoding="async"
-    loading="eager"
-    fetchPriority="high"
-  />
+            <picture>
+              <source srcSet={tabletWebp} type="image/webp" />
+              <img src={tabletPng} alt="Tablette affichant le tableau de bord Analytics" width="1976" height="1312" decoding="async" loading="eager" fetchPriority="high" />
+            </picture>
             <div className="sa-tchart" role="img" aria-label="Activité des 7 derniers jours : vues et clics par jour">
               <div className="sa-tt">Activité — 7 derniers jours</div>
               <div className="sa-tleg"><span><i className="sa-lv" />Vues</span><span><i className="sa-lc" />Clics</span></div>
@@ -211,28 +284,7 @@ function HeroDevices() {
           </div>
         </div>
 
-        <div className="sa-dv-phone">
-          <div className="sa-dv-pbez">
-            <div className="sa-dv-notch" />
-            <div className="sa-dv-pscr">
-              <div className="sa-dv-cover" />
-              <div className="sa-dv-av sa-g">D</div>
-              <div className="sa-dv-pname">Dorine Fashion <span style={{ color: '#22c55e' }}><Ic n="badge" /></span></div>
-              <div className="sa-dv-pbio">Mode &amp; accessoires · Abidjan</div>
-              <div className="sa-dv-links">
-                {rows.map((r, i) => (
-                  <div className="sa-dv-link" key={r.l} style={{ animationDelay: i * 90 + 'ms' }}>
-                    <span style={{ background: r.c }}>{r.i ? <Ic n={r.i} /> : r.t}</span>{r.l}<em>›</em>
-                  </div>
-                ))}
-              </div>
-              <div className="sa-dv-shop">
-                <div style={{ animationDelay: '420ms' }}><i style={{ background: 'linear-gradient(135deg,#f6b58f,#e8845a)' }} /><b>14 000 F</b></div>
-                <div style={{ animationDelay: '500ms' }}><i style={{ background: 'linear-gradient(135deg,#c9b8f5,#8f7be0)' }} /><b>10 000 F</b></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div className="sa-dv-phone"><PhoneVisual /></div>
 
         <div className="sa-dv-fb sa-dv-b1"><b>Nouveau lead !</b><small>Kofi M. · via QR Code</small></div>
         <div className="sa-dv-fb sa-dv-b2"><small>Vues aujourd'hui</small><b style={{ fontSize: '22px', color: '#ff6b35' }}>+247</b><small style={{ color: '#16a34a' }}>↑ 34% vs hier</small></div>
@@ -249,7 +301,6 @@ function HeroDevices() {
 
 /* ─────────────────────────────────────────────
    STYLES
-   (les polices Sora + Inter sont chargées dans index.html, pas ici)
 ───────────────────────────────────────────── */
 const CSS = `
 .sa-p{font-family:'Sora',system-ui,sans-serif;color:#1d1a2b;line-height:1.6;background-color:#f8f5ef;background-image:radial-gradient(900px 600px at 80% 0,rgba(255,107,53,.16),transparent 70%),radial-gradient(700px 600px at 0 22%,rgba(167,139,250,.16),transparent 70%),radial-gradient(800px 600px at 100% 45%,rgba(247,201,72,.2),transparent 70%),radial-gradient(800px 600px at 0 70%,rgba(236,72,153,.1),transparent 70%),radial-gradient(900px 600px at 70% 100%,rgba(255,107,53,.14),transparent 70%)}
@@ -514,7 +565,7 @@ const CSS = `
 :where(.sa-p *){margin:0;padding:0}
 .sa-fqb{all:unset;display:block;width:100%;cursor:pointer;box-sizing:border-box}
 .sa-fqb:focus-visible b{outline:2px solid #ff6b35;outline-offset:4px;border-radius:6px}
-.sa-fq .sa-fqi.open b::after{transform:rotate(45deg)!important}
+.sa-fq .sa-fqi.sa-open b::after{transform:rotate(45deg)!important}
 .sa-lnk{background:none;border:0;padding:0;margin:0 0 11px;font:inherit;color:inherit;cursor:pointer;text-align:left;display:block}
 .sa-lnk:hover{color:#c2410c}
 .sa-btn:focus-visible,.sa-burger:focus-visible{outline:2px solid #1d1a2b;outline-offset:3px}
@@ -536,43 +587,6 @@ const CSS = `
 .sa-dv-tab,.sa-dv-phone{position:absolute;opacity:0;will-change:transform,opacity}
 .sa-dv-tab{left:20px;top:56px;width:520px;height:352px;animation:sa-dvTab 14s ease-in-out infinite}
 .sa-dv-phone{left:164px;top:6px;width:232px;height:468px;animation:sa-dvPhone 14s ease-in-out infinite}
-.sa-dv-bez{height:100%;padding:12px;border-radius:30px;background:#1c1a24;box-shadow:0 40px 80px -30px rgba(60,30,10,.55),inset 0 0 0 2px #36333f}
-.sa-dv-scr{height:100%;display:grid;grid-template-columns:44px 1fr;background:#fff;border-radius:19px;overflow:hidden}
-.sa-dv-side{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;background:#fbf9f4;border-right:1px solid #eee9de}
-.sa-dv-side span{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#6b6874}
-.sa-dv-side span.a{background:rgba(99,102,241,.14);color:#4f46e5}
-.sa-dv-main{display:flex;flex-direction:column;gap:9px;padding:12px 14px;min-width:0;color:#1d1a2b}
-.sa-dv-h{display:flex;justify-content:space-between;align-items:center}
-.sa-dv-h b{display:block;font-size:13px}.sa-dv-h small{font-size:9px;color:#7b788a}
-.sa-dv-live{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:100px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);font-size:9px;font-weight:700;color:#16a34a}
-.sa-dv-live i{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:sa-dvBlink 1.6s infinite}
-.sa-dv-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-.sa-dv-kpi div{background:#f5f1e8;border-radius:11px;padding:8px;text-align:center}
-.sa-dv-kpi b{display:block;font-size:19px;font-weight:900;line-height:1.1}.sa-dv-kpi small{font-size:8px;color:#7b788a}
-.sa-dv-two{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;flex:1;min-height:0}
-.sa-dv-box{background:#f5f1e8;border-radius:11px;padding:9px;display:flex;flex-direction:column;gap:6px;min-height:0}
-.sa-dv-box>small{font-size:9px;font-weight:700;color:#5d5a6e}
-.sa-dv-bars{flex:1;display:flex;align-items:flex-end;gap:6px}
-.sa-dv-bars i{flex:1;border-radius:4px 4px 0 0;background:#e3d6bf;transform-origin:bottom;animation:sa-dvBar 14s ease-out infinite}
-.sa-dv-bars i:last-child{background:#1d1a2b}
-.sa-dv-ctry{display:flex;align-items:center;gap:6px}.sa-dv-ctry em{font-style:normal;font-size:9px;color:#7b788a;width:16px}
-.sa-dv-ctry u{flex:1;height:5px;border-radius:3px;background:#e3dccb;overflow:hidden}.sa-dv-ctry u i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#6366f1,#a78bfa)}
-.sa-dv-chips{display:flex;gap:5px}.sa-dv-chips span{padding:4px 8px;border-radius:7px;font-size:9px;font-weight:700}
-.sa-dv-pbez{position:relative;height:100%;padding:9px;border-radius:38px;background:#1c1a24;box-shadow:0 40px 80px -30px rgba(60,30,10,.6),inset 0 0 0 2px #36333f}
-.sa-dv-notch{position:absolute;top:15px;left:50%;width:62px;height:16px;margin-left:-31px;border-radius:10px;background:#1c1a24;z-index:2}
-.sa-dv-pscr{position:relative;height:100%;border-radius:30px;overflow:hidden;background:#fbf9f4;padding:0 14px;color:#1d1a2b}
-.sa-dv-cover{position:absolute;left:0;right:0;top:0;height:92px;background:linear-gradient(135deg,#ffd9c2,#f7c948 60%,#e9e1fb)}
-.sa-dv-av{position:relative;width:54px;height:54px;margin:62px auto 0;border-radius:16px;border:3px solid #fbf9f4;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#2a1305}
-.sa-dv-pname{text-align:center;margin-top:8px;font-size:13px;font-weight:800}
-.sa-dv-pname .sa-i{width:13px;height:13px;vertical-align:-2px}
-.sa-dv-pbio{text-align:center;font-size:9px;color:#7b788a;margin:2px 0 12px}
-.sa-dv-links{display:flex;flex-direction:column;gap:7px}
-.sa-dv-link{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#fff;border:1px solid #eee9de;font-size:11px;font-weight:700;box-shadow:0 4px 10px -6px rgba(60,40,20,.25);opacity:0;animation:sa-dvRow 14s ease-out infinite}
-.sa-dv-link span{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800}
-.sa-dv-link span .sa-i{width:13px;height:13px}.sa-dv-link em{margin-left:auto;font-style:normal;color:#b7b2a6;font-size:14px}
-.sa-dv-shop{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.sa-dv-shop div{border-radius:12px;background:#fff;border:1px solid #eee9de;overflow:hidden;opacity:0;animation:sa-dvRow 14s ease-out infinite}
-.sa-dv-shop i{display:block;height:52px}.sa-dv-shop b{display:block;padding:5px 8px;font-size:10px}
 .sa-dv-fb{position:absolute;z-index:3;padding:10px 14px;border-radius:14px;background:#fff;border:1px solid rgba(29,26,43,.1);box-shadow:0 16px 36px rgba(60,40,20,.2);opacity:0}
 .sa-dv-fb b{display:block;font-size:11px}.sa-dv-fb small{display:block;font-size:10px;color:#7b788a}
 .sa-dv-b1{left:372px;top:34px;animation:sa-dvB1 14s ease-in-out infinite}
@@ -583,11 +597,8 @@ const CSS = `
 .sa-dv-p1{animation:sa-dvP1 14s steps(1,end) infinite}.sa-dv-p2{animation:sa-dvP2 14s steps(1,end) infinite}
 @keyframes sa-dvTab{0%{opacity:0;transform:translateX(70px) scale(.94)}7%,43%{opacity:1;transform:none}50%,100%{opacity:0;transform:translateX(-70px) scale(.94)}}
 @keyframes sa-dvPhone{0%,50%{opacity:0;transform:translateX(70px) scale(.94)}57%,93%{opacity:1;transform:none}100%{opacity:0;transform:translateX(-70px) scale(.94)}}
-@keyframes sa-dvBar{0%,6%{transform:scaleY(0)}18%,100%{transform:scaleY(1)}}
-@keyframes sa-dvRow{0%,56%{opacity:0;transform:translateY(10px)}63%,93%{opacity:1;transform:none}100%{opacity:0}}
 @keyframes sa-dvB1{0%,12%{opacity:0;transform:translateY(12px) scale(.95)}18%,42%{opacity:1;transform:none}48%,100%{opacity:0;transform:translateY(-6px)}}
 @keyframes sa-dvB3{0%,62%{opacity:0;transform:translateY(12px) scale(.95)}68%,92%{opacity:1;transform:none}98%,100%{opacity:0}}
-@keyframes sa-dvBlink{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes sa-dvP1{0%{background:#1d1a2b;color:#fff;border-color:#1d1a2b}50%{background:rgba(255,255,255,.75);color:#5d5a6e;border-color:rgba(29,26,43,.12)}}
 @keyframes sa-dvP2{0%{background:rgba(255,255,255,.75);color:#5d5a6e;border-color:rgba(29,26,43,.12)}50%{background:#1d1a2b;color:#fff;border-color:#1d1a2b}}
 .sa-dvw:hover .sa-dv *,.sa-dvw:hover .sa-dv{animation-play-state:paused}
@@ -614,12 +625,43 @@ const CSS = `
 @keyframes sa-tbarRise{0%,7%{height:0}18%{height:var(--h)}44%{height:var(--h)}50%,100%{height:0}}
 @media(prefers-reduced-motion:reduce){.sa-tbar{animation:none}}
 
-/* LCP mobile : animation du titre raccourcie */
+.sa-dvw{height:calc(526px*var(--k))}
+.sa-dv{height:526px}
+.sa-dv-tab{top:78px}
+.sa-dv-phone{left:162px;top:6px;width:236px;height:498px}
+.sa-dv-b1{top:52px}.sa-dv-b2{top:252px}.sa-dv-b3{left:8px;top:410px}
+.sa-dv-pills{top:488px}
+.sa-ph-stage{position:absolute;left:0;top:0;width:1080px;height:2280px;transform:scale(.21852);transform-origin:0 0;filter:drop-shadow(0 100px 90px rgba(60,30,10,.35))}
+.sa-ph-stage>img{position:absolute;left:0;top:0;width:1080px;height:2280px;max-width:none;display:block}
+.sa-ph-hdr{position:absolute;left:0;top:0;width:1080px;height:2280px;pointer-events:none;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;max-width:none}
+.sa-ph-plane{position:absolute;left:0;top:0;width:860px;height:1262px;transform-origin:0 0;transform:matrix3d(0.83030826,0.07869739206,0,6.255750666e-05,0,0.9998013903,0,0,0,0,1,0,247,944.6,0,1);font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#f6eee9}
+.sa-ph-item{position:absolute;animation:sa-phEnter 14s infinite both;animation-delay:calc(var(--n)*.1s)}
+.sa-ph-band{left:0;width:860px;height:120px;border-radius:60px;overflow:hidden;top:calc(var(--n)*147.83px);background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.07));border:2px solid rgba(255,255,255,.27);box-shadow:inset 0 2px 0 rgba(255,255,255,.2),inset 0 -2px 0 rgba(0,0,0,.2),0 12px 26px rgba(0,0,0,.3);box-sizing:border-box}
+.sa-ph-band::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 38%,rgba(255,255,255,.26) 50%,transparent 62%);transform:translateX(-115%);animation:sa-phSweep 14s infinite both;animation-delay:calc(var(--n)*.22s)}
+.sa-ph-ico{position:absolute;left:9px;top:9px;width:98px;height:98px;border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.2),0 6px 14px rgba(0,0,0,.4)}
+.sa-ph-ico>svg{display:block;width:100%;height:100%}
+.sa-ph-label{position:absolute;inset:0;display:grid;place-items:center;font-size:25px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.sa-ph-label.sa-ph-two{align-content:center;gap:6px;padding-right:40px}
+.sa-ph-two b{font-size:21px;font-weight:700;letter-spacing:.13em}
+.sa-ph-two span{font-size:19px;font-weight:500;letter-spacing:.02em;text-transform:none;opacity:.92;font-variant-numeric:tabular-nums}
+.sa-ph-copy{position:absolute;right:14px;top:17px;width:84px;height:84px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);display:grid;place-items:center;box-sizing:border-box}
+.sa-ph-copy svg{width:44px;height:44px}
+.sa-ph-support{left:232px;top:1076px;width:396px;height:80px;border-radius:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:14px;background:rgba(46,160,87,.3);border:2px solid rgba(94,214,135,.6);color:#9ff0b9;font-size:23px;font-weight:600;letter-spacing:.01em}
+.sa-ph-support svg{width:34px;height:34px;flex:none}
+.sa-ph-support::before{content:'';position:absolute;inset:-2px;border-radius:40px;border:2px solid rgba(94,214,135,.7);opacity:0;animation:sa-phPing 14s infinite both;animation-delay:.9s}
+.sa-ph-foot{left:286px;top:1180px;width:292px;height:54px;border-radius:27px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;border:1.5px solid rgba(255,255,255,.24);background:rgba(255,255,255,.06);font-size:20px;font-weight:500;color:rgba(255,255,255,.72)}
+.sa-ph-foot svg{width:22px;height:22px}
+@keyframes sa-phEnter{0%,55%{opacity:0;transform:translateX(110px) scale(.96)}61%{opacity:1;transform:translateX(-7px) scale(1.01)}63%,92%{opacity:1;transform:none}96%,100%{opacity:0;transform:translateX(-50px) scale(.98)}}
+@keyframes sa-phSweep{0%,66%{transform:translateX(-115%)}77%,100%{transform:translateX(115%)}}
+@keyframes sa-phPing{0%,74%{opacity:.9;transform:scale(1)}80%,100%{opacity:0;transform:scale(1.14,1.4)}}
+@media(prefers-reduced-motion:reduce){.sa-ph-item,.sa-ph-band::after,.sa-ph-support::before{animation:none}.sa-ph-band::after,.sa-ph-support::before{display:none}}
+.sa-fgd>div>span{display:block;margin-bottom:11px}
 @media(max-width:960px){
 .sa-ttl .sa-ln>span{animation-duration:.5s,9s}
 .sa-ttl .sa-l1{animation-delay:0s,.6s}
 .sa-ttl .sa-l2{animation-delay:.08s,.6s}
 }
+
 `;
 
 /* ─────────────────────────────────────────────
@@ -706,587 +748,830 @@ export default function Home() {
       {showEventModal && <EventQuickCreateModal onClose={() => setShowEventModal(false)} />}
 
       <div className="sa-p">
-        <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
-          <defs>
-            <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" /></symbol>
-            <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 16v-5M12 16V7M17 16v-8" /></symbol>
-            <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6" /></symbol>
-            <symbol id="i-live" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" /><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5" /></symbol>
-            <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" /><circle cx="9" cy="7" r="4" /></symbol>
-            <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" /></symbol>
-            <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></symbol>
-            <symbol id="i-form" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8" /></symbol>
-            <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z" /></symbol>
-            <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v3h20v-3a3 3 0 0 1 0-6V6H2zM13 6v12" /></symbol>
-            <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z" /><circle cx="7" cy="7" r="1" /></symbol>
-            <symbol id="i-note" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /></symbol>
-            <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></symbol>
-            <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20" /></symbol>
-            <symbol id="i-image" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></symbol>
-            <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></symbol>
-            <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l1.9-5.4A8.4 8.4 0 1 1 21 11.5z" /></symbol>
-            <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" /></symbol>
-            <symbol id="i-badge" viewBox="0 0 24 24"><path d="M12 2l2.4 1.8 3-.2 1 2.8 2.5 1.7-.9 2.9.9 2.9-2.5 1.7-1 2.8-3-.2L12 22l-2.4-1.8-3 .2-1-2.8-2.5-1.7.9-2.9-.9-2.9 2.5-1.7 1-2.8 3 .2z" /><path d="m9 12 2 2 4-4" /></symbol>
-            <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><path d="M14 14h3v3M21 14v.01M14 21h3M21 17v4" /></symbol>
-            <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></symbol>
-            <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2" /></symbol>
-            <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></symbol>
-            <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" /></symbol>
-          </defs>
-        </svg>
-
-        <nav className="sa-nav">
-          <div className="sa-brand" role="button" tabIndex={0} aria-label="Retour à l'accueil SocialApp" style={{ cursor: 'pointer' }} onClick={goTop} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') goTop(); }}>
-            <div className="sa-mk sa-g" style={{ overflow: 'hidden' }}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div><span className="sa-bt">SocialApp</span>
-          </div>
-          <div className="sa-lk">{NAV_LINKS.map(([h, l]) => <a key={h} href={h}>{l}</a>)}</div>
-          <div className="sa-nb" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button type="button" className="sa-btn sa-gr" onClick={openEvent}>Créez un évent</button>
-            <button type="button" className="sa-btn sa-nc" onClick={handleCTA}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
-            <button type="button" className={'sa-burger' + (menuOpen ? ' sa-on' : '')} aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}><span /><span /><span /></button>
-          </div>
-          <div className={'sa-mmenu' + (menuOpen ? ' sa-open' : '')}>
-            {NAV_LINKS.map(([h, l]) => <a key={h} href={h} onClick={() => setMenuOpen(false)}>{l}</a>)}
-            <button type="button" className="sa-btn sa-mcta" onClick={() => { setMenuOpen(false); handleCTA(); }}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
-          </div>
-        </nav>
-
-        <div className="sa-w">
-          <header className="sa-hero">
-            <div>
-              <h1 className="sa-ttl">
-                <span className="sa-ln">
-                  <span className="sa-l1">Votre profil digital</span>
-                </span>
-                <span className="sa-ln">
-                  <span className="sa-l2">et CRM <span style={{ whiteSpace: 'nowrap' }}>tout-en-un.</span>
-                  </span>
-                </span>
-              </h1>
-              <div className="sa-pitch">SocialApp est une plateforme tout-en-un qui permet aux entrepreneurs, entreprises, commerciaux et créateurs de contenu de créer un profil professionnel digital, <b>partager leurs contacts via QR Code,</b> collecter des prospects et gérer leurs relations clients grâce à un CRM intégré.</div>
-              <p className="sa-tag">Transformez chaque scan en contact,<br />client ou opportunité.</p>
-              <div className="sa-ck"><i>✓</i>Créez votre carte de visite digitale professionnel avec QR CODE en quelques minutes</div>
-              <div className="sa-ck"><i>✓</i>Partagez vos coordonnées, réseaux sociaux et services via un QR Code unique</div>
-              <div className="sa-ck"><i>✓</i>Collectez automatiquement les contacts et prospects intéressés</div>
-              <div className="sa-ck"><i>✓</i>Gérez vos clients et opportunités avec un CRM intégré</div>
-              <div className="sa-ck"><i>✓</i>Suivez vos statistiques, visites, clics et performances en temps réel</div>
-              <div className="sa-cta">
-                <button type="button" className="sa-btn sa-l" onClick={handleCTA}>{user ? 'Mon tableau de bord →' : 'Créer ma carte de visite gratuitement →'}</button>
-                <a className="sa-btn sa-s sa-l" style={{ boxShadow: 'none', fontSize: '15px', padding: '0 28px' }} href="#f">Voir les fonctionnalités</a>
-              </div>
-              <div className="sa-av">
-                <div style={{ display: 'flex' }}>
-                  <div style={{ background: '#ff6b35' }}>K</div>
-                  <div style={{ background: '#a78bfa' }}>D</div>
-                  <div style={{ background: '#22c55e' }}>J</div>
-                  <div style={{ background: '#f0a500' }}>A</div>
-                  <div style={{ background: '#0ea5e9' }}>M</div>
-                </div>
-                <span>
-                  <b style={{ fontSize: '15px', color: '#1d1a2b' }}>+500 utilisateurs</b> sur SocialApp<br />
-                  <span style={{ color: '#f0a500' }}>★★★★★</span> 4.9/5</span>
-              </div>
-            </div>
-            <HeroDevices />
-          </header>
-        </div>
-
-        <div className="sa-stats">
-          <div>
-            <b className="sa-gt">+30%</b>
-            <span>de followers en plus</span>
-          </div>
-          <div>
-            <b className="sa-gt">1 scan</b>
-            <span>pour tout partager</span>
-          </div>
-          <div>
-            <b style={{ background: 'linear-gradient(135deg,#16a34a,#4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>∞</b>
-            <span>produits avec Business</span>
-          </div>
-          <div>
-            <b style={{ background: 'linear-gradient(135deg,#9333ea,#d946ef)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>100%</b>
-            <span>personnalisable</span>
-          </div>
-        </div>
-
-        <section className="sa-sec">
-          <div className="sa-w sa-two">
-            <div>
-              <div className="sa-badge" style={{ background: 'rgba(255,107,53,.12)', border: '1px solid rgba(255,107,53,.3)', color: '#c2410c' }}>
-                <span className="sa-dot" />Profil digital</div>
-              <h2>Un seul lien pour<br />
-                <span className="sa-gt">toute votre présence Digitale</span>
-              </h2>
-              <p className="sa-sub" style={{ marginBottom: '28px' }}>Votre carte de visite digitale SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(255,107,53,.12)' }}><Ic n="sliders" /></div>
-                <div>
-                  <b>Personnalisation complète</b>
-                  <span>Couleurs, photo, username unique. Un profil à votre image, sans code.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(99,102,241,.12)' }}><Ic n="phone" /></div>
-                <div>
-                  <b>Accessible partout</b>
-                  <span>Lien direct ou QR code à scanner, imprimable sur carte de visite ou vitrine.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(34,197,94,.12)' }}><Ic n="badge" /></div>
-                <div>
-                  <b>Badge vérifié</b>
-                  <span>Renforcez la confiance de vos visiteurs dès le premier coup d'œil.</span>
-                </div>
-              </div>
-              <span className="sa-pl" style={{ background: 'rgba(99,102,241,.12)', color: '#4f46e5' }}>✓ Inclus dans toutes les offres</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}><img src={profilMockup} alt="Profil digital SocialApp" loading="lazy" className="sa-float" style={{ width: '80%', maxWidth: '480px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.25))' }} /></div>
-          </div>
-        </section>
-
-        <section className="sa-sec" id="f" style={{ paddingTop: '20px' }}>
-          <div className="sa-w">
-            <div className="sa-hd">
-              <div className="sa-badge" style={{ background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)', color: '#4f46e5' }}>
-                <span className="sa-dot" />Plateforme tout-en-un</div>
-              <h2>Tout ce dont vous avez besoin<br />
-                <span className="sa-gt">depuis une seule plateforme</span>
-              </h2>
-              <p className="sa-sub">Dashboard complet, analytics temps réel, CRM, automatisations — conçu pour les entrepreneurs ivoiriens.</p>
-            </div>
-            <div className="sa-fg">
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(99,102,241,.14)' }}><Ic n="link" /></div>
-                <h3>Page de liens personnalisée</h3>
-                <p>Créez votre carte de visite digitale avec WhatsApp, Instagram, TikTok, Facebook, YouTube sur une seule page avec username personnalisé et badge vérifié.</p>
-                <span className="sa-ft" style={{ background: 'rgba(99,102,241,.14)', color: '#4f46e5' }}>✓ Toutes les offres</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(34,197,94,.14)' }}><Ic n="chart" /></div>
-                <h3>Analytics & Temps réel</h3>
-                <p>Vues, clics par lien, pays des visiteurs, flux live. Sachez exactement qui scanne votre QR code et d'où.</p>
-                <span className="sa-ft" style={{ background: 'rgba(255,107,53,.14)', color: '#c2410c' }}>PRO & BUSINESS</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(245,158,11,.16)' }}><Ic n="bag" /></div>
-                <h3>Marketplace intégrée</h3>
-                <p>Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission sur vos ventes.</p>
-                <span className="sa-ft" style={{ background: 'rgba(34,197,94,.14)', color: '#15803d' }}>✓ Toutes les offres</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(236,72,153,.14)' }}><Ic n="users" /></div>
-                <h3>CRM & Pipeline de leads</h3>
-                <p>Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.</p>
-                <span className="sa-ft" style={{ background: 'rgba(247,201,72,.28)', color: '#8a6100' }}>BUSINESS</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(255,107,53,.14)' }}><Ic n="ticket" /></div>
-                <h3>Mode Événement</h3>
-                <p>Compte à rebours live, galerie photos & vidéos (50 Mo), bouton réservation. Parfait pour soirées, salons et concerts.</p>
-                <span className="sa-ft" style={{ background: 'rgba(34,197,94,.14)', color: '#15803d' }}>Option — 3 500 FCFA</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(93,202,165,.2)' }}><Ic n="calendar" /></div>
-                <h3>Calendrier de réservation</h3>
-                <p>Vos clients réservent un créneau ou une place directement depuis votre profil public, sans échange de messages.</p>
-                <span className="sa-ft" style={{ background: 'rgba(34,197,94,.14)', color: '#15803d' }}>✓ Toutes les offres</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(59,130,246,.14)' }}><Ic n="form" /></div>
-                <h3>Formulaires personnalisés</h3>
-                <p>Créez des formulaires sur mesure (contact, devis, inscription) et recevez les réponses directement dans votre dashboard.</p>
-                <span className="sa-ft" style={{ background: 'rgba(34,197,94,.14)', color: '#15803d' }}>✓ Toutes les offres</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(37,211,102,.16)' }}><Ic n="send" /></div>
-                <h3>Campagnes WhatsApp IA</h3>
-                <p>Décrivez votre offre, l'IA génère vos messages de campagne (promo, relance, nouveauté) prêts à envoyer.</p>
-                <span className="sa-ft" style={{ background: 'rgba(247,201,72,.28)', color: '#8a6100' }}>BUSINESS</span>
-              </div>
-              <div className="sa-card sa-fc">
-                <div className="sa-ic" style={{ background: 'rgba(139,92,246,.14)' }}><Ic n="bolt" /></div>
-                <h3>Automatisations & Intégrations</h3>
-                <p>Automatisez vos réponses, connectez vos outils. Webhooks, notifications push, flux temps réel.</p>
-                <span className="sa-ft" style={{ background: 'rgba(247,201,72,.28)', color: '#8a6100' }}>BUSINESS</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec sa-tint1" id="crm">
-          <div className="sa-w sa-two">
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <picture>
-                <source srcSet={leadsCrmMockupWebp} type="image/webp" />
-                <img src={leadsCrmMockup} alt="Leads & CRM SocialApp" loading="lazy" className="sa-float" style={{ width: '100%', maxWidth: '640px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(236,72,153,.25))' }} />
-              </picture>
-            </div>
-            <div>
-              <div className="sa-badge" style={{ background: 'rgba(236,72,153,.12)', border: '1px solid rgba(236,72,153,.3)', color: '#be185d' }}>
-                <span className="sa-dot" />CRM intégré</div>
-              <h2>Transformez vos visiteurs<br />en <span className="sa-gt">clients fidèles</span>
-              </h2>
-              <p className="sa-sub" style={{ marginBottom: '28px' }}>Chaque scan de votre QR code est une opportunité. Capturez vos leads, suivez leur parcours et concluez plus de ventes — tout depuis votre dashboard.</p>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(236,72,153,.12)' }}><Ic n="tag" /></div>
-                <div>
-                  <b>Tags intelligents</b>
-                  <span>Prospect, Chaud, Client, Froid, Perdu. Filtrez et agissez en priorité.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(99,102,241,.12)' }}><Ic n="note" /></div>
-                <div>
-                  <b>Notes & historique</b>
-                  <span>Ajoutez des notes sur chaque contact. Gardez le contexte de vos échanges.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(34,197,94,.12)' }}><Ic n="download" /></div>
-                <div>
-                  <b>Export CSV</b>
-                  <span>Exportez tous vos leads en un clic. Compatible Excel & Google Sheets.</span>
-                </div>
-              </div>
-              <span className="sa-pl" style={{ background: 'rgba(247,201,72,.3)', color: '#8a6100' }}>Disponible avec l'offre BUSINESS</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec sa-tint2" id="a">
-          <div className="sa-w sa-two">
-            <div>
-              <div className="sa-badge" style={{ background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)', color: '#4f46e5' }}>
-                <span className="sa-dot" />Analytics avancés</div>
-              <h2>Analysez chaque<br />interaction <span className="sa-gt">en temps réel</span>
-              </h2>
-              <p className="sa-sub" style={{ marginBottom: '28px' }}>Sachez exactement qui visite votre profil, d'où ils viennent et sur quels liens ils cliquent. Des données actionnables pour optimiser votre présence digitale.</p>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(99,102,241,.14)' }}><Ic n="globe" /></div>
-                <div>
-                  <b>Statistiques géographiques</b>
-                  <span>Visualisez d'où viennent vos visiteurs, pays par pays.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(34,197,94,.14)' }}><Ic n="live" /></div>
-                <div>
-                  <b>Flux visiteurs en direct</b>
-                  <span>Voir qui est sur votre page maintenant, en temps réel.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(245,158,11,.16)' }}><Ic n="chart" /></div>
-                <div>
-                  <b>Top liens & taux de clic</b>
-                  <span>Identifiez vos liens les plus performants.</span>
-                </div>
-              </div>
-              <span className="sa-pl" style={{ background: 'rgba(255,107,53,.12)', color: '#c2410c' }}>Disponible avec PRO & BUSINESS</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <picture>
-                <source srcSet={tempsReelMockupWebp} type="image/webp" />
-                <img src={tempsReelMockup} alt="Analytics temps réel SocialApp" loading="lazy" className="sa-float" style={{ width: '100%', maxWidth: '640px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(99,102,241,.3))' }} />
-              </picture>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec sa-tint3" id="m">
-          <div className="sa-w">
-            <div className="sa-hd">
-              <div className="sa-badge" style={{ background: 'rgba(255,107,53,.12)', border: '1px solid rgba(255,107,53,.3)', color: '#c2410c' }}>
-                <span className="sa-dot" />Marketplace </div>
-              <h2>Votre boutique directement<br />sur votre <span className="sa-gt">profil public</span>
-              </h2>
-              <p className="sa-sub">Vendez sans créer un site web. Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission.</p>
-            </div>
-            <div className="sa-two">
-              <div className="sa-mpwrap">
-                <img src={marketplaceWoman} alt="Cliente ravie utilisant SocialApp" loading="lazy" className="sa-float sa-mpwoman" />
-                <div className="sa-phone">
-                  <div className="sa-scr">
-                    <div style={{ textAlign: 'center' }}>
-                      <div className="sa-mk sa-g" style={{ margin: '0 auto 5px' }}>S</div>
-                      <b style={{ fontSize: '10.5px' }}>SocialApp <span style={{ color: '#22c55e' }}><Ic n="badge" /></span></b>
-                      <div style={{ fontSize: '7px', opacity: '.5' }}>Votre boutique, votre profil</div>
-                      <div className="sa-g" style={{ display: 'inline-block', marginTop: '6px', fontSize: '7px', fontWeight: '700', color: '#2a1305', padding: '4px 11px', borderRadius: '20px' }}>Ouvrir ma boutique →</div>
-                    </div>
-                    <div className="sa-pg">
-                      <div>
-                        <i style={{ background: 'linear-gradient(135deg,#5a4a63,#241a2b)' }} />
-                        <b>14 000 F <s style={{ opacity: '.4', fontWeight: '500' }}>20 000 F</s></b>
-                      </div>
-                      <div>
-                        <i style={{ background: 'linear-gradient(135deg,#7a4a3a,#2e1f18)' }} />
-                        <b>10 000 F</b>
-                      </div>
-                      <div>
-                        <i style={{ background: 'linear-gradient(135deg,#3a4a5a,#1a232e)' }}><Ic n="phone" /></i>
-                        <b>180 000 F</b>
-                      </div>
-                      <div>
-                        <i style={{ background: 'linear-gradient(135deg,#4a3a5a,#20182e)' }} />
-                        <b>9 000 F</b>
-                      </div>
-                    </div>
-                    <div className="sa-rw">
-                      <span className="sa-ic" style={{ width: '14px', height: '14px', borderRadius: '4px', fontSize: '7px', background: '#ff6b35' }}><Ic n="phone" /></span>Téléphone</div>
-                    <div className="sa-rw">
-                      <span className="sa-ic" style={{ width: '14px', height: '14px', borderRadius: '4px', fontSize: '7px', background: '#25D366' }}><Ic n="chat" /></span>WhatsApp</div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="sa-it">
-                  <div className="sa-ic" style={{ background: 'rgba(255,107,53,.12)' }}><Ic n="image" /></div>
-                  <div>
-                    <b>Photos, prix & badges promotionnels</b>
-                    <span>Prix barrés, réductions en %, badge disponible/épuisé.</span>
-                  </div>
-                </div>
-                <div className="sa-it">
-                  <div className="sa-ic" style={{ background: 'rgba(34,197,94,.12)' }}><Ic n="coin" /></div>
-                  <div>
-                    <b>Zéro commission — toujours</b>
-                    <span>100% de vos ventes vous reviennent. SocialApp ne prend rien.</span>
-                  </div>
-                </div>
-                <div className="sa-it">
-                  <div className="sa-ic" style={{ background: 'rgba(37,211,102,.14)' }}><Ic n="phone" /></div>
-                  <div>
-                    <b>Commandes directes sur WhatsApp</b>
-                    <span>Bouton de contact direct. Votre client vous écrit en 1 tap.</span>
-                  </div>
-                </div>
-                <div className="sa-it">
-                  <div className="sa-ic" style={{ background: 'rgba(245,158,11,.16)' }}><Ic n="form" /></div>
-                  <div>
-                    <b>Documents PDF joints</b>
-                    <span>Menus, catalogues, brochures — accessibles sur votre profil.</span>
-                  </div>
-                </div>
-                <button type="button" className="sa-btn sa-l" style={{ marginTop: '12px' }} onClick={handleCTA}>Ouvrir ma boutique →</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec" id="e">
-          <div className="sa-w sa-two">
-            <div>
-              <div className="sa-badge" style={{ background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)', color: '#15803d' }}>
-                <span className="sa-dot" />Soirées, salons & concerts</div>
-              <h2>Mode <span className="sa-gt">Événement</span>
-              </h2>
-              <p className="sa-sub" style={{ marginBottom: '28px' }}>Créez une page d'événement dédiée en 2 minutes, avec son propre lien — compte à rebours live, galerie médias, réservation en ligne.</p>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(34,197,94,.16)' }}><Ic n="clock" /></div>
-                <div>
-                  <b>Compte à rebours en direct</b>
-                  <span>Jours, heures, minutes, secondes — en temps réel.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(255,107,53,.14)' }}><Ic n="image" /></div>
-                <div>
-                  <b>Galerie photos & vidéos</b>
-                  <span>Carrousel jusqu'à 50 Mo pour présenter l'ambiance.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(247,201,72,.28)' }}><Ic n="ticket" /></div>
-                <div>
-                  <b>Bouton de réservation</b>
-                  <span>Redirigez vers votre lien de paiement ou de billets.</span>
-                </div>
-              </div>
-              <div className="sa-it">
-                <div className="sa-ic" style={{ background: 'rgba(139,92,246,.14)' }}><Ic n="sliders" /></div>
-                <div>
-                  <b>Couleurs personnalisables</b>
-                  <span>Sunset, Océan, Rose, Forêt — adaptez l'ambiance.</span>
-                </div>
-              </div>
-              <div style={{ background: 'rgba(34,197,94,.1)', border: '1px solid rgba(34,197,94,.25)', borderRadius: '14px', padding: '16px 20px', marginTop: '8px' }}>
-                <b style={{ fontSize: '22px', color: '#16a34a', fontWeight: '900' }}>3 500 FCFA</b>
-                <div style={{ fontSize: '13px', color: '#5d5a6e', marginTop: '4px' }}>par événement · Quel que soit votre plan</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <picture>
-                <source srcSet={eventMockupWebp} type="image/webp" />
-                <img src={eventMockup} alt="Mode Événement SocialApp" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', borderRadius: '24px', boxShadow: '0 40px 80px rgba(0,0,0,.35)', objectFit: 'contain' }} />
-              </picture>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec" id="t" style={{ background: 'rgba(255,255,255,.35)' }}>
-          <div className="sa-w">
-            <div className="sa-hd" style={{ marginBottom: '36px' }}>
-              <h2>Des prix faits pour <span className="sa-gt">l'Afrique</span></h2>
-              <p className="sa-sub">Paiement Mobile Money · Pas de carte bancaire nécessaire</p>
-              <div style={{ marginTop: '20px' }}><BillingToggle value={billing} onChange={setBilling} /></div>
-              <div style={{ fontSize: '12px', color: '#7b788a', marginTop: '10px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
-            </div>
-            <div className="sa-pls">{PLANS.map((p) => <PlanCard key={p.name} p={p} billing={billing} onChoose={choosePlan} />)}</div>
-            <p style={{ textAlign: 'center', color: '#7b788a', fontSize: '13px', marginTop: '28px' }}>Questions ? WhatsApp <b>+225 05 76 03 12 12</b></p>
-          </div>
-        </section>
-
-        <section className="sa-sec">
-          <div className="sa-w">
-            <div className="sa-hd">
-              <h2>Prêt en <span className="sa-gt">5 minutes</span>
-              </h2>
-              <p className="sa-sub">Créez votre carte de visite digitale complète en quelques étapes simples.</p>
-            </div>
-            <div className="sa-stp">
-              <div className="sa-card">
-                <div style={{ fontSize: '32px', color: '#c2410c' }}><Ic n="user" /></div>
-                <div className="sa-nm sa-g">1</div>
-                <h3>Créez votre carte de visite digitale</h3>
-                <p>Nom, photo, bio, vos liens sociaux. En 5 minutes votre vitrine est prête.</p>
-              </div>
-              <div className="sa-card">
-                <div style={{ fontSize: '32px', color: '#c2410c' }}><Ic n="bag" /></div>
-                <div className="sa-nm sa-g">2</div>
-                <h3>Ajoutez vos produits</h3>
-                <p>Photos, prix, descriptions. Votre boutique est visible directement sur votre page.</p>
-              </div>
-              <div className="sa-card">
-                <div style={{ fontSize: '32px', color: '#c2410c' }}><Ic n="qr" /></div>
-                <div className="sa-nm sa-g">3</div>
-                <h3>Partagez votre QR code</h3>
-                <p>Sur vos flyers, cartes de visite, vitrine. Un scan et vos clients trouvent tout.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec" style={{ paddingTop: '20px' }}>
-          <div className="sa-w">
-            <div className="sa-hd">
-              <h2>Ils utilisent déjà <span className="sa-gt">SocialApp</span>
-              </h2>
-              <p className="sa-sub">Ce qu'ils en disent</p>
-            </div>
-            <div className="sa-tg">
-              <div className="sa-card">
-                <div style={{ color: '#f0a500', letterSpacing: '3px', fontSize: '18px' }}>★★★★★</div>
-                <p>"Depuis que j'utilise SocialApp, mes abonnés Instagram ont augmenté de 40% en 2 mois. Les analytics me montrent d'où viennent mes visiteurs. Indispensable !"</p>
-                <b>Koffi Mensah</b>
-                <div style={{ fontSize: '12px', color: '#7b788a' }}>Influenceur · Abidjan</div>
-              </div>
-              <div className="sa-card">
-                <div style={{ color: '#f0a500', letterSpacing: '3px', fontSize: '18px' }}>★★★★★</div>
-                <p>"Mes clients scannent mon QR code, voient mes produits et me contactent sur WhatsApp. Le CRM m'aide à suivre mes prospects. Mon business a vraiment décollé !"</p>
-                <b>Dorine Ouattara</b>
-                <div style={{ fontSize: '12px', color: '#7b788a' }}>Commerçante · Cocody</div>
-              </div>
-              <div className="sa-card">
-                <div style={{ color: '#f0a500', letterSpacing: '3px', fontSize: '18px' }}>★★★★★</div>
-                <p>"J'ai organisé ma soirée avec le mode Événement. Le compte à rebours et la réservation ont boosté mes ventes de billets de 60%. Je recommande !"</p>
-                <b>Jean-Baptiste K.</b>
-                <div style={{ fontSize: '12px', color: '#7b788a' }}>Organisateur · Plateau</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec" style={{ paddingTop: '20px' }}>
-          <div className="sa-w">
-            <div className="sa-fin">
-              <h2>Prêt à transformer votre<br />
-                <span className="sa-gt">présence digitale ?</span>
-              </h2>
-              <p className="sa-sub" style={{ maxWidth: '560px', margin: '0 auto 32px', fontSize: '18px' }}>Rejoignez des centaines d'entrepreneurs ivoiriens et Africains qui utilisent SocialApp pour partager leurs réseaux, vendre leurs produits et gérer leurs leads.</p>
-              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button type="button" className="sa-btn sa-l" onClick={handleCTA}>{user ? 'Accéder à mon dashboard →' : 'Créer ma carte de visite gratuitement →'}</button>
-                <a className="sa-btn sa-s sa-l" style={{ boxShadow: 'none', fontSize: '15px', padding: '0 32px' }} href="#t">Voir les offres</a>
-              </div>
-              <p style={{ color: '#7b788a', fontSize: '13px', margin: '20px 0 0' }}>Paiement Mobile Money · Wave · Orange Money</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="sa-sec" id="q" style={{ paddingTop: '20px' }}>
-          <div className="sa-w">
-            <div className="sa-hd" style={{ marginBottom: '40px' }}><h2>Questions <span className="sa-gt">fréquentes</span></h2></div>
-            <div className="sa-fq">{FAQS.map((f, i) => (
-              <div key={i} className={'sa-fqi' + (openFaq === i ? ' open' : '')}>
-                <button type="button" className="sa-fqb" aria-expanded={openFaq === i} onClick={() => setOpenFaq((v) => (v === i ? null : i))}><b>{f.q}</b></button>
-                {openFaq === i && <span>{f.a}</span>}
-              </div>))}</div>
-          </div>
-        </section>
-
-        <footer className="sa-foot">
-          <div className="sa-fi">
-            <div className="sa-fcta">
-              <div>
-                <b>Prêt à lancer votre carte de visite digitale ?</b>
-                <span>Mise en ligne en 5 minutes · Paiement Mobile Money, sans carte bancaire</span>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button type="button" className="sa-btn" onClick={handleCTA}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
-                <a className="sa-btn sa-s" href="https://wa.me/2250576031212">Nous écrire sur WhatsApp</a>
-              </div>
-            </div>
-            <div className="sa-fgd">
-              <div>
-                <div className="sa-brand" style={{ marginBottom: '16px', color: '#1d1a2b' }}>
-                  <div className="sa-mk sa-g" style={{ width: '32px', height: '32px', overflow: 'hidden' }}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>SocialApp</div>
-                <p>Plateforme SaaS ivoirienne : profil digital, CRM, QR Code et marketplace pour développer votre activité. Accessible partout en Afrique.</p>
-                <div className="sa-pay">
-                  <span>Orange Money</span>
-                  <span>Wave</span>
-                  <span>MTN</span>
-                </div>
-              </div>
-              <div>
-                <h6>Plateforme</h6>
-                <a href="#f">Fonctionnalités</a>
-                <a href="#crm">CRM</a>
-                <a href="#a">Analytics</a>
-                <a href="#m">Boutique</a>
-                <a href="#e">Mode Événement</a>
-              </div>
-              <div>
-                <h6>Offres</h6>
-                <a href="#t">BASIC · 10 000 F</a>
-                <a href="#t">PRO · 15 000 F</a>
-                <a href="#t">BUSINESS · 39 900 F</a>
-                <a href="#t">ÉVÉNEMENT · 3 500 F</a>
-              </div>
-              <div>
-                <h6>Compte</h6>
-                <button type="button" className="sa-lnk" onClick={handleCTA}>{user ? 'Mon dashboard' : 'Se connecter'}</button>
-                <button type="button" className="sa-lnk" onClick={handleCTA}>Créer ma carte</button>
-                <a href="#q">Questions fréquentes</a>
-                <a href="/privacy-policy">Politique de confidentialité</a>
-                <a href="/terms-of-service">Conditions d'utilisation</a>
-              </div>
-              <div>
-                <h6>Contact</h6>
-                <a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer">+225 05 76 03 12 12</a>
-                <span>Côte d'Ivoire</span>
-              </div>
-            </div>
-            <div className="sa-cp">
-              <span>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire </span>
-              <div>
-                <a href="/privacy-policy">Confidentialité</a>
-                <a href="/terms-of-service">Conditions</a>
-                <span>Mobile Money · Wave · Orange Money</span>
-              </div>
-            </div>
-          </div>
-        </footer>
+<svg width="0" height="0" style={{position:"absolute"}} aria-hidden="true">
+<defs>
+<symbol id="i-link" viewBox="0 0 24 24">
+<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5">
+</path>
+</symbol>
+<symbol id="i-chart" viewBox="0 0 24 24">
+<path d="M3 3v18h18M7 16v-5M12 16V7M17 16v-8">
+</path>
+</symbol>
+<symbol id="i-trend" viewBox="0 0 24 24">
+<path d="M3 17l6-6 4 4 8-8M15 7h6v6">
+</path>
+</symbol>
+<symbol id="i-live" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="2">
+</circle>
+<path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5">
+</path>
+</symbol>
+<symbol id="i-users" viewBox="0 0 24 24">
+<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8">
+</path>
+<circle cx="9" cy="7" r="4">
+</circle>
+</symbol>
+<symbol id="i-bag" viewBox="0 0 24 24">
+<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0">
+</path>
+</symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24">
+<rect x="3" y="4" width="18" height="18" rx="2">
+</rect>
+<path d="M16 2v4M8 2v4M3 10h18">
+</path>
+</symbol>
+<symbol id="i-form" viewBox="0 0 24 24">
+<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8">
+</path>
+</symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24">
+<path d="M13 2 3 14h9l-1 8 10-12h-9z">
+</path>
+</symbol>
+<symbol id="i-ticket" viewBox="0 0 24 24">
+<path d="M2 9a3 3 0 0 1 0 6v3h20v-3a3 3 0 0 1 0-6V6H2zM13 6v12">
+</path>
+</symbol>
+<symbol id="i-tag" viewBox="0 0 24 24">
+<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z">
+</path>
+<circle cx="7" cy="7" r="1">
+</circle>
+</symbol>
+<symbol id="i-note" viewBox="0 0 24 24">
+<rect x="8" y="2" width="8" height="4" rx="1">
+</rect>
+<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2">
+</path>
+</symbol>
+<symbol id="i-download" viewBox="0 0 24 24">
+<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3">
+</path>
+</symbol>
+<symbol id="i-globe" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20">
+</path>
+</symbol>
+<symbol id="i-image" viewBox="0 0 24 24">
+<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+</path>
+<circle cx="12" cy="13" r="4">
+</circle>
+</symbol>
+<symbol id="i-phone" viewBox="0 0 24 24">
+<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z">
+</path>
+</symbol>
+<symbol id="i-chat" viewBox="0 0 24 24">
+<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l1.9-5.4A8.4 8.4 0 1 1 21 11.5z">
+</path>
+</symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24">
+<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6">
+</path>
+</symbol>
+<symbol id="i-badge" viewBox="0 0 24 24">
+<path d="M12 2l2.4 1.8 3-.2 1 2.8 2.5 1.7-.9 2.9.9 2.9-2.5 1.7-1 2.8-3-.2L12 22l-2.4-1.8-3 .2-1-2.8-2.5-1.7.9-2.9-.9-2.9 2.5-1.7 1-2.8 3 .2z">
+</path>
+<path d="m9 12 2 2 4-4">
+</path>
+</symbol>
+<symbol id="i-qr" viewBox="0 0 24 24">
+<rect x="3" y="3" width="7" height="7">
+</rect>
+<rect x="14" y="3" width="7" height="7">
+</rect>
+<rect x="3" y="14" width="7" height="7">
+</rect>
+<path d="M14 14h3v3M21 14v.01M14 21h3M21 17v4">
+</path>
+</symbol>
+<symbol id="i-clock" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M12 6v6l4 2">
+</path>
+</symbol>
+<symbol id="i-coin" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2">
+</path>
+</symbol>
+<symbol id="i-user" viewBox="0 0 24 24">
+<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2">
+</path>
+<circle cx="12" cy="7" r="4">
+</circle>
+</symbol>
+<symbol id="i-send" viewBox="0 0 24 24">
+<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z">
+</path>
+</symbol>
+</defs>
+</svg> <nav className="sa-nav">
+<div className="sa-brand" role="button" tabIndex={0} aria-label="Retour à l'accueil SocialApp" style={{ cursor: 'pointer' }} onClick={goTop} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') goTop(); }}>
+<div className="sa-mk sa-g" style={{ overflow: 'hidden' }}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div><span className="sa-bt">SocialApp</span>
+</div>
+<div className="sa-lk">{NAV_LINKS.map(([h, l]) => <a key={h} href={h}>{l}</a>)}</div>
+<div className="sa-nb" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+<button type="button" className="sa-btn sa-gr" onClick={openEvent}>Créez un évent</button>
+<button type="button" className="sa-btn sa-nc" onClick={handleCTA}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
+<button type="button" className={'sa-burger' + (menuOpen ? ' sa-on' : '')} aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}><span /><span /><span /></button>
+</div>
+<div className={'sa-mmenu' + (menuOpen ? ' sa-open' : '')}>
+{NAV_LINKS.map(([h, l]) => <a key={h} href={h} onClick={() => setMenuOpen(false)}>{l}</a>)}
+<button type="button" className="sa-btn sa-mcta" onClick={() => { setMenuOpen(false); handleCTA(); }}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
+</div>
+</nav> <div className="sa-w">
+<header className="sa-hero">
+<div>
+<h1 className="sa-ttl">
+<span className="sa-ln">
+<span className="sa-l1">Votre profil digital</span>
+</span>
+<span className="sa-ln">
+<span className="sa-l2">et CRM <span style={{whiteSpace:"nowrap"}}>tout-en-un.</span>
+</span>
+</span>
+</h1>
+<div className="sa-pitch">SocialApp est une plateforme tout-en-un qui permet aux entrepreneurs, entreprises, commerciaux et créateurs de contenu de créer un profil professionnel digital, <b>partager leurs contacts via QR Code,</b> collecter des prospects et gérer leurs relations clients grâce à un CRM intégré.</div>
+<p className="sa-tag">Transformez chaque scan en contact,<br />client ou opportunité.</p>
+<div className="sa-ck">
+<i>✓</i>Créez votre carte de visite digitale professionnel avec QR CODE en quelques minutes</div>
+<div className="sa-ck">
+<i>✓</i>Partagez vos coordonnées, réseaux sociaux et services via un QR Code unique</div>
+<div className="sa-ck">
+<i>✓</i>Collectez automatiquement les contacts et prospects intéressés</div>
+<div className="sa-ck">
+<i>✓</i>Gérez vos clients et opportunités avec un CRM intégré</div>
+<div className="sa-ck">
+<i>✓</i>Suivez vos statistiques, visites, clics et performances en temps réel</div>
+<div className="sa-cta">
+<button type="button" className="sa-btn sa-l" onClick={handleCTA}>{user ? 'Mon tableau de bord →' : 'Créer ma carte de visite gratuitement →'}</button>
+<a className="sa-btn sa-s sa-l" style={{boxShadow:"none",fontSize:"15px",padding:"0 28px"}} href="#f">Voir les fonctionnalités</a>
+</div>
+<div className="sa-av">
+<div style={{display:"flex"}}>
+<div style={{background:"#ff6b35"}}>K</div>
+<div style={{background:"#a78bfa"}}>D</div>
+<div style={{background:"#22c55e"}}>J</div>
+<div style={{background:"#f0a500"}}>A</div>
+<div style={{background:"#0ea5e9"}}>M</div>
+</div>
+<span>
+<b style={{fontSize:"15px",color:"#1d1a2b"}}>+500 utilisateurs</b> sur SocialApp<br />
+<span style={{color:"#f0a500"}}>★★★★★</span> 4.9/5</span>
+</div>
+</div>
+<HeroDevices />
+</header>
+</div>
+<div className="sa-stats">
+<div>
+<b className="sa-gt">+30%</b>
+<span>de followers en plus</span>
+</div>
+<div>
+<b className="sa-gt">1 scan</b>
+<span>pour tout partager</span>
+</div>
+<div>
+<b style={{background:"linear-gradient(135deg,#16a34a,#4ade80)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>∞</b>
+<span>produits avec Business</span>
+</div>
+<div>
+<b style={{background:"linear-gradient(135deg,#9333ea,#d946ef)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>100%</b>
+<span>personnalisable</span>
+</div>
+</div>
+<section className="sa-sec">
+<div className="sa-w sa-two">
+<div>
+<div className="sa-badge" style={{background:"rgba(255,107,53,.12)",border:"1px solid rgba(255,107,53,.3)",color:"#c2410c"}}>
+<span className="sa-dot">
+</span>Profil digital</div>
+<h2>Un seul lien pour<br />
+<span className="sa-gt">toute votre présence Digitale</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Votre carte de visite digitale SocialApp regroupe vos réseaux sociaux, votre WhatsApp, votre boutique et vos coordonnées sur une seule page personnalisable, accessible par lien ou QR code.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.12)"}}>
+<svg className="sa-i">
+<use href="#i-sliders">
+</use>
+</svg>
+</div>
+<div>
+<b>Personnalisation complète</b>
+<span>Couleurs, photo, username unique. Un profil à votre image, sans code.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.12)"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</div>
+<div>
+<b>Accessible partout</b>
+<span>Lien direct ou QR code à scanner, imprimable sur carte de visite ou vitrine.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.12)"}}>
+<svg className="sa-i">
+<use href="#i-badge">
+</use>
+</svg>
+</div>
+<div>
+<b>Badge vérifié</b>
+<span>Renforcez la confiance de vos visiteurs dès le premier coup d'œil.</span>
+</div>
+</div>
+<span className="sa-pl" style={{background:"rgba(99,102,241,.12)",color:"#4f46e5"}}>✓ Inclus dans toutes les offres</span>
+</div>
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><img src={profilMockup} alt="Profil digital SocialApp" loading="lazy" className="sa-float" style={{ width: '80%', maxWidth: '480px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(255,107,53,.25))' }} /></div>
+</div>
+</section>
+<section className="sa-sec" id="f" style={{paddingTop:"20px"}}>
+<div className="sa-w">
+<div className="sa-hd">
+<div className="sa-badge" style={{background:"rgba(99,102,241,.12)",border:"1px solid rgba(99,102,241,.3)",color:"#4f46e5"}}>
+<span className="sa-dot">
+</span>Plateforme tout-en-un</div>
+<h2>Tout ce dont vous avez besoin<br />
+<span className="sa-gt">depuis une seule plateforme</span>
+</h2>
+<p className="sa-sub">Dashboard complet, analytics temps réel, CRM, automatisations — conçu pour les entrepreneurs ivoiriens.</p>
+</div>
+<div className="sa-fg">
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.14)"}}>
+<svg className="sa-i">
+<use href="#i-link">
+</use>
+</svg>
+</div>
+<h3>Page de liens personnalisée</h3>
+<p>Créez votre carte de visite digitale avec WhatsApp, Instagram, TikTok, Facebook, YouTube sur une seule page avec username personnalisé et badge vérifié.</p>
+<span className="sa-ft" style={{background:"rgba(99,102,241,.14)",color:"#4f46e5"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.14)"}}>
+<svg className="sa-i">
+<use href="#i-chart">
+</use>
+</svg>
+</div>
+<h3>Analytics & Temps réel</h3>
+<p>Vues, clics par lien, pays des visiteurs, flux live. Sachez exactement qui scanne votre QR code et d'où.</p>
+<span className="sa-ft" style={{background:"rgba(255,107,53,.14)",color:"#c2410c"}}>PRO & BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-bag">
+</use>
+</svg>
+</div>
+<h3>Marketplace intégrée</h3>
+<p>Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission sur vos ventes.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(236,72,153,.14)"}}>
+<svg className="sa-i">
+<use href="#i-users">
+</use>
+</svg>
+</div>
+<h3>CRM & Pipeline de leads</h3>
+<p>Capturez, tagguez et suivez vos prospects. Pipeline avec statuts Prospect, Chaud, Client. Export CSV.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.14)"}}>
+<svg className="sa-i">
+<use href="#i-ticket">
+</use>
+</svg>
+</div>
+<h3>Mode Événement</h3>
+<p>Compte à rebours live, galerie photos & vidéos (50 Mo), bouton réservation. Parfait pour soirées, salons et concerts.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>Option — 3 500 FCFA</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(93,202,165,.2)"}}>
+<svg className="sa-i">
+<use href="#i-calendar">
+</use>
+</svg>
+</div>
+<h3>Calendrier de réservation</h3>
+<p>Vos clients réservent un créneau ou une place directement depuis votre profil public, sans échange de messages.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(59,130,246,.14)"}}>
+<svg className="sa-i">
+<use href="#i-form">
+</use>
+</svg>
+</div>
+<h3>Formulaires personnalisés</h3>
+<p>Créez des formulaires sur mesure (contact, devis, inscription) et recevez les réponses directement dans votre dashboard.</p>
+<span className="sa-ft" style={{background:"rgba(34,197,94,.14)",color:"#15803d"}}>✓ Toutes les offres</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(37,211,102,.16)"}}>
+<svg className="sa-i">
+<use href="#i-send">
+</use>
+</svg>
+</div>
+<h3>Campagnes WhatsApp IA</h3>
+<p>Décrivez votre offre, l'IA génère vos messages de campagne (promo, relance, nouveauté) prêts à envoyer.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+<div className="sa-card sa-fc">
+<div className="sa-ic" style={{background:"rgba(139,92,246,.14)"}}>
+<svg className="sa-i">
+<use href="#i-bolt">
+</use>
+</svg>
+</div>
+<h3>Automatisations & Intégrations</h3>
+<p>Automatisez vos réponses, connectez vos outils. Webhooks, notifications push, flux temps réel.</p>
+<span className="sa-ft" style={{background:"rgba(247,201,72,.28)",color:"#8a6100"}}>BUSINESS</span>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec sa-tint1" id="crm">
+<div className="sa-w sa-two">
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><picture><source srcSet={leadsCrmMockupWebp} type="image/webp" /><img src={leadsCrmMockup} alt="Leads & CRM SocialApp" loading="lazy" className="sa-float" style={{ width: '100%', maxWidth: '640px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(236,72,153,.25))' }} /></picture></div>
+<div>
+<div className="sa-badge" style={{background:"rgba(236,72,153,.12)",border:"1px solid rgba(236,72,153,.3)",color:"#be185d"}}>
+<span className="sa-dot">
+</span>CRM intégré</div>
+<h2>Transformez vos visiteurs<br />en <span className="sa-gt">clients fidèles</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Chaque scan de votre QR code est une opportunité. Capturez vos leads, suivez leur parcours et concluez plus de ventes — tout depuis votre dashboard.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(236,72,153,.12)"}}>
+<svg className="sa-i">
+<use href="#i-tag">
+</use>
+</svg>
+</div>
+<div>
+<b>Tags intelligents</b>
+<span>Prospect, Chaud, Client, Froid, Perdu. Filtrez et agissez en priorité.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.12)"}}>
+<svg className="sa-i">
+<use href="#i-note">
+</use>
+</svg>
+</div>
+<div>
+<b>Notes & historique</b>
+<span>Ajoutez des notes sur chaque contact. Gardez le contexte de vos échanges.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.12)"}}>
+<svg className="sa-i">
+<use href="#i-download">
+</use>
+</svg>
+</div>
+<div>
+<b>Export CSV</b>
+<span>Exportez tous vos leads en un clic. Compatible Excel & Google Sheets.</span>
+</div>
+</div>
+<span className="sa-pl" style={{background:"rgba(247,201,72,.3)",color:"#8a6100"}}>Disponible avec l'offre BUSINESS</span>
+</div>
+</div>
+</section>
+<section className="sa-sec sa-tint2" id="a">
+<div className="sa-w sa-two">
+<div>
+<div className="sa-badge" style={{background:"rgba(99,102,241,.12)",border:"1px solid rgba(99,102,241,.3)",color:"#4f46e5"}}>
+<span className="sa-dot">
+</span>Analytics avancés</div>
+<h2>Analysez chaque<br />interaction <span className="sa-gt">en temps réel</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Sachez exactement qui visite votre profil, d'où ils viennent et sur quels liens ils cliquent. Des données actionnables pour optimiser votre présence digitale.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(99,102,241,.14)"}}>
+<svg className="sa-i">
+<use href="#i-globe">
+</use>
+</svg>
+</div>
+<div>
+<b>Statistiques géographiques</b>
+<span>Visualisez d'où viennent vos visiteurs, pays par pays.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.14)"}}>
+<svg className="sa-i">
+<use href="#i-live">
+</use>
+</svg>
+</div>
+<div>
+<b>Flux visiteurs en direct</b>
+<span>Voir qui est sur votre page maintenant, en temps réel.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-chart">
+</use>
+</svg>
+</div>
+<div>
+<b>Top liens & taux de clic</b>
+<span>Identifiez vos liens les plus performants.</span>
+</div>
+</div>
+<span className="sa-pl" style={{background:"rgba(255,107,53,.12)",color:"#c2410c"}}>Disponible avec PRO & BUSINESS</span>
+</div>
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><picture><source srcSet={tempsReelMockupWebp} type="image/webp" /><img src={tempsReelMockup} alt="Analytics temps réel SocialApp" loading="lazy" className="sa-float" style={{ width: '100%', maxWidth: '640px', objectFit: 'contain', filter: 'drop-shadow(0 40px 80px rgba(99,102,241,.3))' }} /></picture></div>
+</div>
+</section>
+<section className="sa-sec sa-tint3" id="m">
+<div className="sa-w">
+<div className="sa-hd">
+<div className="sa-badge" style={{background:"rgba(255,107,53,.12)",border:"1px solid rgba(255,107,53,.3)",color:"#c2410c"}}>
+<span className="sa-dot">
+</span>Marketplace </div>
+<h2>Votre boutique directement<br />sur votre <span className="sa-gt">profil public</span>
+</h2>
+<p className="sa-sub">Vendez sans créer un site web. Photos, prix barrés, badges promo. Vos clients commandent sur WhatsApp. Zéro commission.</p>
+</div>
+<div className="sa-two">
+<div className="sa-mpwrap"><img src={marketplaceWoman} alt="Cliente ravie utilisant SocialApp" loading="lazy" className="sa-float sa-mpwoman" /><div className="sa-phone">
+<div className="sa-scr">
+<div style={{textAlign:"center"}}>
+<div className="sa-mk sa-g" style={{margin:"0 auto 5px"}}>S</div>
+<b style={{fontSize:"10.5px"}}>SocialApp <span style={{color:"#22c55e"}}>
+<svg className="sa-i">
+<use href="#i-badge">
+</use>
+</svg>
+</span>
+</b>
+<div style={{fontSize:"7px",opacity:".5"}}>Votre boutique, votre profil</div>
+<div className="sa-g" style={{display:"inline-block",marginTop:"6px",fontSize:"7px",fontWeight:"700",color:"#2a1305",padding:"4px 11px",borderRadius:"20px"}}>Ouvrir ma boutique →</div>
+</div>
+<div className="sa-pg">
+<div>
+<i style={{background:"linear-gradient(135deg,#5a4a63,#241a2b)"}}>
+</i>
+<b>14 000 F <s style={{opacity:".4",fontWeight:"500"}}>20 000 F</s>
+</b>
+</div>
+<div>
+<i style={{background:"linear-gradient(135deg,#7a4a3a,#2e1f18)"}}>
+</i>
+<b>10 000 F</b>
+</div>
+<div>
+<i style={{background:"linear-gradient(135deg,#3a4a5a,#1a232e)"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</i>
+<b>180 000 F</b>
+</div>
+<div>
+<i style={{background:"linear-gradient(135deg,#4a3a5a,#20182e)"}}>
+</i>
+<b>9 000 F</b>
+</div>
+</div>
+<div className="sa-rw">
+<span className="sa-ic" style={{width:"14px",height:"14px",borderRadius:"4px",fontSize:"7px",background:"#ff6b35"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</span>Téléphone</div>
+<div className="sa-rw">
+<span className="sa-ic" style={{width:"14px",height:"14px",borderRadius:"4px",fontSize:"7px",background:"#25D366"}}>
+<svg className="sa-i">
+<use href="#i-chat">
+</use>
+</svg>
+</span>WhatsApp</div>
+</div>
+</div>
+</div>
+<div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.12)"}}>
+<svg className="sa-i">
+<use href="#i-image">
+</use>
+</svg>
+</div>
+<div>
+<b>Photos, prix & badges promotionnels</b>
+<span>Prix barrés, réductions en %, badge disponible/épuisé.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.12)"}}>
+<svg className="sa-i">
+<use href="#i-coin">
+</use>
+</svg>
+</div>
+<div>
+<b>Zéro commission — toujours</b>
+<span>100% de vos ventes vous reviennent. SocialApp ne prend rien.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(37,211,102,.14)"}}>
+<svg className="sa-i">
+<use href="#i-phone">
+</use>
+</svg>
+</div>
+<div>
+<b>Commandes directes sur WhatsApp</b>
+<span>Bouton de contact direct. Votre client vous écrit en 1 tap.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(245,158,11,.16)"}}>
+<svg className="sa-i">
+<use href="#i-form">
+</use>
+</svg>
+</div>
+<div>
+<b>Documents PDF joints</b>
+<span>Menus, catalogues, brochures — accessibles sur votre profil.</span>
+</div>
+</div>
+<button type="button" className="sa-btn sa-l" style={{marginTop:"12px"}} onClick={handleCTA}>Ouvrir ma boutique →</button>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec" id="e">
+<div className="sa-w sa-two">
+<div>
+<div className="sa-badge" style={{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",color:"#15803d"}}>
+<span className="sa-dot">
+</span>Soirées, salons & concerts</div>
+<h2>Mode <span className="sa-gt">Événement</span>
+</h2>
+<p className="sa-sub" style={{marginBottom:"28px"}}>Créez une page d'événement dédiée en 2 minutes, avec son propre lien — compte à rebours live, galerie médias, réservation en ligne.</p>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(34,197,94,.16)"}}>
+<svg className="sa-i">
+<use href="#i-clock">
+</use>
+</svg>
+</div>
+<div>
+<b>Compte à rebours en direct</b>
+<span>Jours, heures, minutes, secondes — en temps réel.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(255,107,53,.14)"}}>
+<svg className="sa-i">
+<use href="#i-image">
+</use>
+</svg>
+</div>
+<div>
+<b>Galerie photos & vidéos</b>
+<span>Carrousel jusqu'à 50 Mo pour présenter l'ambiance.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(247,201,72,.28)"}}>
+<svg className="sa-i">
+<use href="#i-ticket">
+</use>
+</svg>
+</div>
+<div>
+<b>Bouton de réservation</b>
+<span>Redirigez vers votre lien de paiement ou de billets.</span>
+</div>
+</div>
+<div className="sa-it">
+<div className="sa-ic" style={{background:"rgba(139,92,246,.14)"}}>
+<svg className="sa-i">
+<use href="#i-sliders">
+</use>
+</svg>
+</div>
+<div>
+<b>Couleurs personnalisables</b>
+<span>Sunset, Océan, Rose, Forêt — adaptez l'ambiance.</span>
+</div>
+</div>
+<div style={{background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.25)",borderRadius:"14px",padding:"16px 20px",marginTop:"8px"}}>
+<b style={{fontSize:"22px",color:"#16a34a",fontWeight:"900"}}>3 500 FCFA</b>
+<div style={{fontSize:"13px",color:"#5d5a6e",marginTop:"4px"}}>par événement · Quel que soit votre plan</div>
+</div>
+</div>
+<div style={{display:"flex",justifyContent:"center",alignItems:"center"}}><picture><source srcSet={eventMockupWebp} type="image/webp" /><img src={eventMockup} alt="Mode Événement SocialApp" loading="lazy" className="sa-float" style={{ width: '320px', maxWidth: '100%', borderRadius: '24px', boxShadow: '0 40px 80px rgba(0,0,0,.35)', objectFit: 'contain' }} /></picture></div>
+</div>
+</section> <section className="sa-sec" id="t" style={{ background: 'rgba(255,255,255,.35)' }}>
+<div className="sa-w">
+<div className="sa-hd" style={{ marginBottom: '36px' }}>
+<h2>Des prix faits pour <span className="sa-gt">l'Afrique</span></h2>
+<p className="sa-sub">Paiement Mobile Money · Pas de carte bancaire nécessaire</p>
+<div style={{ marginTop: '20px' }}><BillingToggle value={billing} onChange={setBilling} /></div>
+<div style={{ fontSize: '12px', color: '#7b788a', marginTop: '10px' }}>Le paiement mensuel est disponible pour l'offre BUSINESS</div>
+</div>
+<div className="sa-pls">{PLANS.map((p) => <PlanCard key={p.name} p={p} billing={billing} onChoose={choosePlan} />)}</div>
+<p style={{ textAlign: 'center', color: '#7b788a', fontSize: '13px', marginTop: '28px' }}>Questions ? WhatsApp <b>+225 05 76 03 12 12</b></p>
+</div>
+</section> <section className="sa-sec">
+<div className="sa-w">
+<div className="sa-hd">
+<h2>Prêt en <span className="sa-gt">5 minutes</span>
+</h2>
+<p className="sa-sub">Créez votre carte de visite digitale complète en quelques étapes simples.</p>
+</div>
+<div className="sa-stp">
+<div className="sa-card">
+<div style={{fontSize:"32px",color:"#c2410c"}}>
+<svg className="sa-i">
+<use href="#i-user">
+</use>
+</svg>
+</div>
+<div className="sa-nm sa-g">1</div>
+<h3>Créez votre carte de visite digitale</h3>
+<p>Nom, photo, bio, vos liens sociaux. En 5 minutes votre vitrine est prête.</p>
+</div>
+<div className="sa-card">
+<div style={{fontSize:"32px",color:"#c2410c"}}>
+<svg className="sa-i">
+<use href="#i-bag">
+</use>
+</svg>
+</div>
+<div className="sa-nm sa-g">2</div>
+<h3>Ajoutez vos produits</h3>
+<p>Photos, prix, descriptions. Votre boutique est visible directement sur votre page.</p>
+</div>
+<div className="sa-card">
+<div style={{fontSize:"32px",color:"#c2410c"}}>
+<svg className="sa-i">
+<use href="#i-qr">
+</use>
+</svg>
+</div>
+<div className="sa-nm sa-g">3</div>
+<h3>Partagez votre QR code</h3>
+<p>Sur vos flyers, cartes de visite, vitrine. Un scan et vos clients trouvent tout.</p>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec" style={{paddingTop:"20px"}}>
+<div className="sa-w">
+<div className="sa-hd">
+<h2>Ils utilisent déjà <span className="sa-gt">SocialApp</span>
+</h2>
+<p className="sa-sub">Ce qu'ils en disent</p>
+</div>
+<div className="sa-tg">
+<div className="sa-card">
+<div style={{color:"#f0a500",letterSpacing:"3px",fontSize:"18px"}}>★★★★★</div>
+<p>"Depuis que j'utilise SocialApp, mes abonnés Instagram ont augmenté de 40% en 2 mois. Les analytics me montrent d'où viennent mes visiteurs. Indispensable !"</p>
+<b>Koffi Mensah</b>
+<div style={{fontSize:"12px",color:"#7b788a"}}>Influenceur · Abidjan</div>
+</div>
+<div className="sa-card">
+<div style={{color:"#f0a500",letterSpacing:"3px",fontSize:"18px"}}>★★★★★</div>
+<p>"Mes clients scannent mon QR code, voient mes produits et me contactent sur WhatsApp. Le CRM m'aide à suivre mes prospects. Mon business a vraiment décollé !"</p>
+<b>Dorine Ouattara</b>
+<div style={{fontSize:"12px",color:"#7b788a"}}>Commerçante · Cocody</div>
+</div>
+<div className="sa-card">
+<div style={{color:"#f0a500",letterSpacing:"3px",fontSize:"18px"}}>★★★★★</div>
+<p>"J'ai organisé ma soirée avec le mode Événement. Le compte à rebours et la réservation ont boosté mes ventes de billets de 60%. Je recommande !"</p>
+<b>Jean-Baptiste K.</b>
+<div style={{fontSize:"12px",color:"#7b788a"}}>Organisateur · Plateau</div>
+</div>
+</div>
+</div>
+</section>
+<section className="sa-sec" style={{paddingTop:"20px"}}>
+<div className="sa-w">
+<div className="sa-fin">
+<h2>Prêt à transformer votre<br />
+<span className="sa-gt">présence digitale ?</span>
+</h2>
+<p className="sa-sub" style={{maxWidth:"560px",margin:"0 auto 32px",fontSize:"18px"}}>Rejoignez des centaines d'entrepreneurs ivoiriens et Africains qui utilisent SocialApp pour partager leurs réseaux, vendre leurs produits et gérer leurs leads.</p>
+<div style={{display:"flex",gap:"16px",justifyContent:"center",flexWrap:"wrap"}}>
+<button type="button" className="sa-btn sa-l" onClick={handleCTA}>{user ? 'Accéder à mon dashboard →' : 'Créer ma carte de visite gratuitement →'}</button>
+<a className="sa-btn sa-s sa-l" style={{boxShadow:"none",fontSize:"15px",padding:"0 32px"}} href="#t">Voir les offres</a>
+</div>
+<p style={{color:"#7b788a",fontSize:"13px",margin:"20px 0 0"}}>Paiement Mobile Money · Wave · Orange Money</p>
+</div>
+</div>
+</section> <section className="sa-sec" id="q" style={{ paddingTop: '20px' }}>
+<div className="sa-w">
+<div className="sa-hd" style={{ marginBottom: '40px' }}><h2>Questions <span className="sa-gt">fréquentes</span></h2></div>
+<div className="sa-fq">{FAQS.map((f, i) => (
+<div key={i} className={'sa-fqi' + (openFaq === i ? ' sa-open' : '')}>
+<button type="button" className="sa-fqb" aria-expanded={openFaq === i} onClick={() => setOpenFaq((v) => (v === i ? null : i))}><b>{f.q}</b></button>
+{openFaq === i && <span>{f.a}</span>}
+</div>))}</div>
+</div>
+</section> <footer className="sa-foot">
+<div className="sa-fi">
+<div className="sa-fcta">
+<div>
+<b>Prêt à lancer votre carte de visite digitale ?</b>
+<span>Mise en ligne en 5 minutes · Paiement Mobile Money, sans carte bancaire</span>
+</div>
+<div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
+<button type="button" className="sa-btn" onClick={handleCTA}>{user ? 'Mon dashboard →' : 'Commencer →'}</button>
+<a className="sa-btn sa-s" href="https://wa.me/2250576031212">Nous écrire sur WhatsApp</a>
+</div>
+</div>
+<div className="sa-fgd">
+<div>
+<div className="sa-brand" style={{marginBottom:"16px",color:"#1d1a2b"}}>
+<div className="sa-mk sa-g" style={{width:"32px",height:"32px",overflow:"hidden"}}><img src={logo} alt="SocialApp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>SocialApp</div>
+<p>Plateforme SaaS ivoirienne : profil digital, CRM, QR Code et marketplace pour développer votre activité. Accessible partout en Afrique.</p>
+<div className="sa-pay">
+<span>Orange Money</span>
+<span>Wave</span>
+<span>MTN</span>
+</div>
+</div>
+<div>
+<h6>Plateforme</h6>
+<a href="#f">Fonctionnalités</a>
+<a href="#crm">CRM</a>
+<a href="#a">Analytics</a>
+<a href="#m">Boutique</a>
+<a href="#e">Mode Événement</a>
+</div>
+<div>
+<h6>Offres</h6>
+<a href="#t">BASIC · 10 000 F</a>
+<a href="#t">PRO · 15 000 F</a>
+<a href="#t">BUSINESS · 39 900 F</a>
+<a href="#t">ÉVÉNEMENT · 3 500 F</a>
+</div>
+<div>
+<h6>Compte</h6>
+<button type="button" className="sa-lnk" onClick={handleCTA}>{user ? 'Mon dashboard' : 'Se connecter'}</button>
+<button type="button" className="sa-lnk" onClick={handleCTA}>Créer ma carte</button>
+<a href="#q">Questions fréquentes</a>
+<a href="/privacy-policy">Politique de confidentialité</a>
+<a href="/terms-of-service">Conditions d'utilisation</a>
+</div>
+<div>
+<h6>Contact</h6>
+<a href="https://wa.me/2250576031212" target="_blank" rel="noopener noreferrer">+225 05 76 03 12 12</a>
+<span>Côte d'Ivoire</span>
+</div>
+</div>
+<div className="sa-cp">
+<span>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire </span>
+<div>
+<a href="/privacy-policy">Confidentialité</a>
+<a href="/terms-of-service">Conditions</a>
+<span>Mobile Money · Wave · Orange Money</span>
+</div>
+</div>
+</div>
+</footer>
       </div>
     </>
   );

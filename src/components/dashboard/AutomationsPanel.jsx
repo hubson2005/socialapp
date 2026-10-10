@@ -386,6 +386,23 @@ const STYLE = `
   border-radius:8px; padding:9px 11px;
 }
 
+/* Éditeur d'étapes */
+.ap-step{ display:flex; flex-direction:column; gap:8px; }
+.ap-step-head{ display:flex; align-items:center; gap:8px; }
+.ap-step-num{
+  flex:0 0 auto; width:24px; height:24px; border-radius:50%;
+  background:var(--orange); color:#fff; font-size:12px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+}
+.ap-step-head .ap-field-select{ flex:1 1 auto; min-width:0; }
+.ap-step-tools{ display:flex; gap:4px; flex:0 0 auto; }
+.ap-step-btn{
+  width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+  background:var(--hover); color:var(--t2); cursor:pointer; font-size:14px; line-height:1;
+}
+.ap-step-btn:disabled{ opacity:.35; cursor:default; }
+.ap-step-help{ font-size:11.5px; color:var(--t2); line-height:1.5; margin-top:-2px; }
+
 .ap-modal-footer{
   display:flex; gap:8px; justify-content:flex-end;
   padding-top:4px; border-top:1px solid var(--border); flex-wrap:wrap;
@@ -469,7 +486,7 @@ const PAGE_SIZE = 10;
 // [M3] Actions réellement exécutées par le moteur — clés moteur uniquement
 const IMPLEMENTED_ACTIONS = new Set([
   'create_lead', 'create_task', 'send_whatsapp',
-  'add_score', 'add_tag', 'notify_owner',
+  'add_score', 'add_tag', 'notify_owner', 'wait',
 ]);
 
 // Actions planifiées (non encore dans le moteur)
@@ -504,7 +521,63 @@ const LEAD_STATUSES = [
   { id:'perdu',    label:'Perdu' },
 ];
 
-const EMPTY_FORM = { name:'', desc:'', trigger:'', action:'', freq:'', config:{} };
+const EMPTY_FORM = { name:'', desc:'', trigger:'', steps:[{ type:'', config:{} }], freq:'' };
+
+const MAX_STEPS = 6;
+const MIN_WAIT_HOURS = 0.05;   // 3 minutes (plancher du moteur SQL)
+const MAX_WAIT_HOURS = 720;    // 30 jours (plafond du moteur SQL)
+
+// Déclencheurs qui fournissent déjà un contact au moteur : « Attendre » y est
+// possible sans « Créer un lead » avant.
+const TRIGGERS_WITH_LEAD = new Set([
+  'new_lead', 'lead_status_changed', 'lead_tagged',
+  'lead_score_reached', 'task_completed', 'lead_inactif',
+]);
+
+function waitLabel(config) {
+  const h = Number(config?.delayHours);
+  const hours = Number.isFinite(h) && h > 0 ? h : 24;
+  if (hours < 1)                     return `⏳ Attendre ${Math.max(1, Math.round(hours * 60))} min`;
+  if (hours >= 24 && hours % 24 === 0) return `⏳ Attendre ${hours / 24} j`;
+  return `⏳ Attendre ${hours} h`;
+}
+
+function stepLabel(step) {
+  if (step.type === 'wait') return waitLabel(step.config);
+  return ACTION_LABELS[step.type] || step.type;
+}
+
+// Lit les étapes d'une automatisation (nouveau format `actions[]`, ou ancien `action`).
+function stepsFromAuto(auto) {
+  const base = auto.action_config || {};
+  const arr = (Array.isArray(auto.actions) ? auto.actions : [])
+    .map(s => (typeof s === 'string' ? { type: s, config: {} } : s))
+    .filter(s => s && s.type);
+  if (arr.length === 0) return [{ type: auto.action || '', config: { ...base } }];
+  // Une seule étape : même fusion qu'avant (la config de l'étape prime).
+  if (arr.length === 1) return [{ type: arr[0].type, config: { ...base, ...(arr[0].config || {}) } }];
+  return arr.map(s => ({ type: s.type, config: { ...(s.config || {}) } }));
+}
+
+// Renvoie un message d'erreur, ou null si les étapes sont valides.
+function validateSteps(trigger, rawSteps) {
+  const steps = rawSteps.filter(s => s.type);
+  const waits = steps.filter(s => s.type === 'wait');
+  if (waits.length > 1) return "Une seule étape « Attendre » est possible par automatisation.";
+  const wi = steps.findIndex(s => s.type === 'wait');
+  if (wi === -1) return null;
+  if (wi === steps.length - 1) return "Ajoute au moins une étape après « Attendre » (sinon il n'y a rien à faire après le délai).";
+  const hasLead = steps.slice(0, wi).some(s => s.type === 'create_lead') || TRIGGERS_WITH_LEAD.has(trigger);
+  if (!hasLead) return "Place « Créer un lead » avant « Attendre » : sans contact, il n'y a personne à relancer.";
+  const raw = steps[wi].config?.delayHours;
+  if (raw !== undefined && raw !== '') {
+    const h = Number(raw);
+    if (!Number.isFinite(h) || h < MIN_WAIT_HOURS || h > MAX_WAIT_HOURS) {
+      return `Le délai d'attente doit être compris entre ${MIN_WAIT_HOURS} h (3 min) et ${MAX_WAIT_HOURS} h (30 jours).`;
+    }
+  }
+  return null;
+}
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function formatLastRun(isoDate) {
@@ -590,6 +663,7 @@ function ActionConfigFields({ action, config, setConfigField }) {
             <input
               className="ap-field-input"
               type={field.type || 'text'}
+              step={field.type === 'number' ? 'any' : undefined}
               placeholder={field.placeholder || ''}
               value={config[field.key] ?? ''}
               onChange={setConfigField(field.key)}
@@ -625,7 +699,18 @@ export default function AutomationsPanel({ profileId }) {
   const { isMobile, isTablet } = useBreakpoint();
   const isCreate = modal === 'create';
   const setField       = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
-  const setConfigField = (key) => (e) => setForm(prev => ({ ...prev, config: { ...prev.config, [key]: e.target.value } }));
+  const updateStep     = (i, fn) => setForm(prev => ({ ...prev, steps: prev.steps.map((s, k) => (k === i ? fn(s) : s)) }));
+  const setStepType    = (i, type) => updateStep(i, () => ({ type, config: {} }));
+  const setStepConfig  = (i) => (key) => (e) => { const v = e.target.value; updateStep(i, s => ({ ...s, config: { ...s.config, [key]: v } })); };
+  const addStep        = () => setForm(prev => (prev.steps.length >= MAX_STEPS ? prev : { ...prev, steps: [...prev.steps, { type:'', config:{} }] }));
+  const removeStep     = (i) => setForm(prev => ({ ...prev, steps: prev.steps.length > 1 ? prev.steps.filter((_, k) => k !== i) : prev.steps }));
+  const moveStep       = (i, d) => setForm(prev => {
+    const j = i + d;
+    if (j < 0 || j >= prev.steps.length) return prev;
+    const steps = [...prev.steps];
+    [steps[i], steps[j]] = [steps[j], steps[i]];
+    return { ...prev, steps };
+  });
 
   useEffect(() => { if (profileId) loadAutomations(); }, [profileId]);
   useEffect(() => { if (tab === 'logs' && profileId) loadLogs(); }, [tab, profileId]);
@@ -682,42 +767,39 @@ export default function AutomationsPanel({ profileId }) {
       name:    t.name    || '',
       desc:    t.desc    || '',
       trigger: t.trigger || '',
-      action:  t.action  || '',
+      steps:   [{ type: t.action || '', config: { ...(t.config || {}) } }],
       freq:    t.freq    || '',
-      config:  t.config  || {},
     });
     setModal('create');
   };
 
   // [M7] Ouvrir l'édition en lisant correctement les clés moteur
   const openEdit = (auto) => {
-    const baseConfig  = auto.action_config || {};
-    const arrayConfig = Array.isArray(auto.actions) && auto.actions.length > 0
-      ? (auto.actions[0]?.config || {})
-      : {};
-    const mergedConfig = { ...baseConfig, ...arrayConfig };
-
     setForm({
       name:    auto.name        || '',
       desc:    auto.desc        || auto.description || '',
       trigger: auto.trigger     || '',
-      action:  auto.action      || '',
+      steps:   stepsFromAuto(auto),
       freq:    auto.freq        || '',
-      config:  mergedConfig,
     });
     setModal(auto);
   };
 
   // [M6] Construire le payload avec le format moteur correct
   const buildPayload = () => {
-    const actionConfig = form.config || {};
-    const actionsList = form.action
-      ? [{ type: form.action, config: actionConfig }]
-      : [];
+    const actionsList = form.steps
+      .filter(s => s.type)
+      .map(s => ({ type: s.type, config: s.config || {} }));
+    const multi  = actionsList.length > 1;
+    const first  = actionsList[0];
+    // Une seule étape : on garde aussi action / action_config (compatibilité).
+    // Plusieurs étapes : action_config reste vide, car le moteur SQL l'ajoute
+    // à CHAQUE étape et écraserait leurs réglages.
+    const actionConfig = multi ? {} : (first?.config || {});
 
     const flow = [
       ['🎯', TRIGGER_LABELS[form.trigger] || form.trigger || 'Déclencheur'],
-      ...(form.action ? [['⚡', ACTION_LABELS[form.action] || form.action]] : []),
+      ...actionsList.map(s => [s.type === 'wait' ? '⏳' : '⚡', s.type === 'wait' ? waitLabel(s.config).replace('⏳ ', '') : (ACTION_LABELS[s.type] || s.type)]),
       ['✅', 'Exécuté'],
     ];
 
@@ -726,7 +808,7 @@ export default function AutomationsPanel({ profileId }) {
       name:         form.name.trim(),
       description:  form.desc.trim(),
       trigger:      form.trigger,
-      action:       form.action,
+      action:       first?.type || '',
       actions:      actionsList,
       action_config: actionConfig,
       freq:         form.freq || 'Immédiat',
@@ -739,6 +821,8 @@ export default function AutomationsPanel({ profileId }) {
 
   const handleCreate = async () => {
     if (!form.name.trim()) { alert('Le nom est requis'); return; }
+    const stepsError = validateSteps(form.trigger, form.steps);
+    if (stepsError) { alert(stepsError); return; }
     const payload = { ...buildPayload(), active: true, runs: 0 };
     const { data, error } = await supabase.from('automations').insert(payload).select().maybeSingle();
     if (error) { console.error('CREATE ERROR:', error); return; }
@@ -748,6 +832,8 @@ export default function AutomationsPanel({ profileId }) {
 
   const handleSave = async () => {
     if (!modal || modal === 'create') return;
+    const stepsError = validateSteps(form.trigger, form.steps);
+    if (stepsError) { alert(stepsError); return; }
     const payload = buildPayload();
     const { data, error } = await supabase
       .from('automations').update(payload).eq('id', modal.id).select().maybeSingle();
@@ -867,35 +953,59 @@ export default function AutomationsPanel({ profileId }) {
           </select>
         </div>
 
-        {/* Action — [M2] options depuis constants, avec section "Bientôt" */}
+        {/* Étapes : une ou plusieurs actions exécutées dans l'ordre */}
         <div>
-          <div className="ap-sec-lbl">Action</div>
-          <select className="ap-field-select" value={form.action} onChange={setField('action')}>
-            <option value="">Choisir une action...</option>
-            <optgroup label="── Disponibles ──">
-              {ACTION_OPTIONS.map(a => (
-                <option key={a.value} value={a.value}>{a.label}</option>
-              ))}
-            </optgroup>
-            <optgroup label="── Bientôt ──">
-              {COMING_SOON_ACTIONS.map(a => (
-                <option key={a.value} value={a.value}>{a.label}</option>
-              ))}
-            </optgroup>
-          </select>
+          <div className="ap-sec-lbl">Étapes</div>
+          <div className="ap-step-help">
+            Les étapes s'exécutent dans l'ordre. « ⏳ Attendre » met la suite en pause puis la reprend
+            automatiquement (vérification toutes les 5 minutes).
+          </div>
         </div>
 
-        {/* [M5] Configuration dynamique */}
-        <ActionConfigFields
-          action={form.action}
-          config={form.config || {}}
-          setConfigField={setConfigField}
-        />
+        {form.steps.map((step, i) => (
+          <div className="ap-step" key={i}>
+            <div className="ap-step-head">
+              <span className="ap-step-num">{i + 1}</span>
+              <select className="ap-field-select" value={step.type} onChange={e => setStepType(i, e.target.value)}>
+                <option value="">Choisir une action...</option>
+                <optgroup label="── Disponibles ──">
+                  {ACTION_OPTIONS.map(a => (
+                    <option key={a.value} value={a.value}
+                      disabled={a.value === 'wait' && step.type !== 'wait' && form.steps.some(s => s.type === 'wait')}>
+                      {a.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="── Bientôt ──">
+                  {COMING_SOON_ACTIONS.map(a => (
+                    <option key={a.value} value={a.value}>{a.label}</option>
+                  ))}
+                </optgroup>
+              </select>
+              <div className="ap-step-tools">
+                <button type="button" className="ap-step-btn" title="Monter" aria-label="Monter l'étape" disabled={i === 0} onClick={() => moveStep(i, -1)}>↑</button>
+                <button type="button" className="ap-step-btn" title="Descendre" aria-label="Descendre l'étape" disabled={i === form.steps.length - 1} onClick={() => moveStep(i, 1)}>↓</button>
+                <button type="button" className="ap-step-btn" title="Retirer" aria-label="Retirer l'étape" disabled={form.steps.length <= 1} onClick={() => removeStep(i)}>✕</button>
+              </div>
+            </div>
+            <ActionConfigFields
+              action={step.type}
+              config={step.config || {}}
+              setConfigField={setStepConfig(i)}
+            />
+          </div>
+        ))}
+
+        <div>
+          <button type="button" className="ap-btn-sec" onClick={addStep} disabled={form.steps.length >= MAX_STEPS}>
+            + Ajouter une étape
+          </button>
+        </div>
 
         {/* Délai */}
         <div>
-          <div className="ap-field-label">Délai</div>
-          <input className="ap-field-input" type="text" placeholder="Ex: Immédiat, 3 jours..." value={form.freq} onChange={setField('freq')} />
+          <div className="ap-field-label">Libellé affiché sur la carte (facultatif)</div>
+          <input className="ap-field-input" type="text" placeholder="Ex: Immédiat. Pour un vrai délai, ajoute une étape « Attendre »." value={form.freq} onChange={setField('freq')} />
         </div>
 
         <div className="ap-modal-footer">
@@ -977,10 +1087,17 @@ export default function AutomationsPanel({ profileId }) {
                 <div className="auto-list">
                   {paged.map(auto => {
                     const triggerLabel = TRIGGER_LABELS[auto.trigger] || auto.trigger || 'Aucun';
-                    const actionLabel  = ACTION_LABELS[auto.action]   || auto.action   || 'Aucune';
+                    const stepList = Array.isArray(auto.actions) && auto.actions.length > 1
+                      ? auto.actions.map(a => (typeof a === 'string' ? { type: a, config: {} } : a)).filter(a => a && a.type)
+                      : null;
+                    const actionLabel  = stepList
+                      ? `${stepList.length} étapes`
+                      : (ACTION_LABELS[auto.action] || auto.action || 'Aucune');
                     const cardFlow = [
                       ['🎯', triggerLabel],
-                      ...(auto.action ? [['⚡', actionLabel]] : []),
+                      ...(stepList
+                        ? stepList.map(a => [a.type === 'wait' ? '⏳' : '⚡', a.type === 'wait' ? waitLabel(a.config).replace('⏳ ', '') : stepLabel(a)])
+                        : (auto.action ? [['⚡', actionLabel]] : [])),
                       ['✅', 'Exécuté'],
                     ];
 

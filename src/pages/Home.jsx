@@ -671,7 +671,7 @@ const CSS = `
 .sa-ttl .sa-l2{animation-delay:.08s,.6s}
 }
 
-.sa-dv-qr{left:8px;top:140px;width:150px;padding:12px;text-align:center;animation:sa-dvB3 14s ease-in-out infinite .12s}
+.sa-dv-qr{left:404px;top:150px;width:150px;padding:12px;text-align:center;animation:sa-dvB3 14s ease-in-out infinite .12s}
 .sa-qr-box{position:relative;width:100%;aspect-ratio:1;padding:6px;background:#fff;border:1px solid #eee9de;border-radius:10px;overflow:hidden}
 .sa-qr-box svg{display:block;width:100%;height:100%}
 .sa-qr-box::after{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,transparent,#ff6b35,transparent);box-shadow:0 0 12px rgba(255,107,53,.85);animation:sa-qrScan 2.4s ease-in-out infinite}

@@ -261,7 +261,6 @@ const CSS = `
 .vsp-tools{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
 .vsp-tools .vsp-check{ flex:1; min-width:160px; }
 .vsp-empty{ text-align:center; color:#9ca3af; font-size:13px; padding:22px 8px; }
-.vsp-note{ margin-top:12px; padding:10px 12px; border-radius:12px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; line-height:1.5; }
 
 @media (min-width:640px){
   .vsp-root{ padding:20px; padding-bottom:calc(120px + env(safe-area-inset-bottom)); }
@@ -600,11 +599,6 @@ export default function VisualStudioPanel({ profileId }) {
             </div>
           )}
 
-          <div className="vsp-note">
-            L’IP donne une localisation approximative (ville ou région), pas l’identité de la personne. Sur mobile, plusieurs
-            abonnés partagent souvent la même IP, et un VPN la masque. Pensez à mentionner la collecte d’adresses IP dans votre
-            politique de confidentialité.
-          </div>
         </div>
       )}
     </div>

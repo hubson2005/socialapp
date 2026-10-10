@@ -46,7 +46,7 @@ async function fetchAllProfiles(supabase) {
   for (let from = 0; rows.length < MAX_URLS; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from("link_profiles")
-      .select("username, updated_at")
+      .select("username")
       .not("username", "is", null)
       // .eq("is_public", true)   // ← à activer si une colonne indique qu'un profil est public/actif
       .order("username", { ascending: true }) // ordre stable, indispensable pour paginer
@@ -83,10 +83,7 @@ export default async function handler(req, res) {
       seen.add(key);
 
       const loc = `${BASE_URL}/${encodeURIComponent(name)}`;
-      const d = p.updated_at ? new Date(p.updated_at) : null;
-      const lastmod =
-        d && !Number.isNaN(d.getTime()) ? `\n    <lastmod>${d.toISOString()}</lastmod>` : "";
-      urls.push(`  <url>\n    <loc>${escapeXml(loc)}</loc>${lastmod}\n  </url>`);
+      urls.push(`  <url>\n    <loc>${escapeXml(loc)}</loc>\n  </url>`);
     }
 
     const xml =

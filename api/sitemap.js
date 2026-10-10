@@ -75,8 +75,9 @@ export default async function handler(req, res) {
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
     res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
     res.status(200).send(xml);
-  } catch (err) {
+   } catch (err) {
     console.error("sitemap error:", err);
-    res.status(500).setHeader("Content-Type", "text/plain; charset=utf-8").send("Erreur sitemap");
+    const detail = err?.message || err?.details || JSON.stringify(err);
+    res.status(500).setHeader("Content-Type", "text/plain; charset=utf-8").send("Erreur sitemap: " + detail);
   }
 }

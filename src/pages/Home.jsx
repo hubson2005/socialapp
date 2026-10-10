@@ -14,6 +14,12 @@ import carteVisiteWebp from '../assets/CARTE_VISITE_DIGITALE.webp';
 import carteVisitePng from '../assets/CARTE_VISITE_DIGITALE.png';
 import carteNfcWebp from '../assets/CARTE_NFC_SOCIALAPP.webp';
 import carteNfcPng from '../assets/CARTE_NFC_SOCIALAPP.png';
+import relAutoPng from '../assets/RELANCES_AUTO.png';
+import relAutoWebp from '../assets/RELANCES_AUTO.webp';
+import relCrmPng from '../assets/RELANCES_CRM.png';
+import relCrmWebp from '../assets/RELANCES_CRM.webp';
+import relTachesPng from '../assets/RELANCES_TACHES.png';
+import relTachesWebp from '../assets/RELANCES_TACHES.webp';
 import tabletWebp from '../assets/DASHBOARD_TABLETTE.webp';
 import tabletPng from '../assets/DASHBOARD_TABLETTE.png';
 import phoneWebp from '../assets/TELEPHONE_SOCIALAPP.webp';
@@ -86,6 +92,11 @@ const PLANS = [
   },
 ];
 
+const RELANCES = [
+  { k: 'Programmez', t: 'Programmez la relance une fois', d: "Dans Automatisations, enchaînez les étapes : créer le contact, attendre 1 jour, puis créer une tâche et ajouter un tag. L'attente s'annule si le client répond.", png: relAutoPng, webp: relAutoWebp, alt: 'Automatisation SocialApp : formulaire rempli, créer un lead, attendre 1 jour, créer une tâche, ajouter un tag', w: 735, h: 222 },
+  { k: 'Retrouvez', t: 'Vos relances du jour, dans le CRM', d: "Le bandeau « À relancer » classe tout en retard, aujourd'hui et à venir. Ouvrez WhatsApp en un clic, repoussez de 1, 3 ou 7 jours, ou validez.", png: relCrmPng, webp: relCrmWebp, alt: 'CRM SocialApp : panneau À relancer avec relances en retard, du jour et à venir', w: 1506, h: 298 },
+  { k: 'Suivez', t: 'Une page Tâches pour ne rien oublier', d: 'Ajoutez une tâche avec échéance, priorité et contact lié. Une alerte arrive dans votre cloche au bon moment.', png: relTachesPng, webp: relTachesWebp, alt: 'Page Tâches SocialApp : tâches en retard, du jour et à venir', w: 906, h: 587 },
+];
 const FAQS = [
   { q: "C'est quoi exactement SocialApp ?", a: "SocialApp est votre profil digital tout-en-un : un lien unique et un QR code qui regroupe tous vos réseaux sociaux, WhatsApp, votre boutique et vos événements. Un seul scan, vos clients trouvent tout." },
   { q: 'Combien ça coûte ?', a: "10 000 FCFA/an (BASIC), 15 000 FCFA/an (PRO). L'offre BUSINESS est à 3 990 FCFA/mois ou 39 900 FCFA/an (10 mois payés pour 12 : 2 mois offerts). Module Événement disponible à 3 500 FCFA, quel que soit votre plan. Paiement Mobile Money, Wave ou Orange Money — sans carte bancaire." },
@@ -518,6 +529,21 @@ const CSS = `
 }
 @media(max-width:960px){.sa-stats>div::after{display:none}.sa-stats b{letter-spacing:-1px}}
 @media(prefers-reduced-motion:reduce){.sa-stats>div b,.sa-stats>div span,.sa-stats>div::after,.sa-fq div,.sa-fin,.sa-fin>*,.sa-fin .sa-btn{animation:none!important;transition:none}}
+.sa-rl-tabs{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 28px}
+.sa-rl-tab{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:100px;border:1px solid rgba(29,26,43,.12);background:rgba(255,255,255,.7);font:inherit;font-size:14px;font-weight:700;color:#5d5a6e;cursor:pointer;transition:background .2s,color .2s,border-color .2s,box-shadow .2s}
+.sa-rl-tab i{font-style:normal;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;background:rgba(29,26,43,.08)}
+.sa-rl-tab[aria-selected="true"]{background:#fff;color:#1d1a2b;border-color:rgba(245,158,11,.55);box-shadow:0 10px 30px -12px rgba(245,158,11,.5)}
+.sa-rl-tab[aria-selected="true"] i{background:#f59e0b;color:#fff}
+.sa-rl-tab:focus-visible{outline:2px solid #f59e0b;outline-offset:2px}
+.sa-rl-cap{text-align:center;max-width:640px;margin:0 auto 24px}.sa-rl-cap h3{margin:0 0 8px;font-size:22px;letter-spacing:-.5px}.sa-rl-cap p{margin:0;font-size:15px;color:#5d5a6e;line-height:1.7}
+.sa-rl-fr{max-width:1080px;margin:0 auto;border-radius:18px;background:#fff;border:1px solid rgba(29,26,43,.1);box-shadow:0 30px 70px -28px rgba(80,50,20,.35);overflow:hidden}
+.sa-rl-bar{display:flex;gap:6px;padding:11px 14px;background:#f4f1ec;border-bottom:1px solid rgba(29,26,43,.07)}.sa-rl-bar span{width:10px;height:10px;border-radius:50%;background:#d9d3c8}
+.sa-rl-fr img{display:block;width:100%;height:auto}
+.sa-rl-fr.sa-rl-n{max-width:640px}
+.sa-rl-foot{text-align:center;margin-top:28px}
+.sa-rl-pts{display:flex;gap:10px 22px;justify-content:center;flex-wrap:wrap;margin:0 0 6px;padding:0;list-style:none;font-size:13px;font-weight:600;color:#3d3a4f}
+.sa-rl-hint{display:none;text-align:center;font-size:12px;color:#7b788a;margin:10px 0 0}
+@media(max-width:640px){.sa-rl-fr{overflow-x:auto;-webkit-overflow-scrolling:touch}.sa-rl-fr img{min-width:620px}.sa-rl-fr.sa-rl-w img{min-width:860px}.sa-rl-hint{display:block}.sa-rl-tab{padding:10px 14px;font-size:13px}.sa-rl-cap h3{font-size:19px}}
 @media(max-width:960px){.sa-w{padding:0 20px}.sa-nav{padding:0 20px}.sa-lk{display:none}.sa-hero,.sa-two,.sa-fg,.sa-pls,.sa-stp,.sa-tg,.sa-fgd{grid-template-columns:1fr}.sa-hero{gap:48px;padding:48px 0}.sa-p h1{font-size:40px;letter-spacing:-2px}.sa-p h2,.sa-fin h2{font-size:30px}.sa-sec{padding:64px 0}.sa-stats{grid-template-columns:repeat(2,1fr);padding:36px 20px}.sa-fb{display:none}.sa-fin{padding:48px 24px}.sa-cp,.sa-cp div{flex-direction:column;align-items:flex-start;gap:8px}.sa-foot{padding:48px 20px 24px}.sa-fcta{padding:24px}}
 
 
@@ -699,6 +725,7 @@ export default function Home() {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [billing, setBilling] = useState('annual'); // 'annual' | 'monthly'
+  const [relTab, setRelTab] = useState(0);
 
   const handleCTA = () => { if (user) { navigate('/dashboard'); } else { setShowPlanModal(true); } };
   const openEvent = () => setShowEventModal(true);
@@ -1274,6 +1301,54 @@ export default function Home() {
 <span>Exportez tous vos leads en un clic. Compatible Excel & Google Sheets.</span>
 </div>
 </div>
+<span className="sa-pl" style={{background:"rgba(247,201,72,.3)",color:"#8a6100"}}>Disponible avec l'offre BUSINESS</span>
+</div>
+</div>
+</section>
+<section className="sa-sec" id="relances">
+<div className="sa-w">
+<div className="sa-hd">
+<div className="sa-badge" style={{background:"rgba(245,158,11,.14)",border:"1px solid rgba(245,158,11,.35)",color:"#b45309"}}>
+<span className="sa-dot">
+</span>Nouveau · Relances</div>
+<h2>Relancez au bon moment,<br />
+<span className="sa-gt">sans rien oublier</span>
+</h2>
+<p className="sa-sub">Un prospect qui n'est pas relancé est un client perdu. SocialApp programme la relance, vous la rappelle et vous la montre au bon endroit.</p>
+</div>
+<div className="sa-rl-tabs" role="tablist" aria-label="Relances en 3 étapes">
+{RELANCES.map((r, i) => (
+<button key={r.k} type="button" role="tab" id={'sa-rl-t' + i} aria-selected={relTab === i} aria-controls="sa-rl-panel" className="sa-rl-tab" onClick={() => setRelTab(i)}>
+<i>{i + 1}</i>{r.k}</button>
+))}
+</div>
+<div role="tabpanel" id="sa-rl-panel" aria-labelledby={'sa-rl-t' + relTab}>
+<div className="sa-rl-cap">
+<h3>{RELANCES[relTab].t}</h3>
+<p>{RELANCES[relTab].d}</p>
+</div>
+<div className={'sa-rl-fr' + (relTab === 0 ? ' sa-rl-n' : '') + (relTab === 1 ? ' sa-rl-w' : '')}>
+<div className="sa-rl-bar" aria-hidden="true">
+<span>
+</span>
+<span>
+</span>
+<span>
+</span>
+</div>
+<picture>
+<source srcSet={RELANCES[relTab].webp} type="image/webp" />
+<img src={RELANCES[relTab].png} alt={RELANCES[relTab].alt} width={RELANCES[relTab].w} height={RELANCES[relTab].h} loading="lazy" />
+</picture>
+</div>
+<p className="sa-rl-hint">Faites glisser l'image pour voir tout l'écran</p>
+</div>
+<div className="sa-rl-foot">
+<ul className="sa-rl-pts">
+<li>⏳ Délai de quelques minutes à 30 jours</li>
+<li>🛑 Annulée si le client répond</li>
+<li>🔔 Rappel dans votre cloche</li>
+</ul>
 <span className="sa-pl" style={{background:"rgba(247,201,72,.3)",color:"#8a6100"}}>Disponible avec l'offre BUSINESS</span>
 </div>
 </div>

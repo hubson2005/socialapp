@@ -8,7 +8,9 @@
 //         (URL IDENTIQUE à celle affichée par PublicProfile.jsx, sinon le preload est ignoré),
 //       - window.__PROFILE__ et window.__PROFILE_EXTRAS__ (évite la cascade d'appels API),
 //       - le titre / description / image Open Graph du profil (aperçus WhatsApp, Facebook…),
-//       - le nom et la bio dans la coquille (contenu visible avant même le JS) ;
+//       - le nom et la bio dans la coquille (contenu visible avant même le JS),
+//       - <meta name="robots" content="noindex, nofollow"> si le profil est non public
+//         (is_public = false) ;
 //  3. met le résultat en cache sur le CDN (60 s + revalidation en arrière-plan).
 // En cas de problème (profil introuvable, Supabase lent…), elle renvoie simplement
 // l'index.html normal : l'application se comporte alors comme avant.
@@ -47,6 +49,10 @@ const safeJson = (obj) =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
 const httpsUrl = (u) => (typeof u === 'string' && /^https:\/\//i.test(u) ? u : null);
+
+// Un profil est non indexable uniquement si is_public vaut explicitement false
+// (colonne absente ou null → indexable, comme avant).
+const isHidden = (p) => p && p.is_public === false;
 
 // Copie exacte de imgUrl() de PublicProfile.jsx (mêmes valeurs par défaut).
 // Transformation d'image Supabase INDISPONIBLE sur ce projet (render/image → 403,
@@ -182,10 +188,12 @@ function render(shell, p, extras) {
 
   // 2) Preload de l'image principale (URL transformée, identique à celle du composant)
   //    + données du profil
+  //    + noindex si le profil n'est pas public
   const data =
     `window.__PROFILE__=${safeJson(p)};` +
     (extras ? `window.__PROFILE_EXTRAS__=${safeJson(extras)};` : '');
   const head = [
+    isHidden(p) ? '<meta name="robots" content="noindex, nofollow" />' : '',
     hero ? `<link rel="preload" as="image" href="${esc(imgUrl(hero, { width: HERO_WIDTH }))}" fetchpriority="high" />` : '',
     `<script>${data}</script>`,
   ].filter(Boolean).join('\n  ');
@@ -234,6 +242,8 @@ export default async function handler(req, res) {
   const html = profile ? render(shell, profile, extras) : shell;
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  // Double sécurité : l'en-tête HTTP complète la balise meta pour les profils non publics.
+  if (isHidden(profile)) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.setHeader(
     'Cache-Control',
     profile

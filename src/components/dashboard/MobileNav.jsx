@@ -50,6 +50,10 @@
  *        indépendant du plan. L'entrée reste visible dans le tiroir avec un
  *        cadenas (badge MODULE) tant que la prop `hasEventAccess` est fausse
  *        (admin excepté) ; le clic appelle onUpgrade('event').
+ *
+ *  [C27] Studio visuel (id 'visual-studio') : image + QR code tracké (IP),
+ *        réservé au plan BUSINESS, aligné sur UserSidebar.jsx. Groupe
+ *        « Gestion commerciale » du tiroir.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -159,6 +163,7 @@ const NAV_IDS = {
   REALTIME:     'realtime',
   AUTOMATIONS:  'automations',
   INTEGRATIONS: 'integrations',
+  VISUAL_STUDIO: 'visual-studio', // [C27]
   EVENT:        'event',
   MARKETPLACE:  'marketplace',
   DOCUMENTS:    'documents',
@@ -184,6 +189,7 @@ const NAV_LOCK = {
   [NAV_IDS.TASKS]:        'business',
   [NAV_IDS.AUTOMATIONS]:  'business',
   [NAV_IDS.INTEGRATIONS]: 'business',
+  [NAV_IDS.VISUAL_STUDIO]: 'business', // [C27]
 };
 
 // [C25] Icônes alignées sur UserSidebar (Activity pour Temps réel).
@@ -212,6 +218,7 @@ const SIDEBAR_GROUPS = [
       { id: NAV_IDS.TASKS,        label: 'Tâches',          icon: CheckSquare, description: 'Relances et rappels à faire' },
       { id: NAV_IDS.AUTOMATIONS,  label: 'Automatisations', icon: Zap,         description: 'Workflows et scénarios' },
       { id: NAV_IDS.INTEGRATIONS, label: 'Intégrations',    icon: GitBranch,   description: 'Connectez vos outils préférés' },
+      { id: NAV_IDS.VISUAL_STUDIO, label: 'Studio visuel',   icon: Image,       description: 'Image avec QR code tracké' },
     ],
   },
   {

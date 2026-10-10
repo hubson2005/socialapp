@@ -30,6 +30,7 @@ import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
 import TasksCRMPanel from "@/components/dashboard/TasksCRMPanel";
+import VisualStudioPanel from "@/components/dashboard/VisualStudioPanel";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import UserSidebar, { USER_NAV, USER_GROUPS, PLAN_ORDER } from "@/components/dashboard/UserSidebar";
 import OverviewPanel from "@/components/dashboard/OverviewPanel";
@@ -1036,6 +1037,7 @@ const removeBanner = async (index) => {
           case 'whatsapp-crm':    return limits.hasCRM      ? <WhatsappCRMPanel profileId={localProfile.id} /> : null;
           case 'booking':         return <BookingCalendarPanel profileId={localProfile.id} />; 
           case 'automations':     return <AutomationsPanel     profileId={localProfile.id} />;
+          case 'visual-studio':   return <VisualStudioPanel    profileId={localProfile.id} />; // BUSINESS : verrou géré par isCurrentSectionLocked() via USER_NAV
           case 'meta':            return <MetaIntegrationPanel profile={localProfile} isAdmin={isAdmin} />;
           case 'integrations':    return <IntegrationsPanel    profileId={localProfile.id} isAdmin={isAdmin} />;
           case 'boost':           return <BoostPanel           profile={localProfile}      isAdmin={isAdmin} />;

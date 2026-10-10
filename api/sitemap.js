@@ -95,11 +95,9 @@ export default async function handler(req, res) {
     res.status(200).send(xml);
   } catch (err) {
     console.error("sitemap error:", err);
-    // TODO : une fois le sitemap validé, remplacer par .send("Erreur sitemap")
-    const detail = err?.message || err?.details || JSON.stringify(err);
     res
       .status(500)
       .setHeader("Content-Type", "text/plain; charset=utf-8")
-      .send("Erreur sitemap: " + detail);
+      .send("Erreur sitemap");
   }
 }

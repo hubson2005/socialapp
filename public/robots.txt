@@ -1,8 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /dashboard
-Disallow: /login
-Disallow: /reset-password
-Disallow: /delete-account
+Disallow: /admin
+Disallow: /api/
 
 Sitemap: https://www.socialapp.work/sitemap.xml

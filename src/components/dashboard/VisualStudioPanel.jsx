@@ -77,50 +77,8 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// Bouton visuel « Voir plus » (décoratif : sur une image, il ne s'ouvre pas)
-const LINK_ICON = [
-  'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71',
-  'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
-];
-function drawCta(ctx, W, bottomY, base, text) {
-  const label = (text || 'Voir plus').trim() || 'Voir plus';
-  const h = Math.max(34, Math.round(base * 0.075));
-  const fs = Math.round(h * 0.42);
-  const icon = Math.round(h * 0.46);
-  const padX = Math.round(h * 0.42);
-  const gap = Math.round(h * 0.22);
-  ctx.save();
-  ctx.font = `700 ${fs}px "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif`;
-  const tw = ctx.measureText(label).width;
-  const w = Math.round(padX * 2 + icon + gap + tw);
-  const m = Math.round(base * 0.03);
-  const x = W - w - m;
-  const y = bottomY - h;
-  ctx.shadowColor = 'rgba(0,0,0,0.30)';
-  ctx.shadowBlur = Math.round(h * 0.3);
-  ctx.shadowOffsetY = Math.round(h * 0.08);
-  ctx.fillStyle = 'rgba(17,24,39,0.82)';
-  roundRect(ctx, x, y, w, h, h / 2);
-  ctx.fill();
-  ctx.shadowColor = 'transparent';
-  ctx.translate(x + padX, y + (h - icon) / 2);
-  ctx.scale(icon / 24, icon / 24);
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2.2;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  LINK_ICON.forEach((d) => ctx.stroke(new Path2D(d)));
-  ctx.restore();
-  ctx.save();
-  ctx.font = `700 ${fs}px "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif`;
-  ctx.fillStyle = '#ffffff';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + padX + icon + gap, y + h / 2 + fs * 0.04);
-  ctx.restore();
-}
-
 async function drawComposite(canvas, img, opts) {
-  const { shortUrl, position, sizePct, showText, caption, cta, ctaText } = opts;
+  const { shortUrl, position, sizePct, showText, caption } = opts;
   const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
   const W = Math.round(img.naturalWidth * scale);
   const H = Math.round(img.naturalHeight * scale);
@@ -130,9 +88,7 @@ async function drawComposite(canvas, img, opts) {
   if (position === 'none') {
     canvas.width = W;
     canvas.height = H;
-    const c0 = canvas.getContext('2d');
-    c0.drawImage(img, 0, 0, W, H);
-    if (cta) drawCta(c0, W, H - Math.round(base * 0.03), base, ctaText);
+    canvas.getContext('2d').drawImage(img, 0, 0, W, H);
     return { width: W, height: H };
   }
 
@@ -160,7 +116,6 @@ async function drawComposite(canvas, img, opts) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H + barH);
     ctx.drawImage(img, 0, 0, W, H);
-    if (cta) drawCta(ctx, W, H - Math.round(base * 0.03), base, ctaText);
     ctx.drawImage(qrCanvas, pad, H + pad, qr, qr);
 
     const textX = pad * 2 + qr;
@@ -218,8 +173,6 @@ async function drawComposite(canvas, img, opts) {
     ctx.fillText(label, x + plateW / 2, y + pad + qr + pad * 0.35 + fs);
     ctx.textAlign = 'start';
   }
-  // Bouton « Voir plus » : bas droite ; posé au-dessus de la pastille si le QR code est aussi en bas à droite
-  if (cta) drawCta(ctx, W, position === 'br' ? y - Math.round(m * 0.6) : H - m, base, ctaText);
   return { width: W, height: H };
 }
 // </draw>
@@ -356,8 +309,6 @@ export default function VisualStudioPanel({ profileId }) {
   const [position, setPosition]   = useState('br');
   const [sizePct, setSizePct]     = useState(22);
   const [showText, setShowText]   = useState(true);
-  const [cta, setCta]             = useState(false);
-  const [ctaText, setCtaText]     = useState('Voir plus');
   const [caption, setCaption]     = useState('Scannez pour accéder au lien');
   const [drawing, setDrawing]     = useState(false);
 
@@ -412,11 +363,11 @@ export default function VisualStudioPanel({ profileId }) {
     if (!img || !canvasRef.current) return undefined;
     let cancelled = false;
     setDrawing(true);
-    drawComposite(canvasRef.current, img, { shortUrl: previewUrl, position, sizePct, showText, caption, cta, ctaText })
+    drawComposite(canvasRef.current, img, { shortUrl: previewUrl, position, sizePct, showText, caption })
       .catch((e) => { if (!cancelled) toast.error('Aperçu : ' + e.message); })
       .finally(() => { if (!cancelled) setDrawing(false); });
     return () => { cancelled = true; };
-  }, [img, previewUrl, position, sizePct, showText, caption, cta, ctaText]);
+  }, [img, previewUrl, position, sizePct, showText, caption]);
 
   /* ── Import de l'image ── */
   const onFile = (e) => {
@@ -588,17 +539,6 @@ export default function VisualStudioPanel({ profileId }) {
               </p>
             ) : (
               <p className="vsp-hint">Gardez 20 % ou plus : les réseaux compressent l’image, et un QR code trop petit ne se scanne plus.</p>
-            )}
-            <label className="vsp-check" style={{ marginTop: 14 }}>
-              <input type="checkbox" checked={cta} onChange={(e) => setCta(e.target.checked)} />
-              Ajouter un bouton visuel en bas à droite
-            </label>
-            {cta && (
-              <>
-                <label className="vsp-label" htmlFor="vsp-cta">Texte du bouton</label>
-                <input id="vsp-cta" className="vsp-input" value={ctaText} maxLength={20} onChange={(e) => setCtaText(e.target.value)} />
-                <p className="vsp-hint">Ce bouton est seulement dessiné sur l’image : il ne s’ouvre pas au clic. Pour mesurer les clics, gardez le QR code ou publiez le lien court avec l’image.</p>
-              </>
             )}
           </div>
         </div>

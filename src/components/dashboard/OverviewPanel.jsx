@@ -56,6 +56,7 @@ export default function OverviewPanel({
   const quickActions = [
     { label:'Plateformes',  icon:Link2,         color:'#3b4bf0', section:'platforms',   desc:links.length+' lien(s)',                                                       locked:false },
     { label:'Événement',    icon:CalendarClock, color:'#7b3ff2', section:'event',        desc:profile?.is_event?'Activé':'Désactivé',                                        locked:!limits.hasEvent },
+    { label:'Studio visuel', icon:Image, color:'#0891b2', section:'visual-studio', desc:'Image + QR code', locked:!limits.hasCRM },
     { label:'Analytics',    icon:BarChart2,     color:'#a52ee0', section:'analytics',    desc:'Actifs',                                                                       locked:!limits.hasStats },
     { label:'Marketplace',  icon:ShoppingBag,   color:'#d81f9e', section:'marketplace',  desc:(limits.maxMarketplace===Infinity?'∞':limits.maxMarketplace)+' produits max', locked:false },
     { label:'CRM',          icon:Users,         color:'#ef2f6b', section:'crm',          desc:'Actif',                                                                        locked:!limits.hasCRM },

@@ -84,6 +84,14 @@ async function drawComposite(canvas, img, opts) {
   const H = Math.round(img.naturalHeight * scale);
   const base = Math.min(W, H);
 
+  // Sans QR code : image seule (le lien court se publie dans la légende)
+  if (position === 'none') {
+    canvas.width = W;
+    canvas.height = H;
+    canvas.getContext('2d').drawImage(img, 0, 0, W, H);
+    return { width: W, height: H };
+  }
+
   // QR code net : taille de module entière (bords francs = scan fiable)
   const target = Math.max(96, Math.round((base * sizePct) / 100));
   const modules = QRCode.create(shortUrl, { errorCorrectionLevel: 'M' }).modules.size;
@@ -222,7 +230,8 @@ const CSS = `
 .vsp-drop b{ color:#151329; font-size:14px; }
 .vsp-file{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 
-.vsp-seg{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+.vsp-seg{ display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; }
+@media (min-width:640px){ .vsp-seg{ grid-template-columns:repeat(4, 1fr); } }
 .vsp-seg button{ min-height:46px; padding:6px; border-radius:10px; border:1px solid #d1d5db; background:#fff; color:#374151; font-size:13px; font-weight:700; cursor:pointer; }
 .vsp-seg button.on{ border-color:#6366f1; background:rgba(99,102,241,.1); color:#4f46e5; }
 .vsp-range{ width:100%; height:44px; accent-color:#6366f1; }
@@ -501,23 +510,36 @@ export default function VisualStudioPanel({ profileId }) {
             <h3 className="vsp-step"><i>3</i> Incrustation</h3>
             <span className="vsp-label">Emplacement du QR code</span>
             <div className="vsp-seg" role="radiogroup" aria-label="Emplacement">
-              {[['br', 'Bas droite'], ['bl', 'Bas gauche'], ['bar', 'Bande sous l’image']].map(([id, lbl]) => (
+              {[['br', 'Bas droite'], ['bl', 'Bas gauche'], ['bar', 'Bande sous l’image'], ['none', 'Sans QR code']].map(([id, lbl]) => (
                 <button type="button" key={id} role="radio" aria-checked={position === id} className={position === id ? 'on' : ''} onClick={() => setPosition(id)}>{lbl}</button>
               ))}
             </div>
-            <label className="vsp-label" htmlFor="vsp-size">Taille du QR code : {sizePct}%</label>
-            <input id="vsp-size" className="vsp-range" type="range" min="18" max="36" step="1" value={sizePct} onChange={(e) => setSizePct(Number(e.target.value))} />
-            <label className="vsp-check">
-              <input type="checkbox" checked={showText} onChange={(e) => setShowText(e.target.checked)} />
-              Afficher le lien sous le QR code
-            </label>
+            {position !== 'none' && (
+              <>
+                <label className="vsp-label" htmlFor="vsp-size">Taille du QR code : {sizePct}%</label>
+                <input id="vsp-size" className="vsp-range" type="range" min="18" max="36" step="1" value={sizePct} onChange={(e) => setSizePct(Number(e.target.value))} />
+                <label className="vsp-check">
+                  <input type="checkbox" checked={showText} onChange={(e) => setShowText(e.target.checked)} />
+                  Afficher le lien sous le QR code
+                </label>
+              </>
+            )}
             {position === 'bar' && (
               <>
                 <label className="vsp-label" htmlFor="vsp-cap">Texte de la bande</label>
                 <input id="vsp-cap" className="vsp-input" value={caption} maxLength={60} onChange={(e) => setCaption(e.target.value)} />
               </>
             )}
-            <p className="vsp-hint">Gardez 20 % ou plus : les réseaux compressent l’image, et un QR code trop petit ne se scanne plus.</p>
+            {position === 'none' ? (
+              <p className="vsp-hint">
+                Sans QR code, l’image seule ne mesure rien. Publiez le <b>lien court</b> avec elle (légende, commentaire épinglé, bio ou message WhatsApp) : chaque clic sur ce lien sera compté.
+                {activeLink && (
+                  <> <button type="button" className="vsp-btn" style={{ marginTop: 8 }} onClick={() => copy(shortUrlOf(activeLink.code))}><Copy size={16} /> Copier le lien court</button></>
+                )}
+              </p>
+            ) : (
+              <p className="vsp-hint">Gardez 20 % ou plus : les réseaux compressent l’image, et un QR code trop petit ne se scanne plus.</p>
+            )}
           </div>
         </div>
 

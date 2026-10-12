@@ -64,7 +64,7 @@ const fmtDate = (iso) => (iso
 
 /* ───────────────────────── Composition de l'image ───────────────────────── */
 // <draw>
-const MONTHLY_QUOTA = 3; // doit correspondre au trigger SQL tracked_link_quota_check
+const DEFAULT_QUOTA = 3; // quota standard ; peut être relevé par compte (table tracked_link_limits)
 const MAX_SIDE = 2048; // limite la taille du canvas (mémoire des téléphones)
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -289,6 +289,7 @@ export default function VisualStudioPanel({ profileId }) {
   const [loadingClicks, setLC]    = useState(false);
   const [hideBots, setHideBots]   = useState(true);
   const [usedThisMonth, setUsed] = useState(0);
+  const [monthlyQuota, setQuotaMax] = useState(DEFAULT_QUOTA);
 
   const [img, setImg]             = useState(null);
   const [imgName, setImgName]     = useState('');
@@ -328,6 +329,8 @@ export default function VisualStudioPanel({ profileId }) {
     const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
     const { data } = await supabase.from('tracked_link_quota').select('n').eq('month', month).maybeSingle();
     setUsed(data?.n || 0);
+    const { data: lim } = await supabase.from('tracked_link_limits').select('monthly_limit').maybeSingle();
+    setQuotaMax(lim?.monthly_limit ?? DEFAULT_QUOTA);
   }, []);
   useEffect(() => { loadQuota(); }, [loadQuota]);
 
@@ -373,7 +376,7 @@ export default function VisualStudioPanel({ profileId }) {
   /* ── Création d'un lien ── */
   const createLink = async () => {
     if (creating) return;
-    if (usedThisMonth >= MONTHLY_QUOTA) { toast.error(`Quota atteint : ${MONTHLY_QUOTA} liens par mois. Il se renouvelle le 1er du mois prochain.`); return; }
+    if (usedThisMonth >= monthlyQuota) { toast.error(`Quota atteint : ${monthlyQuota} liens par mois. Il se renouvelle le 1er du mois prochain.`); return; }
     let destination;
     try { destination = normalizeUrl(dest); } catch (e) { toast.error(e.message); return; }
     setCreating(true);
@@ -484,14 +487,14 @@ export default function VisualStudioPanel({ profileId }) {
             <h3 className="vsp-step"><i>2</i> Lien tracké</h3>
             <label className="vsp-label" htmlFor="vsp-name">Nom (pour vous repérer)</label>
             <input id="vsp-name" className="vsp-input" placeholder="Ex : Promo octobre" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
-            <label className="vsp-label" htmlFor="vsp-dest">Où doit mener le clic ?</label>
-            <input id="vsp-dest" className="vsp-input" placeholder="https://socialapp.work/mon-profil" value={dest}
+            <label className="vsp-label" htmlFor="vsp-dest">Où doit mener le clic ? (n’importe quel lien)</label>
+            <input id="vsp-dest" className="vsp-input" placeholder="Collez un lien : site, WhatsApp, TikTok, boutique…" value={dest}
               inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="done"
               onChange={(e) => setDest(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createLink()} />
-            <button type="button" className="vsp-btn primary block" onClick={createLink} disabled={creating || !dest.trim() || usedThisMonth >= MONTHLY_QUOTA}>
+            <button type="button" className="vsp-btn primary block" onClick={createLink} disabled={creating || !dest.trim() || usedThisMonth >= monthlyQuota}>
               {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Créer le lien tracké
             </button>
-            <p className="vsp-hint">Ou touchez un lien existant dans la liste plus bas pour le réutiliser.</p>
+            <p className="vsp-hint">Tous les liens fonctionnent, même hors SocialApp (https://… ou wa.me/…). Ou touchez un lien existant plus bas pour le réutiliser.</p>
           </div>
 
           <div className="vsp-card">
@@ -542,7 +545,7 @@ export default function VisualStudioPanel({ profileId }) {
       {/* ── Mes liens ── */}
       <div className="vsp-card" style={{ marginTop: 12 }}>
         <h3 className="vsp-step" style={{ justifyContent: 'space-between' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Link2 size={16} /> Mes liens trackés ({links.length}) · {usedThisMonth}/{MONTHLY_QUOTA} ce mois-ci</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Link2 size={16} /> Mes liens trackés ({links.length}) · {usedThisMonth}/{monthlyQuota} ce mois-ci</span>
           <button type="button" className="vsp-icon" aria-label="Actualiser" onClick={loadLinks}><RefreshCw size={16} /></button>
         </h3>
         {loadingLinks ? (

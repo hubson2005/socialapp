@@ -473,7 +473,15 @@ export default function UserDashboard() {
   const useBottomNav = isMobile || isTablet; // barre du bas sur mobile ET tablette
   const { t } = useTranslation();
 
-  const [activeSection, setActiveSection]   = useState('overview');
+ const [activeSection, setActiveSectionState] = useState(() => {
+  const saved = localStorage.getItem('activeSection');
+  return saved && USER_NAV.some(n => n.id === saved) ? saved : 'overview';
+});
+
+const setActiveSection = useCallback((id) => {
+  localStorage.setItem('activeSection', id);
+  setActiveSectionState(id);
+}, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showAddDialog, setShowAddDialog]   = useState(false);
   const [showPreview, setShowPreview]       = useState(false);
@@ -899,10 +907,11 @@ const removeBanner = async (index) => {
 };
 
   // FIX logout — déplacé en bas du panel Paramètres (renderSection case 'settings')
-  const handleSignOut = async () => {
-    if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Se déconnecter ?')) return;
-    await signOut();
-  };
+const handleSignOut = async () => {
+  if (hasChanges && !window.confirm('Des modifications non sauvegardées seront perdues. Se déconnecter ?')) return;
+  localStorage.removeItem('activeSection');   // ← ajoute cette ligne ici
+  await signOut();
+};
 
  if (isLoading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f4f5fa' }}>

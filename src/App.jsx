@@ -8,6 +8,9 @@ import {
   PublicOnlyRoute,
 } from "./routes/AuthRoutes";
 
+import SeoPage from "./pages/SeoPage";
+import { SEO_SLUGS } from "./data/seoPages";
+
 // Pages chargées à la demande (code-splitting)
 const Login             = lazy(() => import("./pages/Login"));
 const Dashboard         = lazy(() => import("./pages/Dashboard"));
@@ -138,6 +141,10 @@ function PublicApp() {
           </ProtectedRoute>
         }
       />
+
+      {SEO_SLUGS.map((slug) => (
+  <Route key={slug} path={`/${slug}`} element={<SeoPage slug={slug} />} />
+))}
 
       {/* ✅ FIX : route publique du formulaire — DOIT être déclarée avant
           "/:username" et "*" pour que /form/:formId ne soit pas avalée

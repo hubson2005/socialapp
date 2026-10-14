@@ -17,7 +17,28 @@ const SUPABASE_KEY =
   process.env.VITE_SUPABASE_KEY;
 
 // Pages publiques indexables (pas de /login, /dashboard…)
-const STATIC_PAGES = ["/", "/privacy-policy", "/terms-of-service"];
+// Chaque page listée ici DOIT exister (sinon 404 dans le sitemap = pénalité SEO)
+const STATIC_PAGES = [
+  "/",
+  // Pages demandées
+  "/carte-de-visite-digitale",
+  "/carte-de-visite-nfc",
+  "/qr-code-professionnel",
+  "/entreprises",
+  "/tarifs",
+  "/blog",
+  // Pages proposées (mots-clés à fort potentiel)
+  "/lien-en-bio",
+  "/crm-whatsapp",
+  "/boutique-en-ligne-whatsapp",
+  "/prise-de-rendez-vous-en-ligne",
+  "/billetterie-evenements",
+  "/faq",
+  "/contact",
+  // Légal
+  "/privacy-policy",
+  "/terms-of-service",
+];
 
 // Noms réservés : ce ne sont pas des profils (alignés sur la règle de vercel.json)
 const RESERVED = new Set([
@@ -27,6 +48,11 @@ const RESERVED = new Set([
   "cancel", "terms", "terms-of-service", "privacy", "privacy-policy", "blog",
   "sitemap", "sitemap.xml", "robots", "robots.txt", "manifest", "favicon",
   "preview-profile", "r", "webhooks", "home",
+  // Pages SEO
+  "carte-de-visite-digitale", "carte-de-visite-nfc", "qr-code-professionnel",
+  "entreprises", "tarifs", "lien-en-bio", "crm-whatsapp",
+  "boutique-en-ligne-whatsapp", "prise-de-rendez-vous-en-ligne",
+  "billetterie-evenements", "faq", "contact",
 ]);
 
 // Identifiant valide : même jeu de caractères que la règle /api/profile de vercel.json

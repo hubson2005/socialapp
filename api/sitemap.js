@@ -20,22 +20,13 @@ const SUPABASE_KEY =
 // Chaque page listée ici DOIT exister (sinon 404 dans le sitemap = pénalité SEO)
 const STATIC_PAGES = [
   "/",
-  // Pages demandées
   "/carte-de-visite-digitale",
   "/carte-de-visite-nfc",
   "/qr-code-professionnel",
   "/entreprises",
   "/tarifs",
-  "/blog",
-  // Pages proposées (mots-clés à fort potentiel)
-  "/lien-en-bio",
   "/crm-whatsapp",
-  "/boutique-en-ligne-whatsapp",
-  "/prise-de-rendez-vous-en-ligne",
-  "/billetterie-evenements",
-  "/faq",
-  "/contact",
-  // Légal
+  "/blog",
   "/privacy-policy",
   "/terms-of-service",
 ];

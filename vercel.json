@@ -16,7 +16,7 @@
       "destination": "/api/r?code=:code"
     },
     {
-      "source": "/:slug(carte-de-visite-digitale|carte-de-visite-nfc|qr-code-professionnel|entreprises|tarifs|crm-whatsapp|lien-en-bio|boutique-en-ligne-whatsapp|prise-de-rendez-vous-en-ligne|billetterie-evenements)",
+      "source": "/:slug(carte-de-visite-digitale|carte-de-visite-nfc|qr-code-professionnel|entreprises|tarifs|crm-whatsapp)",
       "destination": "/api/seo-page?slug=:slug"
     },
     {

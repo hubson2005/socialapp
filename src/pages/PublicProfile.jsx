@@ -5,7 +5,12 @@
  *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
  *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, PERF2a-f, DL1-DL8 ... ]
  *
- * LIENS EN CARTE (cette révision) :
+ * DESIGN 2 (cette révision) :
+ *  [DESIGN2] Même langage visuel partout : cartes blanches, pastilles pêche, libellés
+ *        en capitales. Puces du haut en pilules blanches, en-têtes de section
+ *        (SectionHeader), documents en lignes, fiche produit en thème clair.
+ *
+ * LIENS EN CARTE :
  *  [LINKS-CARD] La liste des liens n'est plus une pile de boutons-pilules mais
  *        une carte blanche façon « fiche contact » : une ligne par lien (pastille
  *        d'icône pêche, petit libellé de type en capitales, valeur dessous).
@@ -83,9 +88,9 @@ const CARD_BLUR      = {};
 const CARD_SHADOW    = '0 4px 20px rgba(0,0,0,0.28)';
 
 // [W3] Couleurs de texte pour les cartes blanches
-const CARD_TEXT        = '#15102a';
-const CARD_TEXT_MUTED  = 'rgba(21,16,42,0.55)';
-const CARD_TEXT_FAINT  = 'rgba(21,16,42,0.42)';
+const CARD_TEXT        = '#3a1d0e';
+const CARD_TEXT_MUTED  = 'rgba(58,29,14,0.6)';
+const CARD_TEXT_FAINT  = 'rgba(58,29,14,0.45)';
 
 // [P1] Police de marque unique pour toute la page
 const FONT_STACK = "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -703,15 +708,15 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background:'#0f0a1e', border:'1px solid rgba(255,255,255,0.12)', borderBottom:'none', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92dvh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
+        style={{ background:'#fffaf5', border:'none', borderRadius:'26px 26px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92dvh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
       >
         {/* Barre du haut : poignée centrée + fermer à droite, sur une seule ligne */}
         <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center', height:'52px', flexShrink:0 }}>
-          <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'rgba(255,255,255,0.18)' }} />
+          <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'#e4d3c5' }} />
           <button
             onClick={onClose}
             aria-label="Fermer"
-            style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.75)', touchAction:'manipulation' }}
+            style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', width:'44px', height:'44px', borderRadius:'50%', background:ROW_TILE_BG, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:ROW_ICON_INK, touchAction:'manipulation' }}
           >
             <X size={18} />
           </button>
@@ -723,7 +728,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
           {/* Image — affichée en entier, fond flouté de la même image, zoom au toucher */}
           <div
             onClick={canZoom ? () => onZoom(product.image_url) : undefined}
-            style={{ borderRadius:'18px', overflow:'hidden', aspectRatio:'4/3', background:'#0b0716', position:'relative', isolation:'isolate', cursor: canZoom ? 'zoom-in' : 'default', touchAction:'manipulation' }}
+            style={{ borderRadius:'18px', overflow:'hidden', aspectRatio:'4/3', background:'#f3e6da', position:'relative', isolation:'isolate', cursor: canZoom ? 'zoom-in' : 'default', touchAction:'manipulation' }}
           >
             {product.image_url ? (
               <>
@@ -747,7 +752,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
               </>
             ) : (
               <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <ShoppingBag size={48} color="rgba(255,255,255,0.15)" />
+                <ShoppingBag size={48} color="rgba(58,29,14,0.25)" />
               </div>
             )}
 
@@ -773,18 +778,18 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
           </div>
 
           {/* Titre */}
-          <h2 style={{ color:'white', fontSize:'clamp(17px, 5vw, 21px)', fontWeight:800, margin:'16px 0 10px', lineHeight:1.25, wordBreak:'break-word' }}>
+          <h2 style={{ color:CARD_TEXT, fontSize:'clamp(17px, 5vw, 21px)', fontWeight:800, margin:'16px 0 10px', lineHeight:1.25, wordBreak:'break-word' }}>
             {product.title}
           </h2>
 
           {/* [MODAL1] Prix : jamais coupé, les éléments passent dessous si besoin */}
           <div style={{ display:'flex', flexWrap:'wrap', alignItems:'baseline', columnGap:'12px', rowGap:'6px', marginBottom:'12px' }}>
-            <span style={{ whiteSpace:'nowrap', fontSize:'clamp(26px, 8.5vw, 32px)', fontWeight:900, lineHeight:1, letterSpacing:'-0.5px', color: hasOld ? '#ff6b35' : 'white', fontVariantNumeric:'tabular-nums' }}>
+            <span style={{ whiteSpace:'nowrap', fontSize:'clamp(26px, 8.5vw, 32px)', fontWeight:900, lineHeight:1, letterSpacing:'-0.5px', color: hasOld ? '#ff6b35' : CARD_TEXT, fontVariantNumeric:'tabular-nums' }}>
               {formatNumber(product.price)}
               <span style={{ fontSize:'0.55em', fontWeight:800, marginLeft:'4px', letterSpacing:0 }}>F</span>
             </span>
             {hasOld && (
-              <span style={{ whiteSpace:'nowrap', fontSize:'15px', color:'rgba(255,255,255,0.4)', textDecoration:'line-through', fontVariantNumeric:'tabular-nums' }}>
+              <span style={{ whiteSpace:'nowrap', fontSize:'15px', color:CARD_TEXT_MUTED, textDecoration:'line-through', fontVariantNumeric:'tabular-nums' }}>
                 {formatNumber(product.original_price)}&nbsp;F
               </span>
             )}
@@ -794,13 +799,13 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
           <div style={{ display:'flex', flexWrap:'wrap', gap:'8px', marginBottom:'16px' }}>
             <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background: inStock ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:'1px solid ' + (inStock ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), borderRadius:'100px', padding:'6px 12px' }}>
               <div style={{ width:'7px', height:'7px', borderRadius:'50%', background: inStock ? '#22c55e' : '#ef4444', flexShrink:0 }} />
-              <span style={{ fontSize:'12px', fontWeight:600, whiteSpace:'nowrap', color: inStock ? '#22c55e' : '#f87171' }}>
+              <span style={{ fontSize:'12px', fontWeight:600, whiteSpace:'nowrap', color: inStock ? '#16a34a' : '#dc2626' }}>
                 {inStock ? 'En stock · Disponible' : 'Rupture de stock'}
               </span>
             </div>
             {discount > 0 && (
               <div style={{ display:'inline-flex', alignItems:'center', background:'rgba(34,197,94,0.12)', border:'1px solid rgba(34,197,94,0.25)', borderRadius:'100px', padding:'6px 12px' }}>
-                <span style={{ fontSize:'12px', fontWeight:700, whiteSpace:'nowrap', color:'#22c55e' }}>
+                <span style={{ fontSize:'12px', fontWeight:700, whiteSpace:'nowrap', color:'#16a34a' }}>
                   Économise {formatNumber(product.original_price - product.price)}&nbsp;F
                 </span>
               </div>
@@ -809,18 +814,18 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
 
           {/* Description */}
           {product.description && (
-            <div style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'14px', padding:'14px 16px' }}>
-              <p style={{ color:'rgba(255,255,255,0.55)', fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 8px' }}>Description</p>
-              <p style={{ color:'rgba(255,255,255,0.85)', fontSize:'14px', lineHeight:1.65, margin:0, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{product.description}</p>
+            <div style={{ background:'#fff', border:`1px solid ${ROW_DIVIDER}`, borderRadius:'16px', padding:'14px 16px' }}>
+              <p style={{ color:ROW_LABEL, fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', margin:'0 0 8px' }}>Description</p>
+              <p style={{ color:'#5b4637', fontSize:'14px', lineHeight:1.65, margin:0, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{product.description}</p>
             </div>
           )}
 
-          <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'11px', textAlign:'center', margin:'16px 0 0' }}>🔒 Paiement et livraison directement avec le vendeur</p>
+          <p style={{ color:ROW_LABEL, fontSize:'11px', textAlign:'center', margin:'16px 0 0' }}>🔒 Paiement et livraison directement avec le vendeur</p>
         </div>
 
         {/* [MODAL4] Pied fixe : le bouton reste toujours visible */}
         {(showCta || !inStock) && (
-          <div style={{ flexShrink:0, padding:'12px 16px calc(12px + env(safe-area-inset-bottom, 0px))', background:'linear-gradient(to top, #0f0a1e 78%, rgba(15,10,30,0))', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ flexShrink:0, padding:'12px 16px calc(12px + env(safe-area-inset-bottom, 0px))', background:'#fffaf5', borderTop:`1px solid ${ROW_DIVIDER}` }}>
             {showCta ? (
               <a
                 href={`https://wa.me/${waNumber}?text=${waMsg}`}
@@ -838,13 +843,24 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
                 <WhatsAppIcon size={20} color="white" /> Commander sur WhatsApp
               </a>
             ) : (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', minHeight:'52px', boxSizing:'border-box', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'16px', color:'rgba(255,255,255,0.4)', fontSize:'14px', fontWeight:600 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', minHeight:'52px', boxSizing:'border-box', background:'#fff', border:`1px solid ${ROW_DIVIDER}`, borderRadius:'16px', color:ROW_LABEL, fontSize:'14px', fontWeight:600 }}>
                 Article temporairement indisponible
               </div>
             )}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// [DESIGN2] En-tête de section : pastille pêche + titre + compteur
+function SectionHeader({ icon, title, count }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+      <span style={{ width:'30px', height:'30px', borderRadius:'9px', background:ROW_TILE_BG, color:ROW_ICON_INK, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{icon}</span>
+      <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>{title}</h2>
+      {count ? <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.55)', fontSize:'12px', fontWeight:600 }}>{count}</span> : null}
     </div>
   );
 }
@@ -860,7 +876,7 @@ function PublicProductCard({ product, onOpen, isLight }) {
     <div
       onClick={() => onOpen(product)}
       className="pp-shop-card"
-      style={{ background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'16px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s,background 0.15s', touchAction:'manipulation' }}
+      style={{ background:CARD_BG, border:'none', boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'20px', overflow:'hidden', position:'relative', cursor:'pointer', transition:'transform 0.15s,background 0.15s', touchAction:'manipulation' }}
       onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
       onTouchEnd={e => e.currentTarget.style.transform   = 'scale(1)'}
     >
@@ -880,7 +896,7 @@ function PublicProductCard({ product, onOpen, isLight }) {
       <div style={{ padding:'10px 12px 12px' }}>
         <span style={{ fontSize:'16px', fontWeight:800, color:product.original_price ? '#ff6b35' : CARD_TEXT, display:'block', lineHeight:1.1, whiteSpace:'nowrap' }}>{formatPrice(product.price)}</span>
         {product.original_price && <span style={{ fontSize:'11px', color:CARD_TEXT_FAINT, textDecoration:'line-through' }}>{formatPrice(product.original_price)}</span>}
-        <p style={{ color:CARD_TEXT, opacity:0.85, fontSize:'12px', fontWeight:600, margin:'4px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{product.title}</p>
+        <p style={{ color:CARD_TEXT, opacity:0.85, fontSize:'12px', fontWeight:700, margin:'5px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{product.title}</p>
       </div>
     </div>
   );
@@ -1027,6 +1043,8 @@ export default function PublicProfile({ previewProfile = null }) {
         }
 
         /* [LINKS-CARD] Lignes de la carte de liens */
+        .pp-chip:active             { transform:scale(0.97); }
+        .pp-chip:focus-visible      { outline:2px solid rgba(255,255,255,0.85); outline-offset:2px; }
         .pp-row-btn:active          { background:#fff6ee !important; }
         .pp-row-btn:focus-visible   { outline:2px solid #6366f1; outline-offset:-2px; }
         @media (hover: hover) {
@@ -1490,26 +1508,24 @@ export default function PublicProfile({ previewProfile = null }) {
                   key={i}
                   onClick={() => handleLinkClick(link)}
                   aria-label={link.label || platform.label}
-                  className="pp-link-btn-el"
+                  className="pp-chip"
                   style={{
-                    '--pp-hover-bg': color,
                     flex:'0 1 auto', minWidth:0,
-                    display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px',
-                    height:'38px', padding:'0 8px 0 4px', borderRadius:'999px',
+                    display:'inline-flex', alignItems:'center', gap:'7px',
+                    height:'42px', padding:'0 14px 0 5px', borderRadius:'999px',
                     boxSizing:'border-box',
-                    background:color,
-                    border:'1px solid rgba(255,255,255,0.35)',
-                    boxShadow:'0 4px 14px rgba(0,0,0,0.28)',
-                    color:'#fff', fontSize:'clamp(10px, 2.9vw, 12px)', fontWeight:700, letterSpacing:'0.01em',
-                    cursor:'pointer', touchAction:'manipulation',
+                    background:CARD_BG, border:'none', boxShadow:'0 6px 18px rgba(0,0,0,0.28)',
+                    color:CARD_TEXT, fontSize:'clamp(10px, 2.9vw, 12px)', fontWeight:700, letterSpacing:'0.01em',
+                    cursor:'pointer', touchAction:'manipulation', fontFamily:'inherit',
+                    transition:'transform 0.15s',
                   }}
                 >
                   <span style={{
-                    width:'28px', height:'28px', borderRadius:'50%', overflow:'hidden',
+                    width:'32px', height:'32px', borderRadius:'50%', overflow:'hidden',
                     flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
                     background:'#fff', lineHeight:0,
                   }}>
-                    {platform.icon ? React.cloneElement(platform.icon, { width: 28, height: 28 }) : null}
+                    {platform.icon ? React.cloneElement(platform.icon, { width: 32, height: 32 }) : null}
                   </span>
                   <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                     {link.label || platform.label}
@@ -1595,11 +1611,7 @@ export default function PublicProfile({ previewProfile = null }) {
         {/* Boutique */}
         {sortedProducts.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px' }}>
-              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ff6b35,#f7c948)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><ShoppingBag size={14} color="white" /></div>
-              <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>Boutique</h2>
-              <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{available.length} article{available.length > 1 ? 's' : ''}</span>
-            </div>
+            <SectionHeader icon={<ShoppingBag size={15} />} title="Boutique" count={`${available.length} article${available.length > 1 ? 's' : ''}`} />
             <div className="pp-shop-grid">
               {sortedProducts.map(p => (
                 <PublicProductCard
@@ -1623,28 +1635,25 @@ export default function PublicProfile({ previewProfile = null }) {
         {/* Documents */}
         {documents.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
-              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#ef4444,#b91c1c)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={14} color="white" /></div>
-              <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>Documents</h2>
-              <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.3)', fontSize:'12px' }}>{documents.length} fichier{documents.length > 1 ? 's' : ''}</span>
-            </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-              {documents.map(doc => (
-                <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background:CARD_BG, border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR, borderRadius:'14px', borderLeft:'3px solid #ef4444', textDecoration:'none', transition:'background 0.15s', touchAction:'manipulation' }}
-                  onMouseEnter={e => e.currentTarget.style.background = CARD_BG_HOVER}
-                  onMouseLeave={e => e.currentTarget.style.background = CARD_BG}
-                >
-                  <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={18} color="#ef4444" /></div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ color:CARD_TEXT, fontSize:'13px', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.name}</div>
-                    {doc.file_size && (
-                      <div style={{ color:CARD_TEXT_MUTED, fontSize:'11px', marginTop:'2px' }}>
-                        PDF · {doc.file_size < 1048576 ? Math.round(doc.file_size / 1024) + ' Ko' : (doc.file_size / 1048576).toFixed(1) + ' Mo'}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ width:'32px', height:'32px', borderRadius:'8px', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><ExternalLink size={14} color="#ef4444" /></div>
+            <SectionHeader icon={<FileText size={15} />} title="Documents" count={`${documents.length} fichier${documents.length > 1 ? 's' : ''}`} />
+            <div style={{ background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 10px 30px rgba(0,0,0,0.28)', overflow:'hidden' }}>
+              {documents.map((doc, i) => (
+                <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" className="pp-row-btn"
+                  style={{ ...rowBaseStyle(i === 0), textDecoration:'none', color:'inherit' }}>
+                  <span style={{ width:'44px', height:'44px', borderRadius:'14px', background:ROW_TILE_BG, color:ROW_ICON_INK, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <FileText size={20} />
+                  </span>
+                  <span style={{ minWidth:0, flex:1 }}>
+                    <span style={rowLabelStyle}>
+                      {doc.file_size
+                        ? 'PDF · ' + (doc.file_size < 1048576 ? Math.round(doc.file_size / 1024) + ' Ko' : (doc.file_size / 1048576).toFixed(1) + ' Mo')
+                        : 'PDF'}
+                    </span>
+                    <span style={rowValueStyle}>{doc.name}</span>
+                  </span>
+                  <span aria-hidden="true" style={{ width:'36px', height:'36px', borderRadius:'50%', background:ROW_TILE_BG, color:ROW_ICON_INK, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <ExternalLink size={16} />
+                  </span>
                 </a>
               ))}
             </div>
@@ -1653,35 +1662,35 @@ export default function PublicProfile({ previewProfile = null }) {
 
         {/* Liens — [LINKS-CARD] carte blanche façon fiche contact */}
         {mainLinks.length > 0 && (
-          <div
-            className="pp-content-col pp-link-btn"
-            style={{ marginTop:'8px', background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 10px 30px rgba(0,0,0,0.28)', overflow:'hidden' }}
-          >
-            {mainLinks.map((link, i) => {
-              const platform = resolvePlatform(link);
+          <div className="pp-content-col pp-link-btn" style={{ marginTop:'8px' }}>
+            <SectionHeader icon={<Link2 size={15} />} title="Retrouvez-moi" />
+            <div style={{ background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 10px 30px rgba(0,0,0,0.28)', overflow:'hidden' }}>
+              {mainLinks.map((link, i) => {
+                const platform = resolvePlatform(link);
 
-              if (platform.cryptoAddress) {
+                if (platform.cryptoAddress) {
+                  return (
+                    <CryptoRow
+                      key={i}
+                      link={link}
+                      platform={platform}
+                      first={i === 0}
+                      onCopied={() => { if (profile && !isPreview) trackClick(profile.id, link.platform); }}
+                    />
+                  );
+                }
+
                 return (
-                  <CryptoRow
+                  <LinkRow
                     key={i}
                     link={link}
                     platform={platform}
                     first={i === 0}
-                    onCopied={() => { if (profile && !isPreview) trackClick(profile.id, link.platform); }}
+                    onClick={() => handleLinkClick(link)}
                   />
                 );
-              }
-
-              return (
-                <LinkRow
-                  key={i}
-                  link={link}
-                  platform={platform}
-                  first={i === 0}
-                  onClick={() => handleLinkClick(link)}
-                />
-              );
-            })}
+              })}
+            </div>
           </div>
         )}
 
@@ -1690,7 +1699,7 @@ export default function PublicProfile({ previewProfile = null }) {
           href={`https://wa.me/${SUPPORT_WHATSAPP}`}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.22)', border:'1px solid rgba(37,211,102,0.38)', borderRadius:'12px', padding:'10px 20px', color:'#25D366', fontSize:'13px', fontWeight:'500', textDecoration:'none', touchAction:'manipulation' }}
+          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.22)', border:'1px solid rgba(37,211,102,0.38)', borderRadius:'999px', padding:'11px 20px', color:'#4ade80', fontSize:'13px', fontWeight:700, textDecoration:'none', touchAction:'manipulation' }}
         >
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>
@@ -1700,7 +1709,7 @@ export default function PublicProfile({ previewProfile = null }) {
           target="_blank"
           rel="noopener noreferrer"
           className="pp-brand-badge"
-          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'100px', padding:'7px 16px', color:'rgba(255,255,255,0.45)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
+          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'100px', padding:'7px 16px', color:'rgba(255,255,255,0.55)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
         >
           <Link2 size={12} /> Créé avec SocialApp
         </a>

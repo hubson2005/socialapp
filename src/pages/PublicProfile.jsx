@@ -5,6 +5,13 @@
  *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
  *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, PERF2a-f, DL1-DL8 ... ]
  *
+ * LIENS EN CARTE (cette révision) :
+ *  [LINKS-CARD] La liste des liens n'est plus une pile de boutons-pilules mais
+ *        une carte blanche façon « fiche contact » : une ligne par lien (pastille
+ *        d'icône pêche, petit libellé de type en capitales, valeur dessous).
+ *        Les adresses crypto restent copiables d'un toucher (ligne CryptoRow).
+ *        Les puces du haut (WhatsApp / téléphone / Facebook) sont inchangées.
+ *
  * BANNIÈRES MULTIPLES (cette révision) :
  *  [BANNER-SLIDER] Les bannières (profile.banner_urls, repli sur banner_url)
  *        défilent en fondu enchaîné toutes les 4 s, avec pause au survol/toucher,
@@ -51,9 +58,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff } from 'lucide-react';
+import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff, Copy } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
-import CryptoAddressRow from '../components/CryptoAddressRow';
 // [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
 import { triggerQrScan }          from '../lib/triggers/qr';
@@ -325,25 +331,6 @@ const parseColors = (tc) => {
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
 
-// [S2] Détermine si le contenu posé par-dessus le fond doit être "clair" ou "sombre"
-function getProfileContrast(profile) {
-  if (profile?.bg_image_url) return 'light';
-
-  const relativeLuminance = (hex) => {
-    const clean = String(hex || '').replace('#', '');
-    if (clean.length !== 6) return 0.1; // secours : fond de marque sombre par défaut
-    const r = parseInt(clean.slice(0, 2), 16) / 255;
-    const g = parseInt(clean.slice(2, 4), 16) / 255;
-    const b = parseInt(clean.slice(4, 6), 16) / 255;
-    const lin = (v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
-    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  };
-
-  const { bg1, bg2 } = parseColors(profile?.theme_color);
-  const avgLum = (relativeLuminance(bg1) + relativeLuminance(bg2)) / 2;
-  return avgLum > 0.5 ? 'dark' : 'light';
-}
-
 const getCountdown = (eventDate) => {
   if (!eventDate) return null;
   const diff = new Date(eventDate) - new Date();
@@ -376,6 +363,95 @@ function resolvePlatform(link) {
       </svg>
     ),
   };
+}
+
+// [LINKS-CARD] Liens présentés comme une « fiche contact » : une carte blanche,
+// une ligne par lien (pastille d'icône, petit libellé de type, valeur dessous).
+const ROW_TILE_BG = '#fdebdc'; // pastille d'icône (pêche)
+const ROW_ICON_INK = '#8a4a24'; // pictogramme « copier »
+const ROW_LABEL   = '#8b7566'; // libellé de type (E-MAIL, TÉLÉPHONE…)
+const ROW_VALUE   = '#3a1d0e'; // valeur affichée
+const ROW_DIVIDER = '#f1e6dc'; // séparateur entre deux lignes
+
+const rowBaseStyle = (first) => ({
+  display:'flex', alignItems:'center', gap:'14px', width:'100%', boxSizing:'border-box',
+  padding:'10px 14px 10px 10px', background:'transparent', border:'none',
+  borderTop: first ? 'none' : `1px solid ${ROW_DIVIDER}`,
+  textAlign:'left', cursor:'pointer', touchAction:'manipulation', fontFamily:'inherit',
+  transition:'background 0.15s',
+});
+const rowLabelStyle = { display:'block', fontSize:'10.5px', fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:ROW_LABEL, lineHeight:1.3 };
+const rowValueStyle = { display:'block', marginTop:'1px', fontSize:'15px', fontWeight:600, color:ROW_VALUE, lineHeight:1.35, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' };
+
+// Valeur affichée : le texte saisi par l'utilisateur s'il apporte une info,
+// sinon l'adresse nettoyée (sans mailto:, tel:, https://, www.)
+function rowValue(link, platform) {
+  const typed = (link.label || '').trim();
+  if (typed && typed.toLowerCase() !== String(platform.label || '').trim().toLowerCase()) return typed;
+  const cleaned = (link.url || '').trim()
+    .replace(/^(mailto:|tel:|https?:\/\/)/i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/+$/, '');
+  return cleaned || typed || platform.label;
+}
+
+function LinkRowIcon({ platform }) {
+  return (
+    <span style={{ width:'44px', height:'44px', borderRadius:'14px', background:ROW_TILE_BG, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+      <span style={{ width:'28px', height:'28px', borderRadius:'8px', overflow:'hidden', display:'flex', lineHeight:0 }}>
+        {platform.icon ? React.cloneElement(platform.icon, { width: 28, height: 28 }) : null}
+      </span>
+    </span>
+  );
+}
+
+function LinkRow({ link, platform, first, onClick }) {
+  return (
+    <button type="button" onClick={onClick} className="pp-row-btn" style={rowBaseStyle(first)}>
+      <LinkRowIcon platform={platform} />
+      <span style={{ minWidth:0, flex:1 }}>
+        <span style={rowLabelStyle}>{platform.label}</span>
+        <span style={rowValueStyle}>{rowValue(link, platform)}</span>
+      </span>
+    </button>
+  );
+}
+
+// Adresse crypto : toute la ligne copie l'adresse dans le presse-papiers.
+function CryptoRow({ link, platform, first, onCopied }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef(null);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const address = (link.address || link.url || '').trim()
+    .replace(/^[a-z][a-z0-9+.-]*:/i, '') // « bitcoin: », « ethereum: »…
+    .split('?')[0];
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+    } catch {
+      window.prompt('Copiez cette adresse :', address);
+      return;
+    }
+    setCopied(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 1800);
+    if (onCopied) onCopied();
+  };
+
+  return (
+    <button type="button" onClick={copy} className="pp-row-btn" style={rowBaseStyle(first)} aria-label={`Copier ${link.label || platform.label}`}>
+      <LinkRowIcon platform={platform} />
+      <span style={{ minWidth:0, flex:1 }}>
+        <span style={rowLabelStyle}>{link.label || platform.label}</span>
+        <span style={{ ...rowValueStyle, fontSize:'13px' }}>{address}</span>
+      </span>
+      <span aria-hidden="true" style={{ width:'36px', height:'36px', borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background: copied ? '#dcfce7' : ROW_TILE_BG, color: copied ? '#16a34a' : ROW_ICON_INK, transition:'background 0.2s,color 0.2s' }}>
+        {copied ? <Check size={16} /> : <Copy size={16} />}
+      </span>
+    </button>
+  );
 }
 
 // ─── Sous-composants ──────────────────────────────────────────
@@ -591,36 +667,6 @@ function BannerSlider({ urls, getSrc, isLight, priority, onDownload }) {
         </div>
       )}
     </div>
-  );
-}
-
-function RippleButton({ onClick, style, children, platformColor }) {
-  const [ripples, setRipples] = useState([]);
-  const timeouts = useRef([]);
-
-  useEffect(() => {
-    return () => { timeouts.current.forEach(clearTimeout); timeouts.current = []; };
-  }, []);
-
-  const handlePointerDown = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const id = Date.now();
-    setRipples(p => [...p, { x: e.clientX - rect.left, y: e.clientY - rect.top, id }]);
-    const t = setTimeout(() => setRipples(p => p.filter(r => r.id !== id)), 600);
-    timeouts.current.push(t);
-  };
-  return (
-    <button
-      onClick={onClick}
-      onPointerDown={handlePointerDown}
-      className="pp-link-btn-el"
-      style={{ ...style, position:'relative', overflow:'hidden', touchAction:'manipulation', borderLeft: platformColor ? `4px solid ${platformColor}` : '4px solid rgba(255,255,255,0.15)' }}
-    >
-      {ripples.map(r => (
-        <span key={r.id} style={{ position:'absolute', left:r.x, top:r.y, width:'8px', height:'8px', borderRadius:'50%', background:'rgba(0,0,0,0.18)', transform:'translate(-50%,-50%) scale(0)', animation:'pp-ripple 0.6s ease-out forwards', pointerEvents:'none' }} />
-      ))}
-      {children}
-    </button>
   );
 }
 
@@ -980,6 +1026,13 @@ export default function PublicProfile({ previewProfile = null }) {
           .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
         }
 
+        /* [LINKS-CARD] Lignes de la carte de liens */
+        .pp-row-btn:active          { background:#fff6ee !important; }
+        .pp-row-btn:focus-visible   { outline:2px solid #6366f1; outline-offset:-2px; }
+        @media (hover: hover) {
+          .pp-row-btn:hover { background:#fffaf5 !important; }
+        }
+
         /* [DL4] Mode léger : coupe l'animation "mesh" du fond décoratif */
         .pp-light-mode .pp-mesh-blob { animation:none !important; filter:none !important; }
 
@@ -1261,17 +1314,6 @@ export default function PublicProfile({ previewProfile = null }) {
       <p>Profil introuvable.</p>
     </div>
   );
-
-  const linkContrast      = getProfileContrast(profile);
-  const isLinkBgDark       = linkContrast === 'light';
-  const LINK_TEXT_COLOR    = isLinkBgDark ? 'rgba(255,255,255,0.96)' : '#15102a';
-  const LINK_BORDER_COLOR  = isLinkBgDark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.18)';
-  const LINK_BG_IDLE       = isLinkBgDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.55)';
-  const LINK_BG_HOVER      = isLinkBgDark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.78)';
-  const LINK_CARD_BG_IDLE  = isLinkBgDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.66)';
-  const LINK_CARD_BG_HOVER = isLinkBgDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.86)';
-  const LINK_ICON_BG       = isLinkBgDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.80)';
-  const LINK_TEXT_SHADOW   = isLinkBgDark ? '0 1px 3px rgba(0,0,0,0.35)' : 'none';
 
   const enabledLinks    = (profile.links || []).filter(l => l.enabled !== false);
 
@@ -1609,66 +1651,39 @@ export default function PublicProfile({ previewProfile = null }) {
           </div>
         )}
 
-        {/* Liens */}
-        <div className="pp-content-col" style={{ display:'flex', flexDirection:'column', gap:'12px', marginTop:'8px' }}>
-          {mainLinks.map((link, i) => {
-            const platform = resolvePlatform(link);
+        {/* Liens — [LINKS-CARD] carte blanche façon fiche contact */}
+        {mainLinks.length > 0 && (
+          <div
+            className="pp-content-col pp-link-btn"
+            style={{ marginTop:'8px', background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 10px 30px rgba(0,0,0,0.28)', overflow:'hidden' }}
+          >
+            {mainLinks.map((link, i) => {
+              const platform = resolvePlatform(link);
 
-            if (platform.cryptoAddress) {
-              return (
-                <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
-                  <CryptoAddressRow
+              if (platform.cryptoAddress) {
+                return (
+                  <CryptoRow
+                    key={i}
                     link={link}
                     platform={platform}
-                    theme={{ text: LINK_TEXT_COLOR, border: LINK_BORDER_COLOR, bg: LINK_CARD_BG_IDLE, iconBg: LINK_ICON_BG, shadow: CARD_SHADOW }}
+                    first={i === 0}
                     onCopied={() => { if (profile && !isPreview) trackClick(profile.id, link.platform); }}
                   />
-                </div>
-              );
-            }
+                );
+              }
 
-            return (
-              <div key={i} className="pp-link-btn" style={{ animationDelay: `${i * 0.07}s` }}>
-                <RippleButton
+              return (
+                <LinkRow
+                  key={i}
+                  link={link}
+                  platform={platform}
+                  first={i === 0}
                   onClick={() => handleLinkClick(link)}
-                  platformColor={platform.color || '#6366f1'}
-                  style={{
-                    display:'flex', alignItems:'center', gap:'12px', width:'100%',
-                    padding:'8px 8px',
-                    borderRadius:'999px',
-                    background:LINK_CARD_BG_IDLE,
-                    border:`1px solid ${LINK_BORDER_COLOR}`,
-                    backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
-                    '--pp-hover-bg': LINK_CARD_BG_HOVER,
-                    cursor:'pointer', textAlign:'left',
-                    boxShadow:CARD_SHADOW,
-                    transition:'background 0.15s,transform 0.1s',
-                  }}
-                >
-                  <div style={{
-                    width:'48px', height:'48px', borderRadius:'50%', overflow:'hidden',
-                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                    background:LINK_ICON_BG, boxShadow:`0 0 0 1px ${LINK_BORDER_COLOR}`,
-                  }}>
-                    {platform.icon ? React.cloneElement(platform.icon, { width: 48, height: 48 }) : null}
-                  </div>
-
-                  <span style={{
-                    flex:1, textAlign:'center',
-                    color:LINK_TEXT_COLOR, fontWeight:'700', fontSize:'13px',
-                    letterSpacing:'0.18em', textTransform:'uppercase',
-                    textShadow:LINK_TEXT_SHADOW,
-                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                  }}>
-                    {link.label || platform.label}
-                  </span>
-
-                  <div aria-hidden="true" style={{ width:'48px', flexShrink:0 }} />
-                </RippleButton>
-              </div>
-            );
-          })}
-        </div>
+                />
+              );
+            })}
+          </div>
+        )}
 
         {/* Support */}
         <a

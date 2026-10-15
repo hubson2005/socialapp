@@ -20,49 +20,78 @@ export const COLORS = {
   accentSoft: '#9fe1cb',    // texte accent sur fond sombre
   text: '#ffffff', textMuted: '#8b889c',
   success: '#5dcaa5', danger: '#f87171',
+  inputBg: '#0d0c16',       // fond des champs de saisie
 };
 
-const s = {
+// [DESIGN2] Thème clair du widget sur le profil public : même langage visuel que
+// la carte de liens (carte blanche, pastille pêche, accent orange).
+// PublicBookingPage.jsx continue d'utiliser COLORS (sombre) sans rien changer.
+export const COLORS_LIGHT = {
+  surface: 'rgba(255,255,255,0.97)',
+  surfaceAlt: '#fff6ee',
+  badgeBg: '#fdebdc',
+  border: '#f1e6dc',
+  borderStrong: 'transparent',
+  accent: '#e8590c', accent2: '#f08a24',
+  accentGradient: 'linear-gradient(135deg,#e8590c,#f08a24)',
+  accentDark: '#ffffff',
+  accentSoft: '#d9531e',
+  text: '#3a1d0e', textMuted: '#8b7566',
+  success: '#16a34a', danger: '#dc2626',
+  inputBg: '#ffffff',
+  radius: 24,
+  shadow: '0 10px 30px rgba(0,0,0,0.28)',
+  btnShadow: '0 8px 22px rgba(232,89,12,0.35)',
+  btnWeight: 700,
+};
+
+// Les styles dépendent du thème (sombre par défaut, clair sur le profil public).
+const makeStyles = (C) => ({
   wrap: {
-    background: COLORS.surface, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 18, padding: 24, color: COLORS.text,
+    background: C.surface, border: `1px solid ${C.borderStrong}`, borderRadius: C.radius || 18, padding: 24, color: C.text,
+    boxShadow: C.shadow || 'none',
   },
   headerRow: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
   iconBadge: {
-    width: 36, height: 36, borderRadius: 10, background: COLORS.badgeBg, display: 'flex',
+    width: 36, height: 36, borderRadius: 10, background: C.badgeBg, display: 'flex',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18,
   },
-  title: { fontSize: 16, fontWeight: 500, margin: 0, color: '#fff', letterSpacing: '0.2px' },
-  subtitle: { color: COLORS.textMuted, fontSize: 12, margin: '2px 0 0' },
-  divider: { height: 1, background: COLORS.border, margin: '0 0 16px' },
+  title: { fontSize: 16, fontWeight: 500, margin: 0, color: C.text, letterSpacing: '0.2px' },
+  subtitle: { color: C.textMuted, fontSize: 12, margin: '2px 0 0' },
+  divider: { height: 1, background: C.border, margin: '0 0 16px' },
   tabs: { display: 'flex', gap: 8, marginBottom: 16 },
   tab: (active) => ({
     flex: 1, textAlign: 'center', padding: '10px 12px', borderRadius: 9, cursor: 'pointer', fontWeight: 500, fontSize: 13,
-    background: active ? COLORS.accent : COLORS.surfaceAlt,
-    color: active ? COLORS.accentDark : COLORS.textMuted, touchAction: 'manipulation',
+    background: active ? C.accent : C.surfaceAlt,
+    color: active ? C.accentDark : C.textMuted, touchAction: 'manipulation',
   }),
   item: {
-    background: COLORS.surfaceAlt, borderLeft: `2px solid ${COLORS.accent}`, borderRadius: 12, padding: 16, marginBottom: 10,
+    background: C.surfaceAlt, borderLeft: `2px solid ${C.accent}`, borderRadius: 12, padding: 16, marginBottom: 10,
     cursor: 'pointer', touchAction: 'manipulation',
   },
-  itemSelected: { boxShadow: `0 0 0 1px ${COLORS.accent}` },
+  itemSelected: { boxShadow: `0 0 0 1px ${C.accent}` },
   input: {
-    width: '100%', boxSizing: 'border-box', background: '#0d0c16', border: `1px solid ${COLORS.border}`, borderRadius: 9,
-    padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', marginBottom: 10,
+    width: '100%', boxSizing: 'border-box', background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 9,
+    padding: '12px 14px', color: C.text, fontSize: 14, outline: 'none', marginBottom: 10,
   },
   btn: {
-    width: '100%', background: COLORS.accent, color: COLORS.accentDark, border: 'none',
-    borderRadius: 9, padding: '14px 16px', fontWeight: 500, fontSize: 15, cursor: 'pointer', touchAction: 'manipulation',
+    width: '100%', background: C.accentGradient || C.accent, color: C.accentDark, border: 'none',
+    borderRadius: 9, padding: '14px 16px', fontWeight: C.btnWeight || 500, fontSize: 15, cursor: 'pointer', touchAction: 'manipulation',
+    boxShadow: C.btnShadow || 'none',
   },
-  btnGhost: { background: 'transparent', color: COLORS.textMuted, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', touchAction: 'manipulation' },
+  btnGhost: { background: 'transparent', color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', touchAction: 'manipulation' },
   slotGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 8, marginBottom: 16 },
   slot: (selected) => ({
     padding: '10px 6px', textAlign: 'center', borderRadius: 9, cursor: 'pointer', fontSize: 13, fontWeight: 500,
-    background: selected ? COLORS.accent : COLORS.surfaceAlt,
-    color: selected ? COLORS.accentDark : '#fff', border: `1px solid ${selected ? 'transparent' : COLORS.border}`, touchAction: 'manipulation',
+    background: selected ? C.accent : C.surfaceAlt,
+    color: selected ? C.accentDark : C.text, border: `1px solid ${selected ? 'transparent' : C.border}`, touchAction: 'manipulation',
   }),
-  empty: { textAlign: 'center', color: COLORS.textMuted, fontSize: 13, padding: 20 },
+  empty: { textAlign: 'center', color: C.textMuted, fontSize: 13, padding: 20 },
   success: { textAlign: 'center', padding: 30 },
-};
+});
+
+const sDark = makeStyles(COLORS);
+const sLight = makeStyles(COLORS_LIGHT);
 
 const DATE_RANGE_DAYS = 30;
 
@@ -71,6 +100,7 @@ const DATE_RANGE_DAYS = 30;
 // automatiquement sur 'events' une fois les données chargées (voir [FIX2]) —
 // sinon le widget restait bloqué sur 'services' et n'affichait rien.
 export default function PublicBookingWidget({ profileId }) {
+  const s = sLight; // [DESIGN2] thème clair sur le profil public
   const [mode, setMode] = useState(null); // 'services' | 'events' | null (pas encore déterminé)
   const [services, setServices] = useState([]);
   const [events, setEvents] = useState([]);
@@ -122,8 +152,8 @@ export default function PublicBookingWidget({ profileId }) {
         </div>
       )}
 
-      {mode === 'services' && services.length > 0 && <ServiceBookingFlow profileId={profileId} services={services} />}
-      {mode === 'events' && events.length > 0 && <EventBookingFlow profileId={profileId} events={events} />}
+      {mode === 'services' && services.length > 0 && <ServiceBookingFlow profileId={profileId} services={services} theme={COLORS_LIGHT} />}
+      {mode === 'events' && events.length > 0 && <EventBookingFlow profileId={profileId} events={events} theme={COLORS_LIGHT} />}
     </div>
   );
 }
@@ -136,7 +166,9 @@ export default function PublicBookingWidget({ profileId }) {
 // 2 (choix de la date/heure) au lieu de partir de la liste des services.
 // Le bouton "← {service.name}" qui ramenait à la liste (étape 1) est alors
 // masqué, puisqu'il n'y a plus de liste à laquelle revenir.
-export function ServiceBookingFlow({ profileId, services, initialService }) {
+export function ServiceBookingFlow({ profileId, services, initialService, theme }) {
+  const C = theme || COLORS;
+  const s = theme ? makeStyles(theme) : sDark;
   const [step, setStep] = useState(initialService ? 2 : 1); // 1: service, 2: date+heure, 3: form, 4: succès
   const [service, setService] = useState(initialService || null);
   const [date, setDate] = useState('');
@@ -213,7 +245,7 @@ export function ServiceBookingFlow({ profileId, services, initialService }) {
       <div style={s.success}>
         <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
         <strong>Réservation confirmée !</strong>
-        <p style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 6 }}>
+        <p style={{ color: C.textMuted, fontSize: 13, marginTop: 6 }}>
           {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {slot.slot_start.slice(0, 5)}
         </p>
       </div>
@@ -227,9 +259,9 @@ export function ServiceBookingFlow({ profileId, services, initialService }) {
           <div key={svc.id} style={s.item} onClick={() => pickService(svc)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <strong style={{ fontWeight: 500 }}>{svc.name}</strong>
-              <span style={{ color: COLORS.accentSoft, fontWeight: 500 }}>{svc.price > 0 ? `${svc.price.toLocaleString('fr-FR')} FCFA` : 'Gratuit'}</span>
+              <span style={{ color: C.accentSoft, fontWeight: 500 }}>{svc.price > 0 ? `${svc.price.toLocaleString('fr-FR')} FCFA` : 'Gratuit'}</span>
             </div>
-            <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 4 }}>{svc.duration_minutes} min{svc.description ? ` · ${svc.description}` : ''}</div>
+            <div style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>{svc.duration_minutes} min{svc.description ? ` · ${svc.description}` : ''}</div>
           </div>
         ))}
       </div>
@@ -246,7 +278,7 @@ export function ServiceBookingFlow({ profileId, services, initialService }) {
           <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setStep(1)}>← {service.name}</button>
         )}
         {initialService && (
-          <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 12 }}>
+          <div style={{ color: C.textMuted, fontSize: 13, marginBottom: 12 }}>
             {service.name} · {service.duration_minutes} min{service.price > 0 ? ` · ${service.price.toLocaleString('fr-FR')} FCFA` : ' · Gratuit'}
           </div>
         )}
@@ -257,8 +289,8 @@ export function ServiceBookingFlow({ profileId, services, initialService }) {
             return (
               <div key={iso} onClick={() => pickDate(iso)} style={{
                 flex: '0 0 auto', minWidth: 56, textAlign: 'center', padding: '8px 6px', borderRadius: 9, cursor: 'pointer',
-                background: active ? COLORS.accent : COLORS.surfaceAlt,
-                color: active ? COLORS.accentDark : COLORS.text, border: `1px solid ${active ? 'transparent' : COLORS.border}`,
+                background: active ? C.accent : C.surfaceAlt,
+                color: active ? C.accentDark : C.text, border: `1px solid ${active ? 'transparent' : C.border}`,
               }}>
                 <div style={{ fontSize: 11, opacity: 0.8 }}>{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</div>
                 <div style={{ fontWeight: 500 }}>{d.getDate()}</div>
@@ -289,14 +321,14 @@ export function ServiceBookingFlow({ profileId, services, initialService }) {
   return (
     <div>
       <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setStep(2)}>← Modifier le créneau</button>
-      <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 12 }}>
+      <div style={{ color: C.textMuted, fontSize: 13, marginBottom: 12 }}>
         {service.name} · {new Date(date).toLocaleDateString('fr-FR')} à {slot.slot_start.slice(0, 5)}
       </div>
       <input style={s.input} placeholder="Nom complet *" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
       <input style={s.input} placeholder="Téléphone *" value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} />
       <input style={s.input} placeholder="Email (optionnel)" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
       <input style={s.input} placeholder="Message (optionnel)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-      {errorMsg && <div style={{ color: COLORS.danger, fontSize: 13, marginBottom: 10 }}>{errorMsg}</div>}
+      {errorMsg && <div style={{ color: C.danger, fontSize: 13, marginBottom: 10 }}>{errorMsg}</div>}
       <button style={s.btn} disabled={submitting} onClick={submit}>{submitting ? 'Réservation…' : 'Confirmer la réservation'}</button>
     </div>
   );
@@ -310,7 +342,9 @@ export function ServiceBookingFlow({ profileId, services, initialService }) {
 // démarre déjà rempli, donc la branche `if (!event) { liste... }` ne se
 // déclenche jamais. Le bouton "← {event.title}" (qui ramenait à la liste)
 // est masqué pour la même raison qu'en [LINK2].
-export function EventBookingFlow({ profileId, events, initialEvent }) {
+export function EventBookingFlow({ profileId, events, initialEvent, theme }) {
+  const C = theme || COLORS;
+  const s = theme ? makeStyles(theme) : sDark;
   const [event, setEvent] = useState(initialEvent || null);
   const [form, setForm] = useState({ client_name: '', client_phone: '', client_email: '', party_size: 1 });
   const [submitting, setSubmitting] = useState(false);
@@ -355,7 +389,7 @@ export function EventBookingFlow({ profileId, events, initialEvent }) {
       <div style={s.success}>
         <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
         <strong>Inscription confirmée !</strong>
-        <p style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 6 }}>{event.title}</p>
+        <p style={{ color: C.textMuted, fontSize: 13, marginTop: 6 }}>{event.title}</p>
       </div>
     );
   }
@@ -366,11 +400,11 @@ export function EventBookingFlow({ profileId, events, initialEvent }) {
         {events.map((ev) => (
           <div key={ev.id} style={s.item} onClick={() => ev.spots_remaining > 0 && setEvent(ev)}>
             <strong style={{ fontWeight: 500 }}>{ev.title}</strong>
-            <div style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 4 }}>
+            <div style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>
               {new Date(ev.event_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {ev.start_time?.slice(0, 5)}
               {ev.location ? ` · ${ev.location}` : ''}
             </div>
-            <div style={{ marginTop: 6, fontSize: 13, color: ev.spots_remaining > 0 ? COLORS.success : COLORS.danger, fontWeight: 500 }}>
+            <div style={{ marginTop: 6, fontSize: 13, color: ev.spots_remaining > 0 ? C.success : C.danger, fontWeight: 500 }}>
               {ev.spots_remaining > 0 ? `${ev.spots_remaining} place(s) restante(s)` : 'Complet'}
             </div>
           </div>
@@ -386,7 +420,7 @@ export function EventBookingFlow({ profileId, events, initialEvent }) {
         <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setEvent(null)}>← {event.title}</button>
       )}
       {initialEvent && (
-        <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 12 }}>
+        <div style={{ color: C.textMuted, fontSize: 13, marginBottom: 12 }}>
           {new Date(event.event_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {event.start_time?.slice(0, 5)}
           {event.location ? ` · ${event.location}` : ''}
         </div>
@@ -394,9 +428,9 @@ export function EventBookingFlow({ profileId, events, initialEvent }) {
       <input style={s.input} placeholder="Nom complet *" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
       <input style={s.input} placeholder="Téléphone *" value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} />
       <input style={s.input} placeholder="Email (optionnel)" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
-      <label style={{ fontSize: 12, color: COLORS.textMuted, display: 'block', marginBottom: 4 }}>Nombre de places</label>
+      <label style={{ fontSize: 12, color: C.textMuted, display: 'block', marginBottom: 4 }}>Nombre de places</label>
       <input style={s.input} type="number" min="1" max={event.spots_remaining} value={form.party_size} onChange={(e) => setForm({ ...form, party_size: e.target.value })} />
-      {errorMsg && <div style={{ color: COLORS.danger, fontSize: 13, marginBottom: 10 }}>{errorMsg}</div>}
+      {errorMsg && <div style={{ color: C.danger, fontSize: 13, marginBottom: 10 }}>{errorMsg}</div>}
       <button style={s.btn} disabled={submitting} onClick={submit}>{submitting ? 'Inscription…' : "S'inscrire"}</button>
     </div>
   );

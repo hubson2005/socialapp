@@ -45,26 +45,31 @@ const normalizePhone = (raw = '') => {
   let p = String(raw).replace(/[^\d+]/g, '');
   if (!p) return '';
   if (p.startsWith('00')) p = '+' + p.slice(2);
+  if (!p.startsWith('+') && p.length === 12 && p.startsWith('225')) p = '+' + p;
   if (!p.startsWith('+') && p.length === 10) p = '+225' + p;
   return p;
 };
 
-const buildVCard = ({ fullName = '', title = '', company = '', phone = '', email = '', url = '' }) => {
+const buildVCard = ({ fullName = '', title = '', company = '', phone = '', phone2 = '', email = '', website = '', linkedin = '', url = '' }) => {
   const name  = (fullName || '').trim();
   const parts = name.split(/\s+/).filter(Boolean);
   const last  = parts.length > 1 ? parts.pop() : '';
   const first = parts.join(' ');
   const tel   = normalizePhone(phone);
+  const tel2  = normalizePhone(phone2);
   return [
     'BEGIN:VCARD',
     'VERSION:3.0',
     `N:${vcEsc(last)};${vcEsc(first)};;;`,
     `FN:${vcEsc(name)}`,
-    company && `ORG:${vcEsc(company)}`,
-    title   && `TITLE:${vcEsc(title)}`,
-    tel     && `TEL;TYPE=CELL:${tel}`,
-    email   && `EMAIL:${String(email).trim()}`,
-    url     && `URL:${url}`,
+    company  && `ORG:${vcEsc(company)}`,
+    title    && `TITLE:${vcEsc(title)}`,
+    tel      && `TEL;TYPE=CELL:${tel}`,
+    tel2     && tel2 !== tel && `TEL;TYPE=WORK:${tel2}`,
+    email    && `EMAIL:${String(email).trim()}`,
+    url      && `URL:${url}`,
+    website  && `URL:${String(website).trim()}`,
+    linkedin && `URL:${String(linkedin).trim()}`,
     'END:VCARD',
   ].filter(Boolean).join('\r\n');
 };
@@ -81,6 +86,9 @@ const pickField = (row, keys) => {
 };
 
 const EMPTY_CONTACT = { fullName: '', title: '', company: '', phone: '', email: '' };
+// Champs repris automatiquement des liens du profil (non modifiables dans la modale)
+const EMPTY_PROFILE_INFO = { ...EMPTY_CONTACT, phone2: '', website: '', linkedin: '' };
+const CONTACT_KEYS = ['fullName', 'title', 'company', 'phone', 'email'];
 
 // ─── Options de personnalisation ──────────────────────────────────────────────
 const DOT_STYLES = [
@@ -198,7 +206,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
   const [zoomDataUrl,      setZoomDataUrl]      = useState(null);
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactDraft,     setContactDraft]     = useState({ ...EMPTY_CONTACT });
-  const [profileInfo,      setProfileInfo]      = useState({ ...EMPTY_CONTACT });
+  const [profileInfo,      setProfileInfo]      = useState({ ...EMPTY_PROFILE_INFO });
 
   // [FIX] Toujours sanitiser le username avant de construire le lien encodé
   // dans le QR — voir le commentaire sur `sanitizeUsername` ci-dessus.
@@ -215,6 +223,9 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
     company:  oc.company  || profileInfo.company  || '',
     phone:    oc.phone    || profileInfo.phone    || '',
     email:    oc.email    || profileInfo.email    || '',
+    phone2:   profileInfo.phone2,
+    website:  profileInfo.website,
+    linkedin: profileInfo.linkedin,
   };
   const vcard  = buildVCard({ ...contact, url: profileUrl });
   const qrData = mode === 'offline' ? vcard : `${profileUrl}?source=qr`;
@@ -301,14 +312,24 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
           .maybeSingle();
 
         if (data) {
-          // Pré-remplissage de la fiche contact depuis le profil
-          // → adaptez ces listes de colonnes si besoin
+          // Pré-remplissage de la fiche contact depuis le profil.
+          // Téléphone, e-mail, site web et LinkedIn viennent des liens activés
+          // (link_profiles.links : { platform, url, enabled }).
+          const links = Array.isArray(data.links)
+            ? data.links.filter(l => l && l.enabled !== false && l.url)
+            : [];
+          const byPlatform = (p) => links.filter(l => l.platform === p).map(l => String(l.url).trim());
+          const phones   = byPlatform('phone').map(u => u.replace(/^tel:/i, ''));
+          const waDigits = (byPlatform('whatsapp')[0] || '').replace(/\D/g, '');
           setProfileInfo({
-            fullName: pickField(data, ['display_name', 'full_name', 'name', 'profile_name']),
-            title:    pickField(data, ['job_title', 'headline', 'tagline', 'subtitle']),
-            company:  pickField(data, ['company', 'company_name', 'business_name', 'organization']),
-            phone:    pickField(data, ['whatsapp', 'whatsapp_number', 'phone', 'phone_number']),
-            email:    pickField(data, ['email', 'contact_email']),
+            fullName: pickField(data, ['display_name']),
+            title:    '',
+            company:  '',
+            phone:    phones[0] || pickField(data, ['whatsapp_phone']) || (waDigits ? '+' + waDigits : ''),
+            phone2:   phones[1] || '',
+            email:    (byPlatform('email')[0] || '').replace(/^mailto:/i, ''),
+            website:  byPlatform('website')[0] || '',
+            linkedin: byPlatform('linkedin')[0] || '',
           });
         }
 
@@ -369,19 +390,29 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
 
   // ── Fiche contact hors ligne ─────────────────────────────────────────────
   const openContactModal = () => {
-    setContactDraft({ ...contact }); // pré-rempli avec les valeurs effectives
+    // pré-rempli avec les valeurs effectives (5 champs modifiables)
+    const d = {};
+    CONTACT_KEYS.forEach(k => { d[k] = contact[k] || ''; });
+    setContactDraft(d);
     setShowContactModal(true);
   };
 
   const saveContact = async () => {
     setSaving(true);
-    const next = { ...customization, offlineContact: { ...contactDraft } };
+    // On ne mémorise que ce qui diffère du profil : le reste reste synchronisé avec les liens
+    const stored = {};
+    CONTACT_KEYS.forEach(k => { stored[k] = contactDraft[k] === (profileInfo[k] || '') ? '' : (contactDraft[k] || ''); });
+    const next = { ...customization, offlineContact: stored };
     setCustomization(next);
     try { await persistConfig(next); } catch { /* silencieux */ } finally { setSaving(false); }
     setShowContactModal(false);
   };
 
-  const draftVCard = buildVCard({ ...contactDraft, url: profileUrl });
+  const draftVCard = buildVCard({
+    ...contactDraft,
+    phone2: profileInfo.phone2, website: profileInfo.website, linkedin: profileInfo.linkedin,
+    url: profileUrl,
+  });
 
   const downloadVcfFile = (content, name) => {
     const blob = new Blob([content], { type: 'text/vcard;charset=utf-8' });
@@ -708,7 +739,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
                 {draftVCard.length} caractères{draftVCard.length > 450 ? ' — long : le QR sera dense, raccourcissez si possible' : ''}
               </div>
               <p style={{ color:'rgba(255,255,255,0.28)', fontSize:'10px', margin:0, lineHeight:1.6 }}>
-                Le lien de votre profil ({profileUrl.replace('https://','')}) est inclus automatiquement dans la fiche.
+                Le lien de votre profil, votre 2ᵉ téléphone, votre site web et LinkedIn (s'ils sont activés dans « Mes plateformes ») sont ajoutés automatiquement.
               </p>
             </div>
 

@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Copy, Check, X, Share2, Palette, Upload, Trash2, AlertTriangle } from 'lucide-react';
+import { Download, Copy, Check, X, Share2, Palette, Upload, Trash2, AlertTriangle, Maximize2, UserPen, FileDown } from 'lucide-react';
 import { supabase } from '../../supabase';
 
 const BASE_URL = 'https://www.socialapp.work';
+
+// Taille interne du canvas du QR (affiché à 100px via CSS, mais téléchargé en HD)
+const QR_SIZE = 300;
 
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -25,6 +28,59 @@ const sanitizeUsername = (value) =>
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
+
+// ─── vCard (mode "Sans internet") ─────────────────────────────────────────────
+// Le QR contient directement la fiche contact (texte) : le téléphone qui scanne
+// l'affiche et propose "Ajouter un contact" SANS aucune connexion.
+const vcEsc = (v = '') =>
+  String(v)
+    .replace(/\\/g, '\\\\')
+    .replace(/\r?\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+
+// Numéro au format international. Hypothèse Côte d'Ivoire : un numéro local
+// à 10 chiffres sans "+" reçoit le préfixe +225.
+const normalizePhone = (raw = '') => {
+  let p = String(raw).replace(/[^\d+]/g, '');
+  if (!p) return '';
+  if (p.startsWith('00')) p = '+' + p.slice(2);
+  if (!p.startsWith('+') && p.length === 10) p = '+225' + p;
+  return p;
+};
+
+const buildVCard = ({ fullName = '', title = '', company = '', phone = '', email = '', url = '' }) => {
+  const name  = (fullName || '').trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  const last  = parts.length > 1 ? parts.pop() : '';
+  const first = parts.join(' ');
+  const tel   = normalizePhone(phone);
+  return [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `N:${vcEsc(last)};${vcEsc(first)};;;`,
+    `FN:${vcEsc(name)}`,
+    company && `ORG:${vcEsc(company)}`,
+    title   && `TITLE:${vcEsc(title)}`,
+    tel     && `TEL;TYPE=CELL:${tel}`,
+    email   && `EMAIL:${String(email).trim()}`,
+    url     && `URL:${url}`,
+    'END:VCARD',
+  ].filter(Boolean).join('\r\n');
+};
+
+// Lit la première colonne non vide parmi plusieurs noms possibles
+// → adaptez la liste si vos colonnes link_profiles portent d'autres noms.
+const pickField = (row, keys) => {
+  if (!row) return '';
+  for (const k of keys) {
+    const v = row[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
+};
+
+const EMPTY_CONTACT = { fullName: '', title: '', company: '', phone: '', email: '' };
 
 // ─── Options de personnalisation ──────────────────────────────────────────────
 const DOT_STYLES = [
@@ -90,6 +146,7 @@ const DEFAULT_CUSTOMIZATION = {
   gradientRotation:  45,
   logo:              null,
   frame:             'none',
+  offlineContact:    { ...EMPTY_CONTACT },
 };
 
 // ─── Utilitaire luminosité ────────────────────────────────────────────────────
@@ -111,17 +168,18 @@ function isLight(hex) {
 // que de laisser l'utilisateur partager un lien qui ne fonctionnera pas.
 //
 // [FIX THÈME] La carte principale et les deux états de garde (username
-// manquant / compte non activé) étaient calqués sur l'ancien fond sombre
-// du dashboard (rgba(255,255,255,0.0x) + texte blanc). Le contenu du
-// dashboard est maintenant clair (#f4f5fa) : repassés en cartes blanches
-// avec texte foncé. Les modales (personnalisation QR, sauvegarde mobile)
-// restent en overlay sombre plein écran — cohérent, elles ont leur propre
-// fond opaque (#1a1a2e / #0f0f1a) et backdrop flouté.
+// manquant / compte non activé) sont en thème clair (#f4f5fa). Les modales
+// restent en overlay sombre plein écran.
+//
+// [NOUVEAU] Mode "Sans internet" : le QR peut encoder une vCard (fiche contact)
+// au lieu du lien du profil. Le mode "Profil en ligne" reste le mode par défaut
+// et fonctionne exactement comme avant (même URL, ?source=qr, stats de scan).
 export default function QRCodeDisplay({ profileId, username, userLogo, isActive, isActivated, onNavigate }) {
   const containerRef    = useRef(null);
   const qrInstanceRef   = useRef(null);
   const scriptLoadedRef = useRef(false);
   const logoFileRef     = useRef(null);
+  const renderRef       = useRef(null);
 
   const [qrLoaded,        setQrLoaded]        = useState(false);
   const [copied,          setCopied]          = useState(false);
@@ -134,16 +192,103 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
   const [stats,           setStats]           = useState({ scans: 0, downloads: 0, shares: 0 });
   const [saving,          setSaving]          = useState(false);
 
+  // [NOUVEAU] Mode d'affichage du QR + fiche contact hors ligne
+  const [mode,             setMode]             = useState('online'); // 'online' | 'offline'
+  const [showZoom,         setShowZoom]         = useState(false);
+  const [zoomDataUrl,      setZoomDataUrl]      = useState(null);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactDraft,     setContactDraft]     = useState({ ...EMPTY_CONTACT });
+  const [profileInfo,      setProfileInfo]      = useState({ ...EMPTY_CONTACT });
+
   // [FIX] Toujours sanitiser le username avant de construire le lien encodé
   // dans le QR — voir le commentaire sur `sanitizeUsername` ci-dessus.
-  // (username peut être vide ici ; sanitizeUsername/profileUrl ne sont
-  // utilisés que plus bas, une fois le guard `!username` passé.)
   const profileUrl = username ? `${BASE_URL}/${sanitizeUsername(username)}` : '';
   const LS_KEY     = `qr_config_${profileId}`;
 
   const upd = (key, val) => setCustomization(c => ({ ...c, [key]: val }));
 
-  // ── Chargement config QR (Supabase → localStorage → défaut) ─────────────
+  // ── Contact effectif = saisie manuelle > données du profil > username ───
+  const oc = customization.offlineContact || EMPTY_CONTACT;
+  const contact = {
+    fullName: oc.fullName || profileInfo.fullName || username || '',
+    title:    oc.title    || profileInfo.title    || '',
+    company:  oc.company  || profileInfo.company  || '',
+    phone:    oc.phone    || profileInfo.phone    || '',
+    email:    oc.email    || profileInfo.email    || '',
+  };
+  const vcard  = buildVCard({ ...contact, url: profileUrl });
+  const qrData = mode === 'offline' ? vcard : `${profileUrl}?source=qr`;
+
+  // ── Rendu du QR (défini AVANT les effets et les guards : évite une
+  //    ReferenceError (TDZ) quand un guard retourne tôt) ───────────────────
+  const buildGradient = () => {
+    if (!customization.gradientEnabled) return undefined;
+    return {
+      type: customization.gradientType,
+      rotation: customization.gradientRotation,
+      colorStops: [
+        { offset: 0, color: customization.gradientColor1 },
+        { offset: 1, color: customization.gradientColor2 },
+      ],
+    };
+  };
+
+  const renderStyledQR = () => {
+    const container = containerRef.current;
+    if (!container || !window.QRCodeStyling) return;
+    container.innerHTML = '';
+    qrInstanceRef.current = null;
+
+    const offline = mode === 'offline';
+    const gradient = buildGradient();
+    const accentColor  = gradient ? customization.gradientColor1 : customization.dotColor;
+    const accentColor2 = gradient ? customization.gradientColor2 : customization.dotColor;
+
+    const qr = new window.QRCodeStyling({
+      width:  QR_SIZE,
+      height: QR_SIZE,
+      type:   'canvas',
+      data:   qrData,
+      // Mode hors ligne : marge plus large pour faciliter la lecture d'un QR dense
+      ...(offline ? { margin: 12 } : {}),
+      dotsOptions: {
+        type: customization.dotStyle,
+        ...(gradient ? { gradient } : { color: customization.dotColor }),
+      },
+      cornersSquareOptions: { type: customization.cornerSquareStyle, color: accentColor  },
+      cornersDotOptions:    { type: customization.cornerDotStyle,    color: accentColor2 },
+      backgroundOptions:    { color: customization.bgColor },
+      // Pas de logo en mode hors ligne : le QR vCard est dense, le logo le rendrait illisible
+      ...(customization.logo && !offline ? {
+        image: customization.logo,
+        imageOptions: { crossOrigin: 'anonymous', margin: 6, imageSize: 0.22 },
+      } : {}),
+      // Niveau M en hors ligne (moins de modules → plus lisible), H en ligne (comme avant)
+      qrOptions: { errorCorrectionLevel: offline ? 'M' : 'H' },
+    });
+
+    qr.append(container);
+    qrInstanceRef.current = qr;
+    setTimeout(() => setQrLoaded(true), 350);
+  };
+  // Toujours la dernière version (évite un onload qui rendrait avec un état périmé)
+  renderRef.current = renderStyledQR;
+
+  const loadLibraryAndRender = () => {
+    if (window.QRCodeStyling) { renderRef.current?.(); return; }
+    if (scriptLoadedRef.current) return;
+    scriptLoadedRef.current = true;
+    const existing = document.querySelector('script[data-qr-lib]');
+    if (existing) { existing.addEventListener('load', () => renderRef.current?.()); return; }
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';
+    script.setAttribute('data-qr-lib', '1');
+    script.onload  = () => { scriptLoadedRef.current = false; renderRef.current?.(); };
+    script.onerror = () => { scriptLoadedRef.current = false; };
+    document.head.appendChild(script);
+  };
+
+  // ── Chargement config QR + infos profil (Supabase → localStorage → défaut) ─
   useEffect(() => {
     if (!profileId) return;
     (async () => {
@@ -151,11 +296,25 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
         // FIX: .maybeSingle() au lieu de .single() → évite l'erreur 406
         const { data } = await supabase
           .from('link_profiles')
-          .select('qr_config')
+          .select('*')
           .eq('id', profileId)
           .maybeSingle();
+
+        if (data) {
+          // Pré-remplissage de la fiche contact depuis le profil
+          // → adaptez ces listes de colonnes si besoin
+          setProfileInfo({
+            fullName: pickField(data, ['display_name', 'full_name', 'name', 'profile_name']),
+            title:    pickField(data, ['job_title', 'headline', 'tagline', 'subtitle']),
+            company:  pickField(data, ['company', 'company_name', 'business_name', 'organization']),
+            phone:    pickField(data, ['whatsapp', 'whatsapp_number', 'phone', 'phone_number']),
+            email:    pickField(data, ['email', 'contact_email']),
+          });
+        }
+
         if (data?.qr_config) {
           const merged = { ...DEFAULT_CUSTOMIZATION, logo: userLogo || null, ...data.qr_config };
+          merged.offlineContact = { ...EMPTY_CONTACT, ...(data.qr_config.offlineContact || {}) };
           setCustomization(merged);
           localStorage.setItem(LS_KEY, JSON.stringify(merged));
           return;
@@ -164,22 +323,34 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
       // Fallback localStorage
       try {
         const cached = localStorage.getItem(LS_KEY);
-        if (cached) setCustomization({ ...DEFAULT_CUSTOMIZATION, logo: userLogo || null, ...JSON.parse(cached) });
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setCustomization({
+            ...DEFAULT_CUSTOMIZATION,
+            logo: userLogo || null,
+            ...parsed,
+            offlineContact: { ...EMPTY_CONTACT, ...(parsed.offlineContact || {}) },
+          });
+        }
       } catch { /* silencieux */ }
     })();
   }, [profileId]);
 
   // ── Sauvegarde config QR ─────────────────────────────────────────────────
+  const persistConfig = async (cfg) => {
+    // On ne sauvegarde pas le logo en base (potentiellement très lourd en base64)
+    const { logo, ...configToSave } = cfg;
+    await supabase
+      .from('link_profiles')
+      .update({ qr_config: configToSave })
+      .eq('id', profileId);
+    localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+  };
+
   const saveCustomization = async () => {
     setSaving(true);
     try {
-      // On ne sauvegarde pas le logo en base (potentiellement très lourd en base64)
-      const { logo, ...configToSave } = customization;
-      await supabase
-        .from('link_profiles')
-        .update({ qr_config: configToSave })
-        .eq('id', profileId);
-      localStorage.setItem(LS_KEY, JSON.stringify(customization));
+      await persistConfig(customization);
     } catch { /* silencieux */ } finally {
       setSaving(false);
     }
@@ -188,12 +359,37 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
 
   // ── Réinitialisation ─────────────────────────────────────────────────────
   const resetCustomization = async () => {
-    const def = { ...DEFAULT_CUSTOMIZATION, logo: userLogo || null };
+    const def = { ...DEFAULT_CUSTOMIZATION, logo: userLogo || null, offlineContact: { ...EMPTY_CONTACT } };
     setCustomization(def);
     try {
       await supabase.from('link_profiles').update({ qr_config: null }).eq('id', profileId);
       localStorage.removeItem(LS_KEY);
     } catch { /* silencieux */ }
+  };
+
+  // ── Fiche contact hors ligne ─────────────────────────────────────────────
+  const openContactModal = () => {
+    setContactDraft({ ...contact }); // pré-rempli avec les valeurs effectives
+    setShowContactModal(true);
+  };
+
+  const saveContact = async () => {
+    setSaving(true);
+    const next = { ...customization, offlineContact: { ...contactDraft } };
+    setCustomization(next);
+    try { await persistConfig(next); } catch { /* silencieux */ } finally { setSaving(false); }
+    setShowContactModal(false);
+  };
+
+  const draftVCard = buildVCard({ ...contactDraft, url: profileUrl });
+
+  const downloadVcfFile = (content, name) => {
+    const blob = new Blob([content], { type: 'text/vcard;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `${sanitizeFileName(name || username || 'contact')}.vcf`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   // ── Stats Supabase ───────────────────────────────────────────────────────
@@ -218,9 +414,10 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
 
   // ── Rendu QR ──────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (!username || isActivated === false) return; // pas de QR à rendre (guards plus bas)
     setQrLoaded(false);
     loadLibraryAndRender();
-  }, [profileId, username, customization]);
+  }, [profileId, username, isActivated, customization, mode, qrData]);
 
   useEffect(() => {
     return () => {
@@ -230,12 +427,9 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
   }, []);
 
   // [FIX HOOKS] Les deux guards ci-dessous (username manquant / compte non
-  // activé) étaient à l'origine placés AVANT les useEffect plus haut : un
-  // `return` conditionnel avant des Hooks fait varier leur nombre d'un
-  // rendu à l'autre selon `username`/`isActivated`, ce qui provoque un
-  // crash React ("Rendered fewer hooks than expected"). Les Hooks doivent
-  // toujours être appelés dans le même ordre — les guards sont donc
-  // repoussés ici, après tous les Hooks du composant.
+  // activé) sont placés APRÈS tous les Hooks : un `return` conditionnel avant
+  // des Hooks fait varier leur nombre d'un rendu à l'autre et provoque un
+  // crash React ("Rendered fewer hooks than expected").
   if (!username) {
     return (
       <div style={{ width:'100%', minWidth:0, boxSizing:'border-box' }}>
@@ -326,66 +520,6 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
     );
   }
 
-  const loadLibraryAndRender = () => {
-    if (window.QRCodeStyling) { renderStyledQR(); return; }
-    if (scriptLoadedRef.current) return;
-    scriptLoadedRef.current = true;
-    const existing = document.querySelector('script[data-qr-lib]');
-    if (existing) { existing.addEventListener('load', renderStyledQR); return; }
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';
-    script.setAttribute('data-qr-lib', '1');
-    script.onload  = () => { scriptLoadedRef.current = false; renderStyledQR(); };
-    script.onerror = () => { scriptLoadedRef.current = false; };
-    document.head.appendChild(script);
-  };
-
-  const buildGradient = () => {
-    if (!customization.gradientEnabled) return undefined;
-    return {
-      type: customization.gradientType,
-      rotation: customization.gradientRotation,
-      colorStops: [
-        { offset: 0, color: customization.gradientColor1 },
-        { offset: 1, color: customization.gradientColor2 },
-      ],
-    };
-  };
-
-  const renderStyledQR = () => {
-    const container = containerRef.current;
-    if (!container || !window.QRCodeStyling) return;
-    container.innerHTML = '';
-    qrInstanceRef.current = null;
-
-    const gradient = buildGradient();
-    const accentColor  = gradient ? customization.gradientColor1 : customization.dotColor;
-    const accentColor2 = gradient ? customization.gradientColor2 : customization.dotColor;
-
-    const qr = new window.QRCodeStyling({
-      width:  110,
-      height: 110,
-      type:   'canvas',
-      data:   `${profileUrl}?source=qr`,
-      dotsOptions: {
-        type: customization.dotStyle,
-        ...(gradient ? { gradient } : { color: customization.dotColor }),
-      },
-      cornersSquareOptions: { type: customization.cornerSquareStyle, color: accentColor  },
-      cornersDotOptions:    { type: customization.cornerDotStyle,    color: accentColor2 },
-      backgroundOptions:    { color: customization.bgColor },
-      ...(customization.logo ? {
-        image: customization.logo,
-        imageOptions: { crossOrigin: 'anonymous', margin: 6, imageSize: 0.22 },
-      } : {}),
-      qrOptions: { errorCorrectionLevel: 'H' },
-    });
-
-    qr.append(container);
-    qrInstanceRef.current = qr;
-    setTimeout(() => setQrLoaded(true), 350);
-  };
-
   const getQrDataUrl = () => {
     const canvas = containerRef.current?.querySelector('canvas');
     return canvas ? canvas.toDataURL('image/png') : null;
@@ -405,7 +539,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
     if (!qrLoaded) return;
     setDownloading(true);
     try {
-      const safeName = `qr-${sanitizeFileName(username || profileId)}`;
+      const safeName = `${mode === 'offline' ? 'qr-contact' : 'qr'}-${sanitizeFileName(username || profileId)}`;
       if (profileId) supabase.from('profile_stats')
         .insert([{ profile_id: profileId, event_type: 'qr_download' }])
         .then(() => setStats(s => ({ ...s, downloads: s.downloads + 1 })));
@@ -433,6 +567,12 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
       }
     } finally { setDownloading(false); }
+  };
+
+  // ── Agrandir (plein écran) — pratique pour scanner depuis l'écran ────────
+  const handleZoom = () => {
+    const dataUrl = getQrDataUrl();
+    if (dataUrl) { setZoomDataUrl(dataUrl); setShowZoom(true); }
   };
 
   // ── Copier le lien ────────────────────────────────────────────────────────
@@ -476,11 +616,14 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
   };
 
   const active = isActive !== false;
+  const offline = mode === 'offline';
+  const contactIncomplete = offline && !contact.phone && !contact.email;
+  const vcardLen = vcard.length;
 
   return (
     <div style={{ width:'100%', minWidth:0, boxSizing:'border-box', overflow:'hidden' }}>
 
-      {/* ── Modale mobile — overlay sombre volontaire, inchangée ── */}
+      {/* ── Modale mobile — overlay sombre volontaire ── */}
       {showMobileModal && qrDataUrl && createPortal(
         <div
           style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(10px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px' }}
@@ -512,7 +655,82 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
         document.body
       )}
 
-      {/* ── Modale personnalisation — overlay sombre volontaire, inchangée ── */}
+      {/* ── Modale agrandissement (mode sans internet) ── */}
+      {showZoom && zoomDataUrl && createPortal(
+        <div
+          style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(10px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px' }}
+          onClick={() => setShowZoom(false)}
+        >
+          <div
+            style={{ background:'white', borderRadius:'24px', padding:'16px', width:'min(88vw, 360px)', boxShadow:'0 32px 80px rgba(0,0,0,0.8)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <img src={zoomDataUrl} alt="QR Code contact" style={{ width:'100%', height:'auto', display:'block', borderRadius:'12px' }} />
+          </div>
+          <p style={{ color:'rgba(255,255,255,0.8)', fontSize:'12px', margin:'16px 0 0', textAlign:'center', lineHeight:1.6, maxWidth:'300px' }}>
+            Scannez ce code : la fiche contact s'affiche directement, sans connexion internet.
+          </p>
+          <button type="button" onClick={() => setShowZoom(false)} style={{ marginTop:'16px', padding:'10px 24px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'12px', color:'white', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>
+            Fermer
+          </button>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Modale fiche contact (mode sans internet) ── */}
+      {showContactModal && createPortal(
+        <div
+          style={{ position:'fixed', inset:0, zIndex:9998, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'16px' }}
+          onClick={() => setShowContactModal(false)}
+        >
+          <div
+            style={{ background:'#0f0f1a', borderRadius:'20px', width:'100%', maxWidth:'440px', maxHeight:'90vh', display:'flex', flexDirection:'column', border:'1px solid rgba(255,255,255,0.1)', boxShadow:'0 24px 80px rgba(0,0,0,0.7)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'18px 20px 0' }}>
+              <p style={{ color:'white', fontWeight:700, fontSize:'15px', margin:0 }}>📇 Fiche contact (sans internet)</p>
+              <button type="button" onClick={() => setShowContactModal(false)} style={{ background:'rgba(255,255,255,0.08)', border:'none', cursor:'pointer', borderRadius:'8px', padding:'6px', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.6)' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', WebkitOverflowScrolling:'touch', display:'flex', flexDirection:'column', gap:'12px' }}>
+              <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'11px', margin:0, lineHeight:1.6 }}>
+                Ces informations sont stockées directement dans le QR. Plus elles sont courtes, plus le QR est facile à scanner.
+              </p>
+              <ContactField label="Nom complet"   value={contactDraft.fullName} onChange={v => setContactDraft(d => ({ ...d, fullName: v }))} placeholder="Isaac Kedohounsi" />
+              <ContactField label="Fonction"      value={contactDraft.title}    onChange={v => setContactDraft(d => ({ ...d, title: v }))}    placeholder="Responsable Afrique" />
+              <ContactField label="Entreprise"    value={contactDraft.company}  onChange={v => setContactDraft(d => ({ ...d, company: v }))}  placeholder="Kudu" />
+              <ContactField label="Téléphone"     value={contactDraft.phone}    onChange={v => setContactDraft(d => ({ ...d, phone: v }))}    placeholder="+225 05 01 44 73 44" type="tel" />
+              <ContactField label="E-mail"        value={contactDraft.email}    onChange={v => setContactDraft(d => ({ ...d, email: v }))}    placeholder="nom@exemple.com" type="email" />
+
+              <div style={{ color: draftVCard.length > 450 ? '#fbbf24' : 'rgba(255,255,255,0.3)', fontSize:'10px', fontWeight:700 }}>
+                {draftVCard.length} caractères{draftVCard.length > 450 ? ' — long : le QR sera dense, raccourcissez si possible' : ''}
+              </div>
+              <p style={{ color:'rgba(255,255,255,0.28)', fontSize:'10px', margin:0, lineHeight:1.6 }}>
+                Le lien de votre profil ({profileUrl.replace('https://','')}) est inclus automatiquement dans la fiche.
+              </p>
+            </div>
+
+            <div style={{ padding:'12px 20px 16px', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:'10px' }}>
+              <button
+                type="button"
+                onClick={() => downloadVcfFile(draftVCard, contactDraft.fullName)}
+                style={{ flex:1, padding:'11px', borderRadius:'12px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.55)', fontSize:'12px', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}
+              ><FileDown size={14} /> .vcf</button>
+              <button
+                type="button"
+                onClick={saveContact}
+                disabled={saving}
+                style={{ flex:2, padding:'11px', borderRadius:'12px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', border:'none', color:'white', fontSize:'12px', fontWeight:700, cursor:saving?'default':'pointer', opacity:saving?0.7:1 }}
+              >{saving ? 'Sauvegarde…' : 'Enregistrer'}</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Modale personnalisation — overlay sombre volontaire ── */}
       {showCustomizer && createPortal(
         <div
           style={{ position:'fixed', inset:0, zIndex:9998, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'16px' }}
@@ -620,6 +838,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
                       )}
                     </div>
                     <p style={{ color:'rgba(255,255,255,0.28)', fontSize:'10px', margin:'8px 0 0', lineHeight:1.6 }}>PNG ou SVG recommandé · Fond transparent idéal · Max 500 ko</p>
+                    <p style={{ color:'rgba(255,255,255,0.28)', fontSize:'10px', margin:'6px 0 0', lineHeight:1.6 }}>Le logo n'est pas affiché dans le mode « Sans internet » (QR trop dense).</p>
                   </OptionGroup>
                 </div>
               )}
@@ -727,7 +946,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
       <div style={{ background:'#ffffff', border:'1px solid #e6e8f0', borderRadius:'20px', padding:'18px', position:'relative', minWidth:0, overflow:'hidden', width:'100%', boxSizing:'border-box', boxShadow:'0 1px 2px rgba(15,23,42,0.04)' }}>
 
         {/* En-tête */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', marginBottom:'16px', minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', marginBottom:'14px', minWidth:0 }}>
           <h3 style={{
             color:'#161a2e', fontSize:'14px', fontWeight:700, margin:0,
             overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
@@ -737,6 +956,28 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
             <span style={{ width:'7px', height:'7px', borderRadius:'50%', background:active?'#22c55e':'#ef4444', display:'inline-block', boxShadow:active?'0 0 6px rgba(34,197,94,0.5)':'0 0 6px rgba(239,68,68,0.5)', animation:active?'qr-pulse 2s infinite':'none', flexShrink:0 }} />
             <span style={{ color:active?'#16a34a':'#dc2626', fontSize:'11px', fontWeight:700, whiteSpace:'nowrap' }}>{active?'Actif':'Inactif'}</span>
           </div>
+        </div>
+
+        {/* Sélecteur de mode : Profil en ligne (par défaut) / Sans internet */}
+        <div style={{ display:'flex', gap:'3px', background:'#f1f3f9', borderRadius:'12px', padding:'3px', marginBottom:'16px' }}>
+          {[
+            { id:'online',  label:'🌐 Profil en ligne' },
+            { id:'offline', label:'📴 Sans internet'   },
+          ].map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setMode(m.id)}
+              style={{
+                flex:1, minWidth:0, padding:'8px 6px', border:'none', borderRadius:'10px', cursor:'pointer',
+                background: mode===m.id ? '#ffffff' : 'transparent',
+                color: mode===m.id ? '#161a2e' : '#8a90a2',
+                boxShadow: mode===m.id ? '0 1px 4px rgba(15,23,42,0.12)' : 'none',
+                fontSize:'11px', fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                transition:'all 0.15s',
+              }}
+            >{m.label}</button>
+          ))}
         </div>
 
         {/* Corps : QR + boutons */}
@@ -765,6 +1006,7 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
               )}
               <div
                 ref={containerRef}
+                className="qrd-canvas"
                 style={{ width:'100px', height:'100px', display:qrLoaded?'flex':'none', alignItems:'center', justifyContent:'center', overflow:'hidden' }}
               />
             </div>
@@ -778,14 +1020,23 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
           {/* Boutons action */}
           <div style={{ flex:'1 1 0', minWidth:0, display:'flex', flexDirection:'column', gap:'8px', overflow:'hidden' }}>
             <ActionButton icon={<Download size={14}/>} label="Télécharger" sub="PNG HD" onClick={handleDownload} disabled={downloading||!qrLoaded} />
-            <ActionButton
-              icon={copied?<Check size={14} color="#16a34a"/>:<Copy size={14}/>}
-              label={copied?'Copié !':'Copier le lien'}
-              sub={profileUrl.replace('https://','')}
-              onClick={handleCopyLink}
-              accent={copied}
-            />
-            <ActionButton icon={<Share2 size={14}/>} label="Partager" sub="WhatsApp, SMS…" onClick={handleShare} />
+            {!offline ? (
+              <>
+                <ActionButton
+                  icon={copied?<Check size={14} color="#16a34a"/>:<Copy size={14}/>}
+                  label={copied?'Copié !':'Copier le lien'}
+                  sub={profileUrl.replace('https://','')}
+                  onClick={handleCopyLink}
+                  accent={copied}
+                />
+                <ActionButton icon={<Share2 size={14}/>} label="Partager" sub="WhatsApp, SMS…" onClick={handleShare} />
+              </>
+            ) : (
+              <>
+                <ActionButton icon={<Maximize2 size={14}/>} label="Agrandir" sub="Plein écran pour scanner" onClick={handleZoom} disabled={!qrLoaded} />
+                <ActionButton icon={<UserPen size={14}/>} label="Ma fiche contact" sub="Nom, tél., e-mail…" onClick={openContactModal} />
+              </>
+            )}
             <ActionButton
               icon={<Palette size={14}/>}
               label="Personnaliser"
@@ -795,6 +1046,23 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
             />
           </div>
         </div>
+
+        {/* Explication du mode */}
+        <p style={{ color:'#8a90a2', fontSize:'11px', lineHeight:1.6, margin:'14px 0 0' }}>
+          {!offline
+            ? "Le scan ouvre votre profil digital (connexion internet requise)."
+            : "Le scan affiche directement votre fiche contact avec « Ajouter un contact », sans connexion internet. Les scans hors ligne ne sont pas comptés dans les statistiques."}
+        </p>
+        {offline && contactIncomplete && (
+          <p style={{ color:'#d97706', fontSize:'11px', lineHeight:1.6, margin:'6px 0 0', fontWeight:600 }}>
+            ⚠️ Ajoutez un téléphone ou un e-mail dans « Ma fiche contact » pour que la fiche soit utile.
+          </p>
+        )}
+        {offline && vcardLen > 450 && (
+          <p style={{ color:'#d97706', fontSize:'11px', lineHeight:1.6, margin:'6px 0 0', fontWeight:600 }}>
+            ⚠️ Fiche longue ({vcardLen} caractères) : le QR est dense. Raccourcissez-la si le scan est difficile.
+          </p>
+        )}
 
         {/* Statistiques */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px', marginTop:'16px', borderTop:'1px solid #eef0f5', paddingTop:'14px' }}>
@@ -808,16 +1076,15 @@ export default function QRCodeDisplay({ profileId, username, userLogo, isActive,
         @keyframes qr-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         div::-webkit-scrollbar { display: none; }
+        .qrd-canvas canvas { width:100% !important; height:100% !important; display:block; }
       `}</style>
     </div>
   );
 }
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
-// Les sous-composants ci-dessous (OptionGroup, ColorDot, ColorInputDot,
-// StyleChip, ToggleSwitch) ne sont utilisés que dans la modale de
-// personnalisation (fond sombre #0f0f1a) — leur texte clair y reste
-// correct et n'a pas été modifié.
+// OptionGroup, ColorDot, ColorInputDot, StyleChip, ToggleSwitch et ContactField
+// sont utilisés dans les modales (fond sombre #0f0f1a) — texte clair voulu.
 
 function OptionGroup({ label, children }) {
   return (
@@ -825,6 +1092,25 @@ function OptionGroup({ label, children }) {
       <div style={{ color:'rgba(255,255,255,0.38)', fontSize:'10px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'10px' }}>{label}</div>
       {children}
     </div>
+  );
+}
+
+function ContactField({ label, value, onChange, placeholder, type = 'text' }) {
+  return (
+    <label style={{ display:'block' }}>
+      <div style={{ color:'rgba(255,255,255,0.38)', fontSize:'10px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'6px' }}>{label}</div>
+      <input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width:'100%', boxSizing:'border-box', padding:'10px 12px', borderRadius:'10px',
+          background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)',
+          color:'white', fontSize:'16px', outline:'none', // 16px : évite le zoom auto sur iOS
+        }}
+      />
+    </label>
   );
 }
 

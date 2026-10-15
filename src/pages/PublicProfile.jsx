@@ -10,6 +10,20 @@
  *        en capitales. Puces du haut en pilules blanches, en-têtes de section
  *        (SectionHeader), documents en lignes, fiche produit en thème clair.
  *
+ * QR CODE (cette révision) :
+ *  [QR-MODAL] Dernière ligne de la carte « Retrouvez-moi » : « QR code · En ligne
+ *        ou sans internet ». Elle ouvre une fenêtre (bottom sheet) avec UNIQUEMENT
+ *        deux onglets et le QR code — aucun bouton d'action :
+ *          · « Profil en ligne » : le QR ouvre ce profil (?source=qr, compté dans
+ *            les scans) ;
+ *          · « Sans internet » : le QR contient une vCard (nom, téléphones, e-mail,
+ *            site, LinkedIn, lien du profil) → le téléphone qui scanne propose
+ *            « Ajouter un contact » sans aucune connexion.
+ *        Le QR reprend la personnalisation du dashboard (profile.qr_config : couleurs,
+ *        motifs, dégradé, fiche contact hors ligne). La librairie qr-code-styling
+ *        n'est chargée qu'à l'ouverture de la fenêtre → aucun impact sur le
+ *        chargement de la page ni sur le mode léger.
+ *
  * LIENS EN CARTE :
  *  [LINKS-CARD] La liste des liens n'est plus une pile de boutons-pilules mais
  *        une carte blanche façon « fiche contact » : une ligne par lien (pastille
@@ -56,14 +70,15 @@
  *  [DL7] Switch "Mode léger" discret en bas de page.
  *
  * Aucun changement de comportement en mode complet (isLight === false) hors
- * la modale produit [MODAL1-4] et le carrousel de bannières [BANNER-SLIDER].
+ * la modale produit [MODAL1-4], le carrousel de bannières [BANNER-SLIDER]
+ * et la ligne / fenêtre QR code [QR-MODAL].
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff, Copy } from 'lucide-react';
+import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff, Copy, QrCode, ChevronRight, Globe, Smartphone } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
 // [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
@@ -456,6 +471,275 @@ function CryptoRow({ link, platform, first, onCopied }) {
         {copied ? <Check size={16} /> : <Copy size={16} />}
       </span>
     </button>
+  );
+}
+
+// ─── [QR-MODAL] QR code : ligne dans la carte + fenêtre (2 onglets, QR seul) ───
+
+// Personnalisation par défaut — identique à DEFAULT_CUSTOMIZATION du dashboard
+// (QRCodeDisplay.jsx) ; profile.qr_config la surcharge.
+const QR_DEFAULTS = {
+  dotColor:          '#060412',
+  bgColor:           '#ffffff',
+  dotStyle:          'classy',
+  cornerSquareStyle: 'extra-rounded',
+  cornerDotStyle:    'dot',
+  gradientEnabled:   false,
+  gradientColor1:    '#6366f1',
+  gradientColor2:    '#ec4899',
+  gradientType:      'linear',
+  gradientRotation:  45,
+};
+
+// Chargement paresseux de qr-code-styling (même script que le dashboard) :
+// uniquement à l'ouverture de la fenêtre, jamais au chargement de la page.
+const QR_LIB_URL = 'https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';
+let __qrLibPromise = null;
+function loadQrLib() {
+  if (window.QRCodeStyling) return Promise.resolve(window.QRCodeStyling);
+  if (__qrLibPromise) return __qrLibPromise;
+  __qrLibPromise = new Promise((resolve, reject) => {
+    const fail = () => { __qrLibPromise = null; reject(new Error('qr-lib')); };
+    const done = () => (window.QRCodeStyling ? resolve(window.QRCodeStyling) : fail());
+    const existing = document.querySelector('script[data-qr-lib]');
+    if (existing) {
+      existing.addEventListener('load', done);
+      existing.addEventListener('error', fail);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = QR_LIB_URL;
+    s.async = true;
+    s.setAttribute('data-qr-lib', '1');
+    s.onload = done;
+    s.onerror = fail;
+    document.head.appendChild(s);
+  });
+  return __qrLibPromise;
+}
+
+// vCard (mode « Sans internet ») — même format que le dashboard
+const vcEsc = (v = '') =>
+  String(v)
+    .replace(/\\/g, '\\\\')
+    .replace(/\r?\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+
+// Numéro au format international (hypothèse Côte d'Ivoire : 10 chiffres → +225)
+const normalizePhone = (raw = '') => {
+  let p = String(raw).replace(/[^\d+]/g, '');
+  if (!p) return '';
+  if (p.startsWith('00')) p = '+' + p.slice(2);
+  if (!p.startsWith('+') && p.length === 12 && p.startsWith('225')) p = '+' + p;
+  if (!p.startsWith('+') && p.length === 10) p = '+225' + p;
+  return p;
+};
+
+const buildVCard = ({ fullName = '', title = '', company = '', phone = '', phone2 = '', email = '', website = '', linkedin = '', url = '' }) => {
+  const name  = (fullName || '').trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  const last  = parts.length > 1 ? parts.pop() : '';
+  const first = parts.join(' ');
+  const tel   = normalizePhone(phone);
+  const tel2  = normalizePhone(phone2);
+  return [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `N:${vcEsc(last)};${vcEsc(first)};;;`,
+    `FN:${vcEsc(name)}`,
+    company  && `ORG:${vcEsc(company)}`,
+    title    && `TITLE:${vcEsc(title)}`,
+    tel      && `TEL;TYPE=CELL:${tel}`,
+    tel2     && tel2 !== tel && `TEL;TYPE=WORK:${tel2}`,
+    email    && `EMAIL:${String(email).trim()}`,
+    url      && `URL:${url}`,
+    website  && `URL:${String(website).trim()}`,
+    linkedin && `URL:${String(linkedin).trim()}`,
+    'END:VCARD',
+  ].filter(Boolean).join('\r\n');
+};
+
+// Contact = saisie du dashboard (qr_config.offlineContact) > liens ACTIVÉS du profil.
+// Seules les infos que le propriétaire affiche publiquement sont reprises.
+function deriveContact(profile, enabledLinks) {
+  const oc = (profile.qr_config && profile.qr_config.offlineContact) || {};
+  const by = (p) => enabledLinks
+    .filter(l => (l.platform || '').toLowerCase() === p && l.url)
+    .map(l => String(l.url).trim());
+  const phones = by('phone').map(u => u.replace(/^tel:/i, ''));
+  const waDigits = (by('whatsapp')[0] || '').replace(/\D/g, '');
+  return {
+    fullName: oc.fullName || profile.display_name || profile.username || '',
+    title:    oc.title || '',
+    company:  oc.company || '',
+    phone:    oc.phone || phones[0] || (waDigits ? '+' + waDigits : ''),
+    phone2:   phones[1] || '',
+    email:    oc.email || (by('email')[0] || '').replace(/^mailto:/i, ''),
+    website:  by('website')[0] || '',
+    linkedin: by('linkedin')[0] || '',
+  };
+}
+
+// Dernière ligne de la carte « Retrouvez-moi »
+function QRCodeRow({ first, onClick }) {
+  return (
+    <button type="button" onClick={onClick} className="pp-row-btn" style={rowBaseStyle(first)} aria-haspopup="dialog">
+      <span style={{ width:'44px', height:'44px', borderRadius:'14px', background:ROW_TILE_BG, color:ROW_ICON_INK, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+        <QrCode size={20} />
+      </span>
+      <span style={{ minWidth:0, flex:1 }}>
+        <span style={rowLabelStyle}>QR code</span>
+        <span style={rowValueStyle}>En ligne ou sans internet</span>
+      </span>
+      <span aria-hidden="true" style={{ width:'36px', height:'36px', borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:ROW_TILE_BG, color:ROW_ICON_INK }}>
+        <ChevronRight size={16} />
+      </span>
+    </button>
+  );
+}
+
+// Fenêtre : deux onglets + le QR code, rien d'autre (aucun bouton d'action).
+function QRCodeModal({ profile, enabledLinks, onClose }) {
+  const [mode, setMode]     = useState('online'); // 'online' | 'offline'
+  const [ready, setReady]   = useState(false);
+  const [failed, setFailed] = useState(false);
+  const boxRef = useRef(null);
+
+  useBodyScrollLock();
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  const cfg    = useMemo(() => ({ ...QR_DEFAULTS, ...(profile.qr_config || {}) }), [profile.qr_config]);
+  const cfgKey = useMemo(() => JSON.stringify(cfg), [cfg]);
+
+  const profileUrl = `https://www.socialapp.work/${profile.username}`;
+  const contact    = useMemo(() => deriveContact(profile, enabledLinks), [profile, enabledLinks]);
+  const vcard      = useMemo(() => buildVCard({ ...contact, url: profileUrl }), [contact, profileUrl]);
+  const offline    = mode === 'offline';
+  const data       = offline ? vcard : `${profileUrl}?source=qr&medium=profile_card`;
+
+  useEffect(() => {
+    let cancelled = false;
+    setReady(false);
+    setFailed(false);
+
+    loadQrLib().then((QRCodeStyling) => {
+      const el = boxRef.current;
+      if (cancelled || !el) return;
+      el.innerHTML = '';
+
+      const gradient = cfg.gradientEnabled ? {
+        type: cfg.gradientType,
+        rotation: cfg.gradientRotation,
+        colorStops: [
+          { offset: 0, color: cfg.gradientColor1 },
+          { offset: 1, color: cfg.gradientColor2 },
+        ],
+      } : undefined;
+      const c1 = gradient ? cfg.gradientColor1 : cfg.dotColor;
+      const c2 = gradient ? cfg.gradientColor2 : cfg.dotColor;
+
+      const qr = new QRCodeStyling({
+        width: 300,
+        height: 300,
+        type: 'canvas',
+        data,
+        margin: 12,
+        dotsOptions: { type: cfg.dotStyle, ...(gradient ? { gradient } : { color: cfg.dotColor }) },
+        cornersSquareOptions: { type: cfg.cornerSquareStyle, color: c1 },
+        cornersDotOptions:    { type: cfg.cornerDotStyle,    color: c2 },
+        backgroundOptions:    { color: cfg.bgColor },
+        qrOptions: { errorCorrectionLevel: 'M' },
+      });
+      qr.append(el);
+      setTimeout(() => { if (!cancelled) setReady(true); }, 150);
+    }).catch(() => { if (!cancelled) setFailed(true); });
+
+    return () => { cancelled = true; };
+  }, [mode, data, cfgKey]);
+
+  const tabs = [
+    { id: 'online',  label: 'Profil en ligne', icon: <Globe size={16} /> },
+    { id: 'offline', label: 'Sans internet',   icon: <Smartphone size={16} /> },
+  ];
+
+  return (
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mon QR code"
+      style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease', fontFamily:'inherit' }}
+    >
+      <style>{`.pp-qr-box canvas { width:100% !important; height:auto !important; display:block; }`}</style>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background:'#fffaf5', borderRadius:'26px 26px 0 0', width:'100%', maxWidth:'480px', maxHeight:'92dvh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 -20px 60px rgba(0,0,0,0.6)', animation:'pp-slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)', color:CARD_TEXT }}
+      >
+        {/* Poignée + fermer */}
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center', height:'52px', flexShrink:0 }}>
+          <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'#e4d3c5' }} />
+          <button
+            onClick={onClose}
+            aria-label="Fermer"
+            style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', width:'44px', height:'44px', borderRadius:'50%', background:ROW_TILE_BG, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:ROW_ICON_INK, touchAction:'manipulation' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain', padding:'0 16px calc(24px + env(safe-area-inset-bottom, 0px))' }}>
+          <h2 style={{ margin:'0 0 14px', textAlign:'center', fontSize:'clamp(17px, 5vw, 20px)', fontWeight:800, color:CARD_TEXT }}>Mon QR code</h2>
+
+          {/* Onglets */}
+          <div role="tablist" style={{ display:'flex', gap:'4px', padding:'4px', background:ROW_TILE_BG, borderRadius:'999px', marginBottom:'18px' }}>
+            {tabs.map(t => {
+              const sel = mode === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={sel}
+                  onClick={() => setMode(t.id)}
+                  style={{ flex:1, minHeight:'40px', border:'none', borderRadius:'999px', cursor:'pointer', touchAction:'manipulation', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', fontSize:'13px', fontWeight:800, fontFamily:'inherit', background: sel ? '#fff' : 'transparent', color: sel ? CARD_TEXT : ROW_LABEL, boxShadow: sel ? '0 2px 8px rgba(0,0,0,0.12)' : 'none', transition:'all 0.2s' }}
+                >
+                  {t.icon}{t.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* QR code seul */}
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+            <div style={{ position:'relative', background:'#fff', border:`1px solid ${ROW_DIVIDER}`, borderRadius:'22px', padding:'16px', boxSizing:'border-box', width:'min(280px, 76vw)', aspectRatio:'1 / 1', boxShadow:'0 2px 12px rgba(58,29,14,0.10)' }}>
+              <div ref={boxRef} className="pp-qr-box" style={{ width:'100%', height:'100%', opacity: ready ? 1 : 0, transition:'opacity 0.2s' }} />
+              {!ready && !failed && (
+                <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <div style={{ width:'26px', height:'26px', border:'3px solid #6366f1', borderTopColor:'transparent', borderRadius:'50%', animation:'pp-spin 0.8s linear infinite' }} />
+                </div>
+              )}
+              {failed && (
+                <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px', textAlign:'center', color:ROW_LABEL, fontSize:'13px', fontWeight:600, lineHeight:1.5 }}>
+                  Impossible de charger le QR code. Vérifiez votre connexion puis réessayez.
+                </div>
+              )}
+            </div>
+
+            <p style={{ margin:'16px 0 0', textAlign:'center', fontSize:'13px', lineHeight:1.5, color:CARD_TEXT_MUTED, maxWidth:'300px' }}>
+              {offline
+                ? 'Le scan affiche directement la fiche contact avec « Ajouter un contact », sans connexion internet.'
+                : 'Le scan ouvre ce profil digital (connexion internet requise).'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -963,6 +1247,7 @@ export default function PublicProfile({ previewProfile = null }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [documents, setDocuments]           = useState(ssrInit?.extras?.documents || []);
   const [lightboxSrc, setLightboxSrc]       = useState(null);
+  const [qrOpen, setQrOpen]                 = useState(false); // [QR-MODAL]
 
   // [DL1] Détection du mode data-light
   const { isLight, setManual, clearManual } = useDataSaverMode();
@@ -1660,8 +1945,9 @@ export default function PublicProfile({ previewProfile = null }) {
           </div>
         )}
 
-        {/* Liens — [LINKS-CARD] carte blanche façon fiche contact */}
-        {mainLinks.length > 0 && (
+        {/* Liens — [LINKS-CARD] carte blanche façon fiche contact
+            [QR-MODAL] dernière ligne : QR code (en ligne / sans internet) */}
+        {(mainLinks.length > 0 || !!profile.username) && (
           <div className="pp-content-col pp-link-btn" style={{ marginTop:'8px' }}>
             <SectionHeader icon={<Link2 size={15} />} title="Retrouvez-moi" />
             <div style={{ background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 10px 30px rgba(0,0,0,0.28)', overflow:'hidden' }}>
@@ -1690,6 +1976,9 @@ export default function PublicProfile({ previewProfile = null }) {
                   />
                 );
               })}
+              {profile.username && (
+                <QRCodeRow first={mainLinks.length === 0} onClick={() => setQrOpen(true)} />
+              )}
             </div>
           </div>
         )}
@@ -1730,6 +2019,14 @@ export default function PublicProfile({ previewProfile = null }) {
           onZoom={setLightboxSrc}
           isZoomed={!!lightboxSrc}
           onClose={() => setSelectedProduct(null)}
+        />,
+        document.body
+      )}
+      {qrOpen && createPortal(
+        <QRCodeModal
+          profile={profile}
+          enabledLinks={enabledLinks}
+          onClose={() => setQrOpen(false)}
         />,
         document.body
       )}

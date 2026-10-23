@@ -1,10 +1,129 @@
-﻿// src/data/blogPosts.js
+// src/data/blogPosts.js
 // Contenu statique du blog SocialApp. Pour ajouter un article :
 // 1. Ajoute un objet dans le tableau ci-dessous (slug unique, requis).
-// 2. Ajoute le chemin correspondant dans src/routes/sitemap.js (STATIC_PAGES).
+// 2. Le sitemap (api/sitemap.js) lit ce fichier : l'article y est ajouté automatiquement.
 // Aucune base de données requise pour cette V1.
 
 const blogPosts = [
+  {
+    slug: "vendre-sur-whatsapp-afrique-ouest-centrale-lien-unique",
+    title:
+      "Vendre sur WhatsApp en Afrique de l'Ouest et centrale : créez votre vitrine avec un seul lien (2026)",
+    description:
+      "Comment vendre sur WhatsApp en Côte d'Ivoire, au Sénégal, au Cameroun et en Afrique centrale : créez une vitrine avec un lien unique, vos prix en FCFA, un bouton WhatsApp et un QR code.",
+    excerpt:
+      "De Abidjan à Douala, en passant par Dakar et Kinshasa, les clients écrivent sur WhatsApp et paient en Mobile Money. Voici comment centraliser votre activité sur un lien unique, en FCFA.",
+    date: "2026-10-23",
+    updatedAt: "2026-10-23",
+    author: "SocialApp",
+    tags: [
+      "WhatsApp",
+      "vitrine digitale",
+      "Afrique de l'Ouest",
+      "Afrique centrale",
+      "Mobile Money",
+      "FCFA",
+    ],
+    readingTime: "6 min",
+    content: [
+      {
+        type: "paragraph",
+        text:
+          "À Abidjan, Dakar, Douala ou Libreville, la scène est la même : un client voit votre produit, vous écrit sur WhatsApp, demande le prix, puis paie par Mobile Money. Tout se joue dans une conversation. C'est efficace, mais aussi fragile : les messages se perdent, les prix changent d'une discussion à l'autre, et chaque nouveau client doit tout redemander. Ce guide montre comment garder la force de WhatsApp tout en vous donnant une vitrine professionnelle, accessible par un seul lien.",
+      },
+      {
+        type: "heading",
+        text: "Pourquoi le téléphone est devenu votre vitrine principale",
+      },
+      {
+        type: "paragraph",
+        text:
+          "L'Afrique subsaharienne est le cœur mondial de l'argent mobile. Selon la GSMA, la région comptait plus de 1,1 milliard de comptes enregistrés fin 2024, soit plus des deux tiers du total mondial. Le rapport 2026 de l'association indique que le nombre de comptes actifs chaque mois a progressé de 15 % en un an pour atteindre 593 millions dans le monde, la majorité en Afrique subsaharienne.",
+      },
+      {
+        type: "paragraph",
+        text:
+          "L'accès au smartphone suit : la GSMA estime son adoption à 54 % de la population en Afrique subsaharienne en 2024, avec une projection de 81 % d'ici 2030. En clair, de plus en plus de vos clients ont un téléphone capable d'ouvrir un lien, de scanner un QR code et de payer sans espèces. Reste un point d'attention : une part importante des personnes couvertes par le haut débit mobile n'utilise pas encore internet. Votre page doit donc rester légère et rapide, même avec une connexion moyenne.",
+      },
+      {
+        type: "heading",
+        text: "Un même franc CFA, deux zones, un même réflexe",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Le franc CFA est utilisé en Afrique de l'Ouest (Côte d'Ivoire, Sénégal, Mali, Burkina Faso, Bénin, Togo, Niger, Guinée-Bissau) comme en Afrique centrale (Cameroun, Gabon, Congo, Tchad, Centrafrique, Guinée équatoriale). Les deux monnaies sont distinctes mais ont la même parité avec l'euro. Pour un entrepreneur, cela facilite une chose : afficher ses prix en FCFA parle à des millions de clients dans la région. Les moyens de paiement, eux, varient selon les pays : Wave, Orange Money, MTN Money ou Moov Money n'ont pas la même présence partout. Votre vitrine doit donc rester simple, et vous laisser indiquer les moyens que vous acceptez réellement.",
+      },
+      {
+        type: "heading",
+        text: "Les 4 limites du commerce uniquement par discussion WhatsApp",
+      },
+      {
+        type: "paragraph",
+        text:
+          "1. Aucun catalogue clair : le client doit remonter la conversation ou vous redemander les prix. 2. Aucune image professionnelle : votre sérieux repose sur quelques photos envoyées au hasard. 3. Aucun suivi : impossible de savoir qui a demandé quoi, ni de relancer un prospect resté sans réponse. 4. Aucune découvrabilité : un numéro de téléphone ne s'affiche pas sur Google, alors qu'une page web, si.",
+      },
+      {
+        type: "heading",
+        text: "La solution : un lien unique qui relie tout",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Un profil digital rassemble sur une seule page ce que vos clients cherchent : votre présentation, vos produits avec leurs prix en FCFA, vos documents, vos réseaux, un calendrier de rendez-vous et surtout un bouton WhatsApp. Le client clique, et la conversation s'ouvre vers vous. Vous gardez WhatsApp pour discuter, mais la vitrine travaille pour vous, même la nuit.",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Ce lien se partage partout : en statut WhatsApp, dans votre bio Instagram ou TikTok, sur vos factures, sur une affiche ou sur une carte de visite grâce à un QR code. Quand un prix ou un numéro change, vous modifiez la page une fois, et tout le monde voit la bonne information.",
+      },
+      {
+        type: "heading",
+        text: "Mettre en place votre vitrine en 5 étapes",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Étape 1 : créez votre profil et choisissez un nom simple à retenir, par exemple votre nom commercial. Étape 2 : ajoutez une photo nette et une présentation en deux phrases : ce que vous vendez, où, et pour qui. Étape 3 : publiez vos produits ou services avec leur prix en FCFA et une photo. Étape 4 : ajoutez votre bouton WhatsApp et, si vous travaillez sur rendez-vous, votre calendrier. Étape 5 : partagez votre lien et imprimez votre QR code sur vos supports.",
+      },
+      {
+        type: "heading",
+        text: "Pour qui, et dans quels métiers ?",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Ce fonctionnement convient à toute activité qui vit de la relation directe : boutiques de vêtements et cosmétiques, restauration et traiteurs, coiffure et beauté, artisans, prestataires de services, formateurs, photographes, organisateurs d'événements, agents immobiliers. Dans tous ces cas, le client veut voir, comparer, puis vous contacter sans friction.",
+      },
+      {
+        type: "heading",
+        text: "Du simple contact au suivi client",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Quand les demandes arrivent par un même point d'entrée, vous pouvez enfin les suivre. Un CRM WhatsApp enregistre chaque contact, son origine et son statut, et permet d'envoyer des rappels de rendez-vous. Vous ne perdez plus un client parce que son message était enfoui sous cinquante autres.",
+      },
+      {
+        type: "heading",
+        text: "Combien ça coûte ?",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Avec SocialApp, les plans démarrent à 10 000 FCFA par an (Basic), 15 000 FCFA par an (Pro) et 39 900 FCFA par an ou 3 990 FCFA par mois (Business). Le module Événement coûte 3 500 FCFA, quel que soit le plan. Le règlement se fait par Wave, MTN Money, Orange Money ou carte bancaire. Le tout est pensé pour les entrepreneurs de la région, à partir de la Côte d'Ivoire.",
+      },
+      {
+        type: "heading",
+        text: "Passez à l'action",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Vos clients vous écrivent déjà sur WhatsApp. Il ne vous manque qu'une vitrine claire à leur montrer. Créez votre profil SocialApp, ajoutez vos produits, copiez votre lien et partagez-le dès aujourd'hui. Pour aller plus loin, découvrez aussi nos pages sur la carte de visite digitale, le QR code professionnel et le CRM WhatsApp.",
+      },
+    ],
+  },
   {
     slug: "socialapp-vs-linktree-cote-divoire",
     title: "SocialApp vs Linktree : quelle solution choisir pour les professionnels en Côte d'Ivoire ?",
@@ -13,7 +132,7 @@ const blogPosts = [
     excerpt:
       "Linktree est populaire, mais n'est pas pensé pour le marché ivoirien. Voici pourquoi de plus en plus de professionnels à Abidjan choisissent une alternative locale.",
     date: "2026-07-30",
-    updatedAt: "2026-07-30",
+    updatedAt: "2026-10-23",
     author: "SocialApp",
     tags: ["comparatif", "linktree", "côte d'ivoire", "profil digital"],
     readingTime: "5 min",
@@ -27,7 +146,7 @@ const blogPosts = [
       {
         type: "paragraph",
         text:
-          "Linktree facture ses offres payantes en dollars US, avec une carte bancaire internationale souvent nécessaire. SocialApp propose des tarifs pensés pour le marché local, en FCFA, réglables directement via Mobile Money (Orange Money, MTN MoMo, Moov Money, Wave) : à partir de 10 000 FCFA par an pour l'offre Basic, jusqu'à 25 000 FCFA par an pour l'offre Business.",
+          "Linktree facture ses offres payantes en dollars US, avec une carte bancaire internationale souvent nécessaire. SocialApp propose des tarifs pensés pour le marché local, en FCFA, réglables directement via Mobile Money (Orange Money, MTN MoMo, Moov Money, Wave) : à partir de 10 000 FCFA par an pour l'offre Basic, jusqu'à 39 900 FCFA par an (ou 3 990 FCFA par mois) pour l'offre Business.",
       },
       { type: "heading", text: "2. Un CRM pour vos prospects, pas juste des liens" },
       {

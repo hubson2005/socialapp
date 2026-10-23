@@ -74,7 +74,41 @@ const S = {
     fontWeight: 700,
     color: "#ff6b35",
   },
+  discoverTitle: {
+    fontSize: 22,
+    fontWeight: 800,
+    letterSpacing: "-0.4px",
+    margin: "56px 0 16px",
+  },
+  discoverGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+    gap: 12,
+  },
+  discoverLink: {
+    display: "flex",
+    alignItems: "center",
+    minHeight: 48,
+    padding: "12px 16px",
+    background: "rgba(255,255,255,.03)",
+    border: "1px solid rgba(255,255,255,.08)",
+    borderRadius: 14,
+    textDecoration: "none",
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 700,
+    transition: "border-color .2s",
+  },
 };
+
+const DISCOVER = [
+  { to: "/carte-de-visite-digitale", label: "Carte de visite digitale" },
+  { to: "/carte-de-visite-nfc", label: "Carte de visite NFC" },
+  { to: "/qr-code-professionnel", label: "QR code professionnel" },
+  { to: "/crm-whatsapp", label: "CRM WhatsApp" },
+  { to: "/entreprises", label: "SocialApp pour entreprises" },
+  { to: "/tarifs", label: "Tarifs SocialApp" },
+];
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString("fr-FR", {
@@ -125,6 +159,21 @@ export default function Blog() {
               <div style={S.readMore}>Lire l'article →</div>
             </Link>
           ))}
+
+          <h2 style={S.discoverTitle}>Découvrir SocialApp</h2>
+          <div style={S.discoverGrid}>
+            {DISCOVER.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                style={S.discoverLink}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(255,107,53,.4)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </>

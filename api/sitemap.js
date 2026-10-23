@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getAllPosts } from "../src/data/blogPosts.js";
 
 const BASE_URL = "https://www.socialapp.work";
 const PAGE_SIZE = 1000;   // Supabase renvoie au maximum 1000 lignes par requête
@@ -91,6 +92,9 @@ export default async function handler(req, res) {
 
     for (const page of STATIC_PAGES) {
       urls.push(`  <url>\n    <loc>${BASE_URL}${page}</loc>\n  </url>`);
+    }
+    for (const post of getAllPosts()) {
+      urls.push(`  <url>\n    <loc>${BASE_URL}/blog/${post.slug}</loc>\n  </url>`);
     }
 
     for (const p of profiles) {

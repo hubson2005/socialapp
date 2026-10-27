@@ -20,7 +20,7 @@
       "destination": "/api/seo-page?slug=:slug"
     },
     {
-      "source": "/:username((?!(?:api|assets|fonts|admin|dashboard|login|signup|register|pricing|auth|reset-password|forgot-password|delete-account|e|event|events|booking|marketplace|payment|success|cancel|terms|terms-of-service|privacy|privacy-policy|blog|sitemap|robots|manifest|favicon|preview-profile|r|webhooks|home|carte-de-visite-digitale|carte-de-visite-nfc|qr-code-professionnel|entreprises|tarifs|crm-whatsapp|lien-en-bio|boutique-en-ligne-whatsapp|prise-de-rendez-vous-en-ligne|billetterie-evenements|faq|contact)$)[A-Za-z0-9_-]{1,64})",
+      "source": "/:username((?!(?:api|assets|fonts|admin|dashboard|login|signup|register|pricing|auth|reset-password|forgot-password|delete-account|e|event|events|booking|marketplace|payment|success|cancel|terms|terms-of-service|privacy|privacy-policy|blog|sitemap|robots|manifest|favicon|preview-profile|profil|r|webhooks|home|carte-de-visite-digitale|carte-de-visite-nfc|qr-code-professionnel|entreprises|tarifs|crm-whatsapp|lien-en-bio|boutique-en-ligne-whatsapp|prise-de-rendez-vous-en-ligne|billetterie-evenements|faq|contact)$)[A-Za-z0-9_-]{1,64})",
       "destination": "/api/profile?username=:username"
     },
     {
@@ -68,6 +68,11 @@
   ],
 
   "redirects": [
+    {
+      "source": "/profil/:username",
+      "destination": "/:username",
+      "permanent": true
+    },
     {
       "source": "/home",
       "destination": "/",

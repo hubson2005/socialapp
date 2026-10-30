@@ -80,6 +80,11 @@
  *  [DL6] isLight propagé à PublicProductCard et ProductDetailModal.
  *  [DL7] Switch "Mode léger" discret en bas de page.
  *
+ * PIED DE PAGE (cette révision) :
+ *  [FOOTER-OPACITY] Bouton support, badge « Créé avec SocialApp » et switch
+ *        « Mode léger » : fonds, bordures et texte plus opaques pour rester
+ *        lisibles sur les fonds clairs des modèles (Savane, Hibiscus, Lagon).
+ *
  * Aucun changement de comportement en mode complet (isLight === false) hors
  * la modale produit [MODAL1-4], le carrousel de bannières [BANNER-SLIDER],
  * la ligne / fenêtre QR code [QR-MODAL] et les fonds par modèle [BG-TEMPLATES].
@@ -1304,7 +1309,7 @@ function PageWeightBadge() {
   );
 }
 
-// [DL7] Switch discret pour forcer manuellement le mode léger/complet.
+// [DL7][FOOTER-OPACITY] Switch discret pour forcer manuellement le mode léger/complet.
 function LightModeToggle({ isLight, setManual }) {
   return (
     <button
@@ -1312,8 +1317,8 @@ function LightModeToggle({ isLight, setManual }) {
       aria-label={isLight ? 'Repasser en mode complet' : 'Activer le mode léger'}
       style={{
         marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px',
-        background:'transparent', border:'1px solid rgba(127,127,127,0.3)', borderRadius:'100px',
-        padding:'6px 14px', color:'var(--pp-faint)', fontSize:'11px', fontWeight:600,
+        background:'rgba(127,127,127,0.18)', border:'1px solid rgba(127,127,127,0.5)', borderRadius:'100px',
+        padding:'6px 14px', color:'var(--pp-txt2)', fontSize:'11px', fontWeight:600,
         cursor:'pointer', touchAction:'manipulation',
       }}
     >
@@ -1418,7 +1423,7 @@ export default function PublicProfile({ previewProfile = null }) {
           .pp-link-btn-el:hover  { background:var(--pp-hover-bg, ${CARD_BG_HOVER}) !important; transform:translateY(-1px); }
           .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
           .pp-share-btn:hover    { background:rgba(255,255,255,0.14) !important; }
-          .pp-brand-badge:hover  { background:rgba(127,127,127,0.16) !important; }
+          .pp-brand-badge:hover  { background:rgba(127,127,127,0.34) !important; }
         }
 
         /* [LINKS-CARD] Lignes de la carte de liens */
@@ -2091,22 +2096,23 @@ export default function PublicProfile({ previewProfile = null }) {
           </div>
         )}
 
-        {/* Support */}
+        {/* Support — [FOOTER-OPACITY] fond et bordure plus opaques */}
         <a
           href={`https://wa.me/${SUPPORT_WHATSAPP}`}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.22)', border:'1px solid rgba(37,211,102,0.38)', borderRadius:'999px', padding:'11px 20px', color:'var(--pp-sup)', fontSize:'13px', fontWeight:700, textDecoration:'none', touchAction:'manipulation' }}
+          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.42)', border:'1px solid rgba(37,211,102,0.75)', borderRadius:'999px', padding:'11px 20px', color:'var(--pp-sup)', fontSize:'13px', fontWeight:700, textDecoration:'none', touchAction:'manipulation' }}
         >
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>
 
+        {/* [FOOTER-OPACITY] badge plus opaque, texte pleine couleur */}
         <a
           href="https://www.socialapp.work"
           target="_blank"
           rel="noopener noreferrer"
           className="pp-brand-badge"
-          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(127,127,127,0.08)', border:'1px solid rgba(127,127,127,0.25)', borderRadius:'100px', padding:'7px 16px', color:'var(--pp-txt2)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
+          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(127,127,127,0.24)', border:'1px solid rgba(127,127,127,0.55)', borderRadius:'100px', padding:'7px 16px', color:'var(--pp-txt)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
         >
           <Link2 size={12} /> Créé avec SocialApp
         </a>

@@ -1021,7 +1021,6 @@ const handleSignOut = async () => {
           //
           // [AJOUT] bannerUrl / uploadingBanner / onBannerUpload / onBannerRemove :
           // même pattern que ci-dessus pour la bannière de couverture.
-          case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrls={currentBanners} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFiles} onBannerRemove={removeBanner} />;
           case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
           case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
           // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,
@@ -1140,11 +1139,11 @@ const handleSignOut = async () => {
                   <button
                     type="button"
                     onClick={() => setShowPreview(v => !v)}
-                    title="Aperçu du profil public"
+                     title="Aperçu de la carte"
                     style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 12px', background:showPreview?'#eef0ff':'#ffffff', border:'1px solid '+(showPreview?'#c7cdfb':'#dde0ea'), borderRadius:'9px', color:showPreview?'#4338ca':'#454b5a', fontSize:'11px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}
                   >
                     <Eye size={13} />
-                    {!isMobile && 'Aperçu'}
+                    {!isMobile && 'Aperçu carte'}
                   </button>
                   <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
                   <NotificationBell />

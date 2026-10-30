@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Palette, Check } from 'lucide-react';
 
 /**
- * ThemeColorPicker — bouton de la barre du haut (pastille + palette) qui ouvre
- * le choix du fond du profil public. Remplace l'ancienne grille de pastilles
- * « Thème de fond - profile public » + section « Personnalisé » (Couleur 1/2)
- * par 3 modèles : Savane, Hibiscus, Lagon.
+ * ThemeColorPicker — bouton de la barre du haut (pastille + palette + libellé
+ * « Template carte ») qui ouvre le choix du fond du profil public. Remplace
+ * l'ancienne grille de pastilles « Thème de fond - profile public » + section
+ * « Personnalisé » (Couleur 1/2) par 3 modèles : Savane, Hibiscus, Lagon.
  *
  * MÊME API qu'avant : <ThemeColorPicker profile={localProfile} onUpdate={updateLocal} />
  * → UserDashboard.jsx n'a pas à changer.
@@ -104,26 +104,32 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
         .tcp-card:focus-visible,.tcp-trigger:focus-visible{outline:2px solid #6366f1;outline-offset:2px;}
         .tcp-card[aria-checked="true"]{border-color:#111827;background:rgba(17,24,39,.04);}
         @media (hover:hover){.tcp-card:hover{background:rgba(17,24,39,.05);}}
+        /* Libellé « Template carte » : masqué sur mobile (< 768px) pour ne pas
+           surcharger la topbar ; l'infobulle (title) reste disponible. */
+        .tcp-label{font-size:11px;font-weight:600;color:#454b5a;white-space:nowrap;}
+        @media (max-width:767px){.tcp-label{display:none;}}
       `}</style>
 
-      {/* Déclencheur : pastille (fond actuel) + palette */}
+      {/* Déclencheur : pastille (fond actuel) + palette + libellé */}
       <button
         type="button"
         className="tcp-trigger"
         onClick={() => setOpen(v => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title="Modèle de fond du profil public"
+        aria-label="Template carte"
+        title="Template carte"
         style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: open ? '#e4e6f0' : '#eef0f5', border: '1px solid #dde0ea', borderRadius: '12px', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation', minHeight: '34px' }}
       >
         <span aria-hidden="true" style={{ width: '20px', height: '20px', borderRadius: '50%', background: `linear-gradient(135deg,${bg1},${bg2})`, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)' }} />
         <Palette size={15} color="#454b5a" />
+        <span className="tcp-label">Template carte</span>
       </button>
 
       {open && (
         <div
           role="dialog"
-          aria-label="Modèle de fond du profil public"
+          aria-label="Template carte"
           style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 60, width: 'min(300px, calc(100vw - 24px))', maxHeight: 'min(80dvh, 520px)', overflowY: 'auto', boxSizing: 'border-box', background: '#ffffff', border: '1px solid #e6e8f0', borderRadius: '18px', padding: '14px', boxShadow: '0 20px 50px rgba(15,23,42,.18)' }}
         >
           <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#6b7280' }}>

@@ -28,17 +28,14 @@ export default function OverviewPanel({
   profile, limits, isActivated, onNavigate,
   onUpdate, onSave, hasChanges, saving, plan,
   onRequestActivation, onUpgrade,
-  // [DÉPLACÉ] Contrôle d'image de fond, auparavant dans le footer de
-  // UserSidebar — vit maintenant dans la carte Profil, juste en dessous.
-  // `onBgUpload` reçoit directement le File (comme uploadBgFile côté
-  // UserDashboard), pas l'event brut.
-  bgImageUrl, uploadingBg, onBgUpload, onBgRemove,
+  // [SUPPRIMÉ] Le contrôle « Image de fond » a été retiré de la carte Profil.
+  // Les props bgImageUrl / uploadingBg / onBgUpload / onBgRemove ne sont plus
+  // utilisées ici ; elles peuvent être retirées de l'appel dans UserDashboard.jsx.
   // [BANNIÈRES MULTIPLES] Remplace l'ancien `bannerUrl` (une seule bannière).
   //  - bannerUrls     : tableau d'URLs (max MAX_BANNERS)
   //  - onBannerUpload : reçoit un TABLEAU de File (input `multiple`)
   //  - onBannerRemove : reçoit l'INDEX de la bannière à retirer
   // Affichées en carrousel en haut de la page publique (voir PublicProfile.jsx).
-  // Distinctes de l'image de fond (qui couvre tout l'écran derrière la page).
   bannerUrls = [], uploadingBanner, onBannerUpload, onBannerRemove,
 }) {
   const isMob = useWindowWidth() < 768;
@@ -173,11 +170,9 @@ export default function OverviewPanel({
             </div>
 
             {/* [BANNIÈRES MULTIPLES] Bannières de couverture (profile.banner_urls,
-                max MAX_BANNERS) — placées AVANT le bloc "Image de fond" : c'est
-                le premier élément visuel de la page publique (au-dessus de
-                l'avatar), il précède donc logiquement le fond d'écran
-                plein-page dans l'ordre des contrôles. Sur la page publique,
-                elles défilent en carrousel avec un bouton Télécharger. */}
+                max MAX_BANNERS) — premier élément visuel de la page publique
+                (au-dessus de l'avatar). Sur la page publique, elles défilent
+                en carrousel avec un bouton Télécharger. */}
             {onBannerUpload && (
               <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
                 <label style={{
@@ -231,49 +226,6 @@ export default function OverviewPanel({
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* [DÉPLACÉ DEPUIS LA SIDEBAR] Image de fond du profil public —
-                rapprochée de la carte qu'elle modifie plutôt que reléguée
-                au bas du menu, loin de tout aperçu. Placée après les
-                bannières de couverture ci-dessus. */}
-            {onBgUpload && (
-              <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <label style={{
-                  flex:1, display:'flex', alignItems:'center', gap:'6px',
-                  background:bgImageUrl?'rgba(219,39,119,0.08)':'rgba(15,18,34,0.03)',
-                  border:'1px solid '+(bgImageUrl?'rgba(219,39,119,0.35)':'rgba(15,18,34,0.1)'),
-                  borderRadius:'8px', padding:'7px 10px', cursor:uploadingBg?'not-allowed':'pointer',
-                  position:'relative',
-                }}>
-                  {uploadingBg
-                    ? <Loader2 size={12} color="#db2777" className="animate-spin" />
-                    : <Image size={12} color={bgImageUrl ? '#db2777' : 'rgba(15,18,34,0.4)'} />
-                  }
-                  <span style={{ color:bgImageUrl?'#be185d':'rgba(15,18,34,0.5)', fontSize:'10px', fontWeight:600 }}>
-                    {bgImageUrl ? 'Changer le fond' : 'Image de fond'}
-                  </span>
-                  <input
-                    type="file" accept="image/*"
-                    style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer', width:'100%', height:'100%' }}
-                    onChange={e => { const file = e.target.files?.[0]; if (file) onBgUpload(file); e.target.value=''; }}
-                    disabled={uploadingBg}
-                  />
-                </label>
-                {bgImageUrl && onBgRemove && (
-                  <button
-                    onClick={onBgRemove}
-                    aria-label="Retirer l'image de fond"
-                    style={{
-                      width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                      background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)',
-                      borderRadius:'8px', cursor:'pointer',
-                    }}
-                  >
-                    <X size={11} color="#f87171" />
-                  </button>
                 )}
               </div>
             )}

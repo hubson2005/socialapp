@@ -1021,6 +1021,7 @@ const handleSignOut = async () => {
           //
           // [AJOUT] bannerUrl / uploadingBanner / onBannerUpload / onBannerRemove :
           // même pattern que ci-dessus pour la bannière de couverture.
+         case 'overview':        return <OverviewPanel profile={localProfile} limits={limits} isActivated={isActivated} onNavigate={setActiveSection} onUpdate={updateLocal} onSave={handleSave} hasChanges={hasChanges} saving={updateMutation.isPending} plan={effectivePlan} onUpgrade={handleOpenUpgrade} bgImageUrl={localProfile?.bg_image_url} uploadingBg={uploadingBg} onBgUpload={uploadBgFile} onBgRemove={()=>updateLocal({ bg_image_url:null })} bannerUrls={currentBanners} uploadingBanner={uploadingBanner} onBannerUpload={uploadBannerFiles} onBannerRemove={removeBanner} />;
           case 'platforms':       return <PlatformsPanel localProfile={localProfile} updateLocal={updateLocal} limits={limits} showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} onUpgrade={()=>handleOpenUpgrade()} />;
           case 'event':           return <EventPanel localProfile={localProfile} updateLocal={updateLocal} isActivated={isActivated} />;
           // FIX [DESKTOP-WIDTH] — l'ancien wrapper imposait `maxWidth:'640px'` en dur,

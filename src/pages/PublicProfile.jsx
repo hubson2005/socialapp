@@ -5,6 +5,17 @@
  *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
  *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, PERF2a-f, DL1-DL8 ... ]
  *
+ * FONDS PAR MODÈLE (cette révision) :
+ *  [BG-TEMPLATES] theme_color = « bg1|bg2|idModèle » (Savane, Hibiscus, Lagon —
+ *        choisis depuis ThemeColorPicker du dashboard). Chaque modèle ajoute des
+ *        motifs SVG intégrés (bogolan, treillis de losanges, losanges latéraux, à
+ *        faible opacité) et des textes FONCÉS via les variables CSS --pp-txt /
+ *        --pp-txt2 / --pp-faint / --pp-ink / --pp-sup posées sur le conteneur.
+ *        Ancien format « bg1|bg2 » : rendu inchangé (dégradé + taches animées,
+ *        textes blancs). Image de fond (bg_image_url) : toujours prioritaire,
+ *        textes blancs. ⚠️ BG_TEMPLATES est dupliqué dans ThemeColorPicker.jsx
+ *        (dashboard) — garder les deux listes synchronisées.
+ *
  * DESIGN 2 (cette révision) :
  *  [DESIGN2] Même langage visuel partout : cartes blanches, pastilles pêche, libellés
  *        en capitales. Puces du haut en pilules blanches, en-têtes de section
@@ -70,8 +81,8 @@
  *  [DL7] Switch "Mode léger" discret en bas de page.
  *
  * Aucun changement de comportement en mode complet (isLight === false) hors
- * la modale produit [MODAL1-4], le carrousel de bannières [BANNER-SLIDER]
- * et la ligne / fenêtre QR code [QR-MODAL].
+ * la modale produit [MODAL1-4], le carrousel de bannières [BANNER-SLIDER],
+ * la ligne / fenêtre QR code [QR-MODAL] et les fonds par modèle [BG-TEMPLATES].
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -350,6 +361,88 @@ const parseColors = (tc) => {
   if (tc && tc.includes('|')) { const [a, b] = tc.split('|'); return { bg1: a, bg2: b }; }
   return { bg1: '#0f0a1e', bg2: '#2d1b69' };
 };
+
+// ─── [BG-TEMPLATES] Fonds par modèle (Savane / Hibiscus / Lagon) ───
+// theme_color = « bg1|bg2|idModèle ». Le 3e segment est ignoré par parseColors.
+// ⚠️ Copie de TEMPLATES dans ThemeColorPicker.jsx (dashboard) — garder synchronisées.
+const BG_TEMPLATES = {
+  savane:   { accent: '#e8a25f', motif: 0.12, band: 0.18, dia: 0.28, txt: '#3a1d0e', txt2: 'rgba(58,29,14,0.65)', faint: 'rgba(58,29,14,0.45)', ink: '#fff', sup: '#15803d' },
+  hibiscus: { accent: '#d6336c', motif: 0.06, band: 0.18, dia: 0.26, txt: '#4a1530', txt2: 'rgba(74,21,48,0.65)', faint: 'rgba(74,21,48,0.45)', ink: '#fff', sup: '#15803d' },
+  lagon:    { accent: '#0f9d94', motif: 0.10, band: 0,    dia: 0.22, txt: '#0b3b3a', txt2: 'rgba(11,59,58,0.65)', faint: 'rgba(11,59,58,0.45)', ink: '#fff', sup: '#15803d' },
+};
+// Textes par défaut (fond sombre : ancien format ou image de fond)
+const DARK_TONE = { txt: '#fff', txt2: 'rgba(255,255,255,0.75)', faint: 'rgba(255,255,255,0.4)', ink: '#0f0a1e', sup: '#4ade80' };
+const getTemplateId = (tc) => (tc && tc.split('|')[2]) || '';
+// Variables de texte : une image de fond impose toujours le blanc
+const getTone = (p) => {
+  if (!p || p.bg_image_url) return DARK_TONE;
+  const t = BG_TEMPLATES[getTemplateId(p.theme_color)];
+  return t ? { txt: t.txt, txt2: t.txt2, faint: t.faint, ink: t.ink, sup: t.sup } : DARK_TONE;
+};
+
+const svgUri = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+const bgMotifSvg = (c) => svgUri(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+    <path d="M18 8 V28 M8 18 H28" stroke="${c}" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    <path d="M54 44 L64 54 L54 64 L44 54 Z" fill="none" stroke="${c}" stroke-width="1.4"/>
+    <circle cx="54" cy="18" r="2.4" fill="${c}"/><circle cx="18" cy="54" r="2.4" fill="${c}"/>
+    <circle cx="54" cy="54" r="1.2" fill="${c}"/>
+  </svg>`
+);
+const bgLatticeSvg = (c) => svgUri(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="56" viewBox="0 0 40 56">
+    <path d="M0 14 L20 0 L40 14 L20 28 Z M0 42 L20 28 L40 42 L20 56 Z" fill="none" stroke="${c}" stroke-width="1.2"/>
+  </svg>`
+);
+const bgDiamondSvg = (c, op = 1) => svgUri(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" opacity="${op}">
+    <rect x="22" y="22" width="76" height="76" rx="14" transform="rotate(45 60 60)" fill="none" stroke="${c}" stroke-width="5"/>
+    <rect x="40" y="40" width="40" height="40" rx="8" transform="rotate(45 60 60)" fill="none" stroke="${c}" stroke-width="4"/>
+  </svg>`
+);
+
+// CSS du fond (sans image) pour un modèle connu — identique en mode léger et complet
+// (SVG intégrés : aucune requête réseau, pas d'animation, pas de flou).
+function buildTemplateBgCss(bg1, bg2, templateId) {
+  const t = BG_TEMPLATES[templateId];
+  let css = `
+    #__bg_layer__ {
+      position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 14%, rgba(255,255,255,0.9), transparent 52%),
+        linear-gradient(160deg,${bg1},${bg2});
+    }
+    #__bg_overlay__ { display:none; }
+  `;
+
+  if (t.motif) css += `
+    #__bg_layer__::before {
+      content:'';position:absolute;inset:0;
+      background-image:${bgMotifSvg(t.accent)};background-size:72px 72px;opacity:${t.motif};
+      -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 20%,#000 80%,transparent 100%);
+              mask-image:linear-gradient(180deg,transparent 0%,#000 20%,#000 80%,transparent 100%);
+    }`;
+  if (t.band) css += `
+    #__bg_layer__::after {
+      content:'';position:absolute;inset:0;
+      background-image:${bgLatticeSvg(t.accent)},${bgLatticeSvg(t.accent)};
+      background-repeat:repeat-x,repeat-x;background-position:0 0,0 100%;background-size:40px 56px,40px 56px;
+      opacity:${t.band};
+      -webkit-mask-image:linear-gradient(180deg,#000 0,transparent 12%,transparent 88%,#000 100%);
+              mask-image:linear-gradient(180deg,#000 0,transparent 12%,transparent 88%,#000 100%);
+    }`;
+  if (t.dia) css += `
+    #__bg_overlay__ {
+      display:block;position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-9;pointer-events:none;
+      /* 1er losange (haut droite) : moitié moins marqué que les deux autres */
+      background-image:${bgDiamondSvg(t.accent, 0.5)},${bgDiamondSvg(t.accent)},${bgDiamondSvg(t.accent)};
+      background-repeat:no-repeat;
+      background-size:130px 130px,100px 100px,80px 80px;
+      background-position:calc(100% + 34px) 7%,-48px 58%,calc(100% + 30px) 86%;
+      opacity:${t.dia};
+    }`;
+  return css;
+}
 
 const getCountdown = (eventDate) => {
   if (!eventDate) return null;
@@ -1138,13 +1231,14 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
   );
 }
 
-// [DESIGN2] En-tête de section : pastille pêche + titre + compteur
+// [DESIGN2][BG-TEMPLATES] En-tête de section : pastille pêche + titre + compteur
+// (couleurs de texte via variables CSS posées sur le conteneur principal)
 function SectionHeader({ icon, title, count }) {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
       <span style={{ width:'30px', height:'30px', borderRadius:'9px', background:ROW_TILE_BG, color:ROW_ICON_INK, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{icon}</span>
-      <h2 style={{ color:'white', fontSize:'15px', fontWeight:800, margin:0 }}>{title}</h2>
-      {count ? <span style={{ marginLeft:'auto', color:'rgba(255,255,255,0.55)', fontSize:'12px', fontWeight:600 }}>{count}</span> : null}
+      <h2 style={{ color:'var(--pp-txt)', fontSize:'15px', fontWeight:800, margin:0 }}>{title}</h2>
+      {count ? <span style={{ marginLeft:'auto', color:'var(--pp-txt2)', fontSize:'12px', fontWeight:600 }}>{count}</span> : null}
     </div>
   );
 }
@@ -1204,7 +1298,7 @@ function PageWeightBadge() {
   if (kb === null) return null;
 
   return (
-    <div style={{ marginTop:'8px', display:'inline-flex', alignItems:'center', gap:'5px', color:'rgba(255,255,255,0.35)', fontSize:'11px' }}>
+    <div style={{ marginTop:'8px', display:'inline-flex', alignItems:'center', gap:'5px', color:'var(--pp-faint)', fontSize:'11px' }}>
       <Wifi size={11} /> Mode léger · ~{kb} Ko chargés
     </div>
   );
@@ -1218,8 +1312,8 @@ function LightModeToggle({ isLight, setManual }) {
       aria-label={isLight ? 'Repasser en mode complet' : 'Activer le mode léger'}
       style={{
         marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px',
-        background:'transparent', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'100px',
-        padding:'6px 14px', color:'rgba(255,255,255,0.4)', fontSize:'11px', fontWeight:600,
+        background:'transparent', border:'1px solid rgba(127,127,127,0.3)', borderRadius:'100px',
+        padding:'6px 14px', color:'var(--pp-faint)', fontSize:'11px', fontWeight:600,
         cursor:'pointer', touchAction:'manipulation',
       }}
     >
@@ -1324,7 +1418,7 @@ export default function PublicProfile({ previewProfile = null }) {
           .pp-link-btn-el:hover  { background:var(--pp-hover-bg, ${CARD_BG_HOVER}) !important; transform:translateY(-1px); }
           .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
           .pp-share-btn:hover    { background:rgba(255,255,255,0.14) !important; }
-          .pp-brand-badge:hover  { background:rgba(255,255,255,0.1) !important; }
+          .pp-brand-badge:hover  { background:rgba(127,127,127,0.16) !important; }
         }
 
         /* [LINKS-CARD] Lignes de la carte de liens */
@@ -1504,8 +1598,9 @@ export default function PublicProfile({ previewProfile = null }) {
     return () => clearInterval(t);
   }, [profile?.is_event, profile?.event_date]);
 
-  // ── [C5][F9][O7][P4][BG1][BG2][DL4] Background style ──────────
-  // [DL4] En mode léger : dégradé plat, pas de taches radiales floutées animées.
+  // ── [C5][F9][O7][P4][BG1][BG2][DL4][BG-TEMPLATES] Background style ──────────
+  // Priorité : image de fond > modèle (theme_color « bg1|bg2|id ») > ancien format.
+  // [DL4] Ancien format en mode léger : dégradé plat, pas de taches radiales floutées animées.
   useEffect(() => {
     if (!profile) return;
 
@@ -1522,7 +1617,11 @@ export default function PublicProfile({ previewProfile = null }) {
       `;
     } else {
       const { bg1, bg2 } = parseColors(profile.theme_color);
-      if (isLight) {
+      const templateId = getTemplateId(profile.theme_color);
+      if (BG_TEMPLATES[templateId]) {
+        // [BG-TEMPLATES] Fond par modèle : motifs SVG, identique en mode léger et complet
+        bgCss = buildTemplateBgCss(bg1, bg2, templateId);
+      } else if (isLight) {
         // [DL4] Dégradé plat, pas de blob/blur/animation
         bgCss = `
           #__bg_layer__   { position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:-10;background:linear-gradient(160deg,${bg1},${bg2}); }
@@ -1662,6 +1761,9 @@ export default function PublicProfile({ previewProfile = null }) {
   const heroRaw = heroRawUrl(profile);
   const srcFor  = (url, w) => imgUrl(url, { width: url && url === heroRaw ? HERO_WIDTH : w });
 
+  // [BG-TEMPLATES] Couleurs de texte selon le modèle de fond (blanc par défaut)
+  const tone = getTone(profile);
+
   const avatarBlock = (
     <div style={{ position:'relative' }}>
       <div
@@ -1672,7 +1774,7 @@ export default function PublicProfile({ previewProfile = null }) {
           boxShadow:'0 8px 32px rgba(0,0,0,0.3)',
         }}
       >
-        <div style={{ padding:'3px', borderRadius:'25px', background:'#0f0a1e' }}>
+        <div style={{ padding:'3px', borderRadius:'25px', background:'var(--pp-ink)' }}>
           {profile.avatar_url
             ? <img src={imgUrl(profile.avatar_url, { width: avatarW })} alt={profile.display_name} style={{ width:'106px', height:'106px', borderRadius:'22px', objectFit:'cover', display:'block' }} />
             : <div style={{ width:'106px', height:'106px', borderRadius:'22px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'40px', fontWeight:'bold', color:'white' }}>{(profile.display_name || '?')[0].toUpperCase()}</div>
@@ -1714,7 +1816,8 @@ export default function PublicProfile({ previewProfile = null }) {
         <ShareBar profile={profile} />
       </div>
 
-      {/* [DL2] fontFamily bascule sur SYSTEM_FONT_STACK en mode léger */}
+      {/* [DL2] fontFamily bascule sur SYSTEM_FONT_STACK en mode léger
+          [BG-TEMPLATES] variables CSS de texte (--pp-*) selon le modèle de fond */}
       <div style={{
         position:'relative', zIndex:1, minHeight:'100dvh',
         display:'flex', flexDirection:'column', alignItems:'center',
@@ -1723,6 +1826,11 @@ export default function PublicProfile({ previewProfile = null }) {
         paddingLeft:   'max(16px, env(safe-area-inset-left, 0px))',
         paddingRight:  'max(16px, env(safe-area-inset-right, 0px))',
         fontFamily: isLight ? SYSTEM_FONT_STACK : FONT_STACK,
+        '--pp-txt':   tone.txt,
+        '--pp-txt2':  tone.txt2,
+        '--pp-faint': tone.faint,
+        '--pp-ink':   tone.ink,
+        '--pp-sup':   tone.sup,
       }}>
 
         {bannerList.length > 0 ? (
@@ -1752,12 +1860,12 @@ export default function PublicProfile({ previewProfile = null }) {
             </div>
 
             <div className="pp-content-col" style={{ paddingLeft:'152px', marginTop:'0px', minHeight:'80px', marginBottom:'16px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
-              <h1 style={{ fontSize:'19px', fontWeight:'800', color:'white', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              <h1 style={{ fontSize:'19px', fontWeight:'800', color:'var(--pp-txt)', letterSpacing:'0.01em', margin:0, textAlign:'left', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {profile.display_name}
                 {profile.is_verified && <span style={{ marginLeft:'6px', fontSize:'14px', color:'#22c55e' }}>✓</span>}
               </h1>
               {profile.bio && (
-                <p style={{ color:'rgba(255,255,255,0.75)', fontSize:'13px', fontWeight:500, textAlign:'left', lineHeight:1.4, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
+                <p style={{ color:'var(--pp-txt2)', fontSize:'13px', fontWeight:500, textAlign:'left', lineHeight:1.4, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
                   {profile.bio}
                 </p>
               )}
@@ -1769,16 +1877,16 @@ export default function PublicProfile({ previewProfile = null }) {
               {avatarBlock}
             </div>
 
-            <h1 style={{ fontSize:'24px', fontWeight:'800', color:'white', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
+            <h1 style={{ fontSize:'24px', fontWeight:'800', color:'var(--pp-txt)', letterSpacing:'0.01em', marginBottom:'4px', textAlign:'center' }}>
               {profile.display_name}
               {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
             </h1>
 
-            {profile.bio && <p style={{ color:'rgba(255,255,255,0.72)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
+            {profile.bio && <p style={{ color:'var(--pp-txt2)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
           </>
         )}
 
-        {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,255,255,0.7)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
+        {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'var(--pp-txt2)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
         {topSocialLinks.length > 0 && (
           <div className="pp-content-col" style={{
@@ -1910,9 +2018,9 @@ export default function PublicProfile({ previewProfile = null }) {
                 />
               ))}
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'10px', justifyContent:'center' }}>
-              <Tag size={10} color="rgba(255,255,255,0.25)" />
-              <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px' }}>Contactez le vendeur pour commander</span>
+            <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'10px', justifyContent:'center', color:'var(--pp-faint)' }}>
+              <Tag size={10} color="currentColor" />
+              <span style={{ color:'var(--pp-faint)', fontSize:'11px' }}>Contactez le vendeur pour commander</span>
             </div>
           </div>
         )}
@@ -1988,7 +2096,7 @@ export default function PublicProfile({ previewProfile = null }) {
           href={`https://wa.me/${SUPPORT_WHATSAPP}`}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.22)', border:'1px solid rgba(37,211,102,0.38)', borderRadius:'999px', padding:'11px 20px', color:'#4ade80', fontSize:'13px', fontWeight:700, textDecoration:'none', touchAction:'manipulation' }}
+          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.22)', border:'1px solid rgba(37,211,102,0.38)', borderRadius:'999px', padding:'11px 20px', color:'var(--pp-sup)', fontSize:'13px', fontWeight:700, textDecoration:'none', touchAction:'manipulation' }}
         >
           <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
         </a>
@@ -1998,7 +2106,7 @@ export default function PublicProfile({ previewProfile = null }) {
           target="_blank"
           rel="noopener noreferrer"
           className="pp-brand-badge"
-          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'100px', padding:'7px 16px', color:'rgba(255,255,255,0.55)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
+          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(127,127,127,0.08)', border:'1px solid rgba(127,127,127,0.25)', borderRadius:'100px', padding:'7px 16px', color:'var(--pp-txt2)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
         >
           <Link2 size={12} /> Créé avec SocialApp
         </a>

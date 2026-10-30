@@ -33,3 +33,4 @@ dist-ssr
 apply-preview*.ps1
 *.patch
 supabase/.temp
+src/assets/apercu-*.png

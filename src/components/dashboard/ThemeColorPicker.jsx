@@ -16,6 +16,14 @@ import { Palette, Check } from 'lucide-react';
  *
  * ⚠️ Les modèles sont dupliqués dans PublicProfile.jsx (BG_TEMPLATES, voir le patch)
  * — garder les deux listes synchronisées.
+ *
+ * [FIX MOBILE] Le menu était en position:absolute ancré au bord droit du bouton
+ * palette ; sur mobile ce bouton n'est pas au bord de l'écran, donc le menu
+ * débordait à gauche. Sur < 768px il passe en position:fixed, calé sur l'écran
+ * (marges 12px), sous la topbar et au-dessus de la MobileNav.
+ *
+ * [MINIATURES] Chaque modèle est présenté comme une miniature de profil complet
+ * (fond, bandes, avatar, nom, boutons de liens), en 3 colonnes.
  */
 const TEMPLATES = [
   { id: 'savane',   name: 'Savane',   desc: 'Crème et orange',       bg1: '#f6efe3', bg2: '#e9dcc6', accent: '#e8a25f', motif: true, band: true,  dia: true },
@@ -37,7 +45,7 @@ const latticeTile = (c, op) => uri(
   </svg>`
 );
 
-// Miniature du modèle (même esprit que la page publique)
+// Fond du modèle (même esprit que la page publique)
 function previewStyle(t) {
   const layers = [], rep = [], pos = [], size = [];
   if (t.band) {
@@ -64,6 +72,39 @@ function previewStyle(t) {
     backgroundPosition: pos.join(','),
     backgroundSize: size.join(','),
   };
+}
+
+// Miniature d'un profil complet : fond du modèle + avatar + nom + boutons de liens.
+// L'avatar et le nom sont ceux de l'utilisateur (repli : disque d'accent / barre grise).
+function MiniProfile({ t, profile }) {
+  const name = profile?.display_name;
+  const avatar = profile?.avatar_url;
+  const pill = {
+    display: 'flex', alignItems: 'center', gap: '3px', width: '100%', height: '10px', boxSizing: 'border-box',
+    padding: '0 3px', borderRadius: '99px', background: 'rgba(255,255,255,.92)',
+    boxShadow: '0 1px 2px rgba(0,0,0,.12)',
+  };
+  const dot = { width: '5px', height: '5px', borderRadius: '50%', background: t.accent, flexShrink: 0 };
+  const bar = (w, c = 'rgba(17,24,39,.25)') => ({ display: 'block', width: w, height: '2px', borderRadius: '2px', background: c });
+
+  return (
+    <span
+      aria-hidden="true"
+      style={{ display: 'block', position: 'relative', width: '100%', aspectRatio: '9 / 16', borderRadius: '10px', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12)', ...previewStyle(t) }}
+    >
+      <span style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '24% 9% 0' }}>
+        <span style={{ width: '30%', aspectRatio: '1', borderRadius: '50%', border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,.2)', background: avatar ? `center / cover url("${avatar}")` : t.accent, flexShrink: 0 }} />
+        {name
+          ? <span style={{ maxWidth: '100%', fontSize: '7px', fontWeight: 800, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+          : <span style={bar('50%', 'rgba(17,24,39,.55)')} />}
+        <span style={bar('65%')} />
+        <span style={{ height: '3px' }} />
+        {[0, 1, 2, 3].map(i => (
+          <span key={i} style={pill}><span style={dot} /><span style={bar(`${70 - i * 10}%`)} /></span>
+        ))}
+      </span>
+    </span>
+  );
 }
 
 export default function ThemeColorPicker({ profile, onUpdate }) {
@@ -97,9 +138,9 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
   return (
     <div ref={wrapRef} style={{ position: 'relative', flexShrink: 0 }}>
       <style>{`
-        .tcp-card{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:8px;
-          background:transparent;border:2px solid transparent;border-radius:16px;cursor:pointer;
-          text-align:left;font-family:inherit;touch-action:manipulation;transition:border-color .15s,background .15s;}
+        .tcp-card{display:flex;flex-direction:column;align-items:stretch;gap:6px;width:100%;box-sizing:border-box;padding:5px;
+          background:transparent;border:2px solid transparent;border-radius:14px;cursor:pointer;
+          text-align:center;font-family:inherit;touch-action:manipulation;transition:border-color .15s,background .15s;}
         .tcp-card:active{background:rgba(99,102,241,.06);}
         .tcp-card:focus-visible,.tcp-trigger:focus-visible{outline:2px solid #6366f1;outline-offset:2px;}
         .tcp-card[aria-checked="true"]{border-color:#111827;background:rgba(17,24,39,.04);}
@@ -108,6 +149,23 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
            surcharger la topbar ; l'infobulle (title) reste disponible. */
         .tcp-label{font-size:11px;font-weight:600;color:#454b5a;white-space:nowrap;}
         @media (max-width:767px){.tcp-label{display:none;}}
+
+        /* Menu déroulant — desktop : ancré sous le bouton, aligné à droite. */
+        .tcp-pop{
+          position:absolute; top:calc(100% + 8px); right:0; z-index:60;
+          width:min(340px, calc(100vw - 24px));
+          max-height:min(80dvh, 520px);
+        }
+        /* Mobile : détaché du bouton et calé sur l'écran (marges 12px),
+           sous la topbar, au-dessus de la MobileNav (~130px). */
+        @media (max-width:767px){
+          .tcp-pop{
+            position:fixed;
+            top:calc(env(safe-area-inset-top, 0px) + 62px);
+            left:12px; right:12px; width:auto;
+            max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 62px - 140px);
+          }
+        }
       `}</style>
 
       {/* Déclencheur : pastille (fond actuel) + palette + libellé */}
@@ -130,13 +188,14 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
         <div
           role="dialog"
           aria-label="Template carte"
-          style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 60, width: 'min(300px, calc(100vw - 24px))', maxHeight: 'min(80dvh, 520px)', overflowY: 'auto', boxSizing: 'border-box', background: '#ffffff', border: '1px solid #e6e8f0', borderRadius: '18px', padding: '14px', boxShadow: '0 20px 50px rgba(15,23,42,.18)' }}
+          className="tcp-pop"
+          style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', boxSizing: 'border-box', background: '#ffffff', border: '1px solid #e6e8f0', borderRadius: '18px', padding: '14px', boxShadow: '0 20px 50px rgba(15,23,42,.18)' }}
         >
           <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#6b7280' }}>
             Modèle de fond · profil public
           </p>
 
-          <div role="radiogroup" aria-label="Modèles" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div role="radiogroup" aria-label="Modèles" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {TEMPLATES.map((t) => {
               const selected = t.id === currentId;
               return (
@@ -148,19 +207,16 @@ export default function ThemeColorPicker({ profile, onUpdate }) {
                   className="tcp-card"
                   onClick={() => choose(t)}
                 >
-                  <span
-                    aria-hidden="true"
-                    style={{ width: '84px', height: '64px', flexShrink: 0, borderRadius: '12px', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12)', ...previewStyle(t) }}
-                  />
-                  <span style={{ minWidth: 0, flex: 1 }}>
-                    <span style={{ display: 'block', fontSize: '14px', fontWeight: 800, color: '#111827' }}>{t.name}</span>
-                    <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{t.desc}</span>
+                  <span style={{ position: 'relative', display: 'block' }}>
+                    <MiniProfile t={t} profile={profile} />
+                    {selected && (
+                      <span aria-hidden="true" style={{ position: 'absolute', top: '5px', right: '5px', width: '18px', height: '18px', borderRadius: '50%', background: '#111827', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Check size={11} />
+                      </span>
+                    )}
                   </span>
-                  {selected && (
-                    <span aria-hidden="true" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#111827', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Check size={13} />
-                    </span>
-                  )}
+                  <span style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, color: '#111827' }}>{t.name}</span>
+                  <span style={{ display: 'block', fontSize: '10.5px', lineHeight: 1.3, color: '#6b7280' }}>{t.desc}</span>
                 </button>
               );
             })}

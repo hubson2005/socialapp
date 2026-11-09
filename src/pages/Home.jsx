@@ -1762,7 +1762,7 @@ export default function Home() {
 </div>
 </div>
 <div className="sa-cp">
-<span>© 2026 SocialApp · Tous droits réservés · Côte d'Ivoire </span>
+<span>© 2024 SocialApp · Tous droits réservés · Côte d'Ivoire </span>
 <div>
 <a href="/privacy-policy">Confidentialité</a>
 <a href="/terms-of-service">Conditions</a>

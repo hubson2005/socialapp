@@ -171,7 +171,7 @@ function render(shell, p, extras) {
   const hero = heroRawUrl(p);
   const image = hero || httpsUrl(p.avatar_url) || `${SITE}/Logo_SocialApp.png`;
   const pageUrl = `${SITE}/${encodeURIComponent(p.username)}`;
-  const title = `${name} – SocialApp`;
+  const title = /socialapp/i.test(name) ? name : `${name} – SocialApp`;
 
   let html = shell;
 

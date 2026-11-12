@@ -10,7 +10,7 @@
  *        choisis depuis ThemeColorPicker du dashboard). Chaque modèle ajoute des
  *        motifs SVG intégrés (bogolan, treillis de losanges, losanges latéraux, à
  *        faible opacité) et des textes FONCÉS via les variables CSS --pp-txt /
- *        --pp-txt2 / --pp-faint / --pp-ink / --pp-sup posées sur le conteneur.
+ *        --pp-txt2 / --pp-faint / --pp-ink posées sur le conteneur.
  *        Ancien format « bg1|bg2 » : rendu inchangé (dégradé + taches animées,
  *        textes blancs). Image de fond (bg_image_url) : toujours prioritaire,
  *        textes blancs. ⚠️ BG_TEMPLATES est dupliqué dans ThemeColorPicker.jsx
@@ -81,9 +81,9 @@
  *  [DL7] Switch "Mode léger" discret en bas de page.
  *
  * PIED DE PAGE (cette révision) :
- *  [FOOTER-OPACITY] Bouton support, badge « Créé avec SocialApp » et switch
- *        « Mode léger » : fonds, bordures et texte plus opaques pour rester
- *        lisibles sur les fonds clairs des modèles (Savane, Hibiscus, Lagon).
+ *  [FOOTER-PLAIN] Le bouton « Contactez notre support » est supprimé.
+ *        « Créé avec SocialApp » et « Mode léger » s'affichent sans fond ni
+ *        bordure (icône + texte seulement).
  *
  * Aucun changement de comportement en mode complet (isLight === false) hors
  * la modale produit [MODAL1-4], le carrousel de bannières [BANNER-SLIDER],
@@ -107,9 +107,6 @@ import PublicBookingWidget from '@/pages//PublicBookingWidget';
 import { useDataSaverMode } from '../hooks/useDataSaverMode';
 
 // ─── Constantes ───────────────────────────────────────────────
-// [C11] Numéro support centralisé — modifier ici uniquement
-const SUPPORT_WHATSAPP = '2250576031212';
-
 // [W2] Surface des cartes — blanc quasi opaque
 const CARD_BG        = 'rgba(255,255,255,0.94)';
 const CARD_BG_HOVER  = 'rgba(255,255,255,1)';
@@ -371,18 +368,18 @@ const parseColors = (tc) => {
 // theme_color = « bg1|bg2|idModèle ». Le 3e segment est ignoré par parseColors.
 // ⚠️ Copie de TEMPLATES dans ThemeColorPicker.jsx (dashboard) — garder synchronisées.
 const BG_TEMPLATES = {
-  savane:   { accent: '#e8a25f', motif: 0.12, band: 0.18, dia: 0.28, txt: '#3a1d0e', txt2: 'rgba(58,29,14,0.65)', faint: 'rgba(58,29,14,0.45)', ink: '#fff', sup: '#15803d' },
-  hibiscus: { accent: '#d6336c', motif: 0.06, band: 0.18, dia: 0.26, txt: '#4a1530', txt2: 'rgba(74,21,48,0.65)', faint: 'rgba(74,21,48,0.45)', ink: '#fff', sup: '#15803d' },
-  lagon:    { accent: '#0f9d94', motif: 0.10, band: 0,    dia: 0.22, txt: '#0b3b3a', txt2: 'rgba(11,59,58,0.65)', faint: 'rgba(11,59,58,0.45)', ink: '#fff', sup: '#15803d' },
+  savane:   { accent: '#e8a25f', motif: 0.12, band: 0.18, dia: 0.28, txt: '#3a1d0e', txt2: 'rgba(58,29,14,0.65)', faint: 'rgba(58,29,14,0.45)', ink: '#fff' },
+  hibiscus: { accent: '#d6336c', motif: 0.06, band: 0.18, dia: 0.26, txt: '#4a1530', txt2: 'rgba(74,21,48,0.65)', faint: 'rgba(74,21,48,0.45)', ink: '#fff' },
+  lagon:    { accent: '#0f9d94', motif: 0.10, band: 0,    dia: 0.22, txt: '#0b3b3a', txt2: 'rgba(11,59,58,0.65)', faint: 'rgba(11,59,58,0.45)', ink: '#fff' },
 };
 // Textes par défaut (fond sombre : ancien format ou image de fond)
-const DARK_TONE = { txt: '#fff', txt2: 'rgba(255,255,255,0.75)', faint: 'rgba(255,255,255,0.4)', ink: '#0f0a1e', sup: '#4ade80' };
+const DARK_TONE = { txt: '#fff', txt2: 'rgba(255,255,255,0.75)', faint: 'rgba(255,255,255,0.4)', ink: '#0f0a1e' };
 const getTemplateId = (tc) => (tc && tc.split('|')[2]) || '';
 // Variables de texte : une image de fond impose toujours le blanc
 const getTone = (p) => {
   if (!p || p.bg_image_url) return DARK_TONE;
   const t = BG_TEMPLATES[getTemplateId(p.theme_color)];
-  return t ? { txt: t.txt, txt2: t.txt2, faint: t.faint, ink: t.ink, sup: t.sup } : DARK_TONE;
+  return t ? { txt: t.txt, txt2: t.txt2, faint: t.faint, ink: t.ink } : DARK_TONE;
 };
 
 const svgUri = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
@@ -1309,16 +1306,17 @@ function PageWeightBadge() {
   );
 }
 
-// [DL7][FOOTER-OPACITY] Switch discret pour forcer manuellement le mode léger/complet.
+// [DL7][FOOTER-PLAIN] Switch discret pour forcer manuellement le mode léger/complet
+// (icône + texte seulement, sans fond ni bordure).
 function LightModeToggle({ isLight, setManual }) {
   return (
     <button
       onClick={() => setManual(!isLight)}
       aria-label={isLight ? 'Repasser en mode complet' : 'Activer le mode léger'}
       style={{
-        marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px',
-        background:'rgba(127,127,127,0.18)', border:'1px solid rgba(127,127,127,0.5)', borderRadius:'100px',
-        padding:'6px 14px', color:'var(--pp-txt2)', fontSize:'11px', fontWeight:600,
+        marginTop:'4px', display:'inline-flex', alignItems:'center', gap:'6px',
+        background:'none', border:'none',
+        padding:'6px 8px', color:'var(--pp-txt2)', fontSize:'11px', fontWeight:600,
         cursor:'pointer', touchAction:'manipulation',
       }}
     >
@@ -1423,7 +1421,7 @@ export default function PublicProfile({ previewProfile = null }) {
           .pp-link-btn-el:hover  { background:var(--pp-hover-bg, ${CARD_BG_HOVER}) !important; transform:translateY(-1px); }
           .pp-shop-card:hover    { background:${CARD_BG_HOVER} !important; transform:translateY(-2px); }
           .pp-share-btn:hover    { background:rgba(255,255,255,0.14) !important; }
-          .pp-brand-badge:hover  { background:rgba(127,127,127,0.34) !important; }
+          .pp-brand-badge:hover  { opacity:0.7; }
         }
 
         /* [LINKS-CARD] Lignes de la carte de liens */
@@ -1835,7 +1833,6 @@ export default function PublicProfile({ previewProfile = null }) {
         '--pp-txt2':  tone.txt2,
         '--pp-faint': tone.faint,
         '--pp-ink':   tone.ink,
-        '--pp-sup':   tone.sup,
       }}>
 
         {bannerList.length > 0 ? (
@@ -2096,23 +2093,13 @@ export default function PublicProfile({ previewProfile = null }) {
           </div>
         )}
 
-        {/* Support — [FOOTER-OPACITY] fond et bordure plus opaques */}
-        <a
-          href={`https://wa.me/${SUPPORT_WHATSAPP}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ marginTop:'32px', display:'flex', alignItems:'center', gap:'8px', background:'rgba(37,211,102,0.42)', border:'1px solid rgba(37,211,102,0.75)', borderRadius:'999px', padding:'11px 20px', color:'var(--pp-sup)', fontSize:'13px', fontWeight:700, textDecoration:'none', touchAction:'manipulation' }}
-        >
-          <WhatsAppIcon size={16} color="#25D366" /> Contactez notre support
-        </a>
-
-        {/* [FOOTER-OPACITY] badge plus opaque, texte pleine couleur */}
+        {/* [FOOTER-PLAIN] icône + texte seulement, sans fond ni bordure */}
         <a
           href="https://www.socialapp.work"
           target="_blank"
           rel="noopener noreferrer"
           className="pp-brand-badge"
-          style={{ marginTop:'18px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(127,127,127,0.24)', border:'1px solid rgba(127,127,127,0.55)', borderRadius:'100px', padding:'7px 16px', color:'var(--pp-txt)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'background 0.15s' }}
+          style={{ marginTop:'32px', display:'inline-flex', alignItems:'center', gap:'6px', background:'none', border:'none', padding:'6px 8px', color:'var(--pp-txt)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'opacity 0.15s' }}
         >
           <Link2 size={12} /> Créé avec SocialApp
         </a>

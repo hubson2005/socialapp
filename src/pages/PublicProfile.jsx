@@ -1849,7 +1849,7 @@ export default function PublicProfile({ previewProfile = null }) {
         position:'fixed', zIndex:50,
         bottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
         right:  'max(16px, env(safe-area-inset-right, 0px))',
-        display:'flex', flexDirection:'column', alignItems:'center', gap:'10px',
+        display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'10px',
       }}>
         <LangToggle lang={i18n.lang} onToggle={i18n.toggle} loading={i18n.loading} error={i18n.error} />
         <ShareBar profile={profile} />

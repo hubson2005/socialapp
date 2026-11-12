@@ -230,39 +230,66 @@ export function LangProvider({ value, children }) {
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 }
 
-// ─── Bouton rond « EN / FR » (libellés empilés verticalement) ──────────────
-export function LangToggle({ lang, onToggle, loading, error }) {
-  const en = lang === 'en';
-  const lab = (on) => ({ fontSize: '11px', lineHeight: 1, letterSpacing: '0.05em', fontWeight: on ? 900 : 700, opacity: on ? 1 : 0.45, transition: 'opacity 0.2s' });
+// Drapeaux en SVG intégré (aucune image à charger)
+const FlagUK = () => (
+  <svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true" style={{ display:'block' }}>
+    <clipPath id="pp-uj-clip"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z" /></clipPath>
+    <rect width="60" height="30" fill="#012169" />
+    <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6" />
+    <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" strokeWidth="2" clipPath="url(#pp-uj-clip)" />
+    <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10" />
+    <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6" />
+  </svg>
+);
+const FlagFR = () => (
+  <svg viewBox="0 0 3 2" preserveAspectRatio="none" width="100%" height="100%" aria-hidden="true" style={{ display:'block' }}>
+    <rect width="1" height="2" fill="#0055A4" />
+    <rect x="1" width="1" height="2" fill="#fff" />
+    <rect x="2" width="1" height="2" fill="#EF4135" />
+  </svg>
+);
+
+export function LangToggle({ lang, onToggle, loading = false, error = false }) {
+  const isFr = lang === 'fr';
+  const txt = (active) => ({
+    fontSize: '12px', fontWeight: 800, letterSpacing: '0.04em', lineHeight: 1,
+    color: active ? '#3a1d0e' : 'rgba(58,29,14,0.35)', transition: 'color 0.2s',
+  });
+
   return (
-    <div style={{ position: 'relative' }}>
-      <style>{`.pp-lang-btn:active{transform:scale(0.95)} .pp-lang-btn:focus-visible{outline:2px solid rgba(255,255,255,0.85);outline-offset:2px}`}</style>
+    <div style={{
+      display:'flex', alignItems:'center', gap:'7px', padding:'6px 10px', borderRadius:'999px',
+      background:'rgba(255,255,255,0.94)', boxShadow:'0 6px 20px rgba(0,0,0,0.3)', fontFamily:'inherit',
+    }}>
+      <span style={txt(!isFr)}>EN</span>
       <button
         type="button"
+        role="switch"
+        aria-checked={isFr}
+        aria-label="Changer de langue / Switch language"
+        title={error ? 'Traduction indisponible' : undefined}
+        disabled={loading}
         onClick={onToggle}
-        aria-pressed={en}
-        aria-label={en ? 'Afficher en français · Show in French' : 'Translate to English · Traduire en anglais'}
-        className="pp-lang-btn"
         style={{
-          position: 'relative', width: '48px', height: '48px', borderRadius: '50%', padding: 0,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
-          background: 'rgba(99,102,241,0.92)', border: '1px solid rgba(255,255,255,0.18)', color: '#fff',
-          boxShadow: '0 6px 20px rgba(0,0,0,0.35)', cursor: 'pointer', touchAction: 'manipulation',
-          fontFamily: 'inherit', transition: 'transform 0.15s',
+          position:'relative', width:'58px', height:'32px', padding:0, border:'none', borderRadius:'999px',
+          overflow:'hidden', background:'#fff', cursor: loading ? 'wait' : 'pointer', touchAction:'manipulation',
+          opacity: loading ? 0.8 : 1,
+          boxShadow: error ? '0 0 0 2px #ef4444' : 'inset 0 0 0 2px #2d2a3a',
         }}
       >
-        <span style={lab(en)}>EN</span>
-        <span aria-hidden="true" style={{ width: '16px', height: '1px', background: 'rgba(255,255,255,0.5)' }} />
-        <span style={lab(!en)}>FR</span>
-        {loading && (
-          <span aria-hidden="true" style={{ position: 'absolute', inset: '-5px', borderRadius: '50%', border: '2px solid rgba(99,102,241,0.9)', borderTopColor: 'transparent', animation: 'pp-spin 0.8s linear infinite', pointerEvents: 'none' }} />
-        )}
+        <span style={{ position:'absolute', inset:0 }}>{isFr ? <FlagFR /> : <FlagUK />}</span>
+        <span style={{
+          position:'absolute', top:'3px', left: isFr ? 'calc(100% - 29px)' : '3px',
+          width:'26px', height:'26px', borderRadius:'50%', background:'#fff',
+          boxShadow:'0 1px 4px rgba(0,0,0,0.4), 0 0 0 2px #2d2a3a',
+          transition:'left 0.25s ease', display:'flex', alignItems:'center', justifyContent:'center',
+        }}>
+          {loading && (
+            <span style={{ width:'12px', height:'12px', border:'2px solid #6366f1', borderTopColor:'transparent', borderRadius:'50%', animation:'pp-spin 0.8s linear infinite' }} />
+          )}
+        </span>
       </button>
-      {error && (
-        <div role="status" style={{ position: 'absolute', right: '58px', top: '50%', transform: 'translateY(-50%)', whiteSpace: 'nowrap', background: 'rgba(0,0,0,0.82)', color: '#fff', fontSize: '11px', fontWeight: 600, padding: '8px 12px', borderRadius: '999px', boxShadow: '0 4px 14px rgba(0,0,0,0.35)' }}>
-          Translation unavailable · Traduction indisponible
-        </div>
-      )}
+      <span style={txt(isFr)}>FR</span>
     </div>
   );
 }

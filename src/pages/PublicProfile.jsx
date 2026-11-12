@@ -85,6 +85,11 @@
  *        « Créé avec SocialApp » et « Mode léger » s'affichent sans fond ni
  *        bordure (icône + texte seulement).
  *
+ * TRADUCTION (cette révision) :
+ *  [I18N-ROWS] LinkRow, CryptoRow et QRCodeRow utilisent useLang() : libellés de
+ *        plateforme et textes fixes via t(), libellés saisis par le propriétaire
+ *        via tr(). rowValue() reçoit tr en paramètre.
+ *
  * Aucun changement de comportement en mode complet (isLight === false) hors
  * la modale produit [MODAL1-4], le carrousel de bannières [BANNER-SLIDER],
  * la ligne / fenêtre QR code [QR-MODAL] et les fonds par modèle [BG-TEMPLATES].
@@ -105,6 +110,7 @@ import SEO from "../components/SEO";
 import PublicBookingWidget from '@/pages//PublicBookingWidget';
 // [DL1] Détection du mode data-light
 import { useDataSaverMode } from '../hooks/useDataSaverMode';
+import { LangProvider, LangToggle, useLang, useProfileTranslation } from '../lib/profileI18n';
 
 // ─── Constantes ───────────────────────────────────────────────
 // [W2] Surface des cartes — blanc quasi opaque
@@ -500,9 +506,10 @@ const rowValueStyle = { display:'block', marginTop:'1px', fontSize:'15px', fontW
 
 // Valeur affichée : le texte saisi par l'utilisateur s'il apporte une info,
 // sinon l'adresse nettoyée (sans mailto:, tel:, https://, www.)
-function rowValue(link, platform) {
+// [I18N-ROWS] tr traduit le libellé saisi par le propriétaire.
+function rowValue(link, platform, tr = (s) => s) {
   const typed = (link.label || '').trim();
-  if (typed && typed.toLowerCase() !== String(platform.label || '').trim().toLowerCase()) return typed;
+  if (typed && typed.toLowerCase() !== String(platform.label || '').trim().toLowerCase()) return tr(typed);
   const cleaned = (link.url || '').trim()
     .replace(/^(mailto:|tel:|https?:\/\/)/i, '')
     .replace(/^www\./i, '')
@@ -521,12 +528,13 @@ function LinkRowIcon({ platform }) {
 }
 
 function LinkRow({ link, platform, first, onClick }) {
+  const { t, tr } = useLang();
   return (
     <button type="button" onClick={onClick} className="pp-row-btn" style={rowBaseStyle(first)}>
       <LinkRowIcon platform={platform} />
       <span style={{ minWidth:0, flex:1 }}>
-        <span style={rowLabelStyle}>{platform.label}</span>
-        <span style={rowValueStyle}>{rowValue(link, platform)}</span>
+        <span style={rowLabelStyle}>{t(platform.label)}</span>
+        <span style={rowValueStyle}>{rowValue(link, platform, tr)}</span>
       </span>
     </button>
   );
@@ -534,6 +542,7 @@ function LinkRow({ link, platform, first, onClick }) {
 
 // Adresse crypto : toute la ligne copie l'adresse dans le presse-papiers.
 function CryptoRow({ link, platform, first, onCopied }) {
+  const { t, tr } = useLang();
   const [copied, setCopied] = useState(false);
   const timerRef = useRef(null);
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
@@ -556,10 +565,10 @@ function CryptoRow({ link, platform, first, onCopied }) {
   };
 
   return (
-    <button type="button" onClick={copy} className="pp-row-btn" style={rowBaseStyle(first)} aria-label={`Copier ${link.label || platform.label}`}>
+    <button type="button" onClick={copy} className="pp-row-btn" style={rowBaseStyle(first)} aria-label={`${t('Copier')} ${link.label ? tr(link.label) : t(platform.label)}`}>
       <LinkRowIcon platform={platform} />
       <span style={{ minWidth:0, flex:1 }}>
-        <span style={rowLabelStyle}>{link.label || platform.label}</span>
+        <span style={rowLabelStyle}>{link.label ? tr(link.label) : t(platform.label)}</span>
         <span style={{ ...rowValueStyle, fontSize:'13px' }}>{address}</span>
       </span>
       <span aria-hidden="true" style={{ width:'36px', height:'36px', borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background: copied ? '#dcfce7' : ROW_TILE_BG, color: copied ? '#16a34a' : ROW_ICON_INK, transition:'background 0.2s,color 0.2s' }}>
@@ -678,14 +687,15 @@ function deriveContact(profile, enabledLinks) {
 
 // Dernière ligne de la carte « Retrouvez-moi »
 function QRCodeRow({ first, onClick }) {
+  const { t } = useLang();
   return (
     <button type="button" onClick={onClick} className="pp-row-btn" style={rowBaseStyle(first)} aria-haspopup="dialog">
       <span style={{ width:'44px', height:'44px', borderRadius:'14px', background:ROW_TILE_BG, color:ROW_ICON_INK, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
         <QrCode size={20} />
       </span>
       <span style={{ minWidth:0, flex:1 }}>
-        <span style={rowLabelStyle}>QR code</span>
-        <span style={rowValueStyle}>En ligne ou sans internet</span>
+        <span style={rowLabelStyle}>{t('QR code')}</span>
+        <span style={rowValueStyle}>{t('En ligne ou sans internet')}</span>
       </span>
       <span aria-hidden="true" style={{ width:'36px', height:'36px', borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:ROW_TILE_BG, color:ROW_ICON_INK }}>
         <ChevronRight size={16} />
@@ -696,6 +706,7 @@ function QRCodeRow({ first, onClick }) {
 
 // Fenêtre : deux onglets + le QR code, rien d'autre (aucun bouton d'action).
 function QRCodeModal({ profile, enabledLinks, onClose }) {
+  const { t } = useLang();
   const [mode, setMode]     = useState('online'); // 'online' | 'offline'
   const [ready, setReady]   = useState(false);
   const [failed, setFailed] = useState(false);
@@ -759,8 +770,8 @@ function QRCodeModal({ profile, enabledLinks, onClose }) {
   }, [mode, data, cfgKey]);
 
   const tabs = [
-    { id: 'online',  label: 'Profil en ligne', icon: <Globe size={16} /> },
-    { id: 'offline', label: 'Sans internet',   icon: <Smartphone size={16} /> },
+    { id: 'online',  label: t('Profil en ligne'), icon: <Globe size={16} /> },
+    { id: 'offline', label: t('Sans internet'),   icon: <Smartphone size={16} /> },
   ];
 
   return (
@@ -768,7 +779,7 @@ function QRCodeModal({ profile, enabledLinks, onClose }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Mon QR code"
+      aria-label={t('Mon QR code')}
       style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease', fontFamily:'inherit' }}
     >
       <style>{`.pp-qr-box canvas { width:100% !important; height:auto !important; display:block; }`}</style>
@@ -781,7 +792,7 @@ function QRCodeModal({ profile, enabledLinks, onClose }) {
           <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'#e4d3c5' }} />
           <button
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={t('Fermer')}
             style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', width:'44px', height:'44px', borderRadius:'50%', background:ROW_TILE_BG, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:ROW_ICON_INK, touchAction:'manipulation' }}
           >
             <X size={18} />
@@ -789,7 +800,7 @@ function QRCodeModal({ profile, enabledLinks, onClose }) {
         </div>
 
         <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain', padding:'0 16px calc(24px + env(safe-area-inset-bottom, 0px))' }}>
-          <h2 style={{ margin:'0 0 14px', textAlign:'center', fontSize:'clamp(17px, 5vw, 20px)', fontWeight:800, color:CARD_TEXT }}>Mon QR code</h2>
+          <h2 style={{ margin:'0 0 14px', textAlign:'center', fontSize:'clamp(17px, 5vw, 20px)', fontWeight:800, color:CARD_TEXT }}>{t('Mon QR code')}</h2>
 
           {/* Onglets */}
           <div role="tablist" style={{ display:'flex', gap:'4px', padding:'4px', background:ROW_TILE_BG, borderRadius:'999px', marginBottom:'18px' }}>
@@ -821,15 +832,15 @@ function QRCodeModal({ profile, enabledLinks, onClose }) {
               )}
               {failed && (
                 <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px', textAlign:'center', color:ROW_LABEL, fontSize:'13px', fontWeight:600, lineHeight:1.5 }}>
-                  Impossible de charger le QR code. Vérifiez votre connexion puis réessayez.
+                  {t('Impossible de charger le QR code. Vérifiez votre connexion puis réessayez.')}
                 </div>
               )}
             </div>
 
             <p style={{ margin:'16px 0 0', textAlign:'center', fontSize:'13px', lineHeight:1.5, color:CARD_TEXT_MUTED, maxWidth:'300px' }}>
               {offline
-                ? 'Le scan affiche directement la fiche contact avec « Ajouter un contact », sans connexion internet.'
-                : 'Le scan ouvre ce profil digital (connexion internet requise).'}
+                ? t('Le scan affiche directement la fiche contact avec « Ajouter un contact », sans connexion internet.')
+                : t('Le scan ouvre ce profil digital (connexion internet requise).')}
             </p>
           </div>
         </div>
@@ -909,6 +920,7 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
 
 // [P2] Barre d'actions flottante — partage natif avec repli "copier le lien".
 function ShareBar({ profile }) {
+  const { t } = useLang();
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -938,7 +950,7 @@ function ShareBar({ profile }) {
   return (
     <button
       onClick={handleShare}
-      aria-label="Partager ce profil"
+      aria-label={t('Partager ce profil')}
       className="pp-share-btn"
       style={{
         display:'flex', alignItems:'center', justifyContent:'center',
@@ -957,6 +969,7 @@ function ShareBar({ profile }) {
 }
 
 function ImageLightbox({ src, onClose }) {
+  const { t } = useLang();
   useBodyScrollLock();
 
   useEffect(() => {
@@ -969,7 +982,7 @@ function ImageLightbox({ src, onClose }) {
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:9500, background:'rgba(0,0,0,0.92)', backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', animation:'pp-fadeInOverlay 0.2s ease' }}>
       <button
         onClick={onClose}
-        aria-label="Fermer"
+        aria-label={t('Fermer')}
         style={{ position:'absolute', top:'max(16px, env(safe-area-inset-top, 0px))', right:'16px', width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'white', zIndex:2, touchAction:'manipulation' }}
       >
         <X size={18} />
@@ -983,6 +996,7 @@ function ImageLightbox({ src, onClose }) {
 // pause au survol/toucher, swipe, points, bouton Télécharger en haut à droite.
 // En mode léger, seules la slide courante et ses voisines sont montées.
 function BannerSlider({ urls, getSrc, isLight, priority, onDownload }) {
+  const { t } = useLang();
   const n = urls.length;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -1024,7 +1038,7 @@ function BannerSlider({ urls, getSrc, isLight, priority, onDownload }) {
               eager={i === 0}
               priority={priority && i === 0}
               src={getSrc(u)}
-              alt={`Bannière ${i + 1}`}
+              alt={`${t('Bannière')} ${i + 1}`}
               style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
             />
           </div>
@@ -1034,16 +1048,16 @@ function BannerSlider({ urls, getSrc, isLight, priority, onDownload }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onDownload(urls[index]); }}
-        aria-label="Télécharger la bannière"
+        aria-label={t('Télécharger la bannière')}
         style={{ position:'absolute', top:'10px', right:'10px', zIndex:3, display:'flex', alignItems:'center', gap:'5px', background:'rgba(255,255,255,0.92)', color:'#000', padding:'8px 12px', minHeight:'36px', borderRadius:'999px', fontWeight:700, fontSize:'11px', border:'none', cursor:'pointer', touchAction:'manipulation', boxShadow:'0 2px 10px rgba(0,0,0,0.3)' }}
       >
-        <Download size={12} /> Télécharger
+        <Download size={12} /> {t('Télécharger')}
       </button>
 
       {n > 1 && (
         <div style={{ position:'absolute', bottom:'6px', left:'50%', transform:'translateX(-50%)', display:'flex', zIndex:3 }}>
           {urls.map((_, i) => (
-            <button key={i} type="button" onClick={() => setIndex(i)} aria-label={`Bannière ${i + 1}`}
+            <button key={i} type="button" onClick={() => setIndex(i)} aria-label={`${t('Bannière')} ${i + 1}`}
               style={{ background:'none', border:'none', padding:'6px 3px', cursor:'pointer', touchAction:'manipulation' }}>
               <span style={{ display:'block', width: i === index ? '18px' : '6px', height:'6px', borderRadius:'999px', background:'white', opacity: i === index ? 1 : 0.5, boxShadow:'0 1px 3px rgba(0,0,0,0.4)', transition:'all 0.3s' }} />
             </button>
@@ -1059,6 +1073,7 @@ function BannerSlider({ urls, getSrc, isLight, priority, onDownload }) {
 // parent, isZoomed (true tant que le lightbox est ouvert : Échap ferme alors
 // uniquement le zoom).
 function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLight, onZoom, isZoomed }) {
+  const { t, tr } = useLang();
   const hasOld   = !!product.original_price && Number(product.original_price) > Number(product.price);
   const discount = hasOld ? Math.round((1 - product.price / product.original_price) * 100) : 0;
   const inStock  = product.is_available !== false;
@@ -1082,7 +1097,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={product.title}
+      aria-label={tr(product.title)}
       style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'pp-fadeInOverlay 0.25s ease' }}
     >
       <div
@@ -1094,7 +1109,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
           <div style={{ width:'36px', height:'4px', borderRadius:'2px', background:'#e4d3c5' }} />
           <button
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={t('Fermer')}
             style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', width:'44px', height:'44px', borderRadius:'50%', background:ROW_TILE_BG, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:ROW_ICON_INK, touchAction:'manipulation' }}
           >
             <X size={18} />
@@ -1125,7 +1140,7 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
                 <LazyImg
                   eager
                   src={imgUrl(product.image_url, { width: imgWidth })}
-                  alt={product.title}
+                  alt={tr(product.title)}
                   style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', objectPosition:'center', display:'block', zIndex:1 }}
                 />
               </>
@@ -1142,23 +1157,23 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
             {canZoom && inStock && (
               <button
                 onClick={(e) => { e.stopPropagation(); onZoom(product.image_url); }}
-                aria-label="Agrandir l'image"
+                aria-label={t("Agrandir l'image")}
                 style={{ position:'absolute', bottom:'10px', right:'10px', zIndex:2, display:'flex', alignItems:'center', gap:'5px', background:'rgba(0,0,0,0.6)', color:'white', border:'1px solid rgba(255,255,255,0.18)', borderRadius:'999px', padding:'7px 12px', minHeight:'36px', fontSize:'11px', fontWeight:700, cursor:'pointer', touchAction:'manipulation' }}
               >
-                <ZoomIn size={13} /> Agrandir
+                <ZoomIn size={13} /> {t('Agrandir')}
               </button>
             )}
 
             {!inStock && (
               <div style={{ position:'absolute', inset:0, zIndex:3, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
-                <span style={{ background:'rgba(0,0,0,0.8)', color:'white', fontSize:'13px', fontWeight:700, padding:'8px 20px', borderRadius:'100px' }}>INDISPONIBLE</span>
+                <span style={{ background:'rgba(0,0,0,0.8)', color:'white', fontSize:'13px', fontWeight:700, padding:'8px 20px', borderRadius:'100px' }}>{t('INDISPONIBLE')}</span>
               </div>
             )}
           </div>
 
           {/* Titre */}
           <h2 style={{ color:CARD_TEXT, fontSize:'clamp(17px, 5vw, 21px)', fontWeight:800, margin:'16px 0 10px', lineHeight:1.25, wordBreak:'break-word' }}>
-            {product.title}
+            {tr(product.title)}
           </h2>
 
           {/* [MODAL1] Prix : jamais coupé, les éléments passent dessous si besoin */}
@@ -1179,13 +1194,13 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
             <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background: inStock ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:'1px solid ' + (inStock ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'), borderRadius:'100px', padding:'6px 12px' }}>
               <div style={{ width:'7px', height:'7px', borderRadius:'50%', background: inStock ? '#22c55e' : '#ef4444', flexShrink:0 }} />
               <span style={{ fontSize:'12px', fontWeight:600, whiteSpace:'nowrap', color: inStock ? '#16a34a' : '#dc2626' }}>
-                {inStock ? 'En stock · Disponible' : 'Rupture de stock'}
+                {inStock ? t('En stock · Disponible') : t('Rupture de stock')}
               </span>
             </div>
             {discount > 0 && (
               <div style={{ display:'inline-flex', alignItems:'center', background:'rgba(34,197,94,0.12)', border:'1px solid rgba(34,197,94,0.25)', borderRadius:'100px', padding:'6px 12px' }}>
                 <span style={{ fontSize:'12px', fontWeight:700, whiteSpace:'nowrap', color:'#16a34a' }}>
-                  Économise {formatNumber(product.original_price - product.price)}&nbsp;F
+                  {t('Économise')} {formatNumber(product.original_price - product.price)}&nbsp;F
                 </span>
               </div>
             )}
@@ -1194,12 +1209,12 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
           {/* Description */}
           {product.description && (
             <div style={{ background:'#fff', border:`1px solid ${ROW_DIVIDER}`, borderRadius:'16px', padding:'14px 16px' }}>
-              <p style={{ color:ROW_LABEL, fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', margin:'0 0 8px' }}>Description</p>
-              <p style={{ color:'#5b4637', fontSize:'14px', lineHeight:1.65, margin:0, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{product.description}</p>
+              <p style={{ color:ROW_LABEL, fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', margin:'0 0 8px' }}>{t('Description')}</p>
+              <p style={{ color:'#5b4637', fontSize:'14px', lineHeight:1.65, margin:0, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{tr(product.description)}</p>
             </div>
           )}
 
-          <p style={{ color:ROW_LABEL, fontSize:'11px', textAlign:'center', margin:'16px 0 0' }}>🔒 Paiement et livraison directement avec le vendeur</p>
+          <p style={{ color:ROW_LABEL, fontSize:'11px', textAlign:'center', margin:'16px 0 0' }}>🔒 {t('Paiement et livraison directement avec le vendeur')}</p>
         </div>
 
         {/* [MODAL4] Pied fixe : le bouton reste toujours visible */}
@@ -1219,11 +1234,11 @@ function ProductDetailModal({ product, whatsappNumber, profileId, onClose, isLig
                 }}
                 style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', width:'100%', minHeight:'52px', padding:'0 16px', boxSizing:'border-box', background:'#25D366', borderRadius:'16px', color:'white', fontSize:'16px', fontWeight:700, textDecoration:'none', boxShadow:'0 8px 24px rgba(37,211,102,0.35)', touchAction:'manipulation' }}
               >
-                <WhatsAppIcon size={20} color="white" /> Commander sur WhatsApp
+                <WhatsAppIcon size={20} color="white" /> {t('Commander sur WhatsApp')}
               </a>
             ) : (
               <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', minHeight:'52px', boxSizing:'border-box', background:'#fff', border:`1px solid ${ROW_DIVIDER}`, borderRadius:'16px', color:ROW_LABEL, fontSize:'14px', fontWeight:600 }}>
-                Article temporairement indisponible
+                {t('Article temporairement indisponible')}
               </div>
             )}
           </div>
@@ -1248,6 +1263,7 @@ function SectionHeader({ icon, title, count }) {
 // [W2][W3][DL6] Carte boutique blanche — isLight en prop pour réduire la
 // largeur d'image demandée à Supabase Storage.
 function PublicProductCard({ product, onOpen, isLight }) {
+  const { t, tr } = useLang();
   const discount = product.original_price && product.price
     ? Math.round((1 - product.price / product.original_price) * 100)
     : 0;
@@ -1262,21 +1278,21 @@ function PublicProductCard({ product, onOpen, isLight }) {
     >
       <div style={{ position:'relative', aspectRatio:'4/3', background:'rgba(0,0,0,0.05)', overflow:'hidden' }}>
         {product.image_url
-          ? <LazyImg src={imgUrl(product.image_url, { width: imgWidth })} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+          ? <LazyImg src={imgUrl(product.image_url, { width: imgWidth })} alt={tr(product.title)} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ShoppingBag size={28} color="rgba(0,0,0,0.2)" /></div>
         }
         {discount > 0 && <div style={{ position:'absolute', top:'8px', left:'8px', background:'#22c55e', borderRadius:'6px', padding:'2px 7px', fontSize:'11px', fontWeight:700, color:'white' }}>-{discount}%</div>}
         {!product.is_available && (
           <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <span style={{ background:'rgba(0,0,0,0.7)', color:'rgba(255,255,255,0.9)', fontSize:'10px', fontWeight:700, padding:'4px 10px', borderRadius:'20px' }}>INDISPONIBLE</span>
+            <span style={{ background:'rgba(0,0,0,0.7)', color:'rgba(255,255,255,0.9)', fontSize:'10px', fontWeight:700, padding:'4px 10px', borderRadius:'20px' }}>{t('INDISPONIBLE')}</span>
           </div>
         )}
-        <div style={{ position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.6)', borderRadius:'100px', padding:'3px 8px', fontSize:'10px', color:'rgba(255,255,255,0.9)', fontWeight:600 }}>Voir +</div>
+        <div style={{ position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.6)', borderRadius:'100px', padding:'3px 8px', fontSize:'10px', color:'rgba(255,255,255,0.9)', fontWeight:600 }}>{t('Voir +')}</div>
       </div>
       <div style={{ padding:'10px 12px 12px' }}>
         <span style={{ fontSize:'16px', fontWeight:800, color:product.original_price ? '#ff6b35' : CARD_TEXT, display:'block', lineHeight:1.1, whiteSpace:'nowrap' }}>{formatPrice(product.price)}</span>
         {product.original_price && <span style={{ fontSize:'11px', color:CARD_TEXT_FAINT, textDecoration:'line-through' }}>{formatPrice(product.original_price)}</span>}
-        <p style={{ color:CARD_TEXT, opacity:0.85, fontSize:'12px', fontWeight:700, margin:'5px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{product.title}</p>
+        <p style={{ color:CARD_TEXT, opacity:0.85, fontSize:'12px', fontWeight:700, margin:'5px 0 0', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{tr(product.title)}</p>
       </div>
     </div>
   );
@@ -1284,6 +1300,7 @@ function PublicProductCard({ product, onOpen, isLight }) {
 
 // [DL5] Petit indicateur "~XX Ko chargés" — mode léger uniquement.
 function PageWeightBadge() {
+  const { t } = useLang();
   const [kb, setKb] = useState(null);
 
   useEffect(() => {
@@ -1301,7 +1318,7 @@ function PageWeightBadge() {
 
   return (
     <div style={{ marginTop:'8px', display:'inline-flex', alignItems:'center', gap:'5px', color:'var(--pp-faint)', fontSize:'11px' }}>
-      <Wifi size={11} /> Mode léger · ~{kb} Ko chargés
+      <Wifi size={11} /> {t('Mode léger')} · ~{kb} {t('Ko chargés')}
     </div>
   );
 }
@@ -1309,10 +1326,11 @@ function PageWeightBadge() {
 // [DL7][FOOTER-PLAIN] Switch discret pour forcer manuellement le mode léger/complet
 // (icône + texte seulement, sans fond ni bordure).
 function LightModeToggle({ isLight, setManual }) {
+  const { t } = useLang();
   return (
     <button
       onClick={() => setManual(!isLight)}
-      aria-label={isLight ? 'Repasser en mode complet' : 'Activer le mode léger'}
+      aria-label={isLight ? t('Repasser en mode complet') : t('Activer le mode léger')}
       style={{
         marginTop:'4px', display:'inline-flex', alignItems:'center', gap:'6px',
         background:'none', border:'none',
@@ -1321,7 +1339,7 @@ function LightModeToggle({ isLight, setManual }) {
       }}
     >
       {isLight ? <WifiOff size={11} /> : <Wifi size={11} />}
-      {isLight ? 'Mode léger activé' : 'Activer le mode léger'}
+      {isLight ? t('Mode léger activé') : t('Activer le mode léger')}
     </button>
   );
 }
@@ -1713,6 +1731,22 @@ export default function PublicProfile({ previewProfile = null }) {
     // tout autre schéma (javascript:, data:, vbscript:…) est ignoré
   }, [profile, isPreview]);
 
+  // [I18N] Textes saisis par le propriétaire, à traduire quand on passe en anglais
+  const i18nTexts = useMemo(() => {
+    const out = [];
+    const add = (s) => { if (typeof s === 'string' && s.trim()) out.push(s.trim()); };
+    if (profile) {
+      add(profile.bio);
+      add(profile.event_name);
+      add(profile.event_description);
+      (profile.links || []).forEach(l => add(l.label));
+    }
+    products.forEach(p => { add(p.title); add(p.description); });
+    return out;
+  }, [profile, products]);
+  const i18n = useProfileTranslation(i18nTexts);
+  const { t, tr } = i18n;
+
   if (loading)  return <ProfileSkeleton />;
   if (notFound) return (
     <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f0a1e', color:'white', fontFamily:SYSTEM_FONT_STACK }}>
@@ -1791,7 +1825,7 @@ export default function PublicProfile({ previewProfile = null }) {
   );
 
   return (
-  <>
+  <LangProvider value={i18n}>
     {!isPreview && (
     <SEO
       title={`${profile.display_name} | SocialApp`}
@@ -1815,7 +1849,9 @@ export default function PublicProfile({ previewProfile = null }) {
         position:'fixed', zIndex:50,
         bottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
         right:  'max(16px, env(safe-area-inset-right, 0px))',
+        display:'flex', flexDirection:'column', alignItems:'center', gap:'10px',
       }}>
+        <LangToggle lang={i18n.lang} onToggle={i18n.toggle} loading={i18n.loading} error={i18n.error} />
         <ShareBar profile={profile} />
       </div>
 
@@ -1868,7 +1904,7 @@ export default function PublicProfile({ previewProfile = null }) {
               </h1>
               {profile.bio && (
                 <p style={{ color:'var(--pp-txt2)', fontSize:'13px', fontWeight:500, textAlign:'left', lineHeight:1.4, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
-                  {profile.bio}
+                  {tr(profile.bio)}
                 </p>
               )}
             </div>
@@ -1884,7 +1920,7 @@ export default function PublicProfile({ previewProfile = null }) {
               {profile.is_verified && <span style={{ marginLeft:'8px', fontSize:'16px', color:'#22c55e' }}>✓</span>}
             </h1>
 
-            {profile.bio && <p style={{ color:'var(--pp-txt2)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{profile.bio}</p>}
+            {profile.bio && <p style={{ color:'var(--pp-txt2)', fontSize:'14px', fontWeight:500, textAlign:'center', maxWidth:'300px', lineHeight:1.5, marginBottom:'12px' }}>{tr(profile.bio)}</p>}
           </>
         )}
 
@@ -1902,7 +1938,7 @@ export default function PublicProfile({ previewProfile = null }) {
                 <button
                   key={i}
                   onClick={() => handleLinkClick(link)}
-                  aria-label={link.label || platform.label}
+                  aria-label={link.label ? tr(link.label) : t(platform.label)}
                   className="pp-chip"
                   style={{
                     flex:'0 1 auto', minWidth:0,
@@ -1923,7 +1959,7 @@ export default function PublicProfile({ previewProfile = null }) {
                     {platform.icon ? React.cloneElement(platform.icon, { width: 32, height: 32 }) : null}
                   </span>
                   <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {link.label || platform.label}
+                    {link.label ? tr(link.label) : t(platform.label)}
                   </span>
                 </button>
               );
@@ -1939,7 +1975,7 @@ export default function PublicProfile({ previewProfile = null }) {
                 {/* [PERF2b][PERF2c] Image LCP : même URL que le preload, fetchPriority high sur la 1re */}
                 <img
                   src={srcFor(images[currentIndex], eventW)}
-                  alt={profile.event_name || "Image de l'événement"}
+                  alt={profile.event_name ? tr(profile.event_name) : t("Image de l'événement")}
                   fetchPriority={currentIndex === 0 ? 'high' : undefined}
                   decoding="async"
                   style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', display:'block', transition:'opacity 0.5s ease', cursor:'zoom-in' }}
@@ -1947,10 +1983,10 @@ export default function PublicProfile({ previewProfile = null }) {
                 />
                 <div style={{ position:'absolute', bottom:'14px', right:'12px', display:'flex', gap:'6px', zIndex:10 }}>
                   <button onClick={e => { e.stopPropagation(); setLightboxSrc(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.9)', color:'white', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', touchAction:'manipulation', minHeight:'36px' }}>
-                    <ZoomIn size={12} /> Afficher
+                    <ZoomIn size={12} /> {t('Afficher')}
                   </button>
                   <button onClick={e => { e.stopPropagation(); handleDownload(images[currentIndex]); }} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(255,255,255,0.92)', color:'#000', padding:'8px 12px', borderRadius:'999px', fontWeight:'700', fontSize:'11px', border:'none', cursor:'pointer', touchAction:'manipulation', minHeight:'36px' }}>
-                    <Download size={12} /> Télécharger
+                    <Download size={12} /> {t('Télécharger')}
                   </button>
                 </div>
                 {images.length > 1 && (
@@ -1969,9 +2005,9 @@ export default function PublicProfile({ previewProfile = null }) {
             {(profile.event_name || profile.event_location) && (
               <div style={{ background:`linear-gradient(135deg,${ec1},${ec2})`, borderRadius:'20px', padding:'20px', textAlign:'center', marginBottom:'12px' }}>
                 <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(0,0,0,0.2)', borderRadius:'100px', padding:'4px 12px', fontSize:'11px', fontWeight:'700', color:'white', marginBottom:'8px' }}>
-                  <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'white', display:'inline-block', animation:'pp-pulse 1.5s infinite' }} /> ÉVÉNEMENT
+                  <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'white', display:'inline-block', animation:'pp-pulse 1.5s infinite' }} /> {t('ÉVÉNEMENT')}
                 </div>
-                {profile.event_name     && <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'4px' }}>{profile.event_name}</div>}
+                {profile.event_name     && <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'4px' }}>{tr(profile.event_name)}</div>}
                 {profile.event_location && <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.85)' }}>📍 {profile.event_location}</div>}
               </div>
             )}
@@ -1980,19 +2016,19 @@ export default function PublicProfile({ previewProfile = null }) {
                 {[{ v:countdown.days, l:'Jours' }, { v:countdown.hours, l:'Heures' }, { v:countdown.mins, l:'Min' }, { v:countdown.secs, l:'Sec' }].map(({ v, l }) => (
                   <div key={l} style={{ background:CARD_BG, borderRadius:'12px', padding:'10px', textAlign:'center', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
                     <div style={{ fontSize:'24px', fontWeight:'800', color:'#fa4e0f', lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{String(v).padStart(2, '0')}</div>
-                    <div style={{ fontWeight:'700', fontSize:'9px', color:CARD_TEXT_MUTED, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{l}</div>
+                    <div style={{ fontWeight:'700', fontSize:'9px', color:CARD_TEXT_MUTED, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{t(l)}</div>
                   </div>
                 ))}
               </div>
             )}
             {profile.event_description && (
               <div style={{ background:CARD_BG, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', border:CARD_BORDER, boxShadow:CARD_SHADOW, ...CARD_BLUR }}>
-                <p style={{ fontSize:'13px', color:CARD_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{profile.event_description}</p>
+                <p style={{ fontSize:'13px', color:CARD_TEXT, opacity:0.85, lineHeight:'1.6', margin:0, whiteSpace:'pre-wrap' }}>{tr(profile.event_description)}</p>
               </div>
             )}
             {profile.event_booking_url && (
               <a href={profile.event_booking_url} target="_blank" rel="noopener noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:`linear-gradient(135deg,${ec1},${ec2})`, borderRadius:'14px', padding:'14px 20px', color:'white', fontSize:'15px', fontWeight:'700', textDecoration:'none', width:'100%', boxShadow:'0 4px 20px rgba(0,0,0,0.2)', touchAction:'manipulation' }}>
-                🎟️ Réserver ma place
+                🎟️ {t('Réserver ma place')}
               </a>
             )}
           </div>
@@ -2006,7 +2042,7 @@ export default function PublicProfile({ previewProfile = null }) {
         {/* Boutique */}
         {sortedProducts.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
-            <SectionHeader icon={<ShoppingBag size={15} />} title="Boutique" count={`${available.length} article${available.length > 1 ? 's' : ''}`} />
+            <SectionHeader icon={<ShoppingBag size={15} />} title={t('Boutique')} count={`${available.length} ${t(available.length > 1 ? 'articles' : 'article')}`} />
             <div className="pp-shop-grid">
               {sortedProducts.map(p => (
                 <PublicProductCard
@@ -2022,7 +2058,7 @@ export default function PublicProfile({ previewProfile = null }) {
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'10px', justifyContent:'center', color:'var(--pp-faint)' }}>
               <Tag size={10} color="currentColor" />
-              <span style={{ color:'var(--pp-faint)', fontSize:'11px' }}>Contactez le vendeur pour commander</span>
+              <span style={{ color:'var(--pp-faint)', fontSize:'11px' }}>{t('Contactez le vendeur pour commander')}</span>
             </div>
           </div>
         )}
@@ -2030,7 +2066,7 @@ export default function PublicProfile({ previewProfile = null }) {
         {/* Documents */}
         {documents.length > 0 && (
           <div className="pp-content-col" style={{ marginTop:'8px', marginBottom:'20px' }}>
-            <SectionHeader icon={<FileText size={15} />} title="Documents" count={`${documents.length} fichier${documents.length > 1 ? 's' : ''}`} />
+            <SectionHeader icon={<FileText size={15} />} title={t('Documents')} count={`${documents.length} ${t(documents.length > 1 ? 'fichiers' : 'fichier')}`} />
             <div style={{ background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 10px 30px rgba(0,0,0,0.28)', overflow:'hidden' }}>
               {documents.map((doc, i) => (
                 <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" className="pp-row-btn"
@@ -2041,7 +2077,7 @@ export default function PublicProfile({ previewProfile = null }) {
                   <span style={{ minWidth:0, flex:1 }}>
                     <span style={rowLabelStyle}>
                       {doc.file_size
-                        ? 'PDF · ' + (doc.file_size < 1048576 ? Math.round(doc.file_size / 1024) + ' Ko' : (doc.file_size / 1048576).toFixed(1) + ' Mo')
+                        ? 'PDF · ' + (doc.file_size < 1048576 ? Math.round(doc.file_size / 1024) + ' ' + t('Ko') : (doc.file_size / 1048576).toFixed(1) + ' ' + t('Mo'))
                         : 'PDF'}
                     </span>
                     <span style={rowValueStyle}>{doc.name}</span>
@@ -2059,7 +2095,7 @@ export default function PublicProfile({ previewProfile = null }) {
             [QR-MODAL] dernière ligne : QR code (en ligne / sans internet) */}
         {(mainLinks.length > 0 || !!profile.username) && (
           <div className="pp-content-col pp-link-btn" style={{ marginTop:'8px' }}>
-            <SectionHeader icon={<Link2 size={15} />} title="Retrouvez-moi" />
+            <SectionHeader icon={<Link2 size={15} />} title={t('Retrouvez-moi')} />
             <div style={{ background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 10px 30px rgba(0,0,0,0.28)', overflow:'hidden' }}>
               {mainLinks.map((link, i) => {
                 const platform = resolvePlatform(link);
@@ -2101,7 +2137,7 @@ export default function PublicProfile({ previewProfile = null }) {
           className="pp-brand-badge"
           style={{ marginTop:'32px', display:'inline-flex', alignItems:'center', gap:'6px', background:'none', border:'none', padding:'6px 8px', color:'var(--pp-txt)', fontSize:'11px', fontWeight:600, textDecoration:'none', transition:'opacity 0.15s' }}
         >
-          <Link2 size={12} /> Créé avec SocialApp
+          <Link2 size={12} /> {t('Créé avec SocialApp')}
         </a>
 
         {/* [DL5] Indicateur de poids — mode léger uniquement */}
@@ -2135,6 +2171,6 @@ export default function PublicProfile({ previewProfile = null }) {
         <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />,
         document.body
       )}
-    </>
+    </LangProvider>
   );
 }

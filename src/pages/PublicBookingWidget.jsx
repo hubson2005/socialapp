@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase'; // même chemin que PublicProfile.jsx
 import { checkPhone } from '../lib/phone';
 import { triggerNewBooking, triggerNewEventRegistration } from '../lib/triggers/booking';
+import { useLang } from '../lib/profileI18n';
 
 // Palette "premium" : fond opaque (plus de simple transparence sur le fond
 // dynamique), accent émeraude, séparation nette entre l'en-tête et le
@@ -95,12 +96,22 @@ const sLight = makeStyles(COLORS_LIGHT);
 
 const DATE_RANGE_DAYS = 30;
 
+// [I18N] Accès tolérant à la langue : hors LangProvider (ex. PublicBookingPage),
+// t renvoie le texte français tel quel et les dates restent en fr-FR.
+function useT() {
+  const l = useLang() || {};
+  const t = typeof l.t === 'function' ? l.t : (x) => x;
+  const lang = l.lang || 'fr';
+  return { t, lang, loc: lang === 'en' ? 'en-GB' : 'fr-FR' };
+}
+
 // [FIX1] `mode` ne part plus sur une valeur fixe ('services'). Si un profil
 // n'a AUCUN service actif mais un ou plusieurs événements, le mode bascule
 // automatiquement sur 'events' une fois les données chargées (voir [FIX2]) —
 // sinon le widget restait bloqué sur 'services' et n'affichait rien.
 export default function PublicBookingWidget({ profileId }) {
   const s = sLight; // [DESIGN2] thème clair sur le profil public
+  const { t } = useT();
   const [mode, setMode] = useState(null); // 'services' | 'events' | null (pas encore déterminé)
   const [services, setServices] = useState([]);
   const [events, setEvents] = useState([]);
@@ -131,7 +142,7 @@ export default function PublicBookingWidget({ profileId }) {
     return () => { cancelled = true; };
   }, [profileId]);
 
-  if (loading) return <div style={s.wrap}><div style={s.empty}>Chargement du calendrier…</div></div>;
+  if (loading) return <div style={s.wrap}><div style={s.empty}>{t('Chargement du calendrier…')}</div></div>;
   if (services.length === 0 && events.length === 0) return null; // rien à réserver, on n'affiche pas le widget
 
   return (
@@ -139,16 +150,16 @@ export default function PublicBookingWidget({ profileId }) {
       <div style={s.headerRow}>
         <div style={s.iconBadge}>📅</div>
         <div>
-          <h3 style={s.title}>Prendre rendez-vous</h3>
-          <p style={s.subtitle}>Réserve directement un créneau ou une place</p>
+          <h3 style={s.title}>{t('Prendre rendez-vous')}</h3>
+          <p style={s.subtitle}>{t('Réserve directement un créneau ou une place')}</p>
         </div>
       </div>
       <div style={s.divider} />
 
       {services.length > 0 && events.length > 0 && (
         <div style={s.tabs}>
-          <div style={s.tab(mode === 'services')} onClick={() => setMode('services')}>Rendez-vous</div>
-          <div style={s.tab(mode === 'events')} onClick={() => setMode('events')}>Événements</div>
+          <div style={s.tab(mode === 'services')} onClick={() => setMode('services')}>{t('Rendez-vous')}</div>
+          <div style={s.tab(mode === 'events')} onClick={() => setMode('events')}>{t('Événements')}</div>
         </div>
       )}
 
@@ -169,6 +180,7 @@ export default function PublicBookingWidget({ profileId }) {
 export function ServiceBookingFlow({ profileId, services, initialService, theme }) {
   const C = theme || COLORS;
   const s = theme ? makeStyles(theme) : sDark;
+  const { t, loc } = useT();
   const [step, setStep] = useState(initialService ? 2 : 1); // 1: service, 2: date+heure, 3: form, 4: succès
   const [service, setService] = useState(initialService || null);
   const [date, setDate] = useState('');
@@ -244,9 +256,9 @@ export function ServiceBookingFlow({ profileId, services, initialService, theme 
     return (
       <div style={s.success}>
         <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-        <strong>Réservation confirmée !</strong>
+        <strong>{t('Réservation confirmée !')}</strong>
         <p style={{ color: C.textMuted, fontSize: 13, marginTop: 6 }}>
-          {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {slot.slot_start.slice(0, 5)}
+          {new Date(date).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} {t('à')} {slot.slot_start.slice(0, 5)}
         </p>
       </div>
     );
@@ -259,9 +271,9 @@ export function ServiceBookingFlow({ profileId, services, initialService, theme 
           <div key={svc.id} style={s.item} onClick={() => pickService(svc)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <strong style={{ fontWeight: 500 }}>{svc.name}</strong>
-              <span style={{ color: C.accentSoft, fontWeight: 500 }}>{svc.price > 0 ? `${svc.price.toLocaleString('fr-FR')} FCFA` : 'Gratuit'}</span>
+              <span style={{ color: C.accentSoft, fontWeight: 500 }}>{svc.price > 0 ? `${svc.price.toLocaleString('fr-FR')} FCFA` : t('Gratuit')}</span>
             </div>
-            <div style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>{svc.duration_minutes} min{svc.description ? ` · ${svc.description}` : ''}</div>
+            <div style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>{svc.duration_minutes} {t('min')}{svc.description ? ` · ${svc.description}` : ''}</div>
           </div>
         ))}
       </div>
@@ -279,7 +291,7 @@ export function ServiceBookingFlow({ profileId, services, initialService, theme 
         )}
         {initialService && (
           <div style={{ color: C.textMuted, fontSize: 13, marginBottom: 12 }}>
-            {service.name} · {service.duration_minutes} min{service.price > 0 ? ` · ${service.price.toLocaleString('fr-FR')} FCFA` : ' · Gratuit'}
+            {service.name} · {service.duration_minutes} {t('min')}{service.price > 0 ? ` · ${service.price.toLocaleString('fr-FR')} FCFA` : ` · ${t('Gratuit')}`}
           </div>
         )}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 14 }}>
@@ -292,15 +304,15 @@ export function ServiceBookingFlow({ profileId, services, initialService, theme 
                 background: active ? C.accent : C.surfaceAlt,
                 color: active ? C.accentDark : C.text, border: `1px solid ${active ? 'transparent' : C.border}`,
               }}>
-                <div style={{ fontSize: 11, opacity: 0.8 }}>{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</div>
+                <div style={{ fontSize: 11, opacity: 0.8 }}>{d.toLocaleDateString(loc, { weekday: 'short' })}</div>
                 <div style={{ fontWeight: 500 }}>{d.getDate()}</div>
               </div>
             );
           })}
         </div>
 
-        {date && loadingSlots && <div style={s.empty}>Recherche des créneaux…</div>}
-        {date && !loadingSlots && slots.length === 0 && <div style={s.empty}>Aucun créneau disponible ce jour-là.</div>}
+        {date && loadingSlots && <div style={s.empty}>{t('Recherche des créneaux…')}</div>}
+        {date && !loadingSlots && slots.length === 0 && <div style={s.empty}>{t('Aucun créneau disponible ce jour-là.')}</div>}
         {date && !loadingSlots && slots.length > 0 && (
           <>
             <div style={s.slotGrid}>
@@ -310,7 +322,7 @@ export function ServiceBookingFlow({ profileId, services, initialService, theme 
                 </div>
               ))}
             </div>
-            <button style={s.btn} disabled={!slot} onClick={() => setStep(3)}>Continuer</button>
+            <button style={s.btn} disabled={!slot} onClick={() => setStep(3)}>{t('Continuer')}</button>
           </>
         )}
       </div>
@@ -320,16 +332,16 @@ export function ServiceBookingFlow({ profileId, services, initialService, theme 
   // step === 3
   return (
     <div>
-      <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setStep(2)}>← Modifier le créneau</button>
+      <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => setStep(2)}>← {t('Modifier le créneau')}</button>
       <div style={{ color: C.textMuted, fontSize: 13, marginBottom: 12 }}>
-        {service.name} · {new Date(date).toLocaleDateString('fr-FR')} à {slot.slot_start.slice(0, 5)}
+        {service.name} · {new Date(date).toLocaleDateString(loc)} {t('à')} {slot.slot_start.slice(0, 5)}
       </div>
-      <input style={s.input} placeholder="Nom complet *" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
-      <input style={s.input} placeholder="Téléphone *" value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} />
-      <input style={s.input} placeholder="Email (optionnel)" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
-      <input style={s.input} placeholder="Message (optionnel)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-      {errorMsg && <div style={{ color: C.danger, fontSize: 13, marginBottom: 10 }}>{errorMsg}</div>}
-      <button style={s.btn} disabled={submitting} onClick={submit}>{submitting ? 'Réservation…' : 'Confirmer la réservation'}</button>
+      <input style={s.input} placeholder={t('Nom complet *')} value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+      <input style={s.input} placeholder={t('Téléphone *')} value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} />
+      <input style={s.input} placeholder={t('Email (optionnel)')} value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+      <input style={s.input} placeholder={t('Message (optionnel)')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+      {errorMsg && <div style={{ color: C.danger, fontSize: 13, marginBottom: 10 }}>{t(errorMsg)}</div>}
+      <button style={s.btn} disabled={submitting} onClick={submit}>{submitting ? t('Réservation…') : t('Confirmer la réservation')}</button>
     </div>
   );
 }
@@ -345,6 +357,7 @@ export function ServiceBookingFlow({ profileId, services, initialService, theme 
 export function EventBookingFlow({ profileId, events, initialEvent, theme }) {
   const C = theme || COLORS;
   const s = theme ? makeStyles(theme) : sDark;
+  const { t, loc } = useT();
   const [event, setEvent] = useState(initialEvent || null);
   const [form, setForm] = useState({ client_name: '', client_phone: '', client_email: '', party_size: 1 });
   const [submitting, setSubmitting] = useState(false);
@@ -388,7 +401,7 @@ export function EventBookingFlow({ profileId, events, initialEvent, theme }) {
     return (
       <div style={s.success}>
         <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-        <strong>Inscription confirmée !</strong>
+        <strong>{t('Inscription confirmée !')}</strong>
         <p style={{ color: C.textMuted, fontSize: 13, marginTop: 6 }}>{event.title}</p>
       </div>
     );
@@ -401,11 +414,11 @@ export function EventBookingFlow({ profileId, events, initialEvent, theme }) {
           <div key={ev.id} style={s.item} onClick={() => ev.spots_remaining > 0 && setEvent(ev)}>
             <strong style={{ fontWeight: 500 }}>{ev.title}</strong>
             <div style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>
-              {new Date(ev.event_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {ev.start_time?.slice(0, 5)}
+              {new Date(ev.event_date).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} {t('à')} {ev.start_time?.slice(0, 5)}
               {ev.location ? ` · ${ev.location}` : ''}
             </div>
             <div style={{ marginTop: 6, fontSize: 13, color: ev.spots_remaining > 0 ? C.success : C.danger, fontWeight: 500 }}>
-              {ev.spots_remaining > 0 ? `${ev.spots_remaining} place(s) restante(s)` : 'Complet'}
+              {ev.spots_remaining > 0 ? `${ev.spots_remaining} ${t('place(s) restante(s)')}` : t('Complet')}
             </div>
           </div>
         ))}
@@ -421,17 +434,17 @@ export function EventBookingFlow({ profileId, events, initialEvent, theme }) {
       )}
       {initialEvent && (
         <div style={{ color: C.textMuted, fontSize: 13, marginBottom: 12 }}>
-          {new Date(event.event_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {event.start_time?.slice(0, 5)}
+          {new Date(event.event_date).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} {t('à')} {event.start_time?.slice(0, 5)}
           {event.location ? ` · ${event.location}` : ''}
         </div>
       )}
-      <input style={s.input} placeholder="Nom complet *" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
-      <input style={s.input} placeholder="Téléphone *" value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} />
-      <input style={s.input} placeholder="Email (optionnel)" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
-      <label style={{ fontSize: 12, color: C.textMuted, display: 'block', marginBottom: 4 }}>Nombre de places</label>
+      <input style={s.input} placeholder={t('Nom complet *')} value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+      <input style={s.input} placeholder={t('Téléphone *')} value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} />
+      <input style={s.input} placeholder={t('Email (optionnel)')} value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} />
+      <label style={{ fontSize: 12, color: C.textMuted, display: 'block', marginBottom: 4 }}>{t('Nombre de places')}</label>
       <input style={s.input} type="number" min="1" max={event.spots_remaining} value={form.party_size} onChange={(e) => setForm({ ...form, party_size: e.target.value })} />
-      {errorMsg && <div style={{ color: C.danger, fontSize: 13, marginBottom: 10 }}>{errorMsg}</div>}
-      <button style={s.btn} disabled={submitting} onClick={submit}>{submitting ? 'Inscription…' : "S'inscrire"}</button>
+      {errorMsg && <div style={{ color: C.danger, fontSize: 13, marginBottom: 10 }}>{t(errorMsg)}</div>}
+      <button style={s.btn} disabled={submitting} onClick={submit}>{submitting ? t('Inscription…') : t("S'inscrire")}</button>
     </div>
   );
 }

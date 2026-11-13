@@ -252,13 +252,16 @@ const FlagFR = () => (
 export function LangToggle({ lang, onToggle, loading = false, error = false }) {
   const isFr = lang === 'fr';
   const txt = (active) => ({
-    fontSize: '12px', fontWeight: 800, letterSpacing: '0.04em', lineHeight: 1,
+    fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em', lineHeight: 1,
     color: active ? '#3a1d0e' : 'rgba(58,29,14,0.35)', transition: 'color 0.2s',
   });
 
+  // Interrupteur vertical : EN en haut, FR en bas ; le bouton rond se place
+  // du côté de la langue active, sur le drapeau de l'autre langue.
   return (
     <div style={{
-      display:'flex', alignItems:'center', gap:'7px', padding:'6px 10px', borderRadius:'999px',
+      display:'flex', flexDirection:'column', alignItems:'center', gap:'7px', padding:'10px 6px', borderRadius:'999px',
+      width:'48px', boxSizing:'border-box',
       background:'rgba(255,255,255,0.94)', boxShadow:'0 6px 20px rgba(0,0,0,0.3)', fontFamily:'inherit',
     }}>
       <span style={txt(!isFr)}>EN</span>
@@ -271,18 +274,18 @@ export function LangToggle({ lang, onToggle, loading = false, error = false }) {
         disabled={loading}
         onClick={onToggle}
         style={{
-          position:'relative', width:'58px', height:'32px', padding:0, border:'none', borderRadius:'999px',
+          position:'relative', width:'32px', height:'58px', padding:0, border:'none', borderRadius:'999px',
           overflow:'hidden', background:'#fff', cursor: loading ? 'wait' : 'pointer', touchAction:'manipulation',
-          opacity: loading ? 0.8 : 1,
+          opacity: loading ? 0.8 : 1, flexShrink:0,
           boxShadow: error ? '0 0 0 2px #ef4444' : 'inset 0 0 0 2px #2d2a3a',
         }}
       >
         <span style={{ position:'absolute', inset:0 }}>{isFr ? <FlagFR /> : <FlagUK />}</span>
         <span style={{
-          position:'absolute', top:'3px', left: isFr ? 'calc(100% - 29px)' : '3px',
+          position:'absolute', left:'3px', top: isFr ? 'calc(100% - 29px)' : '3px',
           width:'26px', height:'26px', borderRadius:'50%', background:'#fff',
           boxShadow:'0 1px 4px rgba(0,0,0,0.4), 0 0 0 2px #2d2a3a',
-          transition:'left 0.25s ease', display:'flex', alignItems:'center', justifyContent:'center',
+          transition:'top 0.25s ease', display:'flex', alignItems:'center', justifyContent:'center',
         }}>
           {loading && (
             <span style={{ width:'12px', height:'12px', border:'2px solid #6366f1', borderTopColor:'transparent', borderRadius:'50%', animation:'pp-spin 0.8s linear infinite' }} />

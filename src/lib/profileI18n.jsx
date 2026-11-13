@@ -265,7 +265,7 @@ export function LangToggle({ lang, onToggle, loading = false, error = false }) {
       onClick={onToggle}
       style={{
         position:'relative', width:'40px', height:'72px', padding:0, boxSizing:'border-box',
-        border: `2px solid ${error ? '#ef4444' : '#2d2a3a'}`, borderRadius:'999px',
+        border: `2px solid ${error ? '#ef4444' : '#8a4a24'}`, borderRadius:'999px',
         overflow:'hidden', background:'#fff', cursor: loading ? 'wait' : 'pointer', touchAction:'manipulation',
         opacity: loading ? 0.85 : 1, flexShrink:0, fontFamily:'inherit',
         boxShadow:'0 6px 20px rgba(0,0,0,0.3)',
@@ -275,7 +275,7 @@ export function LangToggle({ lang, onToggle, loading = false, error = false }) {
       <span style={{
         position:'absolute', left:'2px', top: isFr ? 'calc(100% - 34px)' : '2px',
         width:'32px', height:'32px', borderRadius:'50%', background:'#fff',
-        boxShadow:'0 1px 4px rgba(0,0,0,0.4), 0 0 0 2px #2d2a3a',
+        boxShadow:'0 1px 4px rgba(0,0,0,0.4), 0 0 0 2px #8a4a24',
         transition:'top 0.25s ease', display:'flex', alignItems:'center', justifyContent:'center',
         fontSize:'11px', fontWeight:800, letterSpacing:'0.03em', lineHeight:1, color:'#3a1d0e',
       }}>

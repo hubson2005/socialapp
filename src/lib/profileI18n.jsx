@@ -251,48 +251,38 @@ const FlagFR = () => (
 
 export function LangToggle({ lang, onToggle, loading = false, error = false }) {
   const isFr = lang === 'fr';
-  const txt = (active) => ({
-    fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em', lineHeight: 1,
-    color: active ? '#3a1d0e' : 'rgba(58,29,14,0.35)', transition: 'color 0.2s',
-  });
 
-  // Interrupteur vertical : EN en haut, FR en bas ; le bouton rond se place
-  // du côté de la langue active, sur le drapeau de l'autre langue.
+  // Interrupteur vertical sans fond : le drapeau de la langue active remplit la
+  // pilule, le bouton rond blanc porte le code de la langue (EN en haut, FR en bas).
   return (
-    <div style={{
-      display:'flex', flexDirection:'column', alignItems:'center', gap:'7px', padding:'10px 6px', borderRadius:'999px',
-      width:'48px', boxSizing:'border-box',
-      background:'rgba(255,255,255,0.94)', boxShadow:'0 6px 20px rgba(0,0,0,0.3)', fontFamily:'inherit',
-    }}>
-      <span style={txt(!isFr)}>EN</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={isFr}
-        aria-label="Changer de langue / Switch language"
-        title={error ? 'Traduction indisponible' : undefined}
-        disabled={loading}
-        onClick={onToggle}
-        style={{
-          position:'relative', width:'32px', height:'58px', padding:0, border:'none', borderRadius:'999px',
-          overflow:'hidden', background:'#fff', cursor: loading ? 'wait' : 'pointer', touchAction:'manipulation',
-          opacity: loading ? 0.8 : 1, flexShrink:0,
-          boxShadow: error ? '0 0 0 2px #ef4444' : 'inset 0 0 0 2px #2d2a3a',
-        }}
-      >
-        <span style={{ position:'absolute', inset:0 }}>{isFr ? <FlagFR /> : <FlagUK />}</span>
-        <span style={{
-          position:'absolute', left:'3px', top: isFr ? 'calc(100% - 29px)' : '3px',
-          width:'26px', height:'26px', borderRadius:'50%', background:'#fff',
-          boxShadow:'0 1px 4px rgba(0,0,0,0.4), 0 0 0 2px #2d2a3a',
-          transition:'top 0.25s ease', display:'flex', alignItems:'center', justifyContent:'center',
-        }}>
-          {loading && (
-            <span style={{ width:'12px', height:'12px', border:'2px solid #6366f1', borderTopColor:'transparent', borderRadius:'50%', animation:'pp-spin 0.8s linear infinite' }} />
-          )}
-        </span>
-      </button>
-      <span style={txt(isFr)}>FR</span>
-    </div>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={isFr}
+      aria-label="Changer de langue / Switch language"
+      title={error ? 'Traduction indisponible' : undefined}
+      disabled={loading}
+      onClick={onToggle}
+      style={{
+        position:'relative', width:'40px', height:'72px', padding:0, boxSizing:'border-box',
+        border: `2px solid ${error ? '#ef4444' : '#2d2a3a'}`, borderRadius:'999px',
+        overflow:'hidden', background:'#fff', cursor: loading ? 'wait' : 'pointer', touchAction:'manipulation',
+        opacity: loading ? 0.85 : 1, flexShrink:0, fontFamily:'inherit',
+        boxShadow:'0 6px 20px rgba(0,0,0,0.3)',
+      }}
+    >
+      <span style={{ position:'absolute', inset:0 }}>{isFr ? <FlagFR /> : <FlagUK />}</span>
+      <span style={{
+        position:'absolute', left:'2px', top: isFr ? 'calc(100% - 34px)' : '2px',
+        width:'32px', height:'32px', borderRadius:'50%', background:'#fff',
+        boxShadow:'0 1px 4px rgba(0,0,0,0.4), 0 0 0 2px #2d2a3a',
+        transition:'top 0.25s ease', display:'flex', alignItems:'center', justifyContent:'center',
+        fontSize:'11px', fontWeight:800, letterSpacing:'0.03em', lineHeight:1, color:'#3a1d0e',
+      }}>
+        {loading
+          ? <span style={{ width:'14px', height:'14px', border:'2px solid #6366f1', borderTopColor:'transparent', borderRadius:'50%', animation:'pp-spin 0.8s linear infinite' }} />
+          : (isFr ? 'FR' : 'EN')}
+      </span>
+    </button>
   );
 }

@@ -5,7 +5,15 @@
  *   version du repo pour les tags C1-C12, A1-A6, F1-F14, Q1, O1-O9, P1-P7,
  *   W1-W4, BN1-BN5, S1-S2, SB1-SB3, BG1-BG2, PERF1, PERF2a-f, DL1-DL8 ... ]
  *
- * FONDS PAR MODÈLE (cette révision) :
+ * PUCES RONDES (cette révision) :
+ *  [SOCIAL-ROUND] Les puces du haut (WhatsApp / téléphone / Facebook) ne sont plus
+ *        des pilules blanches avec texte : ce sont des cercles transparents à fine
+ *        bordure, avec un pictogramme monochrome (sans libellé). La couleur suit le
+ *        thème via --pp-txt (blanc sur fond sombre / image, foncé sur Savane,
+ *        Hibiscus, Lagon) et la bordure via --pp-faint. Le libellé reste dans
+ *        aria-label (accessibilité).
+ *
+ * FONDS PAR MODÈLE :
  *  [BG-TEMPLATES] theme_color = « bg1|bg2|idModèle » (Savane, Hibiscus, Lagon —
  *        choisis depuis ThemeColorPicker du dashboard). Chaque modèle ajoute des
  *        motifs SVG intégrés (bogolan, treillis de losanges, losanges latéraux, à
@@ -16,12 +24,12 @@
  *        textes blancs. ⚠️ BG_TEMPLATES est dupliqué dans ThemeColorPicker.jsx
  *        (dashboard) — garder les deux listes synchronisées.
  *
- * DESIGN 2 (cette révision) :
+ * DESIGN 2 :
  *  [DESIGN2] Même langage visuel partout : cartes blanches, pastilles pêche, libellés
- *        en capitales. Puces du haut en pilules blanches, en-têtes de section
- *        (SectionHeader), documents en lignes, fiche produit en thème clair.
+ *        en capitales. En-têtes de section (SectionHeader), documents en lignes,
+ *        fiche produit en thème clair.
  *
- * QR CODE (cette révision) :
+ * QR CODE :
  *  [QR-MODAL] Dernière ligne de la carte « Retrouvez-moi » : « QR code · En ligne
  *        ou sans internet ». Elle ouvre une fenêtre (bottom sheet) avec UNIQUEMENT
  *        deux onglets et le QR code — aucun bouton d'action :
@@ -36,13 +44,12 @@
  *        chargement de la page ni sur le mode léger.
  *
  * LIENS EN CARTE :
- *  [LINKS-CARD] La liste des liens n'est plus une pile de boutons-pilules mais
- *        une carte blanche façon « fiche contact » : une ligne par lien (pastille
- *        d'icône pêche, petit libellé de type en capitales, valeur dessous).
- *        Les adresses crypto restent copiables d'un toucher (ligne CryptoRow).
- *        Les puces du haut (WhatsApp / téléphone / Facebook) sont inchangées.
+ *  [LINKS-CARD] La liste des liens est une carte blanche façon « fiche contact » :
+ *        une ligne par lien (pastille d'icône pêche, petit libellé de type en
+ *        capitales, valeur dessous). Les adresses crypto restent copiables d'un
+ *        toucher (ligne CryptoRow).
  *
- * BANNIÈRES MULTIPLES (cette révision) :
+ * BANNIÈRES MULTIPLES :
  *  [BANNER-SLIDER] Les bannières (profile.banner_urls, repli sur banner_url)
  *        défilent en fondu enchaîné toutes les 4 s, avec pause au survol/toucher,
  *        swipe, points de navigation et bouton « Télécharger » en haut à droite.
@@ -50,29 +57,21 @@
  *
  * MODAL — Modale détail produit refaite pour tous les mobiles :
  *  [MODAL1] Prix : whitespace nowrap + taille fluide clamp() ; l'unité « F »
- *        est plus petite et collée au nombre (plus de « 350 000 / F » sur deux
- *        lignes). L'ancien prix et la pastille « Économise » passent DESSOUS
- *        (flex-wrap) au lieu de se casser quand la place manque.
+ *        est plus petite et collée au nombre. L'ancien prix et la pastille
+ *        « Économise » passent DESSOUS (flex-wrap) au lieu de se casser.
  *  [MODAL2] Image : object-fit contain (jamais rognée) + fond flouté de la même
- *        image pour supprimer les bandes noires. Le flou est désactivé en mode
- *        léger (zéro coût GPU). Même URL que l'image nette → pas de requête
- *        supplémentaire.
- *  [MODAL3] Zoom : toucher l'image (ou le bouton « Agrandir ») ouvre
- *        l'ImageLightbox en qualité d'origine. La touche Échap ferme d'abord le
- *        zoom, puis la modale.
- *  [MODAL4] Mise en page : barre du haut compacte (poignée + fermer sur une
- *        ligne), zone centrale scrollable, bouton WhatsApp FIXE en pied
- *        (toujours visible), safe-area-inset-bottom, overscroll contain,
+ *        image. Le flou est désactivé en mode léger (zéro coût GPU).
+ *  [MODAL3] Zoom : toucher l'image (ou « Agrandir ») ouvre l'ImageLightbox en
+ *        qualité d'origine. Échap ferme d'abord le zoom, puis la modale.
+ *  [MODAL4] Mise en page : barre du haut compacte, zone centrale scrollable,
+ *        bouton WhatsApp FIXE en pied, safe-area-inset-bottom, overscroll contain,
  *        role="dialog" + aria-modal.
  *
  * MODE DATA-LIGHT :
  *  [DL1] Détection automatique via le hook useDataSaverMode() (header
  *        Save-Data / navigator.connection.effectiveType 2g-3g / bascule
- *        manuelle mémorisée). isLight est calculé une fois par montage et
- *        redevient réactif si le type de connexion change en cours de
- *        visite (voir le hook), ou si le visiteur touche le switch [DL7].
- *  [DL2] Police custom Manrope : chargement du Google Font entièrement
- *        sauté en mode léger (effet à if (isLight) return; en tête).
+ *        manuelle mémorisée).
+ *  [DL2] Police custom Manrope : chargement sauté en mode léger.
  *  [DL3] Images : helper imgUrl(url, {width, quality}) — transformation à la
  *        volée de Supabase Storage (plan Pro requis, voir IMG_TRANSFORM).
  *  [DL4] Fond "mesh" animé désactivé en mode léger.
@@ -80,26 +79,26 @@
  *  [DL6] isLight propagé à PublicProductCard et ProductDetailModal.
  *  [DL7] Switch "Mode léger" discret en bas de page.
  *
- * PIED DE PAGE (cette révision) :
- *  [FOOTER-PLAIN] Le bouton « Contactez notre support » est supprimé.
- *        « Créé avec SocialApp » et « Mode léger » s'affichent sans fond ni
- *        bordure (icône + texte seulement).
+ * PIED DE PAGE :
+ *  [FOOTER-PLAIN] « Créé avec SocialApp » et « Mode léger » s'affichent sans fond
+ *        ni bordure (icône + texte seulement).
  *
- * TRADUCTION (cette révision) :
+ * TRADUCTION :
  *  [I18N-ROWS] LinkRow, CryptoRow et QRCodeRow utilisent useLang() : libellés de
  *        plateforme et textes fixes via t(), libellés saisis par le propriétaire
  *        via tr(). rowValue() reçoit tr en paramètre.
  *
  * Aucun changement de comportement en mode complet (isLight === false) hors
  * la modale produit [MODAL1-4], le carrousel de bannières [BANNER-SLIDER],
- * la ligne / fenêtre QR code [QR-MODAL] et les fonds par modèle [BG-TEMPLATES].
+ * la ligne / fenêtre QR code [QR-MODAL], les fonds par modèle [BG-TEMPLATES]
+ * et les puces rondes [SOCIAL-ROUND].
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff, Copy, QrCode, ChevronRight, Globe, Smartphone } from 'lucide-react';
+import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff, Copy, QrCode, ChevronRight, Globe, Smartphone, Facebook } from 'lucide-react';
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
 // [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
@@ -918,6 +917,16 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
   </svg>
 );
 
+// [SOCIAL-ROUND] Pictogramme monochrome (currentColor) pour les puces rondes du haut
+function ChipGlyph({ link, platform }) {
+  const key = (link.platform || '').toLowerCase();
+  if (key === 'whatsapp') return <WhatsAppIcon size={20} color="currentColor" />;
+  if (key === 'phone')    return <Phone size={20} />;
+  if (key === 'facebook') return <Facebook size={20} />;
+  // autre plateforme : icône d'origine
+  return platform.icon ? React.cloneElement(platform.icon, { width: 24, height: 24 }) : <Link2 size={20} />;
+}
+
 // [P2] Barre d'actions flottante — partage natif avec repli "copier le lien".
 function ShareBar({ profile }) {
   const { t } = useLang();
@@ -1442,9 +1451,14 @@ export default function PublicProfile({ previewProfile = null }) {
           .pp-brand-badge:hover  { opacity:0.7; }
         }
 
+        /* [SOCIAL-ROUND] Puces rondes du haut : retour tactile + survol + focus (suivent le thème) */
+        .pp-chip:active             { transform:scale(0.94); }
+        .pp-chip:focus-visible      { outline:2px solid var(--pp-txt); outline-offset:2px; }
+        @media (hover: hover) {
+          .pp-chip:hover { background:rgba(255,255,255,0.12) !important; transform:translateY(-1px); }
+        }
+
         /* [LINKS-CARD] Lignes de la carte de liens */
-        .pp-chip:active             { transform:scale(0.97); }
-        .pp-chip:focus-visible      { outline:2px solid rgba(255,255,255,0.85); outline-offset:2px; }
         .pp-row-btn:active          { background:#fff6ee !important; }
         .pp-row-btn:focus-visible   { outline:2px solid #6366f1; outline-offset:-2px; }
         @media (hover: hover) {
@@ -1926,14 +1940,14 @@ export default function PublicProfile({ previewProfile = null }) {
 
         {profile.phone && <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'var(--pp-txt2)', fontSize:'14px', marginBottom:'16px' }}><Phone size={16} />{profile.phone}</div>}
 
+        {/* [SOCIAL-ROUND] Puces rondes : cercle transparent à fine bordure, pictogramme monochrome */}
         {topSocialLinks.length > 0 && (
           <div className="pp-content-col" style={{
-            display:'flex', flexWrap:'nowrap', alignItems:'center', justifyContent:'center',
-            gap:'8px', marginBottom:'14px', boxSizing:'border-box',
+            display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center',
+            gap:'12px', marginBottom:'16px', boxSizing:'border-box',
           }}>
             {topSocialLinks.map((link, i) => {
               const platform = resolvePlatform(link);
-              const color = platform.color || '#6366f1';
               return (
                 <button
                   key={i}
@@ -1941,26 +1955,16 @@ export default function PublicProfile({ previewProfile = null }) {
                   aria-label={link.label ? tr(link.label) : t(platform.label)}
                   className="pp-chip"
                   style={{
-                    flex:'0 1 auto', minWidth:0,
-                    display:'inline-flex', alignItems:'center', gap:'7px',
-                    height:'42px', padding:'0 14px 0 5px', borderRadius:'999px',
-                    boxSizing:'border-box',
-                    background:CARD_BG, border:'none', boxShadow:'0 6px 18px rgba(0,0,0,0.28)',
-                    color:CARD_TEXT, fontSize:'clamp(10px, 2.9vw, 12px)', fontWeight:700, letterSpacing:'0.01em',
-                    cursor:'pointer', touchAction:'manipulation', fontFamily:'inherit',
-                    transition:'transform 0.15s',
+                    width:'46px', height:'46px', borderRadius:'50%', flexShrink:0,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    background:'transparent',
+                    border:'1px solid var(--pp-faint)',
+                    color:'var(--pp-txt)',
+                    padding:0, cursor:'pointer', touchAction:'manipulation', fontFamily:'inherit',
+                    transition:'transform 0.15s, background 0.15s',
                   }}
                 >
-                  <span style={{
-                    width:'32px', height:'32px', borderRadius:'50%', overflow:'hidden',
-                    flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
-                    background:'#fff', lineHeight:0,
-                  }}>
-                    {platform.icon ? React.cloneElement(platform.icon, { width: 32, height: 32 }) : null}
-                  </span>
-                  <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {link.label ? tr(link.label) : t(platform.label)}
-                  </span>
+                  <ChipGlyph link={link} platform={platform} />
                 </button>
               );
             })}

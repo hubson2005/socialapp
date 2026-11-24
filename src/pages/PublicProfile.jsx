@@ -98,7 +98,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff, Copy, QrCode, ChevronRight, Globe, Smartphone, Facebook } from 'lucide-react';
+import { ExternalLink, Phone, ShoppingBag, Tag, FileText, X, ZoomIn, Download, Share2, Check, Link2, Wifi, WifiOff, Copy, QrCode, ChevronRight, Globe, Smartphone } from "lucide-react";
+import { FaFacebook } from "react-icons/fa";
 import { PLATFORMS } from '../components/dashboard/AddPlatformDialog';
 // [A1][A2][A3][A6] Moteur d'automatisation — déclencheurs
 import { triggerWhatsappClick }   from '../lib/triggers/whatsapp';
@@ -922,7 +923,7 @@ function ChipGlyph({ link }) {
   const key = (link.platform || '').toLowerCase();
   if (key === 'whatsapp') return <WhatsAppIcon size={20} color="currentColor" />;
   if (key === 'phone')    return <Phone size={20} />;
-  if (key === 'facebook') return <Facebook size={20} />;
+  if (key === 'facebook') return <FaFacebook size={20} />;
   return null;
 }
 

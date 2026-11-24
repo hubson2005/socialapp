@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,29 +22,29 @@ import QRCodeDisplay from "@/components/dashboard/QRCodeDisplay";
 import ThemeColorPicker from "@/components/dashboard/ThemeColorPicker";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ProfilePreview from "@/components/dashboard/ProfilePreview";
-import MarketplacePanel from "@/components/dashboard/MarketplacePanel";
-import DocumentsPanel from "@/components/dashboard/DocumentsPanel";
-import AutomationsPanel from "@/components/dashboard/AutomationsPanel";
-import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
-import LeadsCRMPanel from "@/components/dashboard/LeadsCRMPanel";
-import TasksCRMPanel from "@/components/dashboard/TasksCRMPanel";
+const MarketplacePanel = lazy(() => import("@/components/dashboard/MarketplacePanel"));
+const DocumentsPanel = lazy(() => import("@/components/dashboard/DocumentsPanel"));
+const AutomationsPanel = lazy(() => import("@/components/dashboard/AutomationsPanel"));
+const IntegrationsPanel = lazy(() => import("@/components/dashboard/IntegrationsPanel"));
+const LeadsCRMPanel = lazy(() => import("@/components/dashboard/LeadsCRMPanel"));
+const TasksCRMPanel = lazy(() => import("@/components/dashboard/TasksCRMPanel"));
 import MobileNav from "@/components/dashboard/MobileNav";
-import EventManager from "@/components/dashboard/EventManager";
-import SettingsPanel from "@/components/dashboard/SettingsPanel";
-import WhatsappCRMPanel from "@/components/dashboard/WhatsappCRMPanel";
-import BookingCalendarPanel from "@/components/dashboard/BookingCalendarPanel";
-import RealtimePanel from "@/components/dashboard/RealtimePanel";
+const EventManager = lazy(() => import("@/components/dashboard/EventManager"));
+const SettingsPanel = lazy(() => import("@/components/dashboard/SettingsPanel"));
+const WhatsappCRMPanel = lazy(() => import("@/components/dashboard/WhatsappCRMPanel"));
+const BookingCalendarPanel = lazy(() => import("@/components/dashboard/BookingCalendarPanel"));
+const RealtimePanel = lazy(() => import("@/components/dashboard/RealtimePanel"));
 import { useTranslation } from "react-i18next";
-import PromotionsDashboard from "@/components/dashboard/PromotionsDashboard";
+const PromotionsDashboard = lazy(() => import("@/components/dashboard/PromotionsDashboard"));
 import { BioAIGenerator, CampaignAIGenerator, PlatformAISuggestions } from "@/components/dashboard/AIPanels";
 import AdminFormsPanel from "@/components/forms/AdminFormsPanel";
 import { subscribeToPush, ensurePushSubscription } from '../lib/push';
 import NotificationBell from "@/pages/NotificationBell";
 
 // ── Imports optionnels ──────────────────────────────────────────────────────
-import BoostPanel from "@/components/dashboard/BoostPanel";
-import MetaIntegrationPanel from "@/components/dashboard/MetaIntegrationPanel";
-import BoostAnalyticsPanel from "@/components/dashboard/BoostAnalyticsPanel";
+const BoostPanel = lazy(() => import("@/components/dashboard/BoostPanel"));
+const MetaIntegrationPanel = lazy(() => import("@/components/dashboard/MetaIntegrationPanel"));
+const BoostAnalyticsPanel = lazy(() => import("@/components/dashboard/BoostAnalyticsPanel"));
 
 // ============================================================
 // THEME — clair, cohérent avec UserDashboard.jsx (cartes blanches

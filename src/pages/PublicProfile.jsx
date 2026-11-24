@@ -918,13 +918,12 @@ const WhatsAppIcon = ({ size = 16, color = '#25D366' }) => (
 );
 
 // [SOCIAL-ROUND] Pictogramme monochrome (currentColor) pour les puces rondes du haut
-function ChipGlyph({ link, platform }) {
+function ChipGlyph({ link }) {
   const key = (link.platform || '').toLowerCase();
   if (key === 'whatsapp') return <WhatsAppIcon size={20} color="currentColor" />;
   if (key === 'phone')    return <Phone size={20} />;
   if (key === 'facebook') return <Facebook size={20} />;
-  // autre plateforme : icône d'origine
-  return platform.icon ? React.cloneElement(platform.icon, { width: 24, height: 24 }) : <Link2 size={20} />;
+  return null;
 }
 
 // [P2] Barre d'actions flottante — partage natif avec repli "copier le lien".
@@ -1964,7 +1963,7 @@ export default function PublicProfile({ previewProfile = null }) {
                     transition:'transform 0.15s, background 0.15s',
                   }}
                 >
-                  <ChipGlyph link={link} platform={platform} />
+                  <ChipGlyph link={link} />
                 </button>
               );
             })}
